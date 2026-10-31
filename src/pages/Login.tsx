@@ -293,16 +293,23 @@ export default function Login() {
       }
 
       // استدعاء دالة السحابة الموثوقة لفحص وربط الجهاز
-      const { data: bindResult, error: bindError } = await supabase.rpc('check_and_bind_device', {
-        p_device_id: currentDeviceId
-      });
+      // (الدالة موجودة في القاعدة لكن أنواع الواجهة القديمة لم تُ再生 بعد،
+      // لذلك تُستدعى عبر قوس آمن مع نوع صريح للنتيجة.)
+      const { data: bindResult, error: bindError } = await supabase.rpc(
+        'check_and_bind_device' as never,
+        { p_device_id: currentDeviceId } as never
+      );
+      const bind = bindResult as
+        | { blocked?: boolean; allow_multi_device?: boolean }
+        | null
+        | undefined;
 
-      if (!bindError && bindResult) {
-        if (bindResult.blocked === true) {
-          console.warn('[DeviceCheck] Device blocked by server:', bindResult);
+      if (!bindError && bind) {
+        if (bind.blocked === true) {
+          console.warn('[DeviceCheck] Device blocked by server:', bind);
           return { blocked: true, allowMultiDevice: false };
         }
-        return { blocked: false, allowMultiDevice: bindResult.allow_multi_device === true };
+        return { blocked: false, allowMultiDevice: bind.allow_multi_device === true };
       }
 
       // فحص احتياطي محلي في حال انقطاع RPC

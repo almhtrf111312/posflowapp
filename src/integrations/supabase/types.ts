@@ -129,6 +129,7 @@ export type Database = {
           is_active: boolean
           kind: string
           link_url: string | null
+          target_version_code: number | null
           title: string
         }
         Insert: {
@@ -140,6 +141,7 @@ export type Database = {
           is_active?: boolean
           kind?: string
           link_url?: string | null
+          target_version_code?: number | null
           title: string
         }
         Update: {
@@ -151,6 +153,7 @@ export type Database = {
           is_active?: boolean
           kind?: string
           link_url?: string | null
+          target_version_code?: number | null
           title?: string
         }
         Relationships: []
@@ -163,10 +166,12 @@ export type Database = {
           created_at: string | null
           current_cashiers: number | null
           device_id: string | null
+          device_reset_count: number | null
           expires_at: string
           id: string
           is_revoked: boolean | null
           is_trial: boolean | null
+          last_device_reset_at: string | null
           last_lease_issued_at: string | null
           license_tier: string | null
           max_cashiers: number | null
@@ -185,10 +190,12 @@ export type Database = {
           created_at?: string | null
           current_cashiers?: number | null
           device_id?: string | null
+          device_reset_count?: number | null
           expires_at: string
           id?: string
           is_revoked?: boolean | null
           is_trial?: boolean | null
+          last_device_reset_at?: string | null
           last_lease_issued_at?: string | null
           license_tier?: string | null
           max_cashiers?: number | null
@@ -207,10 +214,12 @@ export type Database = {
           created_at?: string | null
           current_cashiers?: number | null
           device_id?: string | null
+          device_reset_count?: number | null
           expires_at?: string
           id?: string
           is_revoked?: boolean | null
           is_trial?: boolean | null
+          last_device_reset_at?: string | null
           last_lease_issued_at?: string | null
           license_tier?: string | null
           max_cashiers?: number | null
@@ -1358,6 +1367,7 @@ export type Database = {
           barcode: string | null
           category: string | null
           cost_price: number
+          cost_price_before: number | null
           created_at: string | null
           id: string
           invoice_id: string
@@ -1371,6 +1381,7 @@ export type Database = {
           barcode?: string | null
           category?: string | null
           cost_price?: number
+          cost_price_before?: number | null
           created_at?: string | null
           id?: string
           invoice_id: string
@@ -1384,6 +1395,7 @@ export type Database = {
           barcode?: string | null
           category?: string | null
           cost_price?: number
+          cost_price_before?: number | null
           created_at?: string | null
           id?: string
           invoice_id?: string
@@ -2004,6 +2016,7 @@ export type Database = {
           sync_settings: Json | null
           tax_enabled: boolean | null
           tax_rate: number | null
+          tax_type: string | null
           theme: string | null
           theme_settings: Json | null
           updated_at: string | null
@@ -2029,6 +2042,7 @@ export type Database = {
           sync_settings?: Json | null
           tax_enabled?: boolean | null
           tax_rate?: number | null
+          tax_type?: string | null
           theme?: string | null
           theme_settings?: Json | null
           updated_at?: string | null
@@ -2054,6 +2068,7 @@ export type Database = {
           sync_settings?: Json | null
           tax_enabled?: boolean | null
           tax_rate?: number | null
+          tax_type?: string | null
           theme?: string | null
           theme_settings?: Json | null
           updated_at?: string | null
@@ -2312,7 +2327,12 @@ export type Database = {
         Args: { _target_user_id: string }
         Returns: Json
       }
+      boss_set_single_device: {
+        Args: { p_target_email: string }
+        Returns: Json
+      }
       can_add_cashier: { Args: { _owner_id: string }; Returns: boolean }
+      check_and_bind_device: { Args: { p_device_id: string }; Returns: Json }
       clean_old_error_logs: { Args: never; Returns: number }
       count_owner_cashiers: { Args: { _owner_id: string }; Returns: number }
       deduct_product_quantity: {
@@ -2320,6 +2340,15 @@ export type Database = {
         Returns: number
       }
       delete_owner_cascade: { Args: { _owner_id: string }; Returns: boolean }
+      edit_purchase_invoice_atomic: {
+        Args: {
+          _invoice_id: string
+          _new_lines: Json
+          _op_id: string
+          _reason?: string
+        }
+        Returns: string
+      }
       get_boss_owners: {
         Args: never
         Returns: {
@@ -2402,6 +2431,7 @@ export type Database = {
           _profit: number
           _subtotal: number
           _tax_amount: number
+          _tax_mode?: string
           _tax_rate: number
           _total: number
           _warehouse_id: string
@@ -2460,6 +2490,14 @@ export type Database = {
       refund_invoice_partial_atomic: {
         Args: { _invoice_number: string; _items: Json; _operation_id: string }
         Returns: Json
+      }
+      request_device_reset_secure: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      reset_device_for_user: {
+        Args: { p_target_email: string }
+        Returns: boolean
       }
       reset_user_device: { Args: { _target_user_id: string }; Returns: boolean }
       reset_user_store_data: { Args: never; Returns: Json }

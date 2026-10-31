@@ -148,6 +148,55 @@ serve(async (req) => {
         return new Response("OK", { status: 200 });
       }
 
+      // Case C: أمر تصفير الجهاز الذاتي من التيليجرام /reset_device
+      if (typeof message.text === "string" && message.text.startsWith("/reset_device")) {
+        console.log(`[TelegramAuth] Reset device requested from chat ${chatId}`);
+
+        // 1. البحث عن المستخدم المرتبط بهذا الـ Chat ID
+        const { data: profile } = await serviceClient
+          .from("profiles")
+          .select("user_id, full_name, phone")
+          .eq("telegram_chat_id", chatId.toString())
+          .maybeSingle();
+
+        if (!profile) {
+          await sendTelegramMessage(
+            botToken,
+            chatId,
+            "⚠️ *حسابك غير مربوط بالبوت بعد*:\n\nيرجى إرسال /start ومشاركة رقم هاتفك للربط أولاً قبل طلب تصفير الجهاز."
+          );
+          return new Response("OK", { status: 200 });
+        }
+
+        // 2. استدعاء دالة الـ SQL الخاضعة لشرط الـ 5 أيام
+        const { data: resetRes, error: rpcErr } = await serviceClient.rpc('request_device_reset_secure', {
+          p_user_id: profile.user_id
+        });
+
+        if (rpcErr || !resetRes) {
+          await sendTelegramMessage(botToken, chatId, "❌ حدث خطأ أثناء معالجة طلب التصفير. يرجى المحاولة لاحقاً.");
+          return new Response("OK", { status: 200 });
+        }
+
+        // 3. التحقق من نتيجة القيد الزمني
+        if (!resetRes.success) {
+          await sendTelegramMessage(
+            botToken,
+            chatId,
+            `⏳ *تنبيه أمني - قيود الأجهزة*:\n\n${resetRes.error}\n\n⚠️ حفاظاً على أمان ترخيصك، يُسمح بتغيير الجهاز مرة واحدة كل 5 أيام فقط.`
+          );
+          return new Response("OK", { status: 200 });
+        }
+
+        // 4. إشعار النجاح الفوري
+        await sendTelegramMessage(
+          botToken,
+          chatId,
+          `✅ *تمت إعادة تعيين جهازك بنجاح!*\n\nأهلاً بك يا *${profile.full_name || 'العميل'}*، تم فك ارتباط جهازك السابق في نظام *Flow POS Pro*.\n\n📱 يمكنك الآن فتح التطبيق وتسجيل الدخول من هاتفك الجديد مباشرة.`
+        );
+        return new Response("OK", { status: 200 });
+      }
+
       // Case B: User shared contact
       if (message.contact) {
         const contact = message.contact;

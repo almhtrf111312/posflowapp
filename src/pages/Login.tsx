@@ -41,12 +41,18 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showDeviceBlockedDialog, setShowDeviceBlockedDialog] = useState(false);
+  // 1. تعريف حالة الحظر مع قراءة القيمة الأولية من sessionStorage فوراً لمنع وميض الاختفاء
   const [blockedState, setBlockedState] = useState<{
     isBlocked: boolean;
-    registeredDevice?: string | null;
     userEmail?: string;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('hyperpos_active_device_block');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isResettingDevice, setIsResettingDevice] = useState(false);
   const [showForgotDialog, setShowForgotDialog] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -367,14 +373,17 @@ export default function Login() {
       const { blocked } = await checkDeviceBinding(data.user.id);
 
       if (blocked) {
-        // ✅ تسجيل الخروج فوراً من السيرفر لمنع استهلاك الجلسة
-        await supabase.auth.signOut();
-        
-        // ✅ تثبيت شاشة الحظر في حالة المكون حتى لا تختفي أبداً
-        setBlockedState({
+        const blockData = {
           isBlocked: true,
-          userEmail: email,
-        });
+          userEmail: email.trim(),
+        };
+
+        // حفظ الحالة محلياً في الجلسة حتى لا تختفي عند حدوث signOut
+        sessionStorage.setItem('hyperpos_active_device_block', JSON.stringify(blockData));
+        setBlockedState(blockData);
+
+        // تسجيل الخروج فوراً لتأمين الجلسة السحابية ومنع استهلاك التوكن
+        await supabase.auth.signOut();
         setIsLoading(false);
         return;
       }
@@ -400,8 +409,9 @@ export default function Login() {
   };
 
   const handleResetDevice = async () => {
-    if (!email || !password) {
-      toast.error('يرجى إدخال البريد الإلكتروني وكلمة المرور');
+    const targetEmail = blockedState?.userEmail || email;
+    if (!targetEmail || !password) {
+      toast.error('يرجى كتابة كلمة المرور الخاصة بحسابك لإعادة التعيين والتأكيد');
       return;
     }
 
@@ -409,66 +419,63 @@ export default function Login() {
 
     try {
       const { data, error } = await supabase.functions.invoke('reset-own-device', {
-        body: { email, password }
+        body: { email: targetEmail, password }
       });
 
       if (error) {
-        // Surface the real reason (e.g. the 5-day cooldown text) instead of a generic failure.
-        const details = error instanceof FunctionsHttpError
-          ? await error.context.text()
-          : error.message;
-        let message = 'فشل في إعادة تعيين الجهاز';
+        let message = 'تعذر الاتصال بخدمة التحقق من الجهاز';
         try {
+          const details = error instanceof FunctionsHttpError
+            ? await error.context.text()
+            : error.message;
           const parsed = JSON.parse(details);
           if (parsed?.error) message = parsed.error;
-        } catch { /* keep generic message */ }
-        console.error('Reset device error:', details);
+          else if (typeof details === 'string' && details.trim()) message = details;
+        } catch {
+          if (error.message) message = error.message;
+        }
+        console.error('Reset device error:', error);
         toast.error(message);
-        setIsResettingDevice(false);
         return;
       }
 
-      if (data?.success) {
-        toast.success(data.message || 'تم إعادة تعيين الجهاز بنجاح');
-        setShowDeviceBlockedDialog(false);
-        setBlockedState(null);
-
-        // Now try to login again
-        setIsLoading(true);
-        await clearGuestDemoData(true);
-        const { error: loginError } = await signIn(email, password, stayLoggedIn);
-
-        if (loginError) {
-          toast.error(getAuthErrorMessage(loginError, 'login'));
-          setIsLoading(false);
-          return;
-        }
-
-        const isNewSignup = (() => {
-          try {
-            return sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
-          } catch { return false; }
-        })();
-
-        if (!isNewSignup) {
-          try {
-            localStorage.setItem('hyperpos_setup_complete', 'true');
-          } catch {}
-        }
-
-        toast.success(t('auth.loginSuccess'));
-        navigate('/');
-      } else {
-        toast.error(data?.error || 'فشل في إعادة تعيين الجهاز');
+      if (!data) {
+        toast.error('تعذر الاتصال بخدمة التحقق من الجهاز');
+        return;
       }
-    } catch (err) {
-      console.error('Reset device exception:', err);
-      toast.error('حدث خطأ غير متوقع');
+
+      if (!data.success) {
+        // إظهار رسالة الخطأ القادمة من الـ SQL (مثل: متبقي X يوم أو ساعات)
+        toast.error(data.error || 'فشلت عملية إعادة تعيين الجهاز');
+        return;
+      }
+
+      toast.success(data.message || 'تم فك ارتباط الجهاز السابق بنجاح!');
+      
+      // مسح حالة الحظر
+      sessionStorage.removeItem('hyperpos_active_device_block');
+      setBlockedState(null);
+
+      // تسجيل الدخول بالجهاز الجديد فوراً
+      setIsLoading(true);
+      await clearGuestDemoData(true);
+      const { error: loginError } = await signIn(targetEmail, password, stayLoggedIn);
+
+      if (loginError) {
+        toast.error(getAuthErrorMessage(loginError, 'login'));
+        return;
+      }
+
+      toast.success(t('auth.loginSuccess'));
+      navigate('/');
+    } catch (err: any) {
+      console.error('Reset device error:', err);
+      toast.error('حدث خطأ غير متوقع أثناء تصفير الجهاز');
     } finally {
       setIsResettingDevice(false);
+      setIsLoading(false);
     }
   };
-
   return (
     <div 
       className="min-h-screen w-full bg-background flex flex-col justify-between p-4 sm:p-6 md:justify-center md:items-center relative"
@@ -607,57 +614,6 @@ export default function Login() {
           </Link>
         </div>
       </div>
-
-      {/* شاشة الحظر الدائمة - لا تختفي إلا بطلب المستخدم أو تواصله مع الدعم */}
-      {blockedState?.isBlocked && (
-        <div className="fixed inset-0 z-[250] bg-background/95 backdrop-blur-md flex items-center justify-center p-4" dir={direction}>
-          <div className="w-full max-w-md bg-card border border-destructive/30 rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
-            
-            {/* الترويسة والأيقونة */}
-            <div className="text-center space-y-2">
-              <div className="w-16 h-16 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mx-auto mb-2">
-                <ShieldAlert className="w-9 h-9" />
-              </div>
-              <h3 className="text-xl font-black text-foreground">الحساب مرتبط بجهاز آخر</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                عذراً، هذا الحساب مسجل ويعمل حالياً على جهاز آخر. وفقاً لسياسة الأمان والترخيص، لا يُسمح بتشغيل نفس الحساب على جهازين في وقت واحد.
-              </p>
-            </div>
-
-            {/* خيارات المساعدة والحل */}
-            <div className="bg-muted/50 rounded-2xl p-4 space-y-3 border border-border/60 text-xs">
-              <div className="flex items-start gap-2.5 text-amber-600 dark:text-amber-400">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>إذا كان هذا جهازك الجديد، يمكنك طلب نقل الحساب وفصله عن الجهاز القديم.</span>
-              </div>
-              <div className="border-t border-border/40 pt-2.5">
-                <p className="font-semibold text-foreground mb-1">أو تواصل مباشرة مع الإدارة والدعم الفني:</p>
-                <ContactLinksSection />
-              </div>
-            </div>
-
-            {/* أزرار الإجراء */}
-            <div className="space-y-2 pt-1">
-              <Button
-                onClick={handleResetDevice}
-                disabled={isResettingDevice}
-                className="w-full h-11 rounded-xl text-xs font-bold gap-2 bg-primary text-primary-foreground"
-              >
-                {isResettingDevice ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                نقل الحساب إلى هذا الجهاز
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => setBlockedState(null)}
-                className="w-full h-10 rounded-xl text-xs font-semibold"
-              >
-                إغلاق والعودة لتسجيل الدخول
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Forgot Password Dialog with Telegram & Email Recovery */}
       <Dialog open={showForgotDialog} onOpenChange={(open) => {
@@ -1141,6 +1097,94 @@ export default function Login() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* ========================================================================= */}
+      {/* بطاقة الحظر الدائمة - تظل ثابتة أمام المستخدم حتى يقوم بالإغلاق أو التصفير */}
+      {/* ========================================================================= */}
+      {blockedState?.isBlocked && (
+        <div 
+          className="fixed inset-0 z-[250] bg-background/90 backdrop-blur-md flex items-center justify-center p-4"
+          dir={direction}
+        >
+          <div className="w-full max-w-md bg-card border border-destructive/30 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            
+            {/* الترويسة والأيقونة */}
+            <div className="text-center space-y-2.5">
+              <div className="w-16 h-16 bg-destructive/10 text-destructive border border-destructive/20 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+                <ShieldAlert className="w-9 h-9" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                الحساب مقترن بجهاز آخر
+              </h3>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed px-2">
+                حسابك مسجل ومرتبط بهاتف آخر مسبقاً. حماية للترخيص ولبياناتك لا يمكن فتح الحساب على جهازين بنفس الوقت.
+              </p>
+            </div>
+
+            {/* الحساب المستهدف */}
+            <div className="p-3 bg-muted/50 rounded-2xl border border-border/50 text-center">
+              <span className="text-xs text-muted-foreground block mb-0.5">البريد الإلكتروني المرتبط:</span>
+              <span className="font-mono font-bold text-xs sm:text-sm text-foreground select-all">
+                {blockedState.userEmail || email}
+              </span>
+            </div>
+
+            {/* الأزرار والإجراءات */}
+            <div className="space-y-2.5 pt-1">
+              {/* زر التصفير المباشر (خاضع لمهلة الـ 5 أيام) */}
+              <Button 
+                type="button"
+                onClick={handleResetDevice} 
+                disabled={isResettingDevice} 
+                className="w-full h-12 rounded-xl font-bold bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+              >
+                {isResettingDevice ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>جاري التحقق وفك الارتباط...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>تصفير وربط هذا الجهاز (كل 5 أيام)</span>
+                  </>
+                )}
+              </Button>
+
+              {/* زر التصفير عبر بوت Telegram الرسمي */}
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const botUser = tgBotLink || 'https://t.me/Flowpos_pro_bot';
+                  window.open(botUser, '_blank');
+                }}
+                className="w-full h-11 rounded-xl font-bold border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                <span>التصفير عبر بوت تيليغرام (/reset_device)</span>
+              </Button>
+
+              {/* زر إغلاق التنبيه */}
+              <Button 
+                type="button"
+                variant="ghost" 
+                onClick={() => {
+                  sessionStorage.removeItem('hyperpos_active_device_block');
+                  setBlockedState(null);
+                }} 
+                className="w-full h-10 rounded-xl text-muted-foreground hover:text-foreground text-xs font-semibold cursor-pointer"
+              >
+                إغلاق التنبيه وتجربة حساب آخر
+              </Button>
+            </div>
+
+            <p className="text-[11px] text-center text-muted-foreground leading-normal">
+              🔒 يُسمح بنقل الترخيص وتغيير الجهاز مرة واحدة كل 5 أيام كحد أقصى لأمان النظام.
+            </p>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

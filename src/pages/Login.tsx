@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from '@/lib/sonner-bridge';
 import { Loader2, Store, Eye, EyeOff, Smartphone, RefreshCw, AlertTriangle, Mail, Sparkles, Send, KeyRound, ShieldCheck, ShieldAlert, CheckCircle2, ArrowRight, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { LanguageQuickSelector } from '@/components/auth/LanguageQuickSelector';
 import { getDeviceId } from '@/lib/device-fingerprint';
 import { getDeviceKey } from '@/lib/secure-storage';
@@ -405,8 +406,17 @@ export default function Login() {
       });
 
       if (error) {
-        console.error('Reset device error:', error);
-        toast.error('فشل في إعادة تعيين الجهاز');
+        // Surface the real reason (e.g. the 5-day cooldown text) instead of a generic failure.
+        const details = error instanceof FunctionsHttpError
+          ? await error.context.text()
+          : error.message;
+        let message = 'فشل في إعادة تعيين الجهاز';
+        try {
+          const parsed = JSON.parse(details);
+          if (parsed?.error) message = parsed.error;
+        } catch { /* keep generic message */ }
+        console.error('Reset device error:', details);
+        toast.error(message);
         setIsResettingDevice(false);
         return;
       }

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from '@/lib/sonner-bridge';
 import { Loader2, Store, Eye, EyeOff, Smartphone, RefreshCw, AlertTriangle, Mail, Sparkles, Send, KeyRound, ShieldCheck, ShieldAlert, CheckCircle2, ArrowRight, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { LanguageQuickSelector } from '@/components/auth/LanguageQuickSelector';
 import { getDeviceId } from '@/lib/device-fingerprint';
 import { getDeviceKey } from '@/lib/secure-storage';
@@ -292,16 +293,23 @@ export default function Login() {
       }
 
       // استدعاء دالة السحابة الموثوقة لفحص وربط الجهاز
-      const { data: bindResult, error: bindError } = await supabase.rpc('check_and_bind_device', {
-        p_device_id: currentDeviceId
-      });
+      // (الدالة موجودة في القاعدة لكن أنواع الواجهة القديمة لم تُ再生 بعد،
+      // لذلك تُستدعى عبر قوس آمن مع نوع صريح للنتيجة.)
+      const { data: bindResult, error: bindError } = await supabase.rpc(
+        'check_and_bind_device' as never,
+        { p_device_id: currentDeviceId } as never
+      );
+      const bind = bindResult as
+        | { blocked?: boolean; allow_multi_device?: boolean }
+        | null
+        | undefined;
 
-      if (!bindError && bindResult) {
-        if (bindResult.blocked === true) {
-          console.warn('[DeviceCheck] Device blocked by server:', bindResult);
+      if (!bindError && bind) {
+        if (bind.blocked === true) {
+          console.warn('[DeviceCheck] Device blocked by server:', bind);
           return { blocked: true, allowMultiDevice: false };
         }
-        return { blocked: false, allowMultiDevice: bindResult.allow_multi_device === true };
+        return { blocked: false, allowMultiDevice: bind.allow_multi_device === true };
       }
 
       // فحص احتياطي محلي في حال انقطاع RPC
@@ -405,8 +413,17 @@ export default function Login() {
       });
 
       if (error) {
-        console.error('Reset device error:', error);
-        toast.error('فشل في إعادة تعيين الجهاز');
+        // Surface the real reason (e.g. the 5-day cooldown text) instead of a generic failure.
+        const details = error instanceof FunctionsHttpError
+          ? await error.context.text()
+          : error.message;
+        let message = 'فشل في إعادة تعيين الجهاز';
+        try {
+          const parsed = JSON.parse(details);
+          if (parsed?.error) message = parsed.error;
+        } catch { /* keep generic message */ }
+        console.error('Reset device error:', details);
+        toast.error(message);
         setIsResettingDevice(false);
         return;
       }

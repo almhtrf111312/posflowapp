@@ -1,8 +1,14 @@
 {
-  "versionCode": 386,
+  "versionCode": 387,
   "versionName": "1.5.3.384",
-  "lastUpdated": "2026-10-31T20:13:48.860Z",
+  "lastUpdated": "2026-10-31T21:37:45.799Z",
   "buildHistory": [
+    {
+      "versionCode": 387,
+      "versionName": "1.5.3.384",
+      "date": "2026-10-31",
+      "description": "تأمين تصفير الأجهزة: إلزام دالة التصفير الذاتية بشرط الـ5 أيام وإظهار سبب الرفض، وسد منفذ التصفير المجهول"
+    },
     {
       "versionCode": 386,
       "versionName": "1.5.3.384",

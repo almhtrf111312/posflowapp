@@ -1,8 +1,14 @@
 {
-  "versionCode": 388,
+  "versionCode": 389,
   "versionName": "1.5.3.384",
-  "lastUpdated": "2026-10-31T22:18:00.325Z",
+  "lastUpdated": "2026-11-01T19:50:19.715Z",
   "buildHistory": [
+    {
+      "versionCode": 389,
+      "versionName": "1.5.3.384",
+      "date": "2026-11-01",
+      "description": "Auto-bump on push (d1d2f36)"
+    },
     {
       "versionCode": 388,
       "versionName": "1.5.3.384",

@@ -20,6 +20,8 @@ export interface InvoiceItem {
   total: number;
   costPrice?: number;
   profit?: number;
+  unit?: string;
+  conversionFactor?: number;
 }
 
 export interface Invoice {

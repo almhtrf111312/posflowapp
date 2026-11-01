@@ -534,7 +534,13 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
      for (const item of items) {
        if (!item.product_id) continue;
        try {
-         const { loadProductsFromLocalCache, saveProductsToLocalCache, updateProductInIDB } = await import('./products-cloud');
+         const productsCloud = (await import('./products-cloud')) as unknown as {
+           loadProductsFromLocalCache?: () => any[] | null;
+           saveProductsToLocalCache?: (p: any[]) => void;
+           updateProductInIDB?: (id: string, patch: Record<string, unknown>) => Promise<void>;
+         };
+         const { loadProductsFromLocalCache, saveProductsToLocalCache, updateProductInIDB } = productsCloud;
+         if (!loadProductsFromLocalCache || !saveProductsToLocalCache || !updateProductInIDB) break;
          const localProducts = loadProductsFromLocalCache() || [];
          const prodIndex = localProducts.findIndex(p => p.id === item.product_id);
          if (prodIndex !== -1) {
@@ -572,7 +578,7 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
      emitEvent(EVENTS.PRODUCTS_UPDATED, null);
 
      invalidatePurchaseInvoicesCache();
-     emitEvent(EVENTS.PURCHASE_INVOICES_UPDATED, null);
+     emitEvent(EVENTS.PURCHASES_UPDATED, null);
 
      // Update invoice status
      await supabase

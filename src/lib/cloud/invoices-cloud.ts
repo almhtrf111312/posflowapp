@@ -36,6 +36,8 @@ export interface InvoiceItem {
   costPrice?: number; // ✅ سعر التكلفة لحظة البيع
   profit?: number;    // ✅ الربح لكل عنصر
   refunded?: boolean; // ✅ بند مُسترد بالكامل (كمية 0 بعد استرداد جزئي)
+  unit?: string;
+  conversionFactor?: number;
 }
 
 export interface CloudInvoice {
@@ -70,6 +72,7 @@ export interface CloudInvoice {
 }
 
 export interface Invoice {
+  taxMode?: 'inclusive' | 'exclusive';
   pending_sync?: boolean;
   sync_failed?: boolean;
   warehouseId?: string;
@@ -948,7 +951,9 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
     return failedRefund(error.message || 'فشل تنفيذ الاسترداد على الخادم');
   }
 
-  const atomic = data?.[0];
+  const atomic = data?.[0] as (NonNullable<typeof data>[number] & {
+    refunded_profit?: number; profit_reduced?: number; refunded_cogs?: number; cogs_reduced?: number;
+  }) | undefined;
   if (!atomic) return failedRefund('لم يرد الخادم بأي نتيجة للاسترداد');
 
 

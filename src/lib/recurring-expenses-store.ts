@@ -196,7 +196,7 @@ export async function payRecurringExpense(id: string): Promise<boolean> {
     });
 
     // 3. خصم المبلغ من الصندوق وتسجيله كمصروف تشغيلي بالعملة الأصلية والدولار
-    processExpense(dynamicUsdAmount, expense.type, curr, originalAmt);
+    processExpense(dynamicUsdAmount, expense.type, undefined, undefined, undefined, curr, originalAmt);
     
     // 3. Calculate next due date strictly into the future
     const todayDate = new Date();

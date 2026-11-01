@@ -290,7 +290,7 @@ export default function Expenses() {
       }
 
       // ✅ خصم المبلغ من الصندوق بعملة المصروف الأصلية والدولار
-      processExpense(amountUSD, formData.type, expenseCurrency, formData.amount);
+      processExpense(amountUSD, formData.type, undefined, undefined, undefined, expenseCurrency, formData.amount);
 
       const [expensesData, statsData] = await Promise.all([
         loadExpensesCloud(),
@@ -352,7 +352,7 @@ export default function Expenses() {
           date: todayStr,
         });
 
-        processExpense(amountUSD, recurringForm.type, curr, recurringForm.amount);
+        processExpense(amountUSD, recurringForm.type, undefined, undefined, undefined, curr, recurringForm.amount);
 
         const nextDate = new Date(recurringForm.startDate || todayStr);
         nextDate.setDate(nextDate.getDate() + (recurringForm.intervalDays || 30));

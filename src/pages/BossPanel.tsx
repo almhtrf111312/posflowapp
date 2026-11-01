@@ -1395,7 +1395,7 @@ export default function BossPanel() {
               onClick={() => { setActiveTab('more'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
               className={cn(
                 "flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-1.5 sm:py-2 px-1 rounded-xl text-[11px] sm:text-xs md:text-sm font-bold transition-all",
-                activeTab === 'more'
+                (activeTab as BossTab) === 'more'
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-card/50"
               )}

@@ -222,7 +222,7 @@ export function AICopilotDrawer() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const { isRtl } = useLanguage();
+  const { isRTL: isRtl } = useLanguage();
 
   useEffect(() => {
     try {
@@ -266,10 +266,10 @@ export function AICopilotDrawer() {
               status: activeShift.status,
               openingCashUsd: activeShift.openingCash,
               salesByCurrency: activeShift.currencies || {},
-              totalExpensesUsd: activeShift.totalExpenses || 0,
+              totalExpensesUsd: activeShift.expensesTotal || 0,
               expectedCashUsd: activeShift.expectedCash || 0,
-              countedCashUsd: activeShift.actualCash,
-              differenceUsd: activeShift.difference,
+              countedCashUsd: activeShift.closingCash,
+              differenceUsd: activeShift.discrepancy,
             }
           : null,
       };

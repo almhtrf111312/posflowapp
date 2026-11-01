@@ -149,13 +149,41 @@ jobs:
           CUSTOM_NOTES: ${{ inputs.custom_notes }}
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "::error::TELEGRAM_BOT_TOKEN is missing"
+            echo "::error::TELEGRAM_BOT_TOKEN is missing in secrets"
             exit 1
           fi
 
-          CHANNEL=$(echo "$RAW_CHAT" | tr -d '[:space:]')
-          if echo "$CHANNEL" | grep -qE '^[0-9]+$'; then
-            CHANNEL="-100$CHANNEL"
+          RAW_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]')
+          CANDIDATES=""
+
+          # 1. إضافة المعرّف الخام ومشتقاته
+          if [ -n "$RAW_CHAT" ]; then
+            CANDIDATES="$RAW_CHAT"
+            if echo "$RAW_CHAT" | grep -qE '^[0-9]+$'; then
+              CANDIDATES="$CANDIDATES -100$RAW_CHAT"
+            fi
+            if echo "$RAW_CHAT" | grep -qE '^[A-Za-z][A-Za-z0-9_]+$'; then
+              CANDIDATES="$CANDIDATES @$RAW_CHAT"
+            fi
+          fi
+
+          # 2. استخراج المعرفات الحية التي استقبلها البوت من التيليجرام مباشرة
+          AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
+          CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
+
+          FOUND_CHANNEL=""
+          for C in $CANDIDATES; do
+            R=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getChat" --data-urlencode "chat_id=$C" || true)
+            if echo "$R" | grep -q '"ok":true'; then
+              echo "✅ Verified Telegram target: $C"
+              FOUND_CHANNEL="$C"
+              break
+            fi
+          done
+
+          if [ -z "$FOUND_CHANNEL" ]; then
+            echo "::error::Could not resolve Telegram channel target. Ensure bot is an Administrator in the channel."
+            exit 1
           fi
 
           APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
@@ -185,7 +213,7 @@ jobs:
           REPLY_MARKUP='{"inline_keyboard":[[{"text":"📢 قناة التحديثات الرسمية","url":"https://t.me/flowpospro"}]]}'
 
           curl -sS --fail-with-body "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-            --form-string "chat_id=${CHANNEL}" \
+            --form-string "chat_id=${FOUND_CHANNEL}" \
             -F "document=@${APK_PATH}" \
             --form-string "parse_mode=HTML" \
             --form-string "reply_markup=${REPLY_MARKUP}" \

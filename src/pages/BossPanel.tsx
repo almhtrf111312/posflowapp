@@ -50,6 +50,10 @@ import {
   Terminal,
   Sparkles,
   ArrowRight,
+  Database,
+  Package,
+  Tags,
+  HardDrive,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -252,6 +256,51 @@ export default function BossPanel() {
   const [newPassword, setNewPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // حالة نافذة عرض استهلاك التخزين والبيانات
+  const [storageStatsDialog, setStorageStatsDialog] = useState<{
+    isOpen: boolean;
+    owner: Owner | null;
+    isLoading: boolean;
+    data: {
+      categories_count: number;
+      products_count: number;
+      storage_formatted: string;
+    } | null;
+  }>({
+    isOpen: false,
+    owner: null,
+    isLoading: false,
+    data: null,
+  });
+
+  // دالة جلب بيانات التخزين
+  const handleOpenStorageStats = async (owner: Owner) => {
+    setStorageStatsDialog({
+      isOpen: true,
+      owner,
+      isLoading: true,
+      data: null,
+    });
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_storage_stats' as any, {
+        _target_user_id: owner.user_id,
+      });
+
+      if (error) throw error;
+
+      setStorageStatsDialog((prev) => ({
+        ...prev,
+        isLoading: false,
+        data: data as any,
+      }));
+    } catch (err: any) {
+      console.error('[BossPanel] Failed to fetch user storage stats:', err);
+      toast.error('فشل في جلب إحصائيات التخزين والبيانات');
+      setStorageStatsDialog((prev) => ({ ...prev, isLoading: false }));
+    }
+  };
 
   // Cashier edit name
   const [editCashierNameDialog, setEditCashierNameDialog] = useState<{ userId: string; name: string } | null>(null);
@@ -1826,6 +1875,10 @@ export default function BossPanel() {
                                     }}>
                                       <KeyRound className="w-4 h-4" />
                                       تغيير كلمة المرور
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenStorageStats(owner)}>
+                                      <HardDrive className="w-4 h-4 text-primary" />
+                                      <span>عرض التخزين والبيانات</span>
                                     </DropdownMenuItem>
 
                                     <DropdownMenuSeparator />
@@ -3663,6 +3716,83 @@ export default function BossPanel() {
               <Button onClick={handleSaveCashierName} disabled={isSavingCashierName || !cashierNewName.trim()}>
                 {isSavingCashierName && <RefreshCw className="w-4 h-4 animate-spin" />}
                 حفظ
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* نافذة عرض استهلاك التخزين والبيانات للمستخدم */}
+        <Dialog
+          open={storageStatsDialog.isOpen}
+          onOpenChange={(open) => {
+            if (!open) setStorageStatsDialog((prev) => ({ ...prev, isOpen: false }));
+          }}
+        >
+          <DialogContent className="max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                <HardDrive className="w-5 h-5 text-primary" />
+                استهلاك البيانات والتخزين
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                بيانات الحساب: <span className="font-semibold text-foreground">{storageStatsDialog.owner?.email || storageStatsDialog.owner?.full_name}</span>
+              </DialogDescription>
+            </DialogHeader>
+
+            {storageStatsDialog.isLoading ? (
+              <div className="py-8 flex flex-col items-center justify-center gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground">جاري فحص قاعدة البيانات والمساحة...</span>
+              </div>
+            ) : storageStatsDialog.data ? (
+              <div className="grid grid-cols-3 gap-3 py-3">
+                {/* عدد الأصناف */}
+                <div className="flex flex-col items-center justify-center p-3 rounded-xl border bg-card text-center shadow-sm">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1.5">
+                    <Tags className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">الأصناف</span>
+                  <span className="text-lg font-black text-foreground mt-0.5">
+                    {storageStatsDialog.data.categories_count.toLocaleString('en-US')}
+                  </span>
+                </div>
+
+                {/* عدد المنتجات */}
+                <div className="flex flex-col items-center justify-center p-3 rounded-xl border bg-card text-center shadow-sm">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-1.5">
+                    <Package className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">المنتجات</span>
+                  <span className="text-lg font-black text-foreground mt-0.5">
+                    {storageStatsDialog.data.products_count.toLocaleString('en-US')}
+                  </span>
+                </div>
+
+                {/* المساحة التخزينية في سوبابيز */}
+                <div className="flex flex-col items-center justify-center p-3 rounded-xl border bg-card text-center shadow-sm">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-1.5">
+                    <HardDrive className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">مساحة التخزين</span>
+                  <span className="text-base font-black text-primary mt-1 dir-ltr">
+                    {storageStatsDialog.data.storage_formatted}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                لا توجد بيانات متاحة لهذا الحساب.
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setStorageStatsDialog((prev) => ({ ...prev, isOpen: false }))}
+              >
+                إغلاق
               </Button>
             </DialogFooter>
           </DialogContent>

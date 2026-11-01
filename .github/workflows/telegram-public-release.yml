@@ -50,94 +50,60 @@ jobs:
         run: |
           VERSION_NAME=$(node -p "require('./version.json').versionName")
           VERSION_CODE=$(node -p "require('./version.json').versionCode")
-          
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "VER=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      - name: Wait for In-Progress APK Build (If currently running)
+      - name: Fetch and Extract Pre-built APK Artifact (Reliable Node.js Stream)
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          echo "🔍 Checking if an APK build workflow is currently running in background..."
-          
-          # فحص إذا كان هناك بناء جارٍ لمسار Build APK
-          RUNS_JSON=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-apk.yml/runs?branch=main&per_page=5")
-          
-          ACTIVE_RUN_ID=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[] | select(.status == "in_progress" or .status == "queued") | .id' | head -n 1)
+          node -e '
+          const fs = require("fs");
+          const { execSync } = require("child_process");
 
-          if [ -n "$ACTIVE_RUN_ID" ] && [ "$ACTIVE_RUN_ID" != "null" ]; then
-            echo "⏳ Found an active build run (#$ACTIVE_RUN_ID) in progress."
-            echo "⏳ Waiting for the APK build to finish cleanly before publishing (no rebuild)..."
+          async function run() {
+            const token = process.env.GH_TOKEN;
+            const repo = process.env.REPO;
             
-            MAX_ATTEMPTS=40 # انتظار حتى 6 دقائق كحد أقصى (فحص كل 10 ثوان)
-            ATTEMPT=0
-            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-              STATUS_RES=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
-                "https://api.github.com/repos/${{ github.repository }}/actions/runs/$ACTIVE_RUN_ID")
-              RUN_STATUS=$(echo "$STATUS_RES" | jq -r '.status')
-              RUN_CONCLUSION=$(echo "$STATUS_RES" | jq -r '.conclusion')
+            console.log("🔍 Fetching latest artifacts list...");
+            const listRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts?per_page=30`, {
+              headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
+            });
+            if (!listRes.ok) throw new Error("Failed to fetch artifacts: " + listRes.statusText);
+            const list = await listRes.json();
+            
+            const apkArtifact = list.artifacts.find(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name));
+            if (!apkArtifact) {
+              throw new Error("No ready APK artifact found! Please wait for the build to finish or run Build APK once.");
+            }
+            console.log(`📦 Found artifact: ${apkArtifact.name} (ID: ${apkArtifact.id})`);
 
-              if [ "$RUN_STATUS" == "completed" ]; then
-                if [ "$RUN_CONCLUSION" != "success" ]; then
-                  echo "::error::The background APK build run (#$ACTIVE_RUN_ID) failed with conclusion: $RUN_CONCLUSION"
-                  exit 1
-                fi
-                echo "✅ Background APK build finished successfully!"
-                break
-              fi
+            fs.mkdirSync("/tmp/ready-apk", { recursive: true });
+            
+            // تنزيل نظيف يتجنب مشاكل curl مع S3
+            const zipRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts/${apkArtifact.id}/zip`, {
+              headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
+            });
+            if (!zipRes.ok) throw new Error("Failed to download zip: " + zipRes.statusText);
+            const buffer = Buffer.from(await zipRes.arrayBuffer());
+            fs.writeFileSync("/tmp/ready-apk/artifact.zip", buffer);
 
-              ATTEMPT=$((ATTEMPT + 1))
-              echo "⏳ Still compiling APK... (attempt $ATTEMPT/$MAX_ATTEMPTS) - waiting 10s"
-              sleep 10
-            done
-          else
-            echo "⚡ No active build in progress. Ready to grab the pre-built APK immediately!"
-          fi
+            execSync("unzip -q -o /tmp/ready-apk/artifact.zip -d /tmp/ready-apk");
+            const apkFile = execSync("find /tmp/ready-apk -name \"*.apk\" | head -n 1", { encoding: "utf8" }).trim();
+            if (!apkFile || !fs.existsSync(apkFile)) {
+              throw new Error("No .apk found inside the downloaded artifact zip.");
+            }
 
-      - name: Fetch Latest Pre-built APK Artifact (Instant - No Rebuild)
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "🔍 Searching for latest built FlowPOS APK in artifacts..."
-          
-          # استخراج أحدث حزمة APK مطابقة
-          ARTIFACT_INFO=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?per_page=30" \
-            | jq -r '.artifacts[] | select(.expired == false and (.name | test("FlowPOS.*"; "i")) and (.name | test("win|exe|setup"; "i") | not)) | "\(.id) \(.name)"' | head -n 1)
-
-          if [ -z "$ARTIFACT_INFO" ]; then
-            echo "::error::No pre-built APK artifact found! Ensure 'Build FlowPOS Pro APK' has run at least once."
-            exit 1
-          fi
-
-          ARTIFACT_ID=$(echo "$ARTIFACT_INFO" | awk '{print $1}')
-          ARTIFACT_NAME=$(echo "$ARTIFACT_INFO" | awk '{print $2}')
-          echo "📦 Found ready artifact: $ARTIFACT_NAME (ID: $ARTIFACT_ID)"
-
-          mkdir -p /tmp/ready-apk
-          curl -sS -L -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip" \
-            -o /tmp/ready-apk/artifact.zip
-
-          unzip -q /tmp/ready-apk/artifact.zip -d /tmp/ready-apk
-          FOUND_APK=$(find /tmp/ready-apk -name "*.apk" | head -n 1)
-
-          if [ -z "$FOUND_APK" ] || [ ! -f "$FOUND_APK" ]; then
-            echo "::error::Downloaded artifact does not contain a valid .apk file."
-            exit 1
-          fi
-
-          FINAL_NAME="FlowPOS-v${{ env.VER }}.apk"
-          cp "$FOUND_APK" "$GITHUB_WORKSPACE/$FINAL_NAME"
-          ls -lh "$GITHUB_WORKSPACE/$FINAL_NAME"
-
-          echo "APK_FILE=$FINAL_NAME" >> "$GITHUB_ENV"
-          echo "APK_PATH=$GITHUB_WORKSPACE/$FINAL_NAME" >> "$GITHUB_ENV"
+            const targetName = `FlowPOS-v${process.env.VERSION_NAME}.apk`;
+            fs.copyFileSync(apkFile, targetName);
+            console.log(`✅ Extracted ready APK: ${targetName} (${(fs.statSync(targetName).size / 1024 / 1024).toFixed(2)} MB)`);
+          }
+          run().catch(e => { console.error("::error::" + e.message); process.exit(1); });
+          '
+          echo "APK_PATH=$GITHUB_WORKSPACE/FlowPOS-v${{ env.VERSION_NAME }}.apk" >> "$GITHUB_ENV"
 
       - name: Resolve Telegram Channel Target
         shell: bash
@@ -177,7 +143,7 @@ jobs:
           done
 
           if [ -z "$FOUND_CHANNEL" ]; then
-            echo "::error::Bot cannot access the channel. Please ensure the Bot is added as ADMINISTRATOR with 'Post Messages' permission in the Telegram Channel."
+            echo "::error::Bot cannot access the channel. Please ensure the Bot is an Admin with 'Post Messages' permission."
             exit 1
           fi
 
@@ -206,7 +172,7 @@ jobs:
 
           CAPTION="🚀 <b>تحديث جديد | Flow POS Pro</b>
           ━━━━━━━━━━━━━━
-          📌 <b>الإصدار:</b> <code>v${{ env.VER }} (Build ${{ env.VERSION_CODE }})</code>
+          📌 <b>الإصدار:</b> <code>v${{ env.VERSION_NAME }} (Build ${{ env.VERSION_CODE }})</code>
           📦 <b>حجم الملف:</b> <code>${APK_SIZE}B</code>
           📅 <b>تاريخ النشر:</b> <code>${BUILD_DATE}</code>
 

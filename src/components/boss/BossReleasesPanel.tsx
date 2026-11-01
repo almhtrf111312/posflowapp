@@ -317,7 +317,7 @@ export function BossReleasesPanel() {
       }
 
       toast.success(
-        `تم إطلاق النشر بنجاح (${data?.sha ? data.sha.slice(0, 7) : 'Commit'}) — سيتم بناء ملف APK وإرساله للقناة مباشرة! 🚀`
+        'تم إطلاق النشر السريع بنجاح! سيصل ملف الـ APK إلى قناة تيليجرام خلال ثوانٍ 📢'
       );
       setIsConfirmModalOpen(false);
       loadData();
@@ -488,7 +488,7 @@ export function BossReleasesPanel() {
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-foreground">نشر تحديث جديد</h2>
-              <p className="text-[11px] text-muted-foreground">بناء ملف APK وإرساله مباشرة لقناة Telegram</p>
+              <p className="text-[11px] text-muted-foreground">إرسال ملف الـ APK الجاهز مباشرة لقناة Telegram</p>
             </div>
           </div>
           <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
@@ -621,7 +621,7 @@ export function BossReleasesPanel() {
             className="w-full h-12 text-sm font-extrabold rounded-xl bg-primary text-primary-foreground shadow-md hover:opacity-95 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
           >
             {isBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}
-            نشر التحديث الآن (بناء + رفع + تيليجرام)
+            إرسال التحديث لتيليجرام فوراً 🚀 (بدون إعادة بناء)
           </Button>
 
           <div className="grid grid-cols-2 gap-2">
@@ -879,7 +879,7 @@ export function BossReleasesPanel() {
               تأكيد نشر التحديث العام للمستخدمين
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground pt-1">
-              يرجى مراجعة تفاصيل التحديث قبل بدء عملية البناء الآلي.
+              سيتم سحب ملف الـ APK الجاهز وإرساله مباشرة لقناة Telegram خلال 5 ثوانٍ فقط دون إعادة بناء.
             </DialogDescription>
           </DialogHeader>
 
@@ -908,7 +908,7 @@ export function BossReleasesPanel() {
             </div>
 
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              ⚡ بمجرد التأكيد، ستقوم السحابة بتشغيل سير العمل الآلي لبناء ملف التطبيق وتوقيعه رقمياً، ثم رفعه كملف تثبيت مباشر داخل القناة وتحديث سياسة الأجهزة المتصلة.
+              ⚡ بمجرد التأكيد، سيتم سحب ملف الـ APK الجاهز والمبني مسبقاً وإرساله مباشرة إلى قناة Telegram خلال 5 ثوانٍ فقط دون إعادة بناء، وتحديث سياسة الأجهزة المتصلة.
             </p>
           </div>
 
@@ -929,7 +929,7 @@ export function BossReleasesPanel() {
               className="text-xs font-bold rounded-xl gap-2 bg-primary text-primary-foreground"
             >
               {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-              تأكيد وبدء النشر
+              تأكيد وإرسال التحديث فوراً
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,8 +1,14 @@
 {
-  "versionCode": 400,
-  "versionName": "1.5.12",
-  "lastUpdated": "2026-11-01T22:42:47.879Z",
+  "versionCode": 401,
+  "versionName": "1.5.13",
+  "lastUpdated": "2026-11-01T22:55:34.793Z",
   "buildHistory": [
+    {
+      "versionCode": 401,
+      "versionName": "1.5.13",
+      "date": "2026-11-01",
+      "description": "Release v1.5.13 (Build 401)"
+    },
     {
       "versionCode": 400,
       "versionName": "1.5.12",
@@ -116,12 +122,6 @@
       "versionName": "1.5.3",
       "date": "2026-10-30",
       "description": "Release v1.5.3 (Build 380) - تحسينات وتسريع الواجهة وتأمين الأجهزة"
-    },
-    {
-      "versionCode": 379,
-      "versionName": "1.5.2.372",
-      "date": "2026-10-30",
-      "description": "Release v1.5.2.372 (Build 379)"
     }
   ]
 }

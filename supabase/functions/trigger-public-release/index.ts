@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     const run = await gh('POST', 'actions/workflows/telegram-public-release.yml/dispatches', {
       ref: 'main',
       inputs: {
-        confirm_publish: true,
+        confirm_publish: 'true',
         source_branch: 'main',
       },
     });

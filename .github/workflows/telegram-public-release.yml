@@ -6,15 +6,13 @@ on:
       source_branch:
         description: 'الفرع المستهدف'
         required: true
-        default: main
-        type: choice
-        options:
-          - main
+        default: 'main'
+        type: string
       confirm_publish:
         description: 'تأكيد إرسال النسخة الجاهزة'
         required: true
-        default: true
-        type: boolean
+        default: 'true'
+        type: string
       custom_notes:
         description: 'ملاحظات التحديث (اختياري)'
         required: false
@@ -31,7 +29,6 @@ permissions:
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' && inputs.confirm_publish == true
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout source
@@ -54,7 +51,8 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      - name: Fetch and Extract Pre-built APK Artifact (Reliable Node.js Stream)
+      # خطوة التخطي المباشر: سحب الـ APK الجاهز فوراً من الـ Artifacts بدون أي بناء
+      - name: Grab Ready APK Instantly (Skip Build - 5 Seconds)
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,38 +66,39 @@ jobs:
             const token = process.env.GH_TOKEN;
             const repo = process.env.REPO;
             
-            console.log("🔍 Fetching latest artifacts list...");
-            const listRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts?per_page=30`, {
+            console.log("⚡ Fetching pre-built APK from GitHub Artifacts (Instant - No Build)...");
+            const listRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts?per_page=20`, {
               headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
             });
-            if (!listRes.ok) throw new Error("Failed to fetch artifacts: " + listRes.statusText);
+            if (!listRes.ok) throw new Error("Failed to list artifacts: " + listRes.statusText);
             const list = await listRes.json();
             
+            // العثور على أحدث حزمة FlowPOS APK
             const apkArtifact = list.artifacts.find(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name));
             if (!apkArtifact) {
-              throw new Error("No ready APK artifact found! Please wait for the build to finish or run Build APK once.");
+              throw new Error("لم يتم العثور على ملف APK جاهز مسبقاً! يرجى تشغيل بناء APK مرة واحدة أولاً.");
             }
-            console.log(`📦 Found artifact: ${apkArtifact.name} (ID: ${apkArtifact.id})`);
+            console.log(`📦 Found pre-built artifact: ${apkArtifact.name} (ID: ${apkArtifact.id})`);
 
             fs.mkdirSync("/tmp/ready-apk", { recursive: true });
             
-            // تنزيل نظيف يتجنب مشاكل curl مع S3
+            // تنزيل ملف الـ zip مع معالجة إعادة التوجيه لـ S3 تلقائياً عبر Node fetch
             const zipRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts/${apkArtifact.id}/zip`, {
               headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
             });
-            if (!zipRes.ok) throw new Error("Failed to download zip: " + zipRes.statusText);
+            if (!zipRes.ok) throw new Error("فشل تنزيل ملف الـ APK: " + zipRes.statusText);
             const buffer = Buffer.from(await zipRes.arrayBuffer());
             fs.writeFileSync("/tmp/ready-apk/artifact.zip", buffer);
 
             execSync("unzip -q -o /tmp/ready-apk/artifact.zip -d /tmp/ready-apk");
             const apkFile = execSync("find /tmp/ready-apk -name \"*.apk\" | head -n 1", { encoding: "utf8" }).trim();
             if (!apkFile || !fs.existsSync(apkFile)) {
-              throw new Error("No .apk found inside the downloaded artifact zip.");
+              throw new Error("ملف الـ APK غير موجود داخل الحزمة.");
             }
 
             const targetName = `FlowPOS-v${process.env.VERSION_NAME}.apk`;
             fs.copyFileSync(apkFile, targetName);
-            console.log(`✅ Extracted ready APK: ${targetName} (${(fs.statSync(targetName).size / 1024 / 1024).toFixed(2)} MB)`);
+            console.log(`🎉 APK ready for instant Telegram dispatch: ${targetName} (${(fs.statSync(targetName).size / 1024 / 1024).toFixed(2)} MB)`);
           }
           run().catch(e => { console.error("::error::" + e.message); process.exit(1); });
           '
@@ -143,13 +142,13 @@ jobs:
           done
 
           if [ -z "$FOUND_CHANNEL" ]; then
-            echo "::error::Bot cannot access the channel. Please ensure the Bot is an Admin with 'Post Messages' permission."
+            echo "::error::البوت لا يملك صلاحية الإرسال للقناة. تأكد من إضافته كـ مشرف Admin."
             exit 1
           fi
 
           echo "CHANNEL=$FOUND_CHANNEL" >> "$GITHUB_ENV"
 
-      - name: Send Ready APK Directly to Telegram (~10 seconds)
+      - name: Send APK to Telegram (~5 seconds)
         shell: bash
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -190,4 +189,4 @@ jobs:
             --form-string "reply_markup=${REPLY_MARKUP}" \
             --form-string "caption=${CAPTION}"
 
-          echo "🎉 APK sent directly to Telegram in seconds without rebuilding!"
+          echo "🎉 تم إرسال ملف الـ APK للقناة بنجاح وبسرعة فائقة دون إعادة بناء!"

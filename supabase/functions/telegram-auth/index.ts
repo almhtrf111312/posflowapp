@@ -128,27 +128,44 @@ serve(async (req) => {
       const chatId = message.chat?.id;
       const fromId = message.from?.id;
 
-      // Case A: /start command
+      // -------------------------------------------------------------
+      // أمر /start: ترحيب مع إظهار أزرار التحقق وتصفير الأجهزة
+      // -------------------------------------------------------------
       if (typeof message.text === "string" && message.text.startsWith("/start")) {
         console.log(`[TelegramAuth] Received /start from chat ${chatId}`);
         await sendTelegramMessage(
           botToken,
           chatId,
-          "👋 مرحباً بك في بوت التحقق واستعادة الحساب لنظام *Flow POS Pro*.\n\n📱 للتحقق من هويتك وربط حسابك بالنظام، يرجى الضغط على زر *«مشاركة رقم الهاتف للتحقق»* أدناه:",
+          "👋 مرحباً بك في بوت الخدمة الذاتية لنظام *Flow POS Pro*.\n\n" +
+          "🔐 يمكنك من هنا:\n" +
+          "1️⃣ استلام رموز استعادة كلمة المرور لحسابك فوراً.\n" +
+          "2️⃣ تصفير جهازك المسجل ونقل الحساب لهاتفك الجديد (مرة كل 5 أيام).\n\n" +
+          "📱 للبدء، اضغط على زر *«مشاركة رقم الهاتف للتحقق»* أدناه لربط حسابك:",
           {
-            keyboard: [[{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }]],
+            keyboard: [
+              [{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }],
+              [{ text: "🔄 إعادة تعيين جهازي (/reset_device)" }],
+            ],
             resize_keyboard: true,
-            one_time_keyboard: true,
-          },
+            one_time_keyboard: false,
+          }
         );
         return new Response("OK", { status: 200 });
       }
 
-      // Case C: أمر تصفير الجهاز الذاتي من التيليجرام /reset_device
-      if (typeof message.text === "string" && message.text.startsWith("/reset_device")) {
+      // -------------------------------------------------------------
+      // أمر تصفير الجهاز: /reset_device أو الضغط على زر الكيبورد
+      // -------------------------------------------------------------
+      const isResetCmd = typeof message.text === "string" && (
+        message.text.trim().startsWith("/reset_device") ||
+        message.text.includes("إعادة تعيين جهازي") ||
+        message.text.trim() === "/reset"
+      );
+
+      if (isResetCmd) {
         console.log(`[TelegramAuth] Reset device requested from chat ${chatId}`);
 
-        // 1. البحث عن المستخدم المرتبط بهذا الـ Chat ID
+        // 1. البحث عن الحساب المرتبط بهذا الـ Chat ID
         const { data: profile } = await serviceClient
           .from("profiles")
           .select("user_id, full_name, phone")
@@ -159,40 +176,54 @@ serve(async (req) => {
           await sendTelegramMessage(
             botToken,
             chatId,
-            "⚠️ *حسابك غير مربوط بالبوت بعد*:\n\nيرجى إرسال /start ومشاركة رقم هاتفك للربط أولاً قبل طلب تصفير الجهاز.",
+            "⚠️ *حسابك غير مربوط بالبوت بعد*:\n\n" +
+            "يرجى الضغط أولاً على *«مشاركة رقم الهاتف للتحقق»* أو إرسال /start لربط حسابك برقم الهاتف المسجل في النظام، ثم طلب تصفير الجهاز.",
+            {
+              keyboard: [
+                [{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }],
+              ],
+              resize_keyboard: true,
+            }
           );
           return new Response("OK", { status: 200 });
         }
 
-        // 2. استدعاء دالة الـ SQL الخاضعة لشرط الـ 5 أيام
-        const { data: resetRes, error: rpcErr } = await serviceClient.rpc("request_device_reset_secure", {
-          p_user_id: profile.user_id,
+        // 2. استدعاء دالة الـ SQL المحمية الخاضعة لقيد الـ 5 أيام
+        const { data: resetRes, error: rpcErr } = await serviceClient.rpc('request_device_reset_secure', {
+          p_user_id: profile.user_id
         });
 
         if (rpcErr || !resetRes) {
-          await sendTelegramMessage(botToken, chatId, "❌ حدث خطأ أثناء معالجة طلب التصفير. يرجى المحاولة لاحقاً.");
+          await sendTelegramMessage(
+            botToken,
+            chatId,
+            "❌ حدث خطأ مؤقت في الاتصال بقاعدة البيانات أثناء تصفير الجهاز. يرجى المحاولة لاحقاً أو التواصل مع المطور."
+          );
           return new Response("OK", { status: 200 });
         }
 
-        // 3. التحقق من نتيجة القيد الزمني
+        // 3. في حال كان الحساب مقيداً بمهلة الـ 5 أيام
         if (!resetRes.success) {
           await sendTelegramMessage(
             botToken,
             chatId,
-            `⏳ *تنبيه أمني - قيود الأجهزة*:\n\n${resetRes.error}\n\n⚠️ حفاظاً على أمان ترخيصك، يُسمح بتغيير الجهاز مرة واحدة كل 5 أيام فقط.`,
+            `⏳ *تنبيه أمني - قيود الترخيص*:\n\n` +
+            `${resetRes.error}\n\n` +
+            `⚠️ حماية لحسابك، يُسمح بتغيير الهاتف مرة واحدة كل 5 أيام. إذا كنت بحاجة ماسة للنقل الفوري تواصل مع المطور مباشرة.`
           );
           return new Response("OK", { status: 200 });
         }
 
-        // 4. إشعار النجاح الفوري
+        // 4. إشعار النجاح وفك الارتباط
         await sendTelegramMessage(
           botToken,
           chatId,
-          `✅ *تمت إعادة تعيين جهازك بنجاح!*\n\nأهلاً بك يا *${profile.full_name || "العميل"}*، تم فك ارتباط جهازك السابق في نظام *Flow POS Pro*.\n\n📱 يمكنك الآن فتح التطبيق وتسجيل الدخول من هاتفك الجديد مباشرة.`,
+          `✅ *تمت إعادة تعيين جهازك بنجاح!*\n\n` +
+          `أهلاً بك يا *${profile.full_name || 'العميل'}*، تم فك ارتباط جهازك السابق في نظام *Flow POS Pro*.\n\n` +
+          `📱 يمكنك الآن فتح التطبيق وتسجيل الدخول من هاتفك الجديد مباشرة.`
         );
         return new Response("OK", { status: 200 });
       }
-
       // Case B: User shared contact
       if (message.contact) {
         const contact = message.contact;

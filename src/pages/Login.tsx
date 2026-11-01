@@ -55,13 +55,10 @@ export default function Login() {
   });
   const [isResettingDevice, setIsResettingDevice] = useState(false);
   const [showForgotDialog, setShowForgotDialog] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [isSendingReset, setIsSendingReset] = useState(false);
   const [contactLinks, setContactLinks] = useState<ContactLinks | null>(null);
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
 
   // Telegram Password Recovery State
-  const [recoveryMethod, setRecoveryMethod] = useState<'telegram' | 'email'>('telegram');
   const [telegramStep, setTelegramStep] = useState<1 | 2>(1);
   const [tgIdentifier, setTgIdentifier] = useState('');
   const [tgCode, setTgCode] = useState('');
@@ -143,9 +140,7 @@ export default function Login() {
     if (email && !tgIdentifier) {
       setTgIdentifier(email);
     }
-    if (email && !resetEmail) {
-      setResetEmail(email);
-    }
+
 
     // Fetch Telegram bot info
     const fetchBotInfo = async () => {
@@ -169,7 +164,7 @@ export default function Login() {
   }, [showForgotDialog, email]);
 
   // Handle Telegram OTP Request (Step 1)
-  const handleRequestTelegramOtp = async () => {
+  const handleRequestTelegramOTP = async () => {
     const trimmed = tgIdentifier.trim();
     if (!trimmed) {
       toast.error('يرجى إدخال البريد الإلكتروني أو رقم الهاتف المسجل');
@@ -561,7 +556,7 @@ export default function Login() {
           <div className="flex items-center justify-between pt-1">
             <button
               type="button"
-              onClick={() => { setResetEmail(email); setShowForgotDialog(true); }}
+              onClick={() => { if (email && !tgIdentifier) setTgIdentifier(email); setShowForgotDialog(true); }}
               className="text-xs sm:text-sm text-primary font-bold hover:underline cursor-pointer"
             >
               {t('auth.forgotPassword')}
@@ -615,7 +610,9 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Forgot Password Dialog with Telegram & Email Recovery */}
+      {/* ========================================================================= */}
+      {/* نافذة استعادة كلمة المرور عبر تيليغرام والتواصل مع المطور حصراً */}
+      {/* ========================================================================= */}
       <Dialog open={showForgotDialog} onOpenChange={(open) => {
         setShowForgotDialog(open);
         if (!open) {
@@ -627,472 +624,194 @@ export default function Login() {
         }
       }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" dir={direction}>
-          <DialogHeader className="text-center sm:text-center pb-1">
-            <div className={cn(
-              "mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-2.5 transition-colors shadow-xs",
-              recoveryMethod === 'telegram' ? "bg-sky-500/10 text-sky-500 border border-sky-500/20" : "bg-primary/10 text-primary border border-primary/20"
-            )}>
-              {recoveryMethod === 'telegram' ? (
-                <Send className="w-7 h-7" />
-              ) : (
-                <Mail className="w-7 h-7" />
-              )}
+          <DialogHeader className="text-center sm:text-center pb-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-2.5 transition-colors shadow-xs bg-sky-500/10 text-sky-500 border border-sky-500/20">
+              <Send className="w-7 h-7" />
             </div>
             <DialogTitle className="text-lg font-bold">
-              {recoveryMethod === 'telegram' ? 'استعادة كلمة المرور عبر تيليغرام' : t('auth.forgotPasswordTitle')}
+              استعادة كلمة المرور عبر تيليغرام
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              اختر الطريقة الأنسب لاستعادة الوصول إلى حسابك بسرعة وأمان
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              يتم إرسال رمز الأمان (OTP) مباشرة وبشكل فوري إلى حسابك في بوت تيليغرام
             </DialogDescription>
           </DialogHeader>
 
-          {/* Recovery Method Switcher (Capsule Tabs) */}
-          <div className="bg-muted/60 p-1 rounded-2xl flex items-center gap-1 w-full border border-border/40 shadow-xs my-1 select-none">
-            <button
-              type="button"
-              onClick={() => {
-                setRecoveryMethod('telegram');
-                setTgNotLinkedError(false);
-              }}
-              className={cn(
-                "flex-1 rounded-xl py-2 px-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer",
-                recoveryMethod === 'telegram'
-                  ? "bg-sky-500 text-white shadow-xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-card/60"
-              )}
-            >
-              <Send className="w-3.5 h-3.5 shrink-0" />
-              <span>بوت تيليغرام</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setRecoveryMethod('email')}
-              className={cn(
-                "flex-1 rounded-xl py-2 px-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer",
-                recoveryMethod === 'email'
-                  ? "bg-gradient-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-card/60"
-              )}
-            >
-              <Mail className="w-3.5 h-3.5 shrink-0" />
-              <span>البريد والدعم</span>
-            </button>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* TAB 1: TELEGRAM BOT RECOVERY */}
-          {/* ========================================================================= */}
-          {recoveryMethod === 'telegram' && (
-            <div className="space-y-4 pt-1">
-              {telegramStep === 1 ? (
-                /* Step 1: Enter Email/Phone & Request OTP */
-                <div className="space-y-3.5">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="tgIdentifier" className="text-xs font-semibold text-foreground">
-                      البريد الإلكتروني أو رقم الهاتف المسجل
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="tgIdentifier"
-                        type="text"
-                        placeholder="name@example.com أو 0770..."
-                        value={tgIdentifier}
-                        onChange={(e) => {
-                          setTgIdentifier(e.target.value);
-                          setTgNotLinkedError(false);
-                        }}
-                        disabled={isTgLoading}
-                        className="h-11 rounded-xl text-sm"
-                        dir="ltr"
-                      />
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-normal">
-                      أدخل البريد أو رقم الهاتف المسجل في ملفك الشخصي لإرسال رمز التحقق فوراً إلى محادثة البوت.
-                    </p>
+          {/* محتوى الاستعادة عبر تيليغرام */}
+          <div className="space-y-4 pt-1">
+            {telegramStep === 1 ? (
+              /* الخطوة 1: إدخال البريد أو الهاتف لطلب الرمز */
+              <div className="space-y-3.5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="tgIdentifier" className="text-xs font-semibold text-foreground">
+                    البريد الإلكتروني أو رقم الهاتف المسجل
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="tgIdentifier"
+                      type="text"
+                      placeholder="name@example.com أو 0770..."
+                      value={tgIdentifier}
+                      onChange={(e) => {
+                        setTgIdentifier(e.target.value);
+                        setTgNotLinkedError(false);
+                      }}
+                      disabled={isTgLoading}
+                      className="h-11 rounded-xl text-sm"
+                      dir="ltr"
+                    />
                   </div>
+                  <p className="text-[11px] text-muted-foreground leading-normal">
+                    أدخل بيانات حسابك لإرسال رمز التحقق فوراً إلى محادثة البوت الخاصة بك.
+                  </p>
+                </div>
 
-                  {/* Warning when account is not linked to bot */}
-                  {tgNotLinkedError && (
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-2 text-amber-700 dark:text-amber-400">
-                      <div className="flex items-center gap-2 font-bold">
-                        <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>حسابك غير مربوط بالبوت بعد</span>
-                      </div>
-                      <p className="text-[11px] leading-relaxed">
-                        لم يتم ربط رقم هاتفك ببوت التحقق حتى الآن. لربطه بثوانٍ: اضغط على الزر أدناه لفتح البوت في تيليغرام واضغط <strong>/start</strong> ثم <strong>«مشاركة رقم الهاتف للتحقق»</strong>.
-                      </p>
-                      {tgBotLink && (
-                        <a
-                          href={tgBotLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold text-xs transition-colors shadow-sm"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          <span>فتح بوت تيليغرام الآن للربط</span>
-                        </a>
-                      )}
+                {/* تنبيه إذا كان الحساب غير مربوط بعد */}
+                {tgNotLinkedError && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-2 text-amber-700 dark:text-amber-400">
+                    <div className="flex items-center gap-2 font-bold">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <span>حسابك غير مربوط بالبوت بعد</span>
                     </div>
-                  )}
-
-                  <Button
-                    type="button"
-                    onClick={handleRequestTelegramOtp}
-                    disabled={isTgLoading || !tgIdentifier.trim()}
-                    className="w-full h-11 rounded-xl font-bold bg-sky-500 hover:bg-sky-600 active:scale-98 text-white shadow-md flex items-center justify-center gap-2 transition-[colors,transform] cursor-pointer"
-                  >
-                    {isTgLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>جاري التحقق وإرسال الرمز...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        <span>إرسال رمز التحقق إلى تيليغرام</span>
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Direct Link to Bot for first time linking */}
-                  {tgBotLink && !tgNotLinkedError && (
-                    <div className="pt-1 text-center">
+                    <p className="text-[11px] leading-relaxed">
+                      لم يتم ربط رقم هاتفك ببوت التحقق حتى الآن. افتح البوت واضغط <strong>/start</strong> ثم <strong>«مشاركة رقم الهاتف للتحقق»</strong>.
+                    </p>
+                    {tgBotLink && (
                       <a
                         href={tgBotLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[11px] text-sky-600 dark:text-sky-400 hover:underline font-medium inline-flex items-center gap-1"
+                        className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold text-xs transition-colors shadow-sm"
                       >
-                        <Send className="w-3 h-3" />
-                        <span>لم تربط البوت بعد؟ اضغط هنا للبدء ومشاركة رقم هاتفك</span>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>فتح البوت في تيليغرام الآن</span>
                       </a>
-                    </div>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleRequestTelegramOTP}
+                  disabled={isTgLoading || !tgIdentifier.trim()}
+                  className="w-full h-11 rounded-xl font-bold bg-sky-500 hover:bg-sky-600 active:scale-98 text-white shadow-sm cursor-pointer"
+                >
+                  {isTgLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>جاري إرسال الرمز...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 me-1.5" />
+                      <span>إرسال رمز التحقق إلى تيليغرام</span>
+                    </>
                   )}
-                </div>
-              ) : (
-                /* Step 2: Enter 6-digit OTP & Set New Password */
-                <div className="space-y-3.5">
-                  <div className="p-2.5 bg-sky-500/10 border border-sky-500/25 rounded-2xl flex items-center justify-between text-xs text-sky-700 dark:text-sky-300">
-                    <span className="font-semibold">تم إرسال رمز التحقق إلى محادثتك في تيليغرام</span>
+                </Button>
+              </div>
+            ) : (
+              /* الخطوة 2: إدخال رمز التحقق وتعيين كلمة المرور الجديدة */
+              <div className="space-y-3.5">
+                <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-2xl text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sky-700 dark:text-sky-300">تم إرسال الرمز إلى تيليغرام</span>
                     <button
                       type="button"
                       onClick={() => setTelegramStep(1)}
-                      className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                      className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
                     >
-                      تغيير
+                      تغيير الحساب
                     </button>
                   </div>
-
-                  {/* OTP Code input */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="tgCode" className="text-xs font-semibold text-foreground">
-                      رمز التحقق (6 أرقام)
-                    </Label>
-                    <div className="relative">
-                      <KeyRound className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="tgCode"
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        placeholder="------"
-                        value={tgCode}
-                        onChange={(e) => setTgCode(e.target.value.replace(/\D/g, ''))}
-                        disabled={isTgLoading}
-                        className="pr-9 h-12 rounded-xl text-center font-mono text-xl tracking-[0.35em] font-black border-2 border-primary/30 focus-visible:border-primary"
-                        dir="ltr"
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  {/* New Password */}
-                  {/* حقل كلمة المرور الجديدة ومؤشر المعايير */}
-                  <div className="space-y-2">
-                    <Label htmlFor="tgNewPassword" className="text-xs font-semibold text-foreground">
-                      كلمة المرور الجديدة
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="tgNewPassword"
-                        type={tgShowNewPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        value={tgNewPassword}
-                        onChange={(e) => setTgNewPassword(e.target.value)}
-                        disabled={isTgLoading}
-                        className="pr-9 pl-9 h-11 rounded-xl text-sm"
-                        dir="ltr"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setTgShowNewPassword(!tgShowNewPassword)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {tgShowNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-
-                    {/* شريط ومؤشرات المعايير الأربعة الحية */}
-                    {tgNewPassword.length > 0 && (() => {
-                      const criteria = checkPasswordStrength(tgNewPassword);
-                      const checks = [
-                        { label: 'حرف كبير (A-Z)', valid: criteria.hasUpper },
-                        { label: 'حرف صغير (a-z)', valid: criteria.hasLower },
-                        { label: 'رقم (0-9)', valid: criteria.hasNumber },
-                        { label: 'رمز خاص (@#$%)', valid: criteria.hasSpecial },
-                      ];
-                      const score = checks.filter(c => c.valid).length + (criteria.hasMinLength ? 1 : 0);
-
-                      return (
-                        <div className="p-3 bg-muted/40 rounded-xl border border-border/50 space-y-2 text-xs">
-                          <div className="flex items-center justify-between font-medium">
-                            <span className="text-muted-foreground">قوة كلمة المرور:</span>
-                            <span className={score === 5 ? 'text-emerald-500 font-bold' : score >= 3 ? 'text-amber-500' : 'text-rose-500'}>
-                              {score === 5 ? 'ممتازة وقوية' : score >= 3 ? 'متوسطة (أكمل الشروط)' : 'ضعيفة'}
-                            </span>
-                          </div>
-
-                          {/* شبكة النقاط الأربعة */}
-                          <div className="grid grid-cols-2 gap-1.5 pt-1">
-                            {checks.map((item, idx) => (
-                              <div key={idx} className="flex items-center gap-1.5">
-                                <span className={`w-2 h-2 rounded-full transition-colors ${item.valid ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-muted-foreground/30'}`} />
-                                <span className={item.valid ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-muted-foreground'}>
-                                  {item.label}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-
-                          {!criteria.hasMinLength && (
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400 pt-1">
-                              * يجب ألا تقل عن 8 أحرف لتفادي رفض الخادم
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="tgConfirmPassword" className="text-xs font-semibold text-foreground">
-                      تأكيد كلمة المرور الجديدة
-                    </Label>
-                    <div className="relative">
-                      <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="tgConfirmPassword"
-                        type={tgShowConfirmPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        value={tgConfirmPassword}
-                        onChange={(e) => setTgConfirmPassword(e.target.value)}
-                        disabled={isTgLoading}
-                        className="pr-9 pl-9 h-11 rounded-xl text-sm"
-                        dir="ltr"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setTgShowConfirmPassword(!tgShowConfirmPassword)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {tgShowConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <Button
-                    type="button"
-                    onClick={handleVerifyAndResetPassword}
-                    disabled={isTgLoading || tgCode.length !== 6 || !isPasswordValid || tgNewPassword !== tgConfirmPassword}
-                    className="w-full h-11 rounded-xl font-bold bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground shadow-md flex items-center justify-center gap-2 transition-[colors,transform] cursor-pointer"
-                  >
-                    {isTgLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>جاري التحقق وتغيير كلمة المرور...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>تأكيد وتغيير كلمة المرور</span>
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Resend Code / Back */}
-                  <div className="flex items-center justify-between text-xs pt-1 px-1">
-                    <button
-                      type="button"
-                      onClick={handleRequestTelegramOtp}
-                      disabled={isTgLoading}
-                      className="text-sky-600 dark:text-sky-400 hover:underline font-semibold cursor-pointer disabled:opacity-50"
-                    >
-                      إعادة إرسال رمز جديد
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTelegramStep(1)}
-                      className="text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      الرجوع للخطوة السابقة
-                    </button>
-                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    راجع محادثة البوت وأدخل الرمز المكون من 6 أرقام هنا.
+                  </p>
                 </div>
-              )}
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="tgCode" className="text-xs font-semibold">رمز التحقق (6 أرقام)</Label>
+                  <Input
+                    id="tgCode"
+                    type="text"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={tgCode}
+                    onChange={(e) => setTgCode(e.target.value.replace(/\D/g, ''))}
+                    disabled={isTgLoading}
+                    className="h-11 rounded-xl font-mono text-center tracking-widest text-lg font-bold"
+                    dir="ltr"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="tgNewPassword" className="text-xs font-semibold">كلمة المرور الجديدة</Label>
+                  <Input
+                    id="tgNewPassword"
+                    type="password"
+                    placeholder="8 خانات على الأقل"
+                    value={tgNewPassword}
+                    onChange={(e) => setTgNewPassword(e.target.value)}
+                    disabled={isTgLoading}
+                    className="h-11 rounded-xl text-sm"
+                    dir="ltr"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="tgConfirmPassword" className="text-xs font-semibold">تأكيد كلمة المرور</Label>
+                  <Input
+                    id="tgConfirmPassword"
+                    type="password"
+                    placeholder="أعد إدخال كلمة المرور"
+                    value={tgConfirmPassword}
+                    onChange={(e) => setTgConfirmPassword(e.target.value)}
+                    disabled={isTgLoading}
+                    className="h-11 rounded-xl text-sm"
+                    dir="ltr"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleVerifyAndResetPassword}
+                  disabled={isTgLoading || tgCode.length !== 6 || !tgNewPassword || !tgConfirmPassword}
+                  className="w-full h-11 rounded-xl font-bold bg-gradient-primary text-primary-foreground shadow-sm cursor-pointer"
+                >
+                  {isTgLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>جاري حفظ كلمة المرور...</span>
+                    </>
+                  ) : (
+                    <span>حفظ كلمة المرور الجديدة والدخول</span>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* بطاقة الدعم: التواصل مع المطور والدعم الفني */}
+            <div className="pt-2 border-t border-border/50">
+              <div className="bg-muted/40 rounded-2xl p-3 flex items-center justify-between gap-2 border border-border/40">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-foreground">تواجه مشكلة بالاسترداد؟</p>
+                  <p className="text-[11px] text-muted-foreground">تواصل مباشرة مع المطور للمساعدة اليدوية</p>
+                </div>
+                <Link
+                  to="/contact-developer"
+                  onClick={() => setShowForgotDialog(false)}
+                  className="px-3 py-1.5 bg-background hover:bg-muted text-xs font-bold rounded-xl border border-border text-foreground transition-colors shrink-0"
+                >
+                  التواصل مع المطور
+                </Link>
+              </div>
             </div>
-          )}
+          </div>
 
-          {/* ========================================================================= */}
-          {/* TAB 2: EMAIL & SUPPORT RECOVERY */}
-          {/* ========================================================================= */}
-          {recoveryMethod === 'email' && (
-            <div className="space-y-4 pt-1">
-              {isLoadingContacts ? (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : contactLinks && Object.values(contactLinks).some((v) => typeof v === 'string' && v.trim()) ? (
-                <div className="space-y-4 my-2">
-                  <DialogDescription className="text-center text-sm font-medium">
-                    تواصل مع مدير النظام أو الدعم الفني لإعادة تعيين كلمة المرور
-                  </DialogDescription>
-                  <div className="grid grid-cols-2 gap-3">
-                    {CHANNELS.filter(ch => contactLinks[ch.key]?.trim()).map((ch) => (
-                      <button
-                        key={ch.key}
-                        onClick={() => window.open(ch.openUrl(contactLinks[ch.key]!), '_blank')}
-                        className={`${ch.color} ${ch.hoverColor} text-white rounded-xl px-4 py-3 flex items-center gap-3 transition-[colors,transform] duration-200 hover:shadow-lg active:scale-95`}
-                      >
-                        <span className="text-xl">{ch.icon}</span>
-                        <span className="font-medium text-sm">{t(ch.labelKey as any)}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">أو</span>
-                    </div>
-                  </div>
-                  <p className="text-center text-xs text-muted-foreground">إعادة تعيين كلمة المرور برابط إلى بريدك الإلكتروني</p>
-                  <div className="space-y-2">
-                    <Label htmlFor="resetEmail">{t('auth.email')}</Label>
-                    <Input
-                      id="resetEmail"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      disabled={isSendingReset}
-                      className="h-11 rounded-xl"
-                      dir="ltr"
-                    />
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      if (!resetEmail) return;
-                      setIsSendingReset(true);
-                      try {
-                        const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-                          redirectTo: `${window.location.origin}/#/reset-password`,
-                        });
-                        if (error) {
-                          toast.error(error.message);
-                        } else {
-                          toast.success(t('auth.resetSent'));
-                          setShowForgotDialog(false);
-                        }
-                      } catch (err) {
-                        console.error('Reset password error:', err);
-                        toast.error(t('common.error'));
-                      } finally {
-                        setIsSendingReset(false);
-                      }
-                    }}
-                    disabled={isSendingReset || !resetEmail}
-                    variant="outline"
-                    className="w-full h-11 rounded-xl font-bold cursor-pointer"
-                  >
-                    {isSendingReset ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        {t('auth.loading')}
-                      </>
-                    ) : (
-                      t('auth.sendResetLink')
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4 my-2">
-                  <DialogDescription className="text-center text-xs text-muted-foreground">
-                    {t('auth.forgotPasswordDesc')}
-                  </DialogDescription>
-                  <div className="space-y-2">
-                    <Label htmlFor="resetEmail">{t('auth.email')}</Label>
-                    <Input
-                      id="resetEmail"
-                      type="email"
-                      placeholder="name@example.com"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      disabled={isSendingReset}
-                      className="h-11 rounded-xl"
-                      dir="ltr"
-                    />
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      if (!resetEmail) return;
-                      setIsSendingReset(true);
-                      try {
-                        const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-                          redirectTo: `${window.location.origin}/#/reset-password`,
-                        });
-                        if (error) {
-                          toast.error(error.message);
-                        } else {
-                          toast.success(t('auth.resetSent'));
-                          setShowForgotDialog(false);
-                        }
-                      } catch (err) {
-                        console.error('Reset password error:', err);
-                        toast.error(t('common.error'));
-                      } finally {
-                        setIsSendingReset(false);
-                      }
-                    }}
-                    disabled={isSendingReset || !resetEmail}
-                    className="w-full h-11 rounded-xl font-bold bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground shadow-sm cursor-pointer"
-                  >
-                    {isSendingReset ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        {t('auth.loading')}
-                      </>
-                    ) : (
-                      t('auth.sendResetLink')
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter className="border-t border-border/40 pt-3 mt-1">
+          <DialogFooter className="border-t border-border/40 pt-2.5 mt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowForgotDialog(false)}
               className="w-full h-10 rounded-xl text-xs font-semibold cursor-pointer"
             >
-              {t('common.cancel')}
+              إلغاء
             </Button>
           </DialogFooter>
         </DialogContent>

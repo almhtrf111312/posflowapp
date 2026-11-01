@@ -1,8 +1,8 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
-**Last Updated:** 2026-10-28
-**Current Version:** `v1.3.2 (Build 345)`
-**Repository Branch:** `event-or-artifact` (latest published commit: `35745fd4`; mobile dialog/sidebar improvements in progress).
+**Last Updated:** 2026-11-01
+**Current Version:** `v1.5.3 (Build 389)`
+**Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
 
@@ -40,19 +40,16 @@
 
 ## 🛠️ Repository Skills Matrix & Standby Catalog
 
-### 1. Active Autonomous FlowPOS Core Skills (`.agent/skills/`)
-* **`flowpos-spec-planner`:** Enforces Spec-Driven planning protocol before multi-file refactors.
-* **`flowpos-code-auditor`:** Domain auditor checking offline sync, USD invariants, and platform safety.
-* **`flowpos-memory-sync`:** Synchronizes `.agent/PROJECT_MEMORY.md` at the end of every workflow.
-* **`flowpos-obsidian-sync`:** Generates and updates ADR architecture markdown files in `.agent/docs/adr/`.
+### 1. Active Autonomous FlowPOS Core Skills (`.agent/skills/` & `.gemini/skills/`)
+* **`flowpos-core-workflow`:** Complete execution protocol: spec planning, commits, multi-turn communication, Arabized reporting, and quality gates.
+* **`flowpos-surgical-editing`:** Token efficiency protocol: symbol/range-level reading, small contiguous diffs with text anchors, and zero-leakage editing.
+* **`flowpos-structure-symbol-map`:** Large-file structure and symbol mapping, Mermaid architectures, numeric auditing, backed by `flowpos_map.py`.
+* **`flowpos-domain-audit`:** Domain integrity auditor checking offline sync, USD accounting invariants, frozen modules, and schema safety.
+* **`flowpos-financial-calculations`:** Unified reference for accounting, taxes, rounding, multi-currency conversion, and debt allocations (`references/FINANCIAL_FORMULAS_AR_ORIGINAL.md`).
+* **`flowpos-release-github-memory`:** Release governance, automated memory updates, ADR synchronization, and git delivery.
+* **`flowpos-ui-ux-pro-max`:** Pro Max design intelligence engine: style/motion/typography search, tactile Arabic RTL POS guidelines, and pre-delivery checklist.
 
-### 2. Standby Engine: UI/UX Pro Max (`.agent/skills/ui-ux-pro-max/`)
-* **`ui-ux-pro-max` [STANDBY]:** Elite design engine for high-contrast, tactile cashier-speed UI, 48px touch targets, Arabic RTL typography, and 150-200ms snappy micro-interactions. Activated on-demand for redesign or styling requests.
-
-### 3. User Execution Preferences (`.gemini/skills/user-workflow/`)
-* **`user-workflow`:** Mandates direct production implementation without test scripts, direct git pushes, Arabic completion summaries, and frontend-focused scope boundaries.
-
-### 4. Auxiliary Standby Design Skills (`.agents/skills/`)
+### 2. Auxiliary Standby Design Skills (`.agents/skills/`)
 *(Kept dormant / on standby; available to borrow rules if specialized creative tasks arise)*:
 * `brandkit`: Brand guidelines and logo system generation.
 * `design-taste-frontend` & `design-taste-frontend-v1`: Web landing and layout aesthetics.
@@ -69,6 +66,14 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-01:** Telegram Bot Self-Service Device Reset & OTP Password Recovery:
+  * Front-End (`src/pages/Login.tsx`): Removed email recovery form; dedicated forgot-password flow exclusively to Telegram Bot OTP verification with real-time numeric/character criteria checklist; prominent developer contact button (/contact-developer).
+  * Telegram Auth Edge Function (`supabase/functions/telegram-auth/index.ts`): Configured persistent 2-button keyboard (phone contact sharing & /reset_device); implemented secure device reset handler invoking `request_device_reset_secure` RPC with strict 5-day cooldown enforcement.
+  * Skills Bundle v2.0.0: Consolidated 7 core skills in `.agent/skills/` and `.gemini/skills/` with updated memory ledger.
+* **2026-11-01:** Skills Bundle v2.0.0 — consolidation and migration:
+  * Consolidated legacy disparate skills into 7 unified, production-grade FlowPOS skills under .agent/skills/ and .gemini/skills/: flowpos-core-workflow, flowpos-surgical-editing, flowpos-structure-symbol-map (with flowpos_map.py), flowpos-domain-audit, flowpos-financial-calculations (with full formulas reference), flowpos-release-github-memory, and flowpos-ui-ux-pro-max.
+  * Removed legacy skills: .gemini/skills/user-workflow, .agent/skills/antigravity-serena-token-engine, .agent/skills/flowpos-memory-sync, .agent/skills/flowpos-code-auditor, .agent/skills/flowpos-obsidian-sync, .agent/skills/flowpos-spec-planner, and legacy .agent/skills/ui-ux-pro-max.
+  * Preserved all core domain invariants, USD base currency, and application version. Verification tools (flowpos_map.py and search.py) tested and fully operational.
 * **2026-10-28:** Appearance Draft Tracking and POS Card Readability:
   * Appearance compares all pending theme fields with its saved baseline; ThemeSection emits the full theme draft while existing preview, save, and revert behavior remains unchanged.
   * POS product cards render the currency symbol and amount with a visible divider and emphasize stock counts using theme semantic colors.

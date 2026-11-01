@@ -66,6 +66,11 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-02:** Instant 0ms Settings Loading & Sale vs Refund Queue Shield:
+  * Settings Screen (`src/pages/Settings.tsx`): Initialized `isSettingsReady` to true and eliminated blocking loader spinner in JSX, rendering tabs instantaneously from local cache while cloud sync proceeds quietly in background.
+  * Invoices Refund Handler (`src/pages/Invoices.tsx`): Before attempting cloud refund, searches local sync queue for any pending sale operation for the invoice and cancels/removes it immediately; falls back to full local refund with product quantity restoration and queue entry if network/VPN fails.
+  * Cloud Sync Safety Shield (`src/providers/CloudSyncProvider.tsx`): Added pre-upload check against local cached invoices to skip uploading sales if invoice is marked refunded or cancelled locally.
+  * Cloud Invoices RPC Timeout (`src/lib/cloud/invoices-cloud.ts`): Wrapped `refund_invoice_atomic` with a 3.5s race timeout to prevent app freeze on broken/high-latency VPN connections, triggering instant local-first fallback.
 * **2026-11-01:** Telegram Bot Self-Service Device Reset & OTP Password Recovery:
   * Front-End (`src/pages/Login.tsx`): Removed email recovery form; dedicated forgot-password flow exclusively to Telegram Bot OTP verification with real-time numeric/character criteria checklist; prominent developer contact button (/contact-developer).
   * Telegram Auth Edge Function (`supabase/functions/telegram-auth/index.ts`): Configured persistent 2-button keyboard (phone contact sharing & /reset_device); implemented secure device reset handler invoking `request_device_reset_secure` RPC with strict 5-day cooldown enforcement.

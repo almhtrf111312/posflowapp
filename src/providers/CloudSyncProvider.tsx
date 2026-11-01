@@ -361,9 +361,23 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       const result = await processQueue(async (operation) => {
         const opKey = String(operation.data.uniqueKey || operation.data.operationId || operation.data.localId || operation.id);
         const bInv = (operation.data?.bundle as any)?.invoiceNumber || operation.data?.invoiceNumber;
-        if (isOperationCancelled(opKey) || (bInv && isOperationCancelled(String(bInv)))) {
-          console.warn('[CloudSyncProvider] Skipping cancelled operation from processor:', opKey || bInv);
-          return true;
+
+        // 🛡️ صمام أمان مزدوج: التحقق من سجل الإلغاء أو الكاش المحلي
+        let isLocallyRefunded = false;
+        if (bInv && (operation.type === 'invoice_create' || operation.type === 'debt_sale_bundle')) {
+          try {
+            const { loadCachedInvoicesSync } = await import('@/lib/cloud/invoices-cloud');
+            const localInvoices = loadCachedInvoicesSync() || [];
+            const target = localInvoices.find(inv => inv.id === bInv || inv.invoiceNumber === bInv);
+            if (target && (target.status === 'refunded' || target.status === 'cancelled')) {
+              isLocallyRefunded = true;
+            }
+          } catch { /* ignore */ }
+        }
+
+        if (isOperationCancelled(opKey) || (bInv && isOperationCancelled(String(bInv))) || isLocallyRefunded) {
+          console.warn('[CloudSyncProvider] Skipping sale upload because invoice is cancelled/refunded locally:', opKey || bInv);
+          return true; // تخطي العملية بنجاح لمنع رفع مبيعات ملغاة
         }
 
         if (operation.type === 'invoice_refund') processedRefund = true;

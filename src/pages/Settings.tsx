@@ -315,7 +315,8 @@ export default function Settings() {
   const persisted = loadPersistedSettings();
   const initialUnified = loadUnifiedStoreSettings();
 
-  const [isSettingsReady, setIsSettingsReady] = useState(false);
+  // ✅ البدء فوراً كجاهز من الكاش المحلي دون أي حظر أو انتظار للشبكة
+  const [isSettingsReady, setIsSettingsReady] = useState(true);
   const [lastSaveStatus, setLastSaveStatus] = useState<StoreSettingsSaveStatus | null>(null);
 
   // Store settings
@@ -3986,16 +3987,8 @@ export default function Settings() {
 
           {/* Content */}
           <div className="bg-card/70 sm:bg-card rounded-2xl border border-border/70 sm:border-border p-3.5 sm:p-6 overflow-hidden max-w-full pb-28">
-            {!isSettingsReady ? (
-              <div className="flex flex-col items-center justify-center py-16 space-y-3">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-xs text-muted-foreground font-semibold">
-                  {isRTL ? 'جاري مطابقة وتحديث إعدادات المتجر...' : 'Synchronizing store settings...'}
-                </p>
-              </div>
-            ) : (
-              renderTabContent()
-            )}
+            {/* ✅ إلغاء حظر التحميل: عرض الإعدادات فوراً وتحديث البيانات في الخلفية بهدوء */}
+            {renderTabContent()}
           </div>
         </>
       )}

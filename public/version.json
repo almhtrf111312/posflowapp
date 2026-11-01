@@ -1,8 +1,14 @@
 {
-  "versionCode": 390,
+  "versionCode": 391,
   "versionName": "1.5.3.384",
-  "lastUpdated": "2026-11-01T20:47:47.040Z",
+  "lastUpdated": "2026-11-01T21:18:02.219Z",
   "buildHistory": [
+    {
+      "versionCode": 391,
+      "versionName": "1.5.3.384",
+      "date": "2026-11-01",
+      "description": "Release v1.5.3.384 (Build 391)"
+    },
     {
       "versionCode": 390,
       "versionName": "1.5.3.384",
@@ -116,12 +122,6 @@
       "versionName": "1.5.2.367",
       "date": "2026-10-30",
       "description": "Release v1.5.2.367 (Build 368)"
-    },
-    {
-      "versionCode": 366,
-      "versionName": "1.5.2",
-      "date": "2026-10-30",
-      "description": "v1.5.2 (Build 366) - تحسين تجربة المستشار الذكي وإلغاء تكرار التبويبات ودمج رقم الإصدار بكبسولات التحديث"
     }
   ]
 }

@@ -945,7 +945,13 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
 
   // Stock, debt, customer totals, and invoice status are committed in one locked
   // database transaction. Only the first caller can receive success=true.
-  const { data, error } = await supabase.rpc('refund_invoice_atomic', { _invoice_number: id, _source: source });
+  // ⏱️ مهلة أمان قصيرة (3.5 ثوانٍ) لمنع تجمد التطبيق عند تشغيل VPN معطوب
+  const rpcPromise = supabase.rpc('refund_invoice_atomic', { _invoice_number: id, _source: source });
+  const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+    setTimeout(() => resolve({ data: null, error: { message: 'Network timeout (VPN or slow connection)' } }), 3500)
+  );
+
+  const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
   if (error) {
     console.error('[refundInvoiceCloud] Atomic refund failed:', error);
     return failedRefund(error.message || 'فشل تنفيذ الاسترداد على الخادم');

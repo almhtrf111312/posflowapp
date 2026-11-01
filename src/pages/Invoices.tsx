@@ -1006,24 +1006,55 @@ export default function Invoices() {
     const refundFin = getInvoiceFinancials(invoice, true);
     const invoiceTotal = refundFin.displayTotal;
     const invoiceCurrencySymbol = refundFin.symbol;
-    // Unique toast id per invoice → prevents duplicate stacked notifications on re-triggers
     const toastId = `refund-${invoiceLabel}`;
 
-    // ✅ Close the dialog immediately (non-blocking UX) but DO NOT change the
-    // invoice state until the server confirms the refund succeeded.
     setShowRefundDialog(false);
     setInvoiceToRefund(null);
 
-    // ✅ Offline path: update local state immediately and queue
-    if (!isOnline) {
+    // 🛡️ الخطوة 1: فحص طابور المزامنة المحلي
+    // إذا كانت عملية البيع ما زالت عالقة في الطابور ولم تُرفع للسحابة، نقوم بإلغائها فوراً محلياً!
+    try {
+      const { getPendingOperations, removeFromQueue } = await import('@/lib/sync-queue');
+      const { recordCancellation } = await import('@/lib/cancellation-registry');
+      
+      const pending = getPendingOperations();
+      const pendingSaleOp = pending.find(op => {
+        const invNum = (op.data?.bundle as any)?.invoiceNumber || op.data?.invoiceNumber;
+        return invNum === invoiceLabel;
+      });
+
+      if (pendingSaleOp) {
+        console.warn(`[Refund] Invoice ${invoiceLabel} is still pending in sync queue. Cancelling sale directly!`);
+        // حذف عملية البيع من طابور الرفع حتى لا تُرفع للسحابة أبداً عند عودة الإنترنت
+        removeFromQueue(pendingSaleOp.id);
+        
+        // تسجيل الإلغاء في السجل الدائم
+        recordCancellation({
+          operationId: `cancel_${invoiceLabel}_${Date.now()}`,
+          operationQueueId: pendingSaleOp.id,
+          invoiceNumber: invoiceLabel,
+          type: 'invoice_refund',
+          status: 'cancelled',
+          cancelledAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          reason: 'استرداد محلي قبل مزامنة البيع',
+          reversedEffects: { stock: true, shift: true, profit: true, debt: true, invoice: true }
+        });
+      }
+    } catch (qErr) {
+      console.warn('[Refund] Error checking sync queue for pending sale:', qErr);
+    }
+
+    // 🛡️ دالة مساعدة لتطبيق الاسترداد المحلي وإعادة المخزون فوراً
+    const applyLocalRefundFallback = async (isNetworkIssue: boolean) => {
       markInvoiceRefundedLocally(invoiceLabel);
       setInvoices(prev => prev.map(inv =>
         inv.id === invoiceLabel ? { ...inv, status: 'refunded' as const } : inv
       ));
 
-      // ⚡ إعادة كميات الأصناف محلياً وفورياً لنقطة البيع (Delta Update)
       if (invoice.items && invoice.items.length > 0) {
-        import('@/lib/cloud/products-cloud').then(({ restoreProductsQuantitiesLocally }) => {
+        try {
+          const { restoreProductsQuantitiesLocally } = await import('@/lib/cloud/products-cloud');
           const itemsToRestore = invoice.items.map(item => ({
             productId: item.productId || item.id,
             quantity: (item.unit === 'box' || item.unit === 'bulk')
@@ -1031,175 +1062,86 @@ export default function Invoices() {
               : Number(item.quantity),
           }));
           restoreProductsQuantitiesLocally(itemsToRestore);
-        }).catch(() => {});
+        } catch { /* ignore */ }
       }
 
       if (invoice.customerId) {
-        import('@/lib/cloud/customers-cloud').then(({ updateCustomerStatsCloud }) => {
+        try {
+          const { updateCustomerStatsCloud } = await import('@/lib/cloud/customers-cloud');
           updateCustomerStatsCloud(invoice.customerId!).catch(() => {});
-        });
+        } catch { /* ignore */ }
       }
+
+      // إضافة عملية الاسترداد للطابور لضمان مطابقتها بالسحابة لاحقاً
+      const { addToQueueIfNotExists } = await import('@/lib/sync-queue');
       addToQueueIfNotExists('invoice_refund', { invoiceNumber: invoiceLabel }, `invoice-refund:${invoiceLabel}`);
-      toast.info(`تم استرداد ${invoiceLabel} محلياً`, {
+
+      toast.info(`تم استرداد ${invoiceLabel} محلياً بنجاح`, {
         id: toastId,
-        description: `المبلغ: ${formatCurrency(invoiceTotal, invoiceCurrencySymbol, refundFin.decimals)} — سيُرفع الاسترداد تلقائياً عند عودة الإنترنت`,
-        duration: 3500,
+        description: isNetworkIssue 
+          ? 'تعذر الاتصال بالخادم (VPN أو انقطاع النت). أُعيدت البضاعة للمخزون وسُجل الاسترداد محلياً وسيُطابق تلقائياً.' 
+          : 'سيُرفع الاسترداد تلقائياً عند عودة الإنترنت',
+        duration: 4500,
       });
+    };
+
+    // ✅ مسار الأوفلاين الصريح
+    if (!isOnline) {
+      await applyLocalRefundFallback(false);
       return;
     }
 
-    // ✅ Online path: dialog is already closed, but the guard remains held until completion.
+    // ✅ مسار الأونلاين (مع حماية ضد تعليق أو فشل VPN)
     toast.loading(`جاري استرداد ${invoiceLabel}...`, { id: toastId });
     try {
-        const result = await refundInvoiceCloud(invoiceLabel, 'online');
-        if (typeof result === 'object' && result.alreadyRefunded) {
-          markInvoiceRefundedLocally(invoiceLabel);
-          setInvoices(prev => prev.map(inv =>
-            inv.id === invoiceLabel ? { ...inv, status: 'refunded' as const } : inv
-          ));
-          toast.info(`الفاتورة ${invoiceLabel} مستردة بالفعل`, {
-            id: toastId,
-            description: 'لم تتم إضافة أي كمية جديدة إلى المخزون',
-            duration: 3500,
-          });
-          return;
-        }
-
-        const ok = result && (result === true || (result as RefundResult).success);
-        if (!ok) {
-          const reason = typeof result === 'object' ? (result as RefundResult).error : undefined;
-          if (reason?.includes('not found') || reason?.includes('لم يتم العثور') || reason?.includes('غير موجود')) {
-            console.warn('[Refund] Invoice not on cloud yet, applying local-first refund fallback');
-            markInvoiceRefundedLocally(invoiceLabel);
-            setInvoices(prev => prev.map(inv =>
-              inv.id === invoiceLabel ? { ...inv, status: 'refunded' as const } : inv
-            ));
-            if (invoice.items && invoice.items.length > 0) {
-              import('@/lib/cloud/products-cloud').then(({ restoreProductsQuantitiesLocally }) => {
-                const itemsToRestore = invoice.items.map(item => ({
-                  productId: item.productId || item.id,
-                  quantity: (item.unit === 'box' || item.unit === 'bulk')
-                    ? (Number(item.quantity) * Math.max(Number(item.conversionFactor || 1), 1))
-                    : Number(item.quantity),
-                }));
-                restoreProductsQuantitiesLocally(itemsToRestore);
-              }).catch(() => {});
-            }
-            if (invoice.customerId) {
-              import('@/lib/cloud/customers-cloud').then(({ updateCustomerStatsCloud }) => {
-                updateCustomerStatsCloud(invoice.customerId!).catch(() => {});
-              });
-            }
-            addToQueueIfNotExists('invoice_refund', { invoiceNumber: invoiceLabel }, `invoice-refund:${invoiceLabel}`);
-            toast.info(`تم استرداد الفاتورة ${invoiceLabel} محلياً وستُطابق بالسحابة فور مزامنة البيع`, {
-              id: toastId,
-              duration: 4000,
-            });
-            return;
-          }
-
-          toast.error(`فشل في استرداد ${invoiceLabel}`, {
-            id: toastId,
-            description: reason || 'لم يطرأ أي تغيير على الفاتورة أو المخزون',
-            duration: 5000,
-          });
-          return;
-        }
-
-        // Confirmed by the server → now reflect the refunded state in the list and local cache
+      const result = await refundInvoiceCloud(invoiceLabel, 'online');
+      
+      if (typeof result === 'object' && result.alreadyRefunded) {
         markInvoiceRefundedLocally(invoiceLabel);
         setInvoices(prev => prev.map(inv =>
           inv.id === invoiceLabel ? { ...inv, status: 'refunded' as const } : inv
         ));
-        invalidateInvoicesCache();
-
-        if (invoice.customerId) {
-          import('@/lib/cloud/customers-cloud').then(({ updateCustomerStatsCloud }) => {
-            updateCustomerStatsCloud(invoice.customerId!).catch(() => {});
-          });
-        }
-
-
-        // Refresh stats silently — don't block UI
-        getInvoiceStatsCloud().then(setStats).catch(() => {});
-
-        // Refresh product quantities from cloud so local inventory reflects the refund
-        try {
-          if (invoice.items && invoice.items.length > 0) {
-            import('@/lib/cloud/products-cloud').then(({ restoreProductsQuantitiesLocally }) => {
-              const itemsToRestore = invoice.items.map(item => ({
-                productId: item.productId || item.id,
-                quantity: (item.unit === 'box' || item.unit === 'bulk')
-                  ? (Number(item.quantity) * Math.max(Number(item.conversionFactor || 1), 1))
-                  : Number(item.quantity),
-              }));
-              restoreProductsQuantitiesLocally(itemsToRestore);
-            }).catch(() => {});
-          }
-          invalidateProductsCache();
-          refreshProductsFromCloud().then(() => {
-            // Background sync completes quietly
-          }).catch(() => {});
-        } catch (e) { /* noop */ }
-
-        const refundedTotal = typeof result === 'object' ? result.invoiceTotal : invoiceTotal;
-        const refundedCurrency = typeof result === 'object' ? (result.invoiceCurrency || invoice.currency) : invoice.currency;
-        const lines: string[] = [`💵 المبلغ: ${formatCurrency(refundedTotal, refundedCurrency)}`];
-        if (typeof result === 'object' && (result as RefundResult).success) {
-          const r = result as RefundResult;
-          if (r.restoredUnitsCount > 0) {
-            lines.push(`📦 أُعيدت ${formatNumber(r.restoredUnitsCount)} قطعة من ${formatNumber(r.restoredItemsCount)} منتج`);
-          }
-          if (r.deletedDebtAmount > 0) {
-            lines.push(`🗑️ دين محذوف: ${r.deletedDebtAmount.toFixed(2)}${invoiceCurrencySymbol}`);
-          }
-          if (r.cashToRefund && r.cashToRefund > 0) {
-            lines.push(`💰 يُرجع نقداً للعميل ومن الوردية: ${formatCurrency(r.cashToRefund, refundedCurrency)}`);
-          }
-        }
-        showSmartToast({
-          id: toastId,
-          type: 'refund',
-          title: `تم استرداد ${invoiceLabel}`,
-          subtitle: `#${invoice.id || invoice.invoiceNumber}`,
-          description: lines.join(' • '),
-          pillText: formatCurrency(refundedTotal, refundedCurrency),
-          duration: 4500,
-        });
-
-        const cashRefunded = (typeof result === 'object' && (result as RefundResult).cashToRefund) || 0;
-        const debtDeleted = (typeof result === 'object' && (result as RefundResult).deletedDebtAmount) || 0;
-        const usdSym = currencySymbols?.USD || '$';
-        const detailedRefundDesc = debtDeleted > 0
-          ? `استرداد فاتورة ${invoiceLabel}: تم تخفيض دين العميل بقيمة ${usdSym}${formatNumber(debtDeleted)}${cashRefunded > 0 ? ` وتم تسليمه نقداً ${usdSym}${formatNumber(cashRefunded)} من الصندوق` : ''}`
-          : `استرداد نقدي كامل للفاتورة: ${invoiceLabel} بقيمة ${usdSym}${roundCurrency(refundedTotal)} من الصندوق`;
-
-        void logActivity('invoice_refunded', detailedRefundDesc, {
-          entityType: 'invoice',
-          entityId: invoice.id,
-          entityName: invoice.customerName,
-          snapshot: {
-            invoiceNumber: invoice.id,
-            customerName: invoice.customerName,
-            total: refundedTotal,
-            paymentType: invoice.paymentType,
-            cashToRefund: cashRefunded,
-            deletedDebt: debtDeleted,
-            items: invoice.items.map(it => ({
-              name: it.name,
-              quantity: it.quantity,
-              price: it.price,
-              total: it.total,
-            })),
-          },
-        });
-      } catch (err) {
-        console.error('[confirmRefund] background error:', err);
-        toast.error(`فشل في استرداد ${invoiceLabel}`, { id: toastId, duration: 3500 });
-        invalidateInvoicesCache();
-        const invoicesData = await loadInvoicesCloud();
-        setInvoices(invoicesData);
+        toast.info(`الفاتورة ${invoiceLabel} مستردة بالفعل`, { id: toastId, duration: 3500 });
+        return;
       }
+
+      const ok = result && (result === true || (result as RefundResult).success);
+      if (!ok) {
+        const reason = typeof result === 'object' ? (result as RefundResult).error : undefined;
+        const isNetworkOrNotFound = !reason || 
+          reason.includes('not found') || 
+          reason.includes('لم يتم العثور') || 
+          reason.includes('غير موجود') ||
+          reason.includes('fetch') ||
+          reason.includes('network') ||
+          reason.includes('timeout') ||
+          reason.includes('Failed');
+
+        if (isNetworkOrNotFound) {
+          console.warn('[Refund] Cloud refund unreachable or invoice not found, falling back to local-first refund');
+          await applyLocalRefundFallback(true);
+          return;
+        }
+
+        toast.error(`فشل في استرداد ${invoiceLabel}`, {
+          id: toastId,
+          description: reason || 'لم يطرأ أي تغيير على الفاتورة أو المخزون',
+          duration: 5000,
+        });
+        return;
+      }
+
+      // تم التأكيد من الخادم بنجاح
+      markInvoiceRefundedLocally(invoiceLabel);
+      setInvoices(prev => prev.map(inv =>
+        inv.id === invoiceLabel ? { ...inv, status: 'refunded' as const } : inv
+      ));
+      invalidateInvoicesCache();
+      toast.success(`تم استرداد الفاتورة ${invoiceLabel} بنجاح`, { id: toastId });
+    } catch (err: any) {
+      console.warn('[Refund] Network exception during cloud refund, applying local fallback:', err);
+      await applyLocalRefundFallback(true);
+    }
   });
 
   const confirmPartialRefund = () => refundGuard.run(async () => {

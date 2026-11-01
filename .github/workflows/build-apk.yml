@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_telegram:
-        description: 'إرسال ملف الـ APK المبني في هذه الجلسة إلى قناة Telegram مباشرة'
+        description: 'إرسال الـ APK لتيليجرام بعد انتهاء البناء مباشرة'
         required: false
         default: false
         type: boolean
@@ -156,7 +156,6 @@ jobs:
           RAW_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]')
           CANDIDATES=""
 
-          # 1. إضافة المعرّف الخام ومشتقاته
           if [ -n "$RAW_CHAT" ]; then
             CANDIDATES="$RAW_CHAT"
             if echo "$RAW_CHAT" | grep -qE '^[0-9]+$'; then
@@ -167,7 +166,6 @@ jobs:
             fi
           fi
 
-          # 2. استخراج المعرفات الحية التي استقبلها البوت من التيليجرام مباشرة
           AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
           CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
 
@@ -182,7 +180,7 @@ jobs:
           done
 
           if [ -z "$FOUND_CHANNEL" ]; then
-            echo "::error::Could not resolve Telegram channel target. Ensure bot is an Administrator in the channel."
+            echo "::error::Could not resolve Telegram channel target."
             exit 1
           fi
 

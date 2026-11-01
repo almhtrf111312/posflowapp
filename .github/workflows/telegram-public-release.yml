@@ -62,7 +62,7 @@ jobs:
           RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "Error: TELEGRAM_BOT_TOKEN is missing in GitHub Secrets"
+            echo "::error::Error: TELEGRAM_BOT_TOKEN is missing in GitHub Secrets"
             exit 1
           fi
 
@@ -79,20 +79,27 @@ jobs:
             fi
           fi
 
-          AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
-          CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
+          # إضافة القناة الرسمية كـ خيار بديل
+          CANDIDATES="$CANDIDATES @flowpospro"
 
+          FOUND_CHANNEL=""
           for C in $CANDIDATES; do
             R=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getChat" --data-urlencode "chat_id=$C" || true)
             if echo "$R" | grep -q '"ok":true'; then
-              echo "Verified Telegram target: $C"
-              echo "CHANNEL=$C" >> "$GITHUB_ENV"
-              exit 0
+              echo "✅ Verified Telegram target channel: $C"
+              FOUND_CHANNEL="$C"
+              break
+            else
+              echo "⚠️ Candidate $C returned: $R"
             fi
           done
 
-          echo "Error: Bot cannot access the channel or chat."
-          exit 1
+          if [ -z "$FOUND_CHANNEL" ]; then
+            echo "::error::Bot cannot access the channel. Please ensure the Bot is added as ADMINISTRATOR with 'Post Messages' permission in the Telegram Channel."
+            exit 1
+          fi
+
+          echo "CHANNEL=$FOUND_CHANNEL" >> "$GITHUB_ENV"
 
       - name: Fetch Latest Pre-built APK Artifact (No Rebuilding)
         shell: bash
@@ -105,7 +112,7 @@ jobs:
             | jq -r '.artifacts[] | select(.expired == false and (.name | test("FlowPOS.*"; "i")) and (.name | test("win|exe|setup"; "i") | not)) | "\(.id) \(.name)"' | head -n 1)
 
           if [ -z "$ARTIFACT_INFO" ]; then
-            echo "::error::No pre-built APK artifact found! Please push a commit or run 'Build FlowPOS Pro APK' once first."
+            echo "::error::No pre-built APK artifact found! Please run 'Build FlowPOS Pro APK' once to generate the base APK."
             exit 1
           fi
 

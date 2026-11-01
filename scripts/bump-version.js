@@ -4,7 +4,7 @@
  * FlowPOS Pro - Unified Version Bump Script
  * =========================================
  * Single source of truth: version.json
- * Synchronizes: version.json, public/version.json, package.json, package-lock.json, build.gradle
+ * Automatically increments BOTH versionName (patch) AND versionCode (build) on every edit.
  */
 
 import fs from 'fs';
@@ -24,7 +24,7 @@ const BUILD_GRADLE_FILE = path.join(ROOT_DIR, 'android', 'app', 'build.gradle');
 const args = process.argv.slice(2);
 let incrementBy = 1;
 let setVersion = null;
-let bumpType = 'build'; // 'build' | 'minor' | 'patch' | 'major'
+let bumpType = 'patch'; // افتراضياً patch حتى يعلو رقم الإصدار مع كل تعديل
 let customVersionName = null;
 let customDescription = null;
 
@@ -36,10 +36,10 @@ for (let i = 0; i < args.length; i++) {
   } else if (arg === '--set' && args[i + 1]) {
     setVersion = Number.parseInt(args[i + 1], 10);
     i++;
+  } else if (arg === '--build-only') {
+    bumpType = 'build';
   } else if (arg === '--minor') {
     bumpType = 'minor';
-  } else if (arg === '--patch') {
-    bumpType = 'patch';
   } else if (arg === '--major') {
     bumpType = 'major';
   } else if (arg === '--name' && args[i + 1]) {
@@ -52,11 +52,13 @@ for (let i = 0; i < args.length; i++) {
 }
 
 function bumpSemver(versionStr, type) {
-  const parts = versionStr.split('.').map((p) => {
+  // تنظيف أي زوائد أو أجزاء رباعية والاعتماد على x.y.z
+  const rawParts = versionStr.split('.').map((p) => {
     const n = Number.parseInt(p, 10);
     return Number.isNaN(n) ? 0 : n;
   });
-  while (parts.length < 3) parts.push(0);
+  
+  const parts = [rawParts[0] || 1, rawParts[1] || 5, rawParts[2] || 0];
 
   if (type === 'major') {
     parts[0] += 1;
@@ -82,19 +84,17 @@ function main() {
   const raw = fs.readFileSync(VERSION_FILE, 'utf8');
   const versionData = JSON.parse(raw);
 
-  const oldVersionCode = Number(versionData.versionCode) || 382;
-  const oldVersionName = versionData.versionName || '1.5.3';
+  const oldVersionCode = Number(versionData.versionCode) || 391;
+  const oldVersionName = versionData.versionName || '1.5.4';
 
+  // 1. زيادة رقم البناء (Build)
   let newVersionCode = setVersion !== null ? setVersion : oldVersionCode + incrementBy;
-  if (!Number.isSafeInteger(newVersionCode) || newVersionCode <= 0) {
-    console.error('❌ Error: Invalid new versionCode:', newVersionCode);
-    process.exit(1);
-  }
 
+  // 2. زيادة رقم الإصدار (Version Name)
   let newVersionName = oldVersionName;
   if (customVersionName) {
     newVersionName = customVersionName;
-  } else if (bumpType === 'minor' || bumpType === 'patch' || bumpType === 'major') {
+  } else if (bumpType === 'major' || bumpType === 'minor' || bumpType === 'patch') {
     newVersionName = bumpSemver(oldVersionName, bumpType);
   }
 
@@ -153,17 +153,10 @@ function main() {
     }
   }
 
-  if (fs.existsSync(BUILD_GRADLE_FILE)) {
-    let gradle = fs.readFileSync(BUILD_GRADLE_FILE, 'utf8');
-    if (gradle.includes('versionProps.versionCode')) {
-      console.log('✅ android/app/build.gradle dynamically reads version.json');
-    }
-  }
-
   console.log('\n✨ Version Bump Complete!');
-  console.log(`   Version Code: ${oldVersionCode} ➔ ${newVersionCode}`);
-  console.log(`   Version Name: ${oldVersionName} ➔ ${newVersionName}`);
-  console.log(`   Timestamp:    ${versionData.lastUpdated}\n`);
+  console.log(`   Version Code (Build): ${oldVersionCode} ➔ ${newVersionCode}`);
+  console.log(`   Version Name:         ${oldVersionName} ➔ ${newVersionName}`);
+  console.log(`   Timestamp:            ${versionData.lastUpdated}\n`);
 }
 
 main();

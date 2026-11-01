@@ -35,11 +35,14 @@ Deno.serve(async (req) => {
     if (!main.ok) return json({ error: 'تعذر قراءة فرع main', status: main.status, details: main.text }, 502);
     const sha = main.data.object.sha as string;
 
-    const run = await gh('POST', 'actions/workflows/build-apk.yml/dispatches', {
+    const run = await gh('POST', 'actions/workflows/telegram-public-release.yml/dispatches', {
       ref: 'main',
-      inputs: { publish_telegram: 'true' },
+      inputs: {
+        confirm_publish: true,
+        source_branch: 'main',
+      },
     });
-    if (!run.ok) return json({ error: 'تعذر بدء البناء', status: run.status, details: run.text }, 502);
+    if (!run.ok) return json({ error: 'تعذر إرسال التحديث لتيليجرام', status: run.status, details: run.text }, 502);
     return json({ success: true, sha: sha.slice(0, 7) });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);

@@ -66,6 +66,9 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-02:** Instant Telegram Release Pipeline & Automated Semantic Version Bumping:
+  * Fast Telegram Release (`supabase/functions/trigger-public-release/index.ts` & `.github/workflows/telegram-public-release.yml`): Redirected public release trigger from `build-apk.yml` to `telegram-public-release.yml`; workflow fetches pre-built APK artifact from latest build and sends directly to Telegram channel in seconds without costly 15-minute rebuild.
+  * Dual Version & Build Bump (`scripts/bump-version.js` & `.github/workflows/auto-version-bump.yml`): Defaulted `bumpType` to 'patch' so both `versionName` (semantic patch, e.g. 1.5.3 -> 1.5.4) and `versionCode` (build number) increment synchronously on every push to main; sanitized legacy 4-part versions into standard semver.
 * **2026-11-02:** Instant 0ms Settings Loading & Sale vs Refund Queue Shield:
   * Settings Screen (`src/pages/Settings.tsx`): Initialized `isSettingsReady` to true and eliminated blocking loader spinner in JSX, rendering tabs instantaneously from local cache while cloud sync proceeds quietly in background.
   * Invoices Refund Handler (`src/pages/Invoices.tsx`): Before attempting cloud refund, searches local sync queue for any pending sale operation for the invoice and cancels/removes it immediately; falls back to full local refund with product quantity restoration and queue entry if network/VPN fails.

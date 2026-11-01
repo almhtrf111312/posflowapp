@@ -62,7 +62,7 @@ jobs:
           RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "::error::Error: TELEGRAM_BOT_TOKEN is missing in GitHub Secrets"
+            echo "::error::TELEGRAM_BOT_TOKEN is missing in GitHub Secrets"
             exit 1
           fi
 
@@ -79,8 +79,9 @@ jobs:
             fi
           fi
 
-          # إضافة القناة الرسمية كـ خيار بديل
-          CANDIDATES="$CANDIDATES @flowpospro"
+          # استعادة السطر القديم الذي يقرأ الأحداث الحية للبوت
+          AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
+          CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
 
           FOUND_CHANNEL=""
           for C in $CANDIDATES; do
@@ -89,8 +90,6 @@ jobs:
               echo "✅ Verified Telegram target channel: $C"
               FOUND_CHANNEL="$C"
               break
-            else
-              echo "⚠️ Candidate $C returned: $R"
             fi
           done
 
@@ -112,7 +111,7 @@ jobs:
             | jq -r '.artifacts[] | select(.expired == false and (.name | test("FlowPOS.*"; "i")) and (.name | test("win|exe|setup"; "i") | not)) | "\(.id) \(.name)"' | head -n 1)
 
           if [ -z "$ARTIFACT_INFO" ]; then
-            echo "::error::No pre-built APK artifact found! Please run 'Build FlowPOS Pro APK' once to generate the base APK."
+            echo "::error::No pre-built APK artifact found! Please run 'Build FlowPOS Pro APK' once first to generate the artifact."
             exit 1
           fi
 

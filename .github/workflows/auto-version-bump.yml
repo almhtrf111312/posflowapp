@@ -3,16 +3,11 @@ name: Auto Version Bump
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'android/**'
-      - 'electron/**'
-      - 'scripts/**'
-      - 'index.html'
-      - 'vite.config.ts'
-      - 'capacitor.config.json'
-      - 'package.json'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/build-windows.yml'
+      - '.github/workflows/sync-version-to-cloud.yml'
 
 concurrency:
   group: auto-version-bump-main
@@ -23,6 +18,8 @@ permissions:
 
 jobs:
   bump:
+    # نتأكد أن الـ commit الحالي لم يصدر عن البوت نفسه لتفادي الحلقات اللانهائية
+    if: "!contains(github.event.head_commit.author.name, 'github-actions') && !contains(github.event.head_commit.message, 'chore(release)')"
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout source
@@ -37,7 +34,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Check if version.json was already modified
+      - name: Check if version.json was already modified manually
         id: check_version
         shell: bash
         run: |
@@ -47,10 +44,10 @@ jobs:
             echo "ℹ️ version.json already modified in this commit. Skipping auto-bump."
           else
             echo "already_bumped=false" >> "$GITHUB_OUTPUT"
-            echo "🚀 App changes detected without version bump. Proceeding..."
+            echo "🚀 App changes detected. Proceeding with auto-bump..."
           fi
 
-      - name: Run version bump script
+      - name: Run version bump script (Patch + Build)
         if: steps.check_version.outputs.already_bumped == 'false'
         shell: bash
         run: |
@@ -66,6 +63,6 @@ jobs:
           if ! git diff --cached --quiet; then
             NEW_VER=$(node -p "require('./version.json').versionName")
             NEW_CODE=$(node -p "require('./version.json').versionCode")
-            git commit -m "chore(release): bump version to v${NEW_VER} (Build ${NEW_CODE}) [skip ci]"
+            git commit -m "chore(release): bump version to v${NEW_VER} (Build ${NEW_CODE})"
             git push origin HEAD:main
           fi

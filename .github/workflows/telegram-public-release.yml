@@ -54,64 +54,64 @@ jobs:
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "VER=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      - name: Verify and resolve Telegram Chat ID
+      - name: Wait for In-Progress APK Build (If currently running)
         shell: bash
         env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::TELEGRAM_BOT_TOKEN is missing in GitHub Secrets"
-            exit 1
+          echo "🔍 Checking if an APK build workflow is currently running in background..."
+          
+          # فحص إذا كان هناك بناء جارٍ لمسار Build APK
+          RUNS_JSON=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-apk.yml/runs?branch=main&per_page=5")
+          
+          ACTIVE_RUN_ID=$(echo "$RUNS_JSON" | jq -r '.workflow_runs[] | select(.status == "in_progress" or .status == "queued") | .id' | head -n 1)
+
+          if [ -n "$ACTIVE_RUN_ID" ] && [ "$ACTIVE_RUN_ID" != "null" ]; then
+            echo "⏳ Found an active build run (#$ACTIVE_RUN_ID) in progress."
+            echo "⏳ Waiting for the APK build to finish cleanly before publishing (no rebuild)..."
+            
+            MAX_ATTEMPTS=40 # انتظار حتى 6 دقائق كحد أقصى (فحص كل 10 ثوان)
+            ATTEMPT=0
+            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              STATUS_RES=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/runs/$ACTIVE_RUN_ID")
+              RUN_STATUS=$(echo "$STATUS_RES" | jq -r '.status')
+              RUN_CONCLUSION=$(echo "$STATUS_RES" | jq -r '.conclusion')
+
+              if [ "$RUN_STATUS" == "completed" ]; then
+                if [ "$RUN_CONCLUSION" != "success" ]; then
+                  echo "::error::The background APK build run (#$ACTIVE_RUN_ID) failed with conclusion: $RUN_CONCLUSION"
+                  exit 1
+                fi
+                echo "✅ Background APK build finished successfully!"
+                break
+              fi
+
+              ATTEMPT=$((ATTEMPT + 1))
+              echo "⏳ Still compiling APK... (attempt $ATTEMPT/$MAX_ATTEMPTS) - waiting 10s"
+              sleep 10
+            done
+          else
+            echo "⚡ No active build in progress. Ready to grab the pre-built APK immediately!"
           fi
 
-          RAW_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]')
-          CANDIDATES=""
-
-          if [ -n "$RAW_CHAT" ]; then
-            CANDIDATES="$RAW_CHAT"
-            if echo "$RAW_CHAT" | grep -qE '^[0-9]+$'; then
-              CANDIDATES="$CANDIDATES -100$RAW_CHAT"
-            fi
-            if echo "$RAW_CHAT" | grep -qE '^[A-Za-z][A-Za-z0-9_]+$'; then
-              CANDIDATES="$CANDIDATES @$RAW_CHAT"
-            fi
-          fi
-
-          # استعادة السطر القديم الذي يقرأ الأحداث الحية للبوت
-          AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
-          CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
-
-          FOUND_CHANNEL=""
-          for C in $CANDIDATES; do
-            R=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getChat" --data-urlencode "chat_id=$C" || true)
-            if echo "$R" | grep -q '"ok":true'; then
-              echo "✅ Verified Telegram target channel: $C"
-              FOUND_CHANNEL="$C"
-              break
-            fi
-          done
-
-          if [ -z "$FOUND_CHANNEL" ]; then
-            echo "::error::Bot cannot access the channel. Please ensure the Bot is added as ADMINISTRATOR with 'Post Messages' permission in the Telegram Channel."
-            exit 1
-          fi
-
-          echo "CHANNEL=$FOUND_CHANNEL" >> "$GITHUB_ENV"
-
-      - name: Fetch Latest Pre-built APK Artifact (No Rebuilding)
+      - name: Fetch Latest Pre-built APK Artifact (Instant - No Rebuild)
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "🔍 Searching for latest built FlowPOS APK in artifacts..."
+          
+          # استخراج أحدث حزمة APK مطابقة
           ARTIFACT_INFO=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?per_page=30" \
             | jq -r '.artifacts[] | select(.expired == false and (.name | test("FlowPOS.*"; "i")) and (.name | test("win|exe|setup"; "i") | not)) | "\(.id) \(.name)"' | head -n 1)
 
           if [ -z "$ARTIFACT_INFO" ]; then
-            echo "::error::No pre-built APK artifact found! Please run 'Build FlowPOS Pro APK' once first to generate the artifact."
+            echo "::error::No pre-built APK artifact found! Ensure 'Build FlowPOS Pro APK' has run at least once."
             exit 1
           fi
 
@@ -139,7 +139,51 @@ jobs:
           echo "APK_FILE=$FINAL_NAME" >> "$GITHUB_ENV"
           echo "APK_PATH=$GITHUB_WORKSPACE/$FINAL_NAME" >> "$GITHUB_ENV"
 
-      - name: Send Ready APK to Telegram
+      - name: Resolve Telegram Channel Target
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::TELEGRAM_BOT_TOKEN is missing in GitHub Secrets"
+            exit 1
+          fi
+
+          RAW_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]')
+          CANDIDATES=""
+
+          if [ -n "$RAW_CHAT" ]; then
+            CANDIDATES="$RAW_CHAT"
+            if echo "$RAW_CHAT" | grep -qE '^[0-9]+$'; then
+              CANDIDATES="$CANDIDATES -100$RAW_CHAT"
+            fi
+            if echo "$RAW_CHAT" | grep -qE '^[A-Za-z][A-Za-z0-9_]+$'; then
+              CANDIDATES="$CANDIDATES @$RAW_CHAT"
+            fi
+          fi
+
+          AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
+          CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
+
+          FOUND_CHANNEL=""
+          for C in $CANDIDATES; do
+            R=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getChat" --data-urlencode "chat_id=$C" || true)
+            if echo "$R" | grep -q '"ok":true'; then
+              echo "✅ Verified Telegram target channel: $C"
+              FOUND_CHANNEL="$C"
+              break
+            fi
+          done
+
+          if [ -z "$FOUND_CHANNEL" ]; then
+            echo "::error::Bot cannot access the channel. Please ensure the Bot is added as ADMINISTRATOR with 'Post Messages' permission in the Telegram Channel."
+            exit 1
+          fi
+
+          echo "CHANNEL=$FOUND_CHANNEL" >> "$GITHUB_ENV"
+
+      - name: Send Ready APK Directly to Telegram (~10 seconds)
         shell: bash
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -180,4 +224,4 @@ jobs:
             --form-string "reply_markup=${REPLY_MARKUP}" \
             --form-string "caption=${CAPTION}"
 
-          echo "✅ Sent ready APK directly to Telegram channel without rebuild!"
+          echo "🎉 APK sent directly to Telegram in seconds without rebuilding!"

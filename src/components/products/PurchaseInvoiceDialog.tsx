@@ -197,7 +197,6 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
             const { data: existing } = await supabase
               .from('products')
               .select('id')
-              .eq('user_id', user.id)
               .eq('barcode', item.barcode.trim())
               .maybeSingle();
             if (existing) resolvedProductId = existing.id;
@@ -206,7 +205,6 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
             const { data: existing } = await supabase
               .from('products')
               .select('id')
-              .eq('user_id', user.id)
               .ilike('name', item.product_name.trim())
               .maybeSingle();
             if (existing) resolvedProductId = existing.id;

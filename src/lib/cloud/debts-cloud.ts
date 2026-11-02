@@ -578,8 +578,7 @@ export const deleteDebtCloud = async (debtId: string): Promise<boolean> => {
               debt_paid: 0,
               debt_remaining: 0,
             })
-            .or(`invoice_number.eq.${debt.invoiceId},id.eq.${debt.invoiceId}`)
-            .eq('user_id', userId);
+            .or(`invoice_number.eq.${debt.invoiceId},id.eq.${debt.invoiceId}`);
 
           emitEvent(EVENTS.INVOICES_UPDATED, null);
         }
@@ -706,8 +705,7 @@ export const writeOffDebtCloud = async (
         remaining_debt: 0,
         notes: `${debt.notes || ''}\n[إتلاف دين] ${reason}`.trim(),
       })
-      .eq('id', debtId)
-      .eq('user_id', userId);
+      .eq('id', debtId);
 
     invalidateDebtsCache();
     emitEvent(EVENTS.DEBTS_UPDATED, null);

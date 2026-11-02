@@ -492,8 +492,7 @@ export const linkInvoiceToCustomerCloud = async (
     await supabase
       .from('invoices')
       .update({ customer_id: customerId })
-      .eq('invoice_number', invoiceNumber)
-      .eq('user_id', userId);
+      .eq('invoice_number', invoiceNumber);
     const { invalidateInvoicesCache } = await import('./invoices-cloud');
     invalidateInvoicesCache();
   } catch (e) {

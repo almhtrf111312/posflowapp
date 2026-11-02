@@ -745,12 +745,11 @@ export const updateInvoiceCloud = async (
   const invoice = invoices.find(inv => inv.id === id);
   if (!invoice) return null;
 
-  // Get the actual UUID from cloud
+  // Get the actual UUID from cloud (scoped via RLS get_owner_id)
   const { data: cloudInvoice } = await sb
     .from('invoices')
     .select('id')
     .eq('invoice_number', id)
-    .eq('user_id', getCurrentUserId())
     .maybeSingle();
 
   if (!cloudInvoice) return null;
@@ -835,12 +834,11 @@ export const deleteInvoiceCloud = async (id: string): Promise<boolean> => {
     emitEvent(EVENTS.INVOICES_UPDATED, null);
     return true;
   }
-  // Find by invoice_number
+  // Find by invoice_number (scoped via RLS get_owner_id)
   const { data: cloudInvoice } = await sb
     .from('invoices')
     .select('id, customer_id')
     .eq('invoice_number', id)
-    .eq('user_id', getCurrentUserId())
     .maybeSingle();
 
   if (!cloudInvoice) return false;
@@ -1314,8 +1312,7 @@ export const updateInvoiceByNumberCloud = async (
   const { error } = await sb
     .from('invoices')
     .update(cloudUpdates)
-    .eq('invoice_number', invoiceNumber)
-    .eq('user_id', userId);
+    .eq('invoice_number', invoiceNumber);
 
   if (!error) {
     invalidateInvoicesCache();

@@ -331,7 +331,6 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
           const { data: byBarcode } = await supabase
             .from('products')
             .select('id, quantity, cost_price, sale_price, purchase_history')
-            .eq('user_id', user.id)
             .eq('barcode', barcode.trim())
             .maybeSingle();
 
@@ -343,7 +342,6 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
           const { data: byName } = await supabase
             .from('products')
             .select('id, quantity, cost_price, sale_price, purchase_history')
-            .eq('user_id', user.id)
             .ilike('name', productName.trim())
             .maybeSingle();
 

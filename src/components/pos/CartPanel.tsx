@@ -46,6 +46,7 @@ import { addActivityLog } from '@/lib/activity-log';
 import { addGrossProfit } from '@/lib/profits-store';
 import { distributeDetailedProfit } from '@/lib/partners-store';
 import { useAuth } from '@/hooks/use-auth';
+import { useUserRole } from '@/hooks/use-user-role';
 import { printHTML, printInvoice, PrintableInvoice, getStoreSettings, getPrintSettings } from '@/lib/native-print';
 import { isNativeAndroid } from '@/lib/printer/flowpos-printer';
 import { getStoredPrinterConfig } from '@/lib/printer/printer-config';
@@ -233,6 +234,7 @@ export function CartPanel({
   isMaintenanceEnabled: propIsMaintenanceEnabled,
 }: CartPanelProps) {
   const { user, profile } = useAuth();
+  const { isCashier } = useUserRole();
   const { t, language, isRTL } = useLanguage();
   const { activeWarehouse } = useWarehouse();
   // المستودع الرئيسي يخزن كمياته في المنتج نفسه وليس في جدول مخزون المستودعات
@@ -2089,8 +2091,12 @@ export function CartPanel({
                         const linePrice = roundForCurr(fromUsd(getItemPrice(item), selectedCurrency.code, safeCartRate), selectedCurrency.code);
                         return <span className="text-orange-400 font-medium">{formatNumber(linePrice)} {selectedCurrency.symbol} × {item.quantity}</span>;
                       })()}
-                      {wholesaleMode && isRepairStoreType() && item.costPrice != null && ' · '}
-                      {isRepairStoreType() && item.costPrice != null && `${t('pos.cost') || 'تكلفة'}: ${formatNumber(item.costPrice || 0)}`}
+                      {!isCashier && isRepairStoreType() && item.costPrice != null && (
+                        <>
+                          {wholesaleMode && ' · '}
+                          {`${t('pos.cost') || 'تكلفة'}: ${formatNumber(item.costPrice || 0)}`}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2291,7 +2297,7 @@ export function CartPanel({
                   </div>
                 )}
 
-                {receivedAmount > 0 && wholesaleMode && (
+                {!isCashier && receivedAmount > 0 && wholesaleMode && (
                   <span className={cn("px-1.5 py-0.5 rounded font-bold", wholesaleProfit && wholesaleProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
                     {t('pos.profit') || 'ربح'}: {formatMoney(wholesaleProfit || 0, 'USD')}
                   </span>

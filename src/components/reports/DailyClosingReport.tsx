@@ -5,7 +5,7 @@ import { formatReportAmount } from '@/lib/utils';
 import { ReportCurrencyBanner } from './ReportCurrencyBanner';
 import { Invoice } from '@/lib/cloud/invoices-cloud';
 import { Expense } from '@/lib/cloud/expenses-cloud';
-import { Debt } from '@/lib/cloud/debts-cloud';
+import { Debt, loadDebtPaymentsForDate } from '@/lib/cloud/debts-cloud';
 import { exportToExcel } from '@/lib/excel-export';
 import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
@@ -34,6 +34,28 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
     }
   }, [dateRange.from]);
 
+  const [debtPaymentsTotal, setDebtPaymentsTotal] = useState<number>(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedDate) {
+      setDebtPaymentsTotal(0);
+      return;
+    }
+
+    const loadPayments = async () => {
+      try {
+        const total = await loadDebtPaymentsForDate(selectedDate);
+        if (!cancelled) setDebtPaymentsTotal(total);
+      } catch (e) {
+        console.warn('Failed to load debt payments for date:', e);
+      }
+    };
+
+    loadPayments();
+    return () => { cancelled = true; };
+  }, [selectedDate]);
+
 
   const data = useMemo(() => {
     const dayInvoices = invoices.filter(inv => {
@@ -58,7 +80,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
     const cashSales = dayInvoices.filter(i => i.paymentType === 'cash').reduce((s, i) => s + i.total, 0);
     const debtSales = dayInvoices.filter(i => i.paymentType === 'debt').reduce((s, i) => s + i.total, 0);
     const newDebts = dayDebts.reduce((s, d) => s + d.totalDebt, 0);
-    const debtPayments = dayDebts.reduce((s, d) => s + d.totalPaid, 0);
+    const debtPayments = debtPaymentsTotal;
     const netProfit = totalProfit - totalExpenses;
 
     return {
@@ -79,7 +101,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
       invoiceCount: dayInvoices.length,
       expenseCount: dayExpenses.length,
     };
-  }, [invoices, expenses, debts, selectedDate]);
+  }, [invoices, expenses, debts, selectedDate, debtPaymentsTotal]);
 
   const handleExportExcel = async () => {
     const items = [
@@ -125,6 +147,8 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
       { item: t('reports.totalProfit') || 'إجمالي الأرباح', amount: data.totalProfit },
       { item: t('reports.totalExpenses') || 'إجمالي المصاريف', amount: data.totalExpenses },
       { item: t('reports.netProfit') || 'صافي الربح', amount: data.netProfit },
+      { item: t('reports.newDebts') || 'ديون جديدة', amount: data.newDebts },
+      { item: t('reports.debtPayments') || 'تسديدات ديون مستلمة', amount: data.debtPayments },
     ];
 
     await exportToPDF({
@@ -210,6 +234,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
             { label: t('reports.totalProfit') || 'إجمالي الأرباح', value: data.totalProfit, color: 'text-green-600' },
             { label: t('reports.expenses') || 'المصاريف', value: data.totalExpenses, color: 'text-red-500', count: `${data.expenseCount} ${t('reports.vouchersUnit') || 'مصروف'}` },
             { label: t('reports.newDebts') || 'ديون جديدة', value: data.newDebts, color: 'text-red-500', count: `${data.dayDebts.length} ${t('debts.title') || 'دين'}` },
+            { label: t('reports.debtPayments') || 'تسديدات ديون مستلمة', value: data.debtPayments, color: 'text-green-600' },
           ].map((item, i) => (
             <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
               <div className="flex items-center gap-2">

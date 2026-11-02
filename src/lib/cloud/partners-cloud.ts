@@ -420,20 +420,95 @@ export const withdrawProfitCloud = async (
   if (!allowNegative && amount > partner.currentBalance) {
     return false;
   }
-  
+
+  const roundedAmount = Math.round(amount * 100) / 100;
+  const withdrawalNote = notes || ('سحب أرباح - ' + partner.name);
+
+  // 1. Resolve active shift ID if any
+  let shiftId: string | null = null;
+  try {
+    const { getActiveShift } = await import('../cashbox-store');
+    const activeShift = getActiveShift();
+    if (activeShift?.id && activeShift.id.length >= 32) {
+      shiftId = activeShift.id;
+    }
+  } catch { /* silent */ }
+
+  // 2. Attempt atomic server-side RPC execution
+  let rpcSuccess = false;
+  if (navigator.onLine) {
+    try {
+      const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
+        _partner_id: partnerId,
+        _amount: roundedAmount,
+        _withdrawal_type: 'profit',
+        _notes: withdrawalNote,
+        _shift_id: shiftId,
+      });
+      if (!error && (data as any)?.success) {
+        rpcSuccess = true;
+      }
+    } catch (e) {
+      console.warn('[withdrawProfitCloud] RPC partner_withdrawal_atomic failed, falling back:', e);
+    }
+  }
+
   const withdrawal: Withdrawal = {
     id: Date.now().toString(),
-    amount,
+    amount: roundedAmount,
     type: 'profit',
     date: new Date().toISOString(),
-    notes,
+    notes: withdrawalNote,
   };
-  
-  return updatePartnerCloud(partnerId, {
-    currentBalance: partner.currentBalance - amount,
-    totalWithdrawn: partner.totalWithdrawn + amount,
-    withdrawalHistory: [...partner.withdrawalHistory, withdrawal],
+
+  // 3. Fallback or update state
+  if (rpcSuccess) {
+    partner.currentBalance = Math.round((partner.currentBalance - roundedAmount) * 100) / 100;
+    partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
+    partner.withdrawalHistory = [...(partner.withdrawalHistory || []), withdrawal];
+
+    if (partnersCache) {
+      const idx = partnersCache.findIndex(p => p.id === partnerId);
+      if (idx !== -1) partnersCache[idx] = partner;
+      savePartnersLocally(partnersCache);
+    }
+    emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
+
+    // Update cash drawer locally
+    try {
+      const { updateCashboxBalance } = await import('../cashbox-store');
+      updateCashboxBalance(roundedAmount, 'withdrawal');
+    } catch (e) {
+      console.warn('[withdrawProfitCloud] cashbox update failed:', e);
+    }
+
+    return true;
+  }
+
+  // Fallback for offline or RPC failure
+  const success = await updatePartnerCloud(partnerId, {
+    currentBalance: partner.currentBalance - roundedAmount,
+    totalWithdrawn: partner.totalWithdrawn + roundedAmount,
+    withdrawalHistory: [...(partner.withdrawalHistory || []), withdrawal],
   });
+
+  if (success) {
+    try {
+      const { updateCashboxBalance } = await import('../cashbox-store');
+      updateCashboxBalance(roundedAmount, 'withdrawal');
+    } catch (e) {
+      console.warn('[withdrawProfitCloud] cashbox update failed:', e);
+    }
+
+    try {
+      const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
+      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, 'USD', undefined, partnerId, withdrawalNote);
+    } catch (e) {
+      console.warn('[withdrawProfitCloud] shift tx sync failed:', e);
+    }
+  }
+
+  return success;
 };
 
 // Withdraw capital
@@ -448,13 +523,43 @@ export const withdrawCapitalCloud = async (
   if (amount > partner.currentCapital) return false;
 
   const roundedAmount = Math.round(amount * 100) / 100;
+  const withdrawalNote = notes || ('سحب رأس مال - ' + partner.name);
+
+  // 1. Resolve active shift ID if any
+  let shiftId: string | null = null;
+  try {
+    const { getActiveShift } = await import('../cashbox-store');
+    const activeShift = getActiveShift();
+    if (activeShift?.id && activeShift.id.length >= 32) {
+      shiftId = activeShift.id;
+    }
+  } catch { /* silent */ }
+
+  // 2. Attempt atomic server-side RPC execution
+  let rpcSuccess = false;
+  if (navigator.onLine) {
+    try {
+      const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
+        _partner_id: partnerId,
+        _amount: roundedAmount,
+        _withdrawal_type: 'capital',
+        _notes: withdrawalNote,
+        _shift_id: shiftId,
+      });
+      if (!error && (data as any)?.success) {
+        rpcSuccess = true;
+      }
+    } catch (e) {
+      console.warn('[withdrawCapitalCloud] RPC partner_withdrawal_atomic failed, falling back:', e);
+    }
+  }
 
   const withdrawal: Withdrawal = {
     id: Date.now().toString(),
     amount: roundedAmount,
     type: 'capital',
     date: new Date().toISOString(),
-    notes: notes || 'سحب رأس مال',
+    notes: withdrawalNote,
   };
 
   const capitalTx: CapitalTransaction = {
@@ -462,14 +567,40 @@ export const withdrawCapitalCloud = async (
     amount: roundedAmount,
     type: 'withdrawal',
     date: new Date().toISOString(),
-    notes: notes || 'سحب رأس مال',
+    notes: withdrawalNote,
   };
 
+  // 3. Fallback or update state
+  if (rpcSuccess) {
+    partner.currentCapital = Math.round((partner.currentCapital - roundedAmount) * 100) / 100;
+    partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
+    partner.withdrawalHistory = [...(partner.withdrawalHistory || []), withdrawal];
+    partner.capitalHistory = [...(partner.capitalHistory || []), capitalTx];
+
+    if (partnersCache) {
+      const idx = partnersCache.findIndex(p => p.id === partnerId);
+      if (idx !== -1) partnersCache[idx] = partner;
+      savePartnersLocally(partnersCache);
+    }
+    emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
+
+    // Update cash drawer locally
+    try {
+      const { updateCashboxBalance } = await import('../cashbox-store');
+      updateCashboxBalance(roundedAmount, 'withdrawal');
+    } catch (e) {
+      console.warn('[withdrawCapitalCloud] cashbox update failed:', e);
+    }
+
+    return true;
+  }
+
+  // Fallback for offline or RPC failure
   const success = await updatePartnerCloud(partnerId, {
     currentCapital: partner.currentCapital - roundedAmount,
     totalWithdrawn: partner.totalWithdrawn + roundedAmount,
-    withdrawalHistory: [...partner.withdrawalHistory, withdrawal],
-    capitalHistory: [...partner.capitalHistory, capitalTx],
+    withdrawalHistory: [...(partner.withdrawalHistory || []), withdrawal],
+    capitalHistory: [...(partner.capitalHistory || []), capitalTx],
   });
 
   if (success) {
@@ -478,6 +609,13 @@ export const withdrawCapitalCloud = async (
       updateCashboxBalance(roundedAmount, 'withdrawal');
     } catch (e) {
       console.warn('[withdrawCapitalCloud] cashbox update failed:', e);
+    }
+
+    try {
+      const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
+      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, 'USD', undefined, partnerId, withdrawalNote);
+    } catch (e) {
+      console.warn('[withdrawCapitalCloud] shift tx sync failed:', e);
     }
   }
 

@@ -472,7 +472,10 @@ export default function Reports() {
           } else {
             const price = Number(item.price || 0);
             const qty = Number(item.quantity || 1);
-            singleItemProfit = Math.max(0, (price - actualCost) * qty);
+            const taxRate = Number(inv.taxRate || 0);
+            const isInclusive = inv.taxMode === 'tax_inclusive' || (inv as any).tax_inclusive;
+            const netPrice = (isInclusive && taxRate > 0) ? price / (1 + taxRate / 100) : price;
+            singleItemProfit = Math.max(0, (netPrice - actualCost) * qty);
           }
           itemsProfit += singleItemProfit;
           hasCalculatedItems = true;
@@ -561,9 +564,13 @@ export default function Reports() {
           const actualCost = item.costPrice !== undefined && item.costPrice !== null
             ? Number(item.costPrice)
             : (catalogProduct?.costPrice !== undefined && catalogProduct?.costPrice !== null ? Number(catalogProduct.costPrice) : 0);
+          const price = Number(item.price || 0);
+          const taxRate = Number(inv.taxRate || 0);
+          const isInclusive = inv.taxMode === 'tax_inclusive' || (inv as any).tax_inclusive;
+          const netPrice = (isInclusive && taxRate > 0) ? price / (1 + taxRate / 100) : price;
           const itemProfit = (item.profit !== undefined && item.profit !== null && Number(item.profit) > 0)
             ? Number(item.profit)
-            : Math.max(0, (Number(item.price || 0) - actualCost) * qty);
+            : Math.max(0, (netPrice - actualCost) * qty);
           productSalesMap[key].profit += itemProfit;
         });
       }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Download,
   Filter,
@@ -26,7 +26,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from '@/lib/sonner-bridge';
-import { loadPartners, Partner, ProfitRecord } from '@/lib/partners-store';
+import { loadPartnersCloud, loadPartnersLocally, Partner, ProfitRecord } from '@/lib/cloud/partners-cloud';
+import { EVENTS } from '@/lib/events';
 import { formatNumber, formatMoney, formatReportAmount } from '@/lib/utils';
 import { getReportCurrency } from '@/lib/currencies';
 import { roundForCurrency } from '@/lib/money-engine';
@@ -60,7 +61,31 @@ export function PartnerProfitDetailedReport({ dateRange }: PartnerProfitDetailed
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set());
 
-  const partners = useMemo(() => loadPartners(), []);
+  const [partners, setPartners] = useState<Partner[]>(() => loadPartnersLocally() || []);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchPartners = async () => {
+      try {
+        const data = await loadPartnersCloud();
+        if (mounted) setPartners(data);
+      } catch (err) {
+        console.warn('Failed to load partners cloud in report:', err);
+      }
+    };
+
+    fetchPartners();
+
+    const handleUpdate = () => {
+      fetchPartners();
+    };
+
+    window.addEventListener(EVENTS.PARTNERS_UPDATED, handleUpdate);
+    return () => {
+      mounted = false;
+      window.removeEventListener(EVENTS.PARTNERS_UPDATED, handleUpdate);
+    };
+  }, []);
 
   // Get unique categories from all partners' profit history
   const allCategories = useMemo(() => {

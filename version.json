@@ -1,8 +1,14 @@
 {
-  "versionCode": 408,
-  "versionName": "1.5.20",
-  "lastUpdated": "2026-11-02T01:04:30.481Z",
+  "versionCode": 409,
+  "versionName": "1.5.21",
+  "lastUpdated": "2026-11-02T01:15:58.594Z",
   "buildHistory": [
+    {
+      "versionCode": 409,
+      "versionName": "1.5.21",
+      "date": "2026-11-02",
+      "description": "Release v1.5.21 (Build 409)"
+    },
     {
       "versionCode": 408,
       "versionName": "1.5.20",
@@ -116,12 +122,6 @@
       "versionName": "1.5.3.384",
       "date": "2026-11-01",
       "description": "Release v1.5.3.384 (Build 390)"
-    },
-    {
-      "versionCode": 389,
-      "versionName": "1.5.3.384",
-      "date": "2026-11-01",
-      "description": "Auto-bump on push (d1d2f36)"
     }
   ]
 }

@@ -692,3 +692,69 @@ function mergeSyncQueueDebts(debts) {
   const uniqueQueue = queueDebts.filter(qd => !existingIds.has(qd.invoiceId));
   return [...uniqueQueue, ...debts];
 }
+
+/**
+ * جلب مجموع تسديدات الديون الفعلية لتاريخ محدد (YYYY-MM-DD)
+ * يضمن دقة إقفال اليوم وعدم الخلط بين الديون المنشأة والمسددة
+ */
+export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> => {
+  if (!dateStr) return 0;
+  let total = 0;
+  let foundInCloud = false;
+
+  // 1. Try Supabase debt_payments table
+  if (navigator.onLine) {
+    try {
+      const startIso = `${dateStr}T00:00:00.000Z`;
+      const endIso = `${dateStr}T23:59:59.999Z`;
+      const { data, error } = await sb
+        .from('debt_payments')
+        .select('amount, created_at')
+        .gte('created_at', startIso)
+        .lte('created_at', endIso);
+
+      if (!error && data && data.length > 0) {
+        total = data.reduce((s, p) => s + Number(p.amount || 0), 0);
+        foundInCloud = true;
+      }
+    } catch (e) {
+      console.warn('[loadDebtPaymentsForDate] cloud fetch failed:', e);
+    }
+  }
+
+  // 2. Fallback: shift_transactions with type === 'debt_payment'
+  if (!foundInCloud && navigator.onLine) {
+    try {
+      const startIso = `${dateStr}T00:00:00.000Z`;
+      const endIso = `${dateStr}T23:59:59.999Z`;
+      const { data: shiftTx, error } = await sb
+        .from('shift_transactions')
+        .select('amount, created_at')
+        .eq('type', 'debt_payment')
+        .gte('created_at', startIso)
+        .lte('created_at', endIso);
+
+      if (!error && shiftTx && shiftTx.length > 0) {
+        return round8(shiftTx.reduce((s, tx) => s + Number(tx.amount || 0), 0));
+      }
+    } catch { /* silent */ }
+  }
+
+  // 3. Fallback locally from activity log
+  try {
+    const { getActivityLogs } = await import('@/lib/activity-log');
+    const logs = getActivityLogs();
+    const dayLogs = logs.filter(l => 
+      (l.type === 'debt_payment' || l.type === 'debt_paid') &&
+      (l.timestamp?.startsWith(dateStr) || l.timestamp?.split('T')[0] === dateStr)
+    );
+    if (dayLogs.length > 0) {
+      const localTotal = dayLogs.reduce((s, l) => s + Number((l.details as any)?.amount || 0), 0);
+      if (localTotal > 0 && !foundInCloud) {
+        return round8(localTotal);
+      }
+    }
+  } catch { /* silent */ }
+
+  return round8(total);
+};

@@ -165,13 +165,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       console.log('[CloudSync] Network restored, checking real internet access...');
       checkRealInternetAccess(6000).then(hasInternet => {
         if (hasInternet) {
-          console.log('[CloudSync] Real internet confirmed, starting sync...');
-          showToast.info('جاري المزامنة...', 'جاري رفع البيانات المعلقة');
+          console.log('[CloudSync] Real internet confirmed, starting silent sync...');
           syncNowRef.current?.();
         } else {
           console.log('[CloudSync] Network connected but no real internet access, will retry later');
-          // ✅ رسالة تنبيه ناعمة بدلاً من خطأ أحمر
-          showToast.info('متصل بالشبكة — في انتظار الإنترنت', 'سيتم المزامنة تلقائياً عند توفر الاتصال');
         }
       });
     }
@@ -442,36 +439,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       }, targetOperationId);
 
       // 🔔 إشعار موحد ونهائي يمنع تكدس الإشعارات
+      // ✅ تنفيذ المزامنة بصمت تام في الخلفية دون إظهار إشعارات منبثقة للعميل
       if (pendingBefore > 0 || result.processed > 0 || result.failed > 0) {
-        // معرف ثابت لـ Toast لضمان استبدال أي إشعار سابق وعدم تراكمها
-        const TOAST_SYNC_ID = 'unified-sync-summary';
-
-        if (result.processed > 0 && result.failed === 0) {
-          showToast.success('اكتملت المزامنة بنجاح', {
-            id: TOAST_SYNC_ID,
-            description: `تمت مزامنة كافة العمليات بنجاح (${result.processed} عملية) ✓`,
-            duration: 4000,
-          });
-        } else if (result.processed > 0 && result.failed > 0) {
-          showToast.info('اكتملت المزامنة جزئياً', {
-            id: TOAST_SYNC_ID,
-            description: `تمت مزامنة ${result.processed} عملية بنجاح — تعذرت ${result.failed} عملية`,
-            duration: 5000,
-          });
-        } else if (result.failed > 0 && result.processed === 0) {
-          showToast.error('تعذرت المزامنة', {
-            id: TOAST_SYNC_ID,
-            description: `فشلت مزامنة ${result.failed} عملية — يرجى مراجعة سبب التعثر في قائمة العمليات`,
-            duration: 5000,
-          });
-        }
-      } else if (forceDirect && !targetOperationId) {
-        // إذا ضغط المستخدم ولم تكن هناك أي عمليات معلقة
-        showToast.info('النظام متطابق', {
-          id: 'unified-sync-summary',
-          description: 'لا توجد فواتير أو عمليات معلقة بحاجة للمزامنة',
-          duration: 3000,
-        });
+        console.log(`[CloudSync] Sync completed silently — processed: ${result.processed}, failed: ${result.failed}`);
       }
 
       if (result.processed > 0) {
@@ -482,16 +452,11 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         if (result.failed === 0) resetOfflineInvoiceCounter();
       }
 
-      const cloudSettings = await fetchStoreSettings();
-      if (cloudSettings) {
-        const localSettings = loadUnifiedStoreSettings();
-        const merged = mergeStoreSettings(localSettings, cloudSettings);
-        applySettingsToRuntime(merged);
-
-        const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
-        if (!isJustSignedUp) {
-          localStorage.setItem('hyperpos_setup_complete', 'true');
-        }
+      // ✅ استخدام pullStoreSettingsWithGuard لمنع الكتابة العكسية للإعدادات السحابية القديمة فوق التعديلات المحلية الأحدث
+      await pullStoreSettingsWithGuard();
+      const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
+      if (!isJustSignedUp) {
+        localStorage.setItem('hyperpos_setup_complete', 'true');
       }
 
       emitEvent(EVENTS.PRODUCTS_UPDATED);

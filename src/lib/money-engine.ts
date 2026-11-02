@@ -152,15 +152,19 @@ function buildStateFromStorage(): MoneyEngineState {
           const detectedCode = getCurrencyCodeFromLegacySymbol(String(symbols[legacySlot] || ''));
           if (!detectedCode || detectedCode === legacySlot) continue;
 
-          rates[detectedCode] ??= rates[legacySlot];
+          if (!(Number(rates[detectedCode]) > 0) && Number(rates[legacySlot]) > 0) {
+            rates[detectedCode] = rates[legacySlot];
+          }
           symbols[detectedCode] ??= detectedCode;
           names[detectedCode] ??= names[legacySlot];
           enabledMap[detectedCode] ??= enabledMap[legacySlot];
           if (primary === legacySlot) primary = detectedCode;
-          delete rates[legacySlot];
-          delete symbols[legacySlot];
-          delete names[legacySlot];
-          delete enabledMap[legacySlot];
+          if (parsed.slot1Code !== legacySlot && parsed.slot2Code !== legacySlot) {
+            delete rates[legacySlot];
+            delete symbols[legacySlot];
+            delete names[legacySlot];
+            delete enabledMap[legacySlot];
+          }
         }
         activeCode = primary;
 

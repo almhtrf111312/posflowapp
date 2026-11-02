@@ -358,6 +358,7 @@ export function mergeStoreSettings(
 
   const cloudUpdatedAt = Number(cloudSync.updatedAt) || (cloud.updated_at ? new Date(cloud.updated_at as string).getTime() : 0);
   const localUpdatedAt = Number(base.updatedAt) || 0;
+  const isLocalNewer = localUpdatedAt > 0 && localUpdatedAt >= cloudUpdatedAt;
   const mergedUpdatedAt = Math.max(localUpdatedAt, cloudUpdatedAt) || Date.now();
 
   // 1. معلومات المتجر الأساسية
@@ -427,18 +428,34 @@ export function mergeStoreSettings(
     if (typeof symbol === 'string' && symbol.trim()) mergedSymbols[code.toUpperCase()] = symbol.trim();
   });
 
-  // 6. أسعار الصرف
-  const cloudRates = (cloud.exchange_rates && typeof cloud.exchange_rates === 'object') ? (cloud.exchange_rates as Record<string, any>) : {};
+  // 6. أسعار الصرف (مع احترام الطابع الزمني الأحدث بين المحلي والسحابي)
+  const rawCloudRates = (cloud.exchange_rates && typeof cloud.exchange_rates === 'object')
+    ? (cloud.exchange_rates as Record<string, any>)
+    : {};
+  const syncCloudRates = (cloudSync.exchangeRates && typeof cloudSync.exchangeRates === 'object')
+    ? (cloudSync.exchangeRates as Record<string, any>)
+    : {};
+  const cloudRates: Record<string, any> = { ...rawCloudRates, ...syncCloudRates };
   const localRates = base.exchangeRates || DEFAULT_UNIFIED_SETTINGS.exchangeRates;
-  const tryRate = Number(cloudRates.TRY) > 0 ? Number(cloudRates.TRY) : (Number(localRates.TRY) > 0 ? Number(localRates.TRY) : DEFAULT_UNIFIED_SETTINGS.exchangeRates.TRY);
-  const sypRate = Number(cloudRates.SYP) > 0 ? Number(cloudRates.SYP) : (Number(localRates.SYP) > 0 ? Number(localRates.SYP) : DEFAULT_UNIFIED_SETTINGS.exchangeRates.SYP);
+
+  const pickRate = (code: string, fallback: number): number => {
+    const cRate = Number(cloudRates[code] ?? cloudRates[code.toUpperCase()]);
+    const lRate = Number(localRates[code] ?? localRates[code.toUpperCase()]);
+    if (isLocalNewer) {
+      return lRate > 0 ? lRate : (cRate > 0 ? cRate : fallback);
+    }
+    return cRate > 0 ? cRate : (lRate > 0 ? lRate : fallback);
+  };
+
+  const tryRate = pickRate('TRY', DEFAULT_UNIFIED_SETTINGS.exchangeRates.TRY || 32);
+  const sypRate = pickRate('SYP', DEFAULT_UNIFIED_SETTINGS.exchangeRates.SYP || 14500);
   const mergedRates: Record<string, number> = { USD: 1, TRY: tryRate, SYP: sypRate };
+
   new Set([...Object.keys(cloudRates), ...Object.keys(localRates)]).forEach((code) => {
-    if (code.toUpperCase() === 'USD') return;
-    const cloudRate = Number(cloudRates[code]);
-    const localRate = Number(localRates[code]);
-    const rate = cloudRate > 0 ? cloudRate : localRate;
-    if (rate > 0) mergedRates[code.toUpperCase()] = rate;
+    const upper = code.toUpperCase();
+    if (upper === 'USD') return;
+    const rate = pickRate(code, 0);
+    if (rate > 0) mergedRates[upper] = rate;
   });
   const cloudDisplayModes = cloudSync.currencyDisplayMode || {};
   const localDisplayModes = base.currencyDisplayMode || DEFAULT_UNIFIED_SETTINGS.currencyDisplayMode;
@@ -520,9 +537,9 @@ export function mergeStoreSettings(
   return {
     updatedAt: mergedUpdatedAt,
     storeSettings: mergedStore,
-    primaryCurrency: mergedPrimary,
-    slot1Code: (typeof cloudSync.slot1Code === 'string' && cloudSync.slot1Code) || base.slot1Code || 'TRY',
-    slot2Code: (typeof cloudSync.slot2Code === 'string' && cloudSync.slot2Code) || base.slot2Code || 'SYP',
+    primaryCurrency: isLocalNewer ? (base.primaryCurrency || mergedPrimary) : mergedPrimary,
+    slot1Code: (isLocalNewer && base.slot1Code) ? base.slot1Code : ((typeof cloudSync.slot1Code === 'string' && cloudSync.slot1Code) || base.slot1Code || 'TRY'),
+    slot2Code: (isLocalNewer && base.slot2Code) ? base.slot2Code : ((typeof cloudSync.slot2Code === 'string' && cloudSync.slot2Code) || base.slot2Code || 'SYP'),
     enabledCurrencies: mergedEnabled,
     exchangeRates: mergedRates,
     currencyNames: mergedNames,

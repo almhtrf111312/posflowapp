@@ -1321,6 +1321,39 @@ export default function Settings() {
 
       setEnabledCurrencies(cleanEnabledCurrencies);
 
+      // بناء خريطة أسعار الصرف والأسماء والرموز النظيفة مع منع تداخل الخانات القديمة TRY/SYP
+      const cleanExchangeRates: Record<string, number> = { USD: 1 };
+      for (const [k, v] of Object.entries(exchangeRates)) {
+        const upperKey = k.trim().toUpperCase();
+        if (v !== '' && v !== undefined) {
+          const num = Number(v);
+          if (Number.isFinite(num) && num > 0) {
+            cleanExchangeRates[upperKey] = num;
+          }
+        }
+      }
+      if (slot1Code && exchangeRates[slot1Code] !== '' && exchangeRates[slot1Code] !== undefined) {
+        const num = Number(exchangeRates[slot1Code]);
+        if (Number.isFinite(num) && num > 0) cleanExchangeRates[slot1Code.toUpperCase()] = num;
+      }
+      if (slot2Code && exchangeRates[slot2Code] !== '' && exchangeRates[slot2Code] !== undefined) {
+        const num = Number(exchangeRates[slot2Code]);
+        if (Number.isFinite(num) && num > 0) cleanExchangeRates[slot2Code.toUpperCase()] = num;
+      }
+
+      // إعادة الخانات التراثية TRY و SYP لأسمائها ورموزها الأصلية إذا لم تكن هي المختارة في slot1/slot2
+      // لمنع detectCurrencyCodeFromMeta من اعتقاد أن TRY هي EGP
+      const cleanCurrencyNames: Record<string, string | undefined> = { ...currencyNames };
+      const cleanCurrencySymbols: Record<string, string | undefined> = { ...currencySymbols };
+      if (slot1Code !== 'TRY' && slot2Code !== 'TRY') {
+        cleanCurrencyNames.TRY = 'ليرة تركية';
+        cleanCurrencySymbols.TRY = '₺';
+      }
+      if (slot1Code !== 'SYP' && slot2Code !== 'SYP') {
+        cleanCurrencyNames.SYP = 'ليرة سورية';
+        cleanCurrencySymbols.SYP = 'ل.س';
+      }
+
       const saveResult = await saveUnifiedStoreSettings({
         updatedAt: Date.now(),
         slot1Code,
@@ -1328,26 +1361,9 @@ export default function Settings() {
         storeSettings,
         primaryCurrency,
         enabledCurrencies: cleanEnabledCurrencies,
-        exchangeRates: (() => {
-          const res: Record<string, number> = { USD: 1 };
-          for (const [k, v] of Object.entries(exchangeRates)) {
-            if (v !== '' && v !== undefined) {
-              const num = Number(v);
-              if (Number.isFinite(num) && num > 0) res[k] = num;
-            }
-          }
-          if (slot1Code && exchangeRates[slot1Code] !== '' && exchangeRates[slot1Code] !== undefined) {
-            const num = Number(exchangeRates[slot1Code]);
-            if (Number.isFinite(num) && num > 0) res[slot1Code] = num;
-          }
-          if (slot2Code && exchangeRates[slot2Code] !== '' && exchangeRates[slot2Code] !== undefined) {
-            const num = Number(exchangeRates[slot2Code]);
-            if (Number.isFinite(num) && num > 0) res[slot2Code] = num;
-          }
-          return res;
-        })() as any,
-        currencyNames,
-        currencySymbols,
+        exchangeRates: cleanExchangeRates,
+        currencyNames: cleanCurrencyNames,
+        currencySymbols: cleanCurrencySymbols,
         currencyDisplayMode,
         taxEnabled,
         taxRate,
@@ -1380,9 +1396,9 @@ export default function Settings() {
         slot1Code,
         slot2Code,
         enabledCurrencies: { ...cleanEnabledCurrencies },
-        exchangeRates: { ...exchangeRates },
-        currencyNames: { ...currencyNames },
-        currencySymbols: { ...currencySymbols },
+        exchangeRates: { ...exchangeRates, ...cleanExchangeRates },
+        currencyNames: { ...cleanCurrencyNames },
+        currencySymbols: { ...cleanCurrencySymbols },
         currencyDisplayMode: { ...currencyDisplayMode },
         notificationSettings: { ...notificationSettings },
         printSettings: { ...printSettings },

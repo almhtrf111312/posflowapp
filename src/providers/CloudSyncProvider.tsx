@@ -1,5 +1,6 @@
 // Cloud Sync Provider - Wraps the app and ensures cloud sync is properly initialized
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/hooks/use-auth';
 import { setCurrentUserId, fetchStoreSettings, saveStoreSettings } from '@/lib/supabase-store';
 import { EVENTS, emitEvent, emitAppRefresh } from '@/lib/events';
@@ -180,27 +181,55 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   useEffect(() => {
     if (!user || isGuestDemoMode()) return;
     const handleOnline = () => {
-      console.log('[CloudSync] window online event fired, triggering sync & warmup...');
+      console.log('[CloudSync] online event fired, triggering sync & warmup...');
       setTimeout(() => {
         syncNowRef.current?.(true);
         warmupAllCaches(true).catch(() => {});
       }, 200);
     };
     window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+
+    // ✅ دعم مستمع أحداث كاباسيتور الأصلية للأندرويد
+    let removeCapacitorListener: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      import('@capacitor/network').then(({ Network }) => {
+        const listenerPromise = Network.addListener('networkStatusChange', (status) => {
+          if (status.connected) {
+            handleOnline();
+          }
+        });
+        removeCapacitorListener = () => {
+          listenerPromise.then(l => l.remove()).catch(() => {});
+        };
+      }).catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      if (removeCapacitorListener) {
+        removeCapacitorListener();
+      }
+    };
   }, [user]);
 
-  // مؤقت دوري لإعادة محاولة المزامنة
+  // مؤقت دوري ذكي لإعادة محاولة المزامنة:
+  // ✅ يتوقف تماماً إذا كان طابور المزامنة فارغاً ولا توجد عمليات معلقة لتوفير طاقة المعالج والبطارية
   useEffect(() => {
     if (!user || isGuestDemoMode()) return;
 
     periodicRetryRef.current = setInterval(async () => {
       if (isSyncingRef.current) return;
-      console.log('[CloudSync] Periodic background sync check...');
+
+      // فحص طابور المزامنة أولاً: إذا كان فارغاً، يتم التخطي فوراً دون أي استهلاك للشبكة أو المعالج
+      const queueStatus = getQueueStatus();
+      if (!queueStatus || queueStatus.pendingCount === 0) {
+        return;
+      }
+
+      console.log(`[CloudSync] Found ${queueStatus.pendingCount} pending operations, checking connection and retrying...`);
       const hasInternet = await checkRealInternetAccess(4000);
       if (hasInternet) {
         syncNowRef.current?.();
-        warmupAllCaches().catch(() => {});
       }
     }, PERIODIC_RETRY_INTERVAL_MS);
 

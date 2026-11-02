@@ -79,7 +79,7 @@ const saveCustomersLocally = (customers: Customer[]) => {
   } catch { /* ignore */ }
 };
 
-const loadCustomersLocally = (): Customer[] | null => {
+export const loadCustomersLocally = (): Customer[] | null => {
   try {
     const data = localStorage.getItem(LOCAL_CACHE_KEY);
     return data ? JSON.parse(data) : null;
@@ -115,7 +115,10 @@ const refreshCustomersInBackground = async () => {
   }
 };
 
-// Load customers — local-first: serve cache instantly, refresh in background
+// In-memory profiles cache for cashier names to eliminate redundant network queries
+const cashierProfilesMap = new Map<string, string>();
+
+// Load customers — Cache-First / Zero-Wait pattern (0ms local return + silent SWR background sync)
 export const loadCustomersCloud = async (): Promise<Customer[]> => {
   if (isGuestDemoMode()) {
     const local = loadCustomersLocally() || [];
@@ -134,23 +137,21 @@ export const loadCustomersCloud = async (): Promise<Customer[]> => {
     return mergeSyncQueueCustomers(local || customersCache || []);
   }
 
-  // Memory cache: instant
-  if (customersCache && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return mergeSyncQueueCustomers(customersCache);
-  }
-
-  // localStorage cache: instant + trigger background refresh
+  // 1. Instant Cache-First return (0ms)
   const local = loadCustomersLocally();
-  if (local && local.length > 0) {
-    customersCache = local;
-    cacheTimestamp = Date.now();
-    if (navigator.onLine) refreshCustomersInBackground();
-    return mergeSyncQueueCustomers(local);
+  const cachedData = (local && local.length > 0) ? local : customersCache;
+
+  if (cachedData && cachedData.length > 0) {
+    customersCache = cachedData;
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      if (Date.now() - cacheTimestamp >= CACHE_TTL) {
+        void refreshCustomersInBackground();
+      }
+    }
+    return mergeSyncQueueCustomers(cachedData);
   }
 
-  // First load — must wait for network if online
-  if (!navigator.onLine) return mergeSyncQueueCustomers([]);
-
+  // 2. Cold start with zero cache: fetch from cloud
   try {
     const cloudCustomers = await fetchFromSupabase<CloudCustomer>('customers', {
       column: 'created_at',
@@ -170,7 +171,7 @@ export const loadCustomersCloud = async (): Promise<Customer[]> => {
   return mergeSyncQueueCustomers(local || customersCache || []);
 };
 
-// ✅ تحميل العملاء مع أسماء الكاشير بأمان دون تعليق أو أخطاء أوفلاين
+// ✅ تحميل العملاء مع أسماء الكاشير بأمان دون تعليق أو أخطاء أوفلاين مع كاش فوري
 export const loadCustomersWithCashierNamesCloud = async (): Promise<Customer[]> => {
   if (isGuestDemoMode()) {
     return loadCustomersCloud();
@@ -181,28 +182,36 @@ export const loadCustomersWithCashierNamesCloud = async (): Promise<Customer[]> 
     return customers;
   }
   
+  const cashierIds = [...new Set(customers.filter(c => c.cashierId).map(c => c.cashierId!))];
+  if (cashierIds.length === 0) return customers;
+
+  const missingIds = cashierIds.filter(id => !cashierProfilesMap.has(id));
+  if (missingIds.length === 0) {
+    return customers.map(c => ({
+      ...c,
+      cashierName: c.cashierId ? cashierProfilesMap.get(c.cashierId) || undefined : undefined,
+    }));
+  }
+
   try {
-    // جلب أسماء الكاشير من profiles
-    const cashierIds = [...new Set(customers.filter(c => c.cashierId).map(c => c.cashierId!))];
-    
-    if (cashierIds.length === 0) return customers;
-    
     const { data: profiles } = await supabase
       .from('profiles')
       .select('user_id, full_name')
-      .in('user_id', cashierIds);
+      .in('user_id', missingIds);
     
-    if (!profiles || profiles.length === 0) return customers;
-    const profileMap = new Map(profiles.map(p => [p.user_id, p.full_name]));
-    
-    return customers.map(c => ({
-      ...c,
-      cashierName: c.cashierId ? profileMap.get(c.cashierId) || undefined : undefined,
-    }));
+    if (profiles) {
+      profiles.forEach((p: { user_id: string; full_name: string }) => {
+        if (p.user_id && p.full_name) cashierProfilesMap.set(p.user_id, p.full_name);
+      });
+    }
   } catch (err) {
     console.warn('[customers-cloud] cashier names lookup failed:', err);
-    return customers;
   }
+
+  return customers.map(c => ({
+    ...c,
+    cashierName: c.cashierId ? cashierProfilesMap.get(c.cashierId) || undefined : undefined,
+  }));
 };
 
 export const invalidateCustomersCache = () => {

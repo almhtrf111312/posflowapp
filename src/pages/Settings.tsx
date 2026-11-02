@@ -1,8 +1,18 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+
+const ArchiveSection = lazy(() => import('@/components/settings/ArchiveSection').then(m => ({ default: m.ArchiveSection })));
+const ActivityLogSection = lazy(() => import('@/components/settings/ActivityLogSection').then(m => ({ default: m.ActivityLogSection })));
+const SystemDiagnostics = lazy(() => import('@/components/settings/SystemDiagnostics').then(m => ({ default: m.SystemDiagnostics })));
+const LocalBackupSection = lazy(() => import('@/components/settings/LocalBackupSection').then(m => ({ default: m.LocalBackupSection })));
+const Partners = lazy(() => import('@/pages/Partners'));
+const LicenseManagement = lazy(() => import('@/components/settings/LicenseManagement').then(m => ({ default: m.LicenseManagement })));
+const DataResetSection = lazy(() => import('@/components/settings/DataResetSection'));
+const ContactLinksSection = lazy(() => import('@/components/settings/ContactLinksSection').then(m => ({ default: m.ContactLinksSection })));
+const ProductFieldsSection = lazy(() => import('@/components/settings/ProductFieldsSection').then(m => ({ default: m.ProductFieldsSection })));
+const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
 import { Coins, Undo2, Smartphone, UserCheck, Users, ArrowLeft, ArrowRight, Sparkles, ShoppingCart, SlidersHorizontal, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NOTIFICATION_EVENT_GROUPS, getDefaultNotificationEvents } from '@/lib/notification-events-config';
-import Partners from '@/pages/Partners';
-import { ArchiveSection } from '@/components/settings/ArchiveSection';
+
 import {
   Search,
   Store,
@@ -52,23 +62,15 @@ import {
   Wallet
 } from 'lucide-react';
 import { downloadJSON, isNativePlatform, listNativeBackups, NativeBackupFile, DownloadResult } from '@/lib/file-download';
-import { LocalBackupSection } from '@/components/settings/LocalBackupSection';
 import { LanguageSection } from '@/components/settings/LanguageSection';
 import { isValidAppFontId, setStoredAppFont, APP_FONT_STORAGE_KEY } from '@/lib/app-font-config';
 // ThemeSection integrated as a tab
-import { ActivityLogSection } from '@/components/settings/ActivityLogSection';
-import { SystemDiagnostics } from '@/components/settings/SystemDiagnostics';
-import { PasswordChangeDialog } from '@/components/settings/PasswordChangeDialog';
-import { LicenseManagement } from '@/components/settings/LicenseManagement';
 import { ActivationCodeInput } from '@/components/settings/ActivationCodeInput';
-import { ProductFieldsSection } from '@/components/settings/ProductFieldsSection';
 import { ProductFieldsConfig, loadProductFieldsConfig, saveProductFieldsConfig, getDefaultFieldsByStoreType, StoreType } from '@/lib/product-fields-config';
 import { loadCustomFields } from '@/lib/custom-fields-config';
 import { PREDEFINED_CURRENCIES, CURRENCY_CATEGORIES, detectCurrencyCodeFromMeta, loadNormalizedCurrencySettings, normalizeCurrencySettings } from '@/lib/currencies';
 import { getDefaultCategories } from '@/lib/store-type-config';
 import { saveCategories, Category } from '@/lib/categories-store';
-import DataResetSection from '@/components/settings/DataResetSection';
-import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 import { ProfileManagement } from '@/components/settings/ProfileManagement';
 import {
   printHTML,
@@ -104,7 +106,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
-import { useUsersManagement, UserData } from '@/hooks/use-users-management';
+
 import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
 import { isGuestDemoMode } from '@/lib/demo-data';
@@ -248,7 +250,6 @@ export default function Settings() {
   const { toast } = useToast();
   const { t, isRTL } = useLanguage();
   const { user: currentUser } = useAuth();
-  const { users, isLoading: usersLoading, addUser, updateUserRole, updateUserProfile, deleteUser } = useUsersManagement();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab');
 
@@ -734,27 +735,6 @@ export default function Settings() {
   const [pendingStoreType, setPendingStoreType] = useState<string | null>(null);
 
   // Dialogs
-  const [userDialogOpen, setUserDialogOpen] = useState(false);
-  const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [passwordChangeUserId, setPasswordChangeUserId] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [userForm, setUserForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    phone: '',
-    role: 'cashier' as 'admin' | 'cashier',
-    userType: 'cashier' as 'cashier' | 'distributor' | 'pos',
-    allowedPages: [] as string[],
-  });
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const userNameInputRef = useRef<HTMLInputElement>(null);
-  const userEmailInputRef = useRef<HTMLInputElement>(null);
-  const userPasswordInputRef = useRef<HTMLInputElement>(null);
-
   const [isSyncing, setIsSyncing] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -832,120 +812,108 @@ export default function Settings() {
   } | null>(null);
 
 
-  // ✅ Load settings from cloud on mount to ensure persistence across reinstalls/updates
+  // ✅ Silent SWR: Load settings from cloud in background without UI blocking or unnecessary re-renders
   useEffect(() => {
     let isMounted = true;
-    const loadFromCloud = async () => {
+    const loadFromCloudSilent = async () => {
       try {
         const restoredSettings = await pullStoreSettingsWithGuard();
-        if (!isMounted) return;
+        if (!isMounted || !restoredSettings) return;
 
-        const localSettings = restoredSettings;
-        if (restoredSettings) {
-          const merged = restoredSettings;
-          setSettingsLayout(merged.appearanceSettings.settingsLayout === 'list' ? 'list' : 'grid');
-          const restoredSync = {
-            interval: Number(merged.syncSettings?.interval ?? 10),
-            showSuccessNotification: merged.syncSettings?.showSuccessNotification !== false,
-            showErrorNotification: merged.syncSettings?.showErrorNotification !== false,
-            showSyncStatus: merged.syncSettings?.showSyncStatus !== false,
-            lastSync: String(merged.syncSettings?.lastSync ?? ''),
-          };
-          setSyncSettings(restoredSync);
+        // Compare timestamps to avoid unnecessary re-renders when local settings are already current
+        const cloudUpdatedAt = Number(restoredSettings.updatedAt) || 0;
+        const localUpdatedAt = Number(initialUnified?.updatedAt) || 0;
 
-          setStoreSettings(merged.storeSettings);
-          setTaxEnabled(merged.taxEnabled);
-          setTaxRate(merged.taxRate);
-          setNotificationSettings(merged.notificationSettings as unknown as typeof notificationSettings);
-          setPrintSettings(merged.printSettings as typeof printSettings);
-          const s1Code = detectCurrencyCodeFromMeta(merged.currencySymbols?.TRY, merged.currencyNames?.TRY, 'TRY');
-          const s2Code = detectCurrencyCodeFromMeta(merged.currencySymbols?.SYP, merged.currencyNames?.SYP, 'SYP');
-          setSlot1Code(s1Code);
-          setSlot2Code(s2Code);
-          const initialNorm = normalizeCurrencySettings(merged);
-          setPrimaryCurrency(initialNorm.primaryCurrencyCode);
+        if (cloudUpdatedAt <= localUpdatedAt) {
+          return;
+        }
 
-          const loadedRates: Record<string, string> = {};
-          const loadedNames: Record<string, string> = {};
-          const loadedSymbols: Record<string, string> = {};
-          const loadedEnabled: Record<string, boolean> = {};
-          for (const [code, c] of Object.entries(initialNorm.currencies)) {
-            loadedRates[code] = String(c.rate);
-            loadedNames[code] = c.name;
-            loadedSymbols[code] = c.symbol;
-            loadedEnabled[code] = c.enabled;
-          }
-          setExchangeRates(loadedRates);
-          setCurrencyNames(loadedNames);
-          setCurrencySymbols(loadedSymbols);
-          setCurrencyDisplayMode(merged.currencyDisplayMode || {});
-          setEnabledCurrencies(loadedEnabled);
+        const merged = restoredSettings;
+        setSettingsLayout(merged.appearanceSettings.settingsLayout === 'list' ? 'list' : 'grid');
+        const restoredSync = {
+          interval: Number(merged.syncSettings?.interval ?? 10),
+          showSuccessNotification: merged.syncSettings?.showSuccessNotification !== false,
+          showErrorNotification: merged.syncSettings?.showErrorNotification !== false,
+          showSyncStatus: merged.syncSettings?.showSyncStatus !== false,
+          lastSync: String(merged.syncSettings?.lastSync ?? ''),
+        };
+        setSyncSettings(restoredSync);
 
-          setDiscountPercentEnabled(merged.discountPercentEnabled);
-          setDiscountFixedEnabled(merged.discountFixedEnabled);
-          setBarcodeScanMode(merged.barcodeScanMode);
-          setHideMaintenanceSection(merged.hideMaintenanceSection);
-          setTrackCapital(merged.trackCapital);
-          setInitialCapital(merged.initialCapital);
-          setBackupSettings({
+        setStoreSettings(merged.storeSettings);
+        setTaxEnabled(merged.taxEnabled);
+        setTaxRate(merged.taxRate);
+        setNotificationSettings(merged.notificationSettings as unknown as typeof notificationSettings);
+        setPrintSettings(merged.printSettings as typeof printSettings);
+        const s1Code = detectCurrencyCodeFromMeta(merged.currencySymbols?.TRY, merged.currencyNames?.TRY, 'TRY');
+        const s2Code = detectCurrencyCodeFromMeta(merged.currencySymbols?.SYP, merged.currencyNames?.SYP, 'SYP');
+        setSlot1Code(s1Code);
+        setSlot2Code(s2Code);
+        const initialNorm = normalizeCurrencySettings(merged);
+        setPrimaryCurrency(initialNorm.primaryCurrencyCode);
+
+        const loadedRates: Record<string, string> = {};
+        const loadedNames: Record<string, string> = {};
+        const loadedSymbols: Record<string, string> = {};
+        const loadedEnabled: Record<string, boolean> = {};
+        for (const [code, c] of Object.entries(initialNorm.currencies)) {
+          loadedRates[code] = String(c.rate);
+          loadedNames[code] = c.name;
+          loadedSymbols[code] = c.symbol;
+          loadedEnabled[code] = c.enabled;
+        }
+        setExchangeRates(loadedRates);
+        setCurrencyNames(loadedNames);
+        setCurrencySymbols(loadedSymbols);
+        setCurrencyDisplayMode(merged.currencyDisplayMode || {});
+        setEnabledCurrencies(loadedEnabled);
+
+        setDiscountPercentEnabled(merged.discountPercentEnabled);
+        setDiscountFixedEnabled(merged.discountFixedEnabled);
+        setBarcodeScanMode(merged.barcodeScanMode);
+        setHideMaintenanceSection(merged.hideMaintenanceSection);
+        setTrackCapital(merged.trackCapital);
+        setInitialCapital(merged.initialCapital);
+        setBackupSettings({
+          autoBackup: Boolean(merged.backupSettings.autoBackup),
+          interval: String(merged.backupSettings.interval || 'daily'),
+          keepDays: String(merged.backupSettings.keepDays || '7'),
+        });
+
+        if (merged.productFieldsConfig) {
+          setProductFieldsConfig(merged.productFieldsConfig);
+        }
+
+        applySettingsToRuntime(merged);
+
+        settingsSnapshotRef.current = {
+          storeSettings: { ...merged.storeSettings },
+          syncSettings: restoredSync,
+          primaryCurrency: merged.primaryCurrency,
+          enabledCurrencies: { ...merged.enabledCurrencies },
+          exchangeRates: { ...merged.exchangeRates } as any,
+          currencyNames: { ...merged.currencyNames } as any,
+          currencySymbols: { ...merged.currencySymbols } as any,
+          currencyDisplayMode: { ...merged.currencyDisplayMode },
+          notificationSettings: { ...(merged.notificationSettings as unknown as typeof notificationSettings) },
+          printSettings: { ...(merged.printSettings as typeof printSettings) },
+          backupSettings: {
             autoBackup: Boolean(merged.backupSettings.autoBackup),
             interval: String(merged.backupSettings.interval || 'daily'),
             keepDays: String(merged.backupSettings.keepDays || '7'),
-          });
-
-          if (merged.productFieldsConfig) {
-            setProductFieldsConfig(merged.productFieldsConfig);
-          }
-
-          applySettingsToRuntime(merged);
-
-          // ✅ Update snapshot with the EXACT identical fresh values
-          settingsSnapshotRef.current = {
-            storeSettings: { ...merged.storeSettings },
-            syncSettings: restoredSync,
-            primaryCurrency: merged.primaryCurrency,
-            enabledCurrencies: { ...merged.enabledCurrencies },
-            exchangeRates: { ...merged.exchangeRates } as any,
-            currencyNames: { ...merged.currencyNames } as any,
-            currencySymbols: { ...merged.currencySymbols } as any,
-            currencyDisplayMode: { ...merged.currencyDisplayMode },
-            notificationSettings: { ...(merged.notificationSettings as unknown as typeof notificationSettings) },
-            printSettings: { ...(merged.printSettings as typeof printSettings) },
-            backupSettings: {
-              autoBackup: Boolean(merged.backupSettings.autoBackup),
-              interval: String(merged.backupSettings.interval || 'daily'),
-              keepDays: String(merged.backupSettings.keepDays || '7'),
-            },
-            hideMaintenanceSection: merged.hideMaintenanceSection,
-            productFieldsConfig: merged.productFieldsConfig || loadProductFieldsConfig(),
-            taxEnabled: merged.taxEnabled,
-            taxRate: merged.taxRate,
-            discountPercentEnabled: merged.discountPercentEnabled,
-            discountFixedEnabled: merged.discountFixedEnabled,
-            barcodeScanMode: merged.barcodeScanMode,
-            trackCapital: merged.trackCapital,
-            initialCapital: merged.initialCapital,
-          };
-
-          console.log('[Settings] Loaded and synced from cloud successfully');
-        } else {
-          // In offline mode or cloud not reachable, apply local unified settings
-          applySettingsToRuntime(localSettings);
-        }
-      } catch (err) {
-        console.warn('[Settings] Could not load from cloud, using local cache:', err);
-      } finally {
-        if (isMounted) {
-          setIsSettingsReady(true);
-        }
+          },
+          hideMaintenanceSection: merged.hideMaintenanceSection,
+          productFieldsConfig: merged.productFieldsConfig || loadProductFieldsConfig(),
+        };
+      } catch (e) {
+        console.warn('[Settings] Silent background settings sync error (cached values in use):', e);
       }
     };
-
-    loadFromCloud();
+    const timer = setTimeout(loadFromCloudSilent, 50);
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Capture snapshot on first render only
   useEffect(() => {
@@ -1045,7 +1013,7 @@ export default function Settings() {
       adminOnly: true,
       category: 'operations',
       color: 'indigo',
-      badge: `${users?.length || 0} ${isRTL ? 'مستخدم' : 'users'}`,
+      badge: isRTL ? 'إدارة' : 'Manage',
       keywords: ['مستخدمين', 'كاشير', 'صلاحيات', 'وصول', 'users', 'roles', 'cashier'],
     },
     {
@@ -1134,7 +1102,7 @@ export default function Settings() {
       badge: 'v1.0.68',
       keywords: ['حول', 'برنامج', 'إصدار', 'تحديث', 'نسخة', 'about', 'version'],
     },
-  ], [t, isRTL, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationPerm, printSettings?.paperSize, users?.length]);
+  ], [t, isRTL, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationPerm, printSettings?.paperSize]);
 
   // Independent tabs that have no saveable settings form state
   const INDEPENDENT_TABS = ['licenses', 'activity', 'archive', 'license', 'contact', 'reset', 'about', 'users', 'partners', 'profile'];
@@ -1420,194 +1388,6 @@ export default function Settings() {
         description: t('settings.dataSynced'),
       });
     }, 2000);
-  };
-
-  const handleAddUser = () => {
-    if (isGuestDemoMode()) {
-      toast({
-        title: isRTL ? 'تنبيه' : 'Notice',
-        description: 'إدارة الحسابات تتطلب حساباً رسمياً وغير متاحة في النسخة التجريبية',
-      });
-      return;
-    }
-    setSelectedUser(null);
-    setUserForm({ name: '', email: '', password: '', phone: '', role: 'cashier', userType: 'cashier', allowedPages: [] });
-    setEmailError('');
-    setPasswordError('');
-    setUserDialogOpen(true);
-  };
-
-  const handleEditUser = (user: UserData) => {
-    if (isGuestDemoMode()) {
-      toast({
-        title: isRTL ? 'تنبيه' : 'Notice',
-        description: 'إدارة الحسابات تتطلب حساباً رسمياً وغير متاحة في النسخة التجريبية',
-      });
-      return;
-    }
-    setSelectedUser(user);
-    // Convert boss/admin roles to 'cashier' for the form since we only allow cashier role for new users
-    const formRole = user.role === 'boss' || user.role === 'admin' ? 'cashier' : user.role;
-    // Populate phone from user data
-    setUserForm({
-      name: user.name,
-      email: '',
-      password: '',
-      phone: user.phone || '',
-      role: formRole as 'admin' | 'cashier',
-      userType: user.userType || 'cashier',
-      allowedPages: user.allowedPages || [],
-    });
-    setEmailError('');
-    setPasswordError('');
-    setUserDialogOpen(true);
-  };
-
-  const handleDeleteUser = (user: UserData) => {
-    if (isGuestDemoMode()) {
-      toast({
-        title: isRTL ? 'تنبيه' : 'Notice',
-        description: 'إدارة الحسابات تتطلب حساباً رسمياً وغير متاحة في النسخة التجريبية',
-      });
-      return;
-    }
-    setSelectedUser(user);
-    setDeleteUserDialogOpen(true);
-  };
-
-  const confirmDeleteUser = async () => {
-    if (selectedUser) {
-      setIsSavingUser(true);
-      const success = await deleteUser(selectedUser.user_id, selectedUser.id);
-      setIsSavingUser(false);
-      if (success) {
-        setDeleteUserDialogOpen(false);
-        setSelectedUser(null);
-      }
-    }
-  };
-
-  const handleSaveUser = async () => {
-    if (isGuestDemoMode()) {
-      toast({
-        title: isRTL ? 'تنبيه' : 'Notice',
-        description: 'إدارة الحسابات تتطلب حساباً رسمياً وغير متاحة في النسخة التجريبية',
-      });
-      return;
-    }
-    setEmailError('');
-    setPasswordError('');
-
-    const trimmedName = userForm.name.trim();
-    if (!trimmedName) {
-      toast({
-        title: t('common.error'),
-        description: t('settings.enterUsername'),
-        variant: "destructive",
-      });
-      userNameInputRef.current?.focus();
-      return;
-    }
-
-    if (selectedUser) {
-      setIsSavingUser(true);
-      // Update existing user - update profile with name, userType, phone, and allowedPages
-      const nameChanged = trimmedName !== selectedUser.name;
-      const userTypeChanged = userForm.userType !== selectedUser.userType;
-      const phoneChanged = userForm.phone !== (selectedUser.phone || '');
-      const pagesChanged = JSON.stringify(userForm.allowedPages) !== JSON.stringify(selectedUser.allowedPages || []);
-
-      let success = true;
-
-      // Update profile if anything changed
-      if (nameChanged || userTypeChanged || phoneChanged || pagesChanged) {
-        success = await updateUserProfile(
-          selectedUser.user_id,
-          trimmedName,
-          userForm.userType,
-          userForm.phone,
-          userForm.allowedPages.length > 0 ? userForm.allowedPages : null
-        );
-      }
-
-      if (success) {
-        setUserDialogOpen(false);
-        setSelectedUser(null);
-        setUserForm({ name: '', email: '', password: '', phone: '', role: 'cashier', userType: 'cashier', allowedPages: [] });
-      }
-      setIsSavingUser(false);
-    } else {
-      // Add new user - Clean inputs
-      const trimmedEmail = userForm.email.trim().toLowerCase();
-      const rawPassword = userForm.password;
-
-      // Email validation: check empty and strict regex
-      if (!trimmedEmail) {
-        setEmailError('يرجى إدخال البريد الإلكتروني');
-        toast({
-          title: t('common.error'),
-          description: 'يرجى إدخال البريد الإلكتروني',
-          variant: "destructive",
-        });
-        userEmailInputRef.current?.focus();
-        return;
-      }
-
-      // Regex ensures valid standard format [local]@[domain].[tld] preventing reversed formats
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!emailRegex.test(trimmedEmail)) {
-        setEmailError('صيغة البريد الإلكتروني غير صالحة (مثال: user@example.com)');
-        toast({
-          title: t('common.error'),
-          description: 'صيغة البريد الإلكتروني غير صالحة، تأكد من كتابة البريد بشكل صحيح',
-          variant: "destructive",
-        });
-        userEmailInputRef.current?.focus();
-        return;
-      }
-
-      // Password validation: check empty and minimum length
-      if (!rawPassword) {
-        setPasswordError('يرجى إدخال كلمة المرور');
-        toast({
-          title: t('common.error'),
-          description: 'يرجى إدخال كلمة المرور',
-          variant: "destructive",
-        });
-        userPasswordInputRef.current?.focus();
-        return;
-      }
-
-      if (rawPassword.length < 6) {
-        setPasswordError('يجب أن تتكون كلمة المرور من 6 أحرف على الأقل');
-        toast({
-          title: t('common.error'),
-          description: t('settings.passwordTooShort') || 'كلمة المرور يجب أن لا تقل عن 6 أحرف',
-          variant: "destructive",
-        });
-        userPasswordInputRef.current?.focus();
-        return;
-      }
-
-      setIsSavingUser(true);
-
-      const success = await addUser(
-        trimmedEmail,
-        rawPassword,
-        trimmedName,
-        userForm.role,
-        userForm.userType,
-        userForm.phone?.trim() || undefined,
-        userForm.allowedPages.length > 0 ? userForm.allowedPages : undefined
-      );
-
-      if (success) {
-        setUserDialogOpen(false);
-        setUserForm({ name: '', email: '', password: '', phone: '', role: 'cashier', userType: 'cashier', allowedPages: [] });
-      }
-
-      setIsSavingUser(false);
-    }
   };
 
   const handleBackupNow = async () => {
@@ -3252,98 +3032,7 @@ export default function Settings() {
         );
 
       case 'users':
-        return (
-          <div className="space-y-4">
-            {isGuestDemoMode() && (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span>إدارة الحسابات وتعيين كلمات المرور تتطلب حساباً رسمياً وغير متاحة في النسخة التجريبية.</span>
-              </div>
-            )}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <h2 className="text-base sm:text-lg font-bold text-foreground">{t('settings.userManagement')}</h2>
-              <Button onClick={handleAddUser} className="w-full sm:w-auto h-9">
-                <Plus className="w-4 h-4" />
-                {t('settings.addUser')}
-              </Button>
-            </div>
-            <div className="space-y-2.5">
-              {usersLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-primary" />
-                  {t('common.loading')}
-                </div>
-              ) : users.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl p-4">
-                  {t('settings.noUsers')}
-                </div>
-              ) : (
-                users
-                  .filter((user) => user.role !== 'boss') // Hide boss accounts from this list
-                  .map((user) => (
-                    <div key={user.id} className="flex flex-col gap-2 p-3.5 bg-muted/40 rounded-xl border border-border/50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                          <User className="w-4 h-4 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground text-sm truncate">{user.name}</p>
-                          {user.email && (
-                            <p className="text-xs text-muted-foreground truncate font-mono">{user.email}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {user.role === 'admin' ? t('settings.userTypeOwner') :
-                              user.userType === 'distributor' ? t('settings.userTypeDistributor') :
-                                user.userType === 'pos' ? t('settings.userTypePOS') :
-                                  t('settings.cashier')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 border-t border-border/40 pt-2">
-                        {(!user.isOwner || isBoss || user.role === 'cashier') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 h-8 gap-1 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:text-primary transition-colors font-medium shadow-none"
-                            onClick={() => {
-                              if (isGuestDemoMode()) {
-                                toast({
-                                  title: isRTL ? 'تنبيه' : 'Notice',
-                                  description: 'إدارة الحسابات تتطلب حساباً رسمياً وغير متاحة في النسخة التجريبية',
-                                });
-                                return;
-                              }
-                              setPasswordChangeUserId(user.user_id || user.id);
-                              setSelectedUser(user);
-                              setPasswordDialogOpen(true);
-                            }}
-                            title={isRTL ? 'تغيير كلمة المرور' : 'Change Password'}
-                          >
-                            <Key className="w-3.5 h-3.5 text-primary shrink-0" />
-                            <span>{isRTL ? 'كلمة المرور' : t('settings.password')}</span>
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="flex-1 h-8 gap-1 text-xs" onClick={() => handleEditUser(user)}>
-                          <Edit className="w-3 h-3" />
-                          <span>{t('common.edit')}</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex-1 h-8 gap-1 text-xs text-destructive"
-                          onClick={() => handleDeleteUser(user)}
-                          disabled={user.user_id === currentUser?.id || user.isOwner}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>{t('common.delete')}</span>
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-        );
+        return <UsersTab />;
 
       case 'backup':
         return (
@@ -3691,7 +3380,7 @@ export default function Settings() {
     }
   };
 
-  const isAdmin = users.find(u => u.user_id === currentUser?.id)?.role === 'admin';
+
 
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-x-hidden max-w-full">
@@ -3987,247 +3676,17 @@ export default function Settings() {
 
           {/* Content */}
           <div className="bg-card/70 sm:bg-card rounded-2xl border border-border/70 sm:border-border p-3.5 sm:p-6 overflow-hidden max-w-full pb-28">
-            {/* ✅ إلغاء حظر التحميل: عرض الإعدادات فوراً وتحديث البيانات في الخلفية بهدوء */}
-            {renderTabContent()}
+            {/* ✅ إلغاء حظر التحميل: عرض الإعدادات فوراً وتحديث البيانات في الخلفية بهدوء واستيراد مرجأ */}
+            <Suspense fallback={
+              <div className="flex items-center justify-center p-8 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            }>
+              {renderTabContent()}
+            </Suspense>
           </div>
         </>
       )}
-
-      {/* User Dialog */}
-      <Dialog
-        open={userDialogOpen}
-        onOpenChange={(open) => {
-          setUserDialogOpen(open);
-          if (!open) {
-            setEmailError('');
-            setPasswordError('');
-          }
-        }}
-      >
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto w-[95vw] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedUser ? t('settings.editUser') : t('settings.addNewUser')}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('common.name')}</label>
-              <Input
-                ref={userNameInputRef}
-                value={userForm.name}
-                onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                placeholder={t('settings.usernamePlaceholder')}
-              />
-            </div>
-            {selectedUser && (
-              <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Key className="w-4 h-4 text-primary shrink-0" />
-                    <span>{isRTL ? 'كلمة مرور المستخدم' : 'User Password'}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {isRTL ? 'تعيين أو تغيير كلمة المرور لهذا المستخدم مباشرة' : 'Directly set or change this user\'s password'}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 h-8 gap-1.5 border-primary/40 text-primary hover:bg-primary/10 font-medium"
-                  onClick={() => {
-                    setPasswordChangeUserId(selectedUser.user_id || selectedUser.id);
-                    setPasswordDialogOpen(true);
-                  }}
-                >
-                  <Key className="w-3.5 h-3.5 text-primary" />
-                  <span>{isRTL ? 'تعيين كلمة مرور جديدة' : 'Set New Password'}</span>
-                </Button>
-              </div>
-            )}
-            {!selectedUser && (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('common.email')}</label>
-                  <Input
-                    ref={userEmailInputRef}
-                    type="email"
-                    dir="ltr"
-                    value={userForm.email}
-                    onChange={(e) => {
-                      setUserForm({ ...userForm, email: e.target.value });
-                      if (emailError) setEmailError('');
-                    }}
-                    placeholder="email@example.com"
-                    className={`text-left placeholder:text-right ${emailError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                  />
-                  {emailError && (
-                    <p className="text-xs text-destructive font-medium">{emailError}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('auth.password')}</label>
-                  <div className="relative">
-                    <Input
-                      ref={userPasswordInputRef}
-                      type={showPassword ? 'text' : 'password'}
-                      dir="ltr"
-                      value={userForm.password}
-                      onChange={(e) => {
-                        setUserForm({ ...userForm, password: e.target.value });
-                        if (passwordError) setPasswordError('');
-                      }}
-                      placeholder={t('auth.password')}
-                      className={`text-left placeholder:text-right pr-10 ${passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {passwordError && (
-                    <p className="text-xs text-destructive font-medium">{passwordError}</p>
-                  )}
-                </div>
-              </>
-            )}
-            {!selectedUser && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('settings.phoneOptional')}</label>
-                <Input
-                  type="tel"
-                  value={userForm.phone}
-                  onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                  placeholder="+963 912 345 678"
-                />
-              </div>
-            )}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{t('settings.userTypeLabel')}</label>
-              <select
-                value={userForm.userType}
-                onChange={(e) => setUserForm({ ...userForm, userType: e.target.value as 'cashier' | 'distributor' | 'pos' })}
-                className="w-full h-10 px-3 rounded-md bg-muted border-0"
-              >
-                <option value="cashier">{t('settings.userTypeCashierOption')}</option>
-                <option value="pos">{t('settings.userTypePOSOption')}</option>
-                <option value="distributor">{t('settings.userTypeDistributorOption')}</option>
-              </select>
-              <p className="text-xs text-muted-foreground">
-                {userForm.userType === 'cashier'
-                  ? t('settings.userTypeCashierDesc')
-                  : userForm.userType === 'pos'
-                    ? t('settings.userTypePOSDesc')
-                    : t('settings.userTypeDistributorDesc')}
-              </p>
-            </div>
-            {/* Allowed Pages - checkboxes for page permissions */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">{isRTL ? 'القوائم المسموح بها' : 'Allowed Pages'}</label>
-              <p className="text-xs text-muted-foreground">
-                {isRTL ? 'حدد القوائم الإضافية التي يستطيع هذا المستخدم الوصول إليها' : 'Select additional pages this user can access'}
-              </p>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                {[
-                  { key: 'dashboard', label: t('nav.dashboard') },
-                  { key: 'products', label: isRTL ? 'المنتجات (عرض فقط)' : 'Products (view only)' },
-                  { key: 'partners', label: t('nav.partners') },
-                  { key: 'reports', label: t('nav.reports') },
-                  { key: 'settings', label: t('nav.settings') },
-                ].map(page => (
-                  <label key={page.key} className="flex items-center gap-2 text-sm cursor-pointer p-1.5 rounded-lg hover:bg-muted">
-                    <input
-                      type="checkbox"
-                      checked={userForm.allowedPages.includes(page.key)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setUserForm(prev => ({ ...prev, allowedPages: [...prev.allowedPages, page.key] }));
-                        } else {
-                          setUserForm(prev => ({ ...prev, allowedPages: prev.allowedPages.filter(p => p !== page.key) }));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-primary text-primary accent-primary"
-                    />
-                    {page.label}
-                  </label>
-                ))}
-              </div>
-              {/* Special permission: can add products */}
-              {(userForm.allowedPages.includes('products') || userForm.role === 'cashier') && (
-                <div className="mt-2 p-2.5 bg-muted/60 rounded-lg border border-border/50">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={userForm.allowedPages.includes('products:add')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          // Make sure 'products' is also enabled
-                          setUserForm(prev => ({
-                            ...prev,
-                            allowedPages: [...prev.allowedPages.filter(p => p !== 'products:add'), 'products:add',
-                              ...(!prev.allowedPages.includes('products') ? ['products'] : [])
-                            ]
-                          }));
-                        } else {
-                          setUserForm(prev => ({ ...prev, allowedPages: prev.allowedPages.filter(p => p !== 'products:add') }));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-primary text-primary accent-primary"
-                    />
-                    <div>
-                      <span className="font-medium">{isRTL ? 'إمكانية إضافة المنتجات' : 'Can Add Products'}</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {isRTL ? 'يسمح للكاشير بإضافة منتجات جديدة وتعديلها' : 'Allows cashier to add and edit products'}
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUserDialogOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={handleSaveUser} disabled={isSavingUser}>
-              {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {t('common.save')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete User Dialog */}
-      <Dialog open={deleteUserDialogOpen} onOpenChange={setDeleteUserDialogOpen}>
-        <DialogContent className="max-w-sm w-[95vw] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>{t('common.confirmDelete')}</DialogTitle>
-          </DialogHeader>
-          <p className="py-4">{t('settings.confirmDeleteUser')} "{selectedUser?.name}"?</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUserDialogOpen(false)}>{t('common.cancel')}</Button>
-            <Button variant="destructive" onClick={confirmDeleteUser} disabled={isSavingUser}>
-              {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {t('common.delete')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Password Change Dialog */}
-      <PasswordChangeDialog
-        open={passwordDialogOpen}
-        onOpenChange={(open) => {
-          setPasswordDialogOpen(open);
-          if (!open) {
-            setPasswordChangeUserId(null);
-          }
-        }}
-        userId={passwordChangeUserId || selectedUser?.user_id || selectedUser?.id || undefined}
-        userName={users.find(u => (u.user_id === passwordChangeUserId || u.id === passwordChangeUserId))?.name || selectedUser?.name}
-        isOwnPassword={passwordChangeUserId ? passwordChangeUserId === currentUser?.id : false}
-      />
 
       {/* Transfer License Dialog */}
       <AlertDialog open={transferDialogOpen} onOpenChange={(open) => {

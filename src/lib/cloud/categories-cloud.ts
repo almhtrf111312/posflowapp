@@ -47,7 +47,7 @@ const saveCategoriesLocally = (categories: Category[]) => {
   } catch { /* ignore */ }
 };
 
-const loadCategoriesLocally = (): Category[] | null => {
+export const loadCategoriesLocally = (): Category[] | null => {
   try {
     const data = localStorage.getItem(LOCAL_CACHE_KEY);
     return data ? JSON.parse(data) : null;

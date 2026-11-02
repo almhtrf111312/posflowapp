@@ -57,13 +57,13 @@ import { getCurrencyDef, roundForCurrency, round8 } from '@/lib/money-engine';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/sonner-bridge';
 import { useTheme } from '@/hooks/use-theme';
-import { loadInvoicesCloud, Invoice } from '@/lib/cloud/invoices-cloud';
-import { loadProductsCloud, Product } from '@/lib/cloud/products-cloud';
-import { loadCustomersCloud, Customer } from '@/lib/cloud/customers-cloud';
-import { loadPartnersCloud, Partner } from '@/lib/cloud/partners-cloud';
-import { loadCategoriesCloud, Category } from '@/lib/cloud/categories-cloud';
-import { loadExpensesCloud, Expense } from '@/lib/cloud/expenses-cloud';
-import { loadDebtsCloud, Debt } from '@/lib/cloud/debts-cloud';
+import { loadInvoicesCloud, loadInvoicesFromLocalCache, Invoice } from '@/lib/cloud/invoices-cloud';
+import { loadProductsCloud, loadProductsLocalFirst, Product } from '@/lib/cloud/products-cloud';
+import { loadCustomersCloud, loadCustomersLocally, Customer } from '@/lib/cloud/customers-cloud';
+import { loadPartnersCloud, loadPartnersLocally, Partner } from '@/lib/cloud/partners-cloud';
+import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/cloud/categories-cloud';
+import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
+import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PartnerProfitDetailedReport } from '@/components/reports/PartnerProfitDetailedReport';
 import { ProfitTrendChart } from '@/components/reports/ProfitTrendChart';
@@ -76,7 +76,7 @@ import { MaintenanceReport } from '@/components/reports/MaintenanceReport';
 import { DailyClosingReport } from '@/components/reports/DailyClosingReport';
 import { LibraryReport } from '@/components/reports/LibraryReport';
 import { downloadJSON } from '@/lib/file-download';
-import { loadPurchaseInvoicesCloud } from '@/lib/cloud/purchase-invoices-cloud';
+import { loadPurchaseInvoicesCloud, loadPurchaseInvoicesLocally } from '@/lib/cloud/purchase-invoices-cloud';
 import {
   exportInvoicesToExcel,
   exportProductsToExcel,
@@ -218,20 +218,49 @@ export default function Reports() {
   const [cloudDebts, setCloudDebts] = useState<Debt[]>([]);
   const [cloudPurchases, setCloudPurchases] = useState<any[]>([]);
 
-  const loadCloudData = useCallback(async (isSilent = false) => {
-    if (!isSilent) setIsLoading(true);
+  // 🚀 ترويض استعلامات التقارير: تغذية التقارير أولاً من الكاشات المحلية المتوفرة بدون تعطيل
+  const loadLocalReportsData = useCallback(async () => {
     try {
-      // Local-first products pre-population for instant 0ms report calculations
-      if (cloudProducts.length === 0) {
-        try {
-          const { loadProductsLocalFirst } = await import('@/lib/cloud/products-cloud');
-          const localProds = await loadProductsLocalFirst();
-          if (localProds && localProds.length > 0) setCloudProducts(localProds);
-        } catch {
-          // ignore local load error
-        }
-      }
+      const [
+        localInvoices,
+        localProducts,
+        localCustomers,
+        localPartners,
+        localCategories,
+        localExpenses,
+        localDebts,
+        localPurchases
+      ] = await Promise.all([
+        Promise.resolve(loadInvoicesFromLocalCache() || []),
+        loadProductsLocalFirst().catch(() => []),
+        Promise.resolve(loadCustomersLocally() || []),
+        Promise.resolve(loadPartnersLocally() || []),
+        Promise.resolve(loadCategoriesLocally() || []),
+        Promise.resolve(loadExpensesLocally() || []),
+        Promise.resolve(loadDebtsLocally() || []),
+        Promise.resolve(loadPurchaseInvoicesLocally() || [])
+      ]);
 
+      if (localInvoices && localInvoices.length > 0) setCloudInvoices(localInvoices);
+      if (localProducts && localProducts.length > 0) setCloudProducts(localProducts);
+      if (localCustomers && localCustomers.length > 0) setCloudCustomers(localCustomers);
+      if (localPartners && localPartners.length > 0) setCloudPartners(localPartners);
+      if (localCategories && localCategories.length > 0) setCloudCategories(localCategories);
+      if (localExpenses && localExpenses.length > 0) setCloudExpenses(localExpenses);
+      if (localDebts && localDebts.length > 0) setCloudDebts(localDebts);
+      if (localPurchases && localPurchases.length > 0) setCloudPurchases(localPurchases);
+    } catch (e) {
+      console.warn('[Reports] Error loading local caches:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // السحب السحابي الشامل — مخصص للتشغيل الصامت أو عند النقر اليدوي على زر "تحديث البيانات"
+  const [isRefreshingCloud, setIsRefreshingCloud] = useState(false);
+  const loadCloudData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsRefreshingCloud(true);
+    try {
       const [invoices, products, customers, partners, categories, expenses, debts, purchases] = await Promise.all([
         loadInvoicesCloud(),
         loadProductsCloud(),
@@ -250,37 +279,29 @@ export default function Reports() {
       setCloudExpenses(expenses);
       setCloudDebts(debts);
       setCloudPurchases(purchases || []);
+      if (!isSilent) {
+        toast.success(isRTL ? 'تم تحديث بيانات التقارير بنجاح' : 'Reports data updated successfully');
+      }
     } catch (error) {
       console.error('Error loading cloud data for reports:', error);
       if (!isSilent) toast.error(t('reports.loadError'));
     } finally {
+      setIsRefreshingCloud(false);
       setIsLoading(false);
     }
-  }, [t, cloudProducts.length]);
+  }, [t, isRTL]);
 
   const isPageActiveRef = useRef(isPageActive);
   useEffect(() => {
     isPageActiveRef.current = isPageActive;
   }, [isPageActive]);
 
-  const hasPendingReportUpdateRef = useRef(false);
-
+  // ✅ منع تشغيل Promise.all الثماني عند مجرد التنقل: تغذية فورية 0ms من الكاش المحلي
   useEffect(() => {
-    // If returning to reports tab and an update was queued while hidden, trigger fresh load
-    if (isPageActive && hasPendingReportUpdateRef.current) {
-      hasPendingReportUpdateRef.current = false;
-      loadCloudData(true);
-    }
-  }, [isPageActive, loadCloudData]);
-
-  useEffect(() => {
-    loadCloudData();
+    loadLocalReportsData();
     const handleUpdate = () => {
-      if (!isPageActiveRef.current) {
-        hasPendingReportUpdateRef.current = true;
-        return;
-      }
-      loadCloudData(true);
+      // قراءة الكاش المحلي المحدث فوراً عند استلام أي حدث دون إطلاق طلبات شبكة جديدة
+      loadLocalReportsData();
     };
     window.addEventListener(EVENTS.INVOICES_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.PRODUCTS_UPDATED, handleUpdate);
@@ -298,7 +319,7 @@ export default function Reports() {
       window.removeEventListener(EVENTS.EXPENSES_UPDATED, handleUpdate);
       window.removeEventListener(EVENTS.PURCHASES_UPDATED, handleUpdate);
     };
-  }, [loadCloudData]);
+  }, [loadLocalReportsData]);
 
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>('all');
   const isDistributorStore = storeType === 'phones';
@@ -2372,6 +2393,17 @@ export default function Reports() {
               title={t('reports.extraFilter')}
             >
               <Filter className="w-4 h-4 text-muted-foreground" />
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => loadCloudData(false)}
+              disabled={isLoading || isRefreshingCloud}
+              className="h-10 px-3 rounded-xl border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary shrink-0 shadow-sm transition-[colors,transform] active:scale-95 flex items-center gap-1.5 text-[11px] font-bold"
+              title={isRTL ? 'تحديث البيانات من السحابة' : 'Refresh Cloud Data'}
+            >
+              <RefreshCw className={cn("w-4 h-4", (isLoading || isRefreshingCloud) && "animate-spin")} />
+              <span className="hidden sm:inline">{isRTL ? 'تحديث البيانات' : 'Refresh'}</span>
             </Button>
 
             <Button

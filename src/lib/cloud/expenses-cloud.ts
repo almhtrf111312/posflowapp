@@ -130,7 +130,7 @@ const saveExpensesLocally = (expenses: Expense[]) => {
   } catch { /* ignore */ }
 };
 
-const loadExpensesLocally = (): Expense[] | null => {
+export const loadExpensesLocally = (): Expense[] | null => {
   try {
     const data = localStorage.getItem(LOCAL_CACHE_KEY);
     return data ? JSON.parse(data) : null;
@@ -222,23 +222,50 @@ const fetchFresh_loadExpensesCloud = async (): Promise<Expense[]> => {
 };
 
 
-// Local-first boot: first load after app start shows the saved copy instantly, refreshes silently
-let bootServed_loadExpensesCloud = false;
-export const loadExpensesCloud = async (): Promise<Expense[]> => {
-  if (!bootServed_loadExpensesCloud) {
-    bootServed_loadExpensesCloud = true;
-    const local = loadExpensesLocally();
-    if (local && local.length > 0 && getCurrentUserId()) {
-      expensesCache = local; cacheTimestamp = Date.now();
-      if (navigator.onLine) {
-        setTimeout(() => {
-          expensesCache = null; cacheTimestamp = 0;
-          fetchFresh_loadExpensesCloud().then(() => emitEvent(EVENTS.EXPENSES_UPDATED, null)).catch(() => {});
-        }, 0);
+let bgFetchingExpenses = false;
+const refreshExpensesInBackground = async () => {
+  if (bgFetchingExpenses || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+  bgFetchingExpenses = true;
+  try {
+    const oldCache = expensesCache || loadExpensesLocally() || [];
+    const fresh = await fetchFresh_loadExpensesCloud();
+    if (fresh) {
+      const oldLen = oldCache.length;
+      const newLen = fresh.length;
+      const oldLatest = oldCache[0]?.id;
+      const newLatest = fresh[0]?.id;
+      if (oldLen !== newLen || oldLatest !== newLatest) {
+        emitEvent(EVENTS.EXPENSES_UPDATED, fresh);
       }
-      return local;
     }
+  } catch (err) {
+    console.warn('[ExpensesCloud] Background refresh failed:', err);
+  } finally {
+    bgFetchingExpenses = false;
   }
+};
+
+// Load expenses — Cache-First / Zero-Wait pattern (0ms local return + silent SWR background sync)
+export const loadExpensesCloud = async (): Promise<Expense[]> => {
+  // 1. Cache-First: Serve local copy immediately (0ms)
+  const local = loadExpensesLocally();
+  const cachedData = (local && local.length > 0) ? local : expensesCache;
+
+  if (cachedData && cachedData.length > 0) {
+    expensesCache = cachedData;
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      if (Date.now() - cacheTimestamp >= CACHE_TTL) {
+        void refreshExpensesInBackground();
+      }
+    }
+    return cachedData;
+  }
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return cachedData || [];
+  }
+
+  // 2. Cold start with zero cache: fetch fresh from cloud
   return fetchFresh_loadExpensesCloud();
 };
 

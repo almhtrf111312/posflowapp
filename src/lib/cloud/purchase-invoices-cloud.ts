@@ -87,43 +87,66 @@ const savePurchaseInvoicesLocally = (invoices: PurchaseInvoice[]) => {
   } catch { /* ignore */ }
 };
 
-const loadPurchaseInvoicesLocally = (): PurchaseInvoice[] | null => {
+export const loadPurchaseInvoicesLocally = (): PurchaseInvoice[] | null => {
   try {
     const data = localStorage.getItem(LOCAL_CACHE_KEY);
     return data ? JSON.parse(data) : null;
   } catch { return null; }
 };
 
-// Load all purchase invoices
+let bgFetchingPurchases = false;
+async function refreshPurchasesInBackground(): Promise<void> {
+  if (bgFetchingPurchases || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+  bgFetchingPurchases = true;
+  try {
+    const { data, error } = await supabase
+      .from('purchase_invoices')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const fresh = data as PurchaseInvoice[];
+      const oldCache = purchaseInvoicesCache || loadPurchaseInvoicesLocally() || [];
+      const oldJson = JSON.stringify(oldCache);
+      const newJson = JSON.stringify(fresh);
+      if (oldJson !== newJson) {
+        savePurchaseInvoicesLocally(fresh);
+        emitEvent(EVENTS.PURCHASES_UPDATED, fresh);
+      }
+    }
+  } catch (err) {
+    console.warn('[purchase-invoices-cloud] background refresh error:', err);
+  } finally {
+    bgFetchingPurchases = false;
+  }
+}
+
+// Load all purchase invoices — Cache-First / Zero-Wait pattern (0ms local return + silent SWR background sync)
 export async function loadPurchaseInvoicesCloud(): Promise<PurchaseInvoice[]> {
   if (isGuestDemoMode()) {
     const local = loadPurchaseInvoicesLocally();
     return local || [];
   }
-  // 1. Offline fast-path: zero network delay, instant local cache + queue
+
+  // 1. Instant Cache-First return (0ms)
+  const cached = purchaseInvoicesCache || loadPurchaseInvoicesLocally();
+  if (cached && cached.length > 0) {
+    // Launch background fetch silently without blocking UI
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      if (Date.now() - purchaseCacheTimestamp >= PURCHASE_CACHE_TTL) {
+        void refreshPurchasesInBackground();
+      }
+    }
+    return mergeSyncQueuePurchases(cached);
+  }
+
+  // Fast offline return
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     const local = loadPurchaseInvoicesLocally();
-    return mergeSyncQueuePurchases(local || purchaseInvoicesCache || []);
+    return mergeSyncQueuePurchases(local || []);
   }
 
-  // 2. Safe userId retrieval using local session
-  let userId = getCurrentUserId();
-  if (!userId) {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      userId = session?.user?.id || null;
-    } catch { /* ignore */ }
-  }
-
-  if (!userId) {
-    const local = loadPurchaseInvoicesLocally();
-    return mergeSyncQueuePurchases(local || purchaseInvoicesCache || []);
-  }
-
-  if (purchaseInvoicesCache && Date.now() - purchaseCacheTimestamp < PURCHASE_CACHE_TTL) {
-    return mergeSyncQueuePurchases(purchaseInvoicesCache);
-  }
-
+  // 2. Cold start with zero cache: fetch from cloud
   try {
     const { data, error } = await supabase
       .from('purchase_invoices')
@@ -133,7 +156,7 @@ export async function loadPurchaseInvoicesCloud(): Promise<PurchaseInvoice[]> {
     if (error) {
       console.warn('Error loading purchase invoices from cloud:', error);
       const local = loadPurchaseInvoicesLocally();
-      return mergeSyncQueuePurchases(local || purchaseInvoicesCache || []);
+      return mergeSyncQueuePurchases(local || []);
     }
 
     const invoices = (data || []) as PurchaseInvoice[];
@@ -142,7 +165,7 @@ export async function loadPurchaseInvoicesCloud(): Promise<PurchaseInvoice[]> {
   } catch (err) {
     console.warn('Exception loading purchase invoices, falling back to local cache:', err);
     const local = loadPurchaseInvoicesLocally();
-    return mergeSyncQueuePurchases(local || purchaseInvoicesCache || []);
+    return mergeSyncQueuePurchases(local || []);
   }
 }
  

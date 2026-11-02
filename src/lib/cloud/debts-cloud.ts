@@ -103,7 +103,7 @@ const saveDebtsLocally = (debts: Debt[]) => {
   } catch { /* ignore */ }
 };
 
-const loadDebtsLocally = (): Debt[] | null => {
+export const loadDebtsLocally = (): Debt[] | null => {
   try {
     const data = localStorage.getItem(LOCAL_CACHE_KEY);
     return data ? JSON.parse(data) : null;

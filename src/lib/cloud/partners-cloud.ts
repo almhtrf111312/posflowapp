@@ -177,7 +177,7 @@ const savePartnersLocally = (partners: Partner[]) => {
   } catch { /* ignore */ }
 };
 
-const loadPartnersLocally = (): Partner[] | null => {
+export const loadPartnersLocally = (): Partner[] | null => {
   try {
     const data = localStorage.getItem(LOCAL_CACHE_KEY);
     return data ? JSON.parse(data) : null;

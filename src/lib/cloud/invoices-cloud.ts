@@ -206,7 +206,7 @@ const saveInvoicesToLocalCache = (invoices: Invoice[]) => {
 };
 
 // Load invoices from localStorage
-const loadInvoicesFromLocalCache = (): Invoice[] | null => {
+export const loadInvoicesFromLocalCache = (): Invoice[] | null => {
   try {
     const cached = localStorage.getItem(LOCAL_INVOICES_CACHE_KEY);
     if (cached) {
@@ -361,9 +361,30 @@ const getNextInvoiceNumber = async (): Promise<string> => {
   }
 };
 
-let coldStartServed = false;
+let bgFetchingInvoices = false;
+const refreshInvoicesInBackground = async (userId: string) => {
+  if (bgFetchingInvoices || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+  bgFetchingInvoices = true;
+  try {
+    const oldCache = invoicesCache || loadInvoicesFromLocalCache() || [];
+    const fresh = await fetchInvoicesFromCloud(userId);
+    if (fresh && fresh.length > 0) {
+      const oldLen = oldCache.length;
+      const newLen = fresh.length;
+      const oldLatest = oldCache[0]?.id;
+      const newLatest = fresh[0]?.id;
+      if (oldLen !== newLen || oldLatest !== newLatest) {
+        emitEvent(EVENTS.INVOICES_UPDATED, fresh);
+      }
+    }
+  } catch (err) {
+    console.warn('[InvoicesCloud] Background refresh failed:', err);
+  } finally {
+    bgFetchingInvoices = false;
+  }
+};
 
-// Load invoices
+// Load invoices — Cache-First / Zero-Wait pattern (0ms local return + silent SWR background sync)
 // ✅ Owners see all invoices, cashiers see only their own
 export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
   if (isGuestDemoMode()) {
@@ -371,6 +392,7 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
     invoicesCache = localInvoices;
     return localInvoices;
   }
+
   // 1. Instant offline fast-path: zero network delay, instant local cache + queue
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     const localInvoices = loadInvoicesFromLocalCache();
@@ -394,30 +416,26 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
     } catch { /* ignore */ }
   }
 
-  if (!userId) {
-    // Return local cache even without userId
-    const localInvoices = loadInvoicesFromLocalCache();
-    return mergeSyncQueueInvoices(localInvoices || invoicesCache || []);
-  }
-
-  if (invoicesCache && Date.now() - cacheTimestamp < CACHE_TTL) {
-    return mergeSyncQueueInvoices(invoicesCache);
-  }
-
-  // 3. Instant open: on first load after app start, serve local copy immediately
-  // and refresh from server in background without blocking rendering.
+  // 3. Cache-First: Always serve local cache immediately (0ms)
   const localInvoices = loadInvoicesFromLocalCache();
-  if (!coldStartServed && localInvoices && localInvoices.length > 0) {
-    coldStartServed = true;
-    invoicesCache = mergeSyncQueueInvoices(localInvoices);
-    cacheTimestamp = Date.now();
-    void fetchInvoicesFromCloud(userId).then((fresh) => {
-      emitEvent(EVENTS.INVOICES_UPDATED, fresh);
-    }).catch(() => { /* keep saved copy */ });
-    return invoicesCache;
-  }
-  coldStartServed = true;
+  const cachedData = (localInvoices && localInvoices.length > 0) ? localInvoices : invoicesCache;
 
+  if (cachedData && cachedData.length > 0) {
+    invoicesCache = cachedData;
+    // Launch background fetch if online and TTL expired
+    if (userId && typeof navigator !== 'undefined' && navigator.onLine) {
+      if (Date.now() - cacheTimestamp >= CACHE_TTL) {
+        void refreshInvoicesInBackground(userId);
+      }
+    }
+    return mergeSyncQueueInvoices(cachedData);
+  }
+
+  if (!userId) {
+    return mergeSyncQueueInvoices(cachedData || []);
+  }
+
+  // 4. Cold start with zero cache: fetch from cloud
   try {
     const cloudInvoices = await fetchInvoicesFromCloud(userId);
     return mergeSyncQueueInvoices(cloudInvoices);

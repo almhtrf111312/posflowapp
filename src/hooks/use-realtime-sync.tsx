@@ -3,15 +3,9 @@ import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './use-auth';
 import { EVENTS, emitEvent } from '@/lib/events';
-import { invalidateAllCaches } from '@/lib/cloud';
-import { fetchStoreSettings, getOwnerIdForInsert } from '@/lib/supabase-store';
+import { getOwnerIdForInsert } from '@/lib/supabase-store';
 import { isGuestDemoMode } from '@/lib/demo-data';
-import {
-  loadUnifiedStoreSettings,
-  mergeStoreSettings,
-  applySettingsToRuntime,
-  pullStoreSettingsWithGuard,
-} from '@/lib/store-settings-sync';
+import { pullStoreSettingsWithGuard } from '@/lib/store-settings-sync';
 
 const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
 
@@ -35,23 +29,23 @@ const SYNC_TABLES = [
 export function useRealtimeSync() {
   const { user } = useAuth();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const lastRefreshRef = useRef<number>(0);
+  const debounceTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Helper to refresh all data safely (debounced to avoid loops)
-  const refreshData = async (reason: string) => {
-    const now = Date.now();
-    // Channel (re)subscriptions happen often on mobile; avoid full reloads within 60s
-    const minGap = reason === 'SUBSCRIBED' ? 60000 : 2000;
-    if (now - lastRefreshRef.current < minGap) return;
-    lastRefreshRef.current = now;
-    
-    console.log(`[Realtime] Triggering global refresh due to: ${reason}`);
-    await invalidateAllCaches();
-    await pullStoreSettingsWithGuard();
-    
-    // Emit events to trigger UI re-fetches
-    SYNC_TABLES.forEach(table => emitEvent(table.event));
-    emitEvent(EVENTS.SETTINGS_UPDATED);
+  // ✅ تخميد وتجميع أحداث المزامنة الحية (Debounce & Batch Realtime)
+  // يمنع إرسال أحداث متكررة أو تجميد الواجهة عند استلام عدة تعديلات متتالية على نفس الجدول
+  const emitDebouncedEvent = (tableName: string, eventName: string) => {
+    const existingTimer = debounceTimersRef.current.get(tableName);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(() => {
+      debounceTimersRef.current.delete(tableName);
+      console.log(`[Realtime] Emitting targeted event for changed table: ${tableName}`);
+      emitEvent(eventName);
+    }, 350);
+
+    debounceTimersRef.current.set(tableName, timer);
   };
 
   useEffect(() => {
@@ -92,7 +86,7 @@ export function useRealtimeSync() {
       const channelTopic = `owner-sync-${ownerId}-${Date.now()}`;
       const channel = supabase.channel(channelTopic);
 
-      // Register all tables with the same owner-scoped filter
+      // Register all tables with the same owner-scoped filter and targeted debouncing
       SYNC_TABLES.forEach(table => {
         channel.on('postgres_changes', {
           event: '*',
@@ -101,9 +95,8 @@ export function useRealtimeSync() {
           filter: `user_id=eq.${ownerId}`
         }, (payload) => {
           console.log(`[Realtime] ${table.name} changed (${payload.eventType})`);
-          // Note: Cache invalidation is now handled in individual cloud stores
-          // but we emit events to trigger UI updates.
-          emitEvent(table.event);
+          // ✅ تحديث الجدول الذي تغير فقط بهدوء مع تخميد التكرار السريع
+          emitDebouncedEvent(table.name, table.event);
         });
       });
 
@@ -127,9 +120,9 @@ export function useRealtimeSync() {
 
       channel.subscribe((status) => {
         console.log('[Realtime] Subscription status:', status);
-        // ✅ Refresh on successful subscription/reconnection to catch missed updates
+        // ✅ فحص الإعدادات بهدوء في الخلفية دون مسح الكاش ودون إطلاق عواصف من الأحداث
         if (status === 'SUBSCRIBED') {
-          refreshData('SUBSCRIBED');
+          pullStoreSettingsWithGuard().catch(() => {});
         }
       });
 
@@ -138,13 +131,18 @@ export function useRealtimeSync() {
 
     setupChannel();
 
-    // Refresh only when the device actually comes back online — not on every app resume/focus.
-    const handleOnline = () => refreshData('ONLINE');
+    // فحص الإعدادات بهدوء عند عودة الاتصال دون مسح الكاشات
+    const handleOnline = () => {
+      pullStoreSettingsWithGuard().catch(() => {});
+    };
     window.addEventListener('online', handleOnline);
 
     return () => {
       isMounted = false;
       window.removeEventListener('online', handleOnline);
+      // إلغاء أي مؤقتات تخميد معلقة
+      debounceTimersRef.current.forEach(timer => clearTimeout(timer));
+      debounceTimersRef.current.clear();
       if (channelRef.current) {
         try {
           supabase.removeChannel(channelRef.current);

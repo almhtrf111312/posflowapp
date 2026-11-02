@@ -7,6 +7,10 @@ import {
   getCurrentUserId 
 } from '../supabase-store';
 import { emitEvent, EVENTS } from '../events';
+import { supabase } from '@/integrations/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+type LooseSupabase = SupabaseClient<any, 'public', any>;
+const sb = supabase as unknown as LooseSupabase;
 
 export interface CategoryShare {
   categoryId: string;

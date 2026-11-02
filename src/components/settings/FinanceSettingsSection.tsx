@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,13 @@ export interface FinanceSettingsSectionProps {
   setTrackCapital: (track: boolean) => void;
   initialCapital: number;
   setInitialCapital: (cap: number) => void;
+  slot1Code: string;
+  setSlot1Code: (code: string) => void;
+  slot2Code: string;
+  setSlot2Code: (code: string) => void;
+  toggleCurrency: (code: string, enabled: boolean) => void;
+  renderCurrencyDisplayOptions: (code: string) => React.ReactNode;
+  sanitizeNumberText?: (val: string) => string;
 }
 
 export function FinanceSettingsSection({
@@ -60,6 +68,13 @@ export function FinanceSettingsSection({
   setTrackCapital,
   initialCapital,
   setInitialCapital,
+  slot1Code,
+  setSlot1Code,
+  slot2Code,
+  setSlot2Code,
+  toggleCurrency,
+  renderCurrencyDisplayOptions,
+  sanitizeNumberText = (val: string) => val.replace(/[^\d.]/g, ''),
 }: FinanceSettingsSectionProps) {
   const { t, isRTL } = useLanguage();
 

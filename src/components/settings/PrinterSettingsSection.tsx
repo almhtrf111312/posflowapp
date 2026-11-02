@@ -25,6 +25,8 @@ export interface PrinterSettingsSectionProps {
   printSettings: any;
   setPrintSettings: React.Dispatch<React.SetStateAction<any>>;
   isPrinterConnected: boolean;
+  setShowBtDialog: (show: boolean) => void;
+  setShowUnpairDialog: (show: boolean) => void;
 }
 
 export function PrinterSettingsSection({
@@ -36,6 +38,8 @@ export function PrinterSettingsSection({
   printSettings,
   setPrintSettings,
   isPrinterConnected,
+  setShowBtDialog,
+  setShowUnpairDialog,
 }: PrinterSettingsSectionProps) {
   const { t, isRTL } = useLanguage();
 

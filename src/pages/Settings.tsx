@@ -1848,6 +1848,13 @@ export default function Settings() {
                     setTrackCapital={setTrackCapital}
                     initialCapital={initialCapital}
                     setInitialCapital={setInitialCapital}
+                    slot1Code={slot1Code}
+                    setSlot1Code={setSlot1Code}
+                    slot2Code={slot2Code}
+                    setSlot2Code={setSlot2Code}
+                    toggleCurrency={toggleCurrency}
+                    renderCurrencyDisplayOptions={renderCurrencyDisplayOptions}
+                    sanitizeNumberText={sanitizeNumberText}
                   />
                 </Suspense>
               </TabsContent>
@@ -2044,6 +2051,8 @@ export default function Settings() {
               printSettings={printSettings}
               setPrintSettings={setPrintSettings}
               isPrinterConnected={isPrinterConnected}
+              setShowBtDialog={setShowBtDialog}
+              setShowUnpairDialog={setShowUnpairDialog}
             />
           </Suspense>
         );

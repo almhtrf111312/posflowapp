@@ -1,13 +1,13 @@
 {
   "versionCode": 414,
   "versionName": "1.5.26",
-  "lastUpdated": "2026-11-02T20:28:54.092Z",
+  "lastUpdated": "2026-11-02T15:47:49.381Z",
   "buildHistory": [
     {
       "versionCode": 414,
       "versionName": "1.5.26",
       "date": "2026-11-02",
-      "description": "Release v1.5.26 (Build 414)"
+      "description": "Auto-bump on push (dfbbd8e)"
     },
     {
       "versionCode": 413,

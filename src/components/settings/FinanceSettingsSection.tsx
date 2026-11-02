@@ -74,7 +74,15 @@ export function FinanceSettingsSection({
   setSlot2Code,
   toggleCurrency,
   renderCurrencyDisplayOptions,
-  sanitizeNumberText = (val: string) => val.replace(/[^\d.]/g, ''),
+  sanitizeNumberText = (val: string) => {
+    if (!val) return '';
+    let normalized = val.replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x0660));
+    normalized = normalized.replace(/[\u06f0-\u06f9]/g, d => String(d.charCodeAt(0) - 0x06f0));
+    normalized = normalized.replace(/[,\u060c\u066b]/g, '.');
+    normalized = normalized.replace(/[^\d.]/g, '');
+    const parts = normalized.split('.');
+    return parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : normalized;
+  },
 }: FinanceSettingsSectionProps) {
   const { t, isRTL } = useLanguage();
 
@@ -273,7 +281,7 @@ export function FinanceSettingsSection({
                           <Input
                             type="text"
                             inputMode="decimal"
-                            value={exchangeRates[slot1Code] || ''}
+                            value={exchangeRates[slot1Code] ?? ''}
                             onChange={(e) => setExchangeRates({ ...exchangeRates, [slot1Code]: sanitizeNumberText(e.target.value) })}
                             className="h-7 text-xs font-mono font-bold px-2 bg-background/80"
                             placeholder="3.64"
@@ -405,7 +413,7 @@ export function FinanceSettingsSection({
                           <Input
                             type="text"
                             inputMode="decimal"
-                            value={exchangeRates[slot2Code] || ''}
+                            value={exchangeRates[slot2Code] ?? ''}
                             onChange={(e) => setExchangeRates({ ...exchangeRates, [slot2Code]: sanitizeNumberText(e.target.value) })}
                             className="h-7 text-xs font-mono font-bold px-2 bg-background/80"
                             placeholder="48"

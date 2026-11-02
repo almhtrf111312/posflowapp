@@ -572,6 +572,8 @@ export function detectCurrencyCodeFromMeta(
   if (cleanSym === 'ر.ي' || cleanName.includes('يمن')) return 'YER';
   if (cleanSym === '₺' || cleanName.includes('ترك')) return 'TRY';
   if (cleanSym === 'ل.س' || cleanName.includes('سور')) return 'SYP';
+  if (cleanSym === '€' || cleanName.includes('يورو') || cleanName.toLowerCase().includes('euro')) return 'EUR';
+  if (cleanSym === '£' || cleanName.includes('استرليني') || cleanName.toLowerCase().includes('pound')) return 'GBP';
 
   // 2. مطابقة بالكتالوج العام
   if (cleanSym) {

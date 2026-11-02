@@ -65,6 +65,8 @@ export interface UnifiedStoreSettings {
   updatedAt?: number;
   storeSettings: StoreInfo;
   primaryCurrency: 'USD' | 'TRY' | 'SYP' | string;
+  slot1Code?: string;
+  slot2Code?: string;
   enabledCurrencies: {
     USD?: boolean;
     TRY?: boolean;
@@ -131,6 +133,8 @@ export const DEFAULT_UNIFIED_SETTINGS: UnifiedStoreSettings = {
     logo: '',
   },
   primaryCurrency: 'USD',
+  slot1Code: 'TRY',
+  slot2Code: 'SYP',
   enabledCurrencies: {
     USD: true,
     TRY: false,
@@ -292,6 +296,8 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
       updatedAt: typeof parsed?.updatedAt === 'number' ? parsed.updatedAt : undefined,
       storeSettings,
       primaryCurrency: parsed?.primaryCurrency || 'USD',
+      slot1Code: parsed?.slot1Code || parsed?.syncSettings?.slot1Code || 'TRY',
+      slot2Code: parsed?.slot2Code || parsed?.syncSettings?.slot2Code || 'SYP',
       enabledCurrencies,
       exchangeRates,
       currencyNames,
@@ -515,6 +521,8 @@ export function mergeStoreSettings(
     updatedAt: mergedUpdatedAt,
     storeSettings: mergedStore,
     primaryCurrency: mergedPrimary,
+    slot1Code: (typeof cloudSync.slot1Code === 'string' && cloudSync.slot1Code) || base.slot1Code || 'TRY',
+    slot2Code: (typeof cloudSync.slot2Code === 'string' && cloudSync.slot2Code) || base.slot2Code || 'SYP',
     enabledCurrencies: mergedEnabled,
     exchangeRates: mergedRates,
     currencyNames: mergedNames,
@@ -622,6 +630,8 @@ export function buildCloudStorePayload(
       },
     },
     primaryCurrency: settings.primaryCurrency,
+    slot1Code: settings.slot1Code || 'TRY',
+    slot2Code: settings.slot2Code || 'SYP',
     enabledCurrencies: settings.enabledCurrencies,
     currencyNames: settings.currencyNames,
     currencySymbols: settings.currencySymbols,
@@ -778,6 +788,8 @@ export async function saveUnifiedStoreSettings(
     ...current,
     ...partial,
     updatedAt,
+    slot1Code: partial.slot1Code || current.slot1Code || 'TRY',
+    slot2Code: partial.slot2Code || current.slot2Code || 'SYP',
     storeSettings: {
       ...current.storeSettings,
       ...(partial.storeSettings || {}),

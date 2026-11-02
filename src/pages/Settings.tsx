@@ -193,6 +193,8 @@ interface BackupSettingsType {
 
 export interface PersistedSettings {
   primaryCurrency?: string;
+  slot1Code?: string;
+  slot2Code?: string;
   enabledCurrencies?: Record<string, boolean>;
   storeSettings?: Partial<{ name: string; type: string; phone: string; email: string; address: string; logo: string }>;
   exchangeRates?: Record<string, string | number>;
@@ -214,7 +216,15 @@ export interface PersistedSettings {
   initialCapital?: number;
 };
 
-const sanitizeNumberText = (value: string) => value.replace(/[^\d.]/g, '');
+const sanitizeNumberText = (value: string) => {
+  if (!value) return '';
+  let normalized = value.replace(/[\u0660-\u0669]/g, d => String(d.charCodeAt(0) - 0x0660));
+  normalized = normalized.replace(/[\u06f0-\u06f9]/g, d => String(d.charCodeAt(0) - 0x06f0));
+  normalized = normalized.replace(/[,\u060c\u066b]/g, '.');
+  normalized = normalized.replace(/[^\d.]/g, '');
+  const parts = normalized.split('.');
+  return parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : normalized;
+};
 
 const loadPersistedSettings = (): PersistedSettings | null => {
   if (typeof window === 'undefined') return null;
@@ -444,15 +454,32 @@ export default function Settings() {
   const initialNormalized = useMemo(() => loadNormalizedCurrencySettings(), []);
 
   const [slot1Code, setSlot1Code] = useState<string>(() => {
-    const sym = persisted?.currencySymbols?.TRY || initialUnified?.currencySymbols?.TRY;
-    const name = persisted?.currencyNames?.TRY || initialUnified?.currencyNames?.TRY;
-    return detectCurrencyCodeFromMeta(sym, name, 'TRY');
+    const s1Saved = persisted?.slot1Code || initialUnified?.slot1Code;
+    if (s1Saved && s1Saved !== 'USD') return s1Saved;
+    const enabledMap = initialUnified?.enabledCurrencies || persisted?.enabledCurrencies || {};
+    const namesMap = initialUnified?.currencyNames || persisted?.currencyNames || {};
+    const symbolsMap = initialUnified?.currencySymbols || persisted?.currencySymbols || {};
+    const ratesMap = initialUnified?.exchangeRates || persisted?.exchangeRates || {};
+    const activeNonUsd = Object.keys(enabledMap).filter(c => c !== 'USD' && enabledMap[c] === true);
+    const otherConfigured = Object.keys({ ...ratesMap, ...namesMap, ...symbolsMap })
+      .filter(c => c !== 'USD' && !activeNonUsd.includes(c));
+    const candidateCodes = [...activeNonUsd, ...otherConfigured];
+    return candidateCodes[0] || detectCurrencyCodeFromMeta(symbolsMap.TRY, namesMap.TRY, 'TRY');
   });
 
   const [slot2Code, setSlot2Code] = useState<string>(() => {
-    const sym = persisted?.currencySymbols?.SYP || initialUnified?.currencySymbols?.SYP;
-    const name = persisted?.currencyNames?.SYP || initialUnified?.currencyNames?.SYP;
-    return detectCurrencyCodeFromMeta(sym, name, 'SYP');
+    const s2Saved = persisted?.slot2Code || initialUnified?.slot2Code;
+    if (s2Saved && s2Saved !== 'USD') return s2Saved;
+    const enabledMap = initialUnified?.enabledCurrencies || persisted?.enabledCurrencies || {};
+    const namesMap = initialUnified?.currencyNames || persisted?.currencyNames || {};
+    const symbolsMap = initialUnified?.currencySymbols || persisted?.currencySymbols || {};
+    const ratesMap = initialUnified?.exchangeRates || persisted?.exchangeRates || {};
+    const activeNonUsd = Object.keys(enabledMap).filter(c => c !== 'USD' && enabledMap[c] === true);
+    const otherConfigured = Object.keys({ ...ratesMap, ...namesMap, ...symbolsMap })
+      .filter(c => c !== 'USD' && !activeNonUsd.includes(c));
+    const candidateCodes = [...activeNonUsd, ...otherConfigured];
+    const s1Candidate = candidateCodes[0] || 'TRY';
+    return candidateCodes.find(c => c !== s1Candidate) || detectCurrencyCodeFromMeta(symbolsMap.SYP, namesMap.SYP, s1Candidate === 'SYP' ? 'TRY' : 'SYP');
   });
 
   const [primaryCurrency, setPrimaryCurrency] = useState<string>(
@@ -515,6 +542,8 @@ export default function Settings() {
     const persistedSettings = loadPersistedSettings() || {};
     const updated = {
       ...persistedSettings,
+      slot1Code,
+      slot2Code,
       enabledCurrencies: sanitizedEnabled,
       primaryCurrency: newPrimary,
     };
@@ -523,6 +552,8 @@ export default function Settings() {
 
     saveUnifiedStoreSettings({
       updatedAt: Date.now(),
+      slot1Code,
+      slot2Code,
       enabledCurrencies: sanitizedEnabled,
       primaryCurrency: newPrimary,
     }).catch(e => console.warn('[Settings] toggleCurrency unified save error:', e));
@@ -848,8 +879,24 @@ export default function Settings() {
         setTaxRate(merged.taxRate);
         setNotificationSettings(merged.notificationSettings as unknown as typeof notificationSettings);
         setPrintSettings(merged.printSettings as typeof printSettings);
-        const s1Code = detectCurrencyCodeFromMeta(merged.currencySymbols?.TRY, merged.currencyNames?.TRY, 'TRY');
-        const s2Code = detectCurrencyCodeFromMeta(merged.currencySymbols?.SYP, merged.currencyNames?.SYP, 'SYP');
+        const s1Saved = merged.slot1Code;
+        const s2Saved = merged.slot2Code;
+        let s1Code = s1Saved && s1Saved !== 'USD' ? s1Saved : '';
+        let s2Code = s2Saved && s2Saved !== 'USD' ? s2Saved : '';
+        if (!s1Code) {
+          const enabledMap = merged.enabledCurrencies || {};
+          const namesMap = merged.currencyNames || {};
+          const symbolsMap = merged.currencySymbols || {};
+          const ratesMap = merged.exchangeRates || {};
+          const activeNonUsd = Object.keys(enabledMap).filter(c => c !== 'USD' && enabledMap[c] === true);
+          const otherConfigured = Object.keys({ ...ratesMap, ...namesMap, ...symbolsMap })
+            .filter(c => c !== 'USD' && !activeNonUsd.includes(c));
+          const candidateCodes = [...activeNonUsd, ...otherConfigured];
+          s1Code = candidateCodes[0] || detectCurrencyCodeFromMeta(merged.currencySymbols?.TRY, merged.currencyNames?.TRY, 'TRY');
+          s2Code = candidateCodes.find(c => c !== s1Code) || detectCurrencyCodeFromMeta(merged.currencySymbols?.SYP, merged.currencyNames?.SYP, s1Code === 'SYP' ? 'TRY' : 'SYP');
+        } else if (!s2Code) {
+          s2Code = s1Code === 'SYP' ? 'TRY' : 'SYP';
+        }
         setSlot1Code(s1Code);
         setSlot2Code(s2Code);
         const initialNorm = normalizeCurrencySettings(merged);
@@ -1122,6 +1169,8 @@ export default function Settings() {
     if (activeTab === 'store') {
       return (
         primaryCurrency !== snap.primaryCurrency ||
+        slot1Code !== (snap as any).slot1Code ||
+        slot2Code !== (snap as any).slot2Code ||
         JSON.stringify(enabledCurrencies) !== JSON.stringify(snap.enabledCurrencies) ||
         JSON.stringify(storeSettings) !== JSON.stringify(snap.storeSettings) ||
         JSON.stringify(exchangeRates) !== JSON.stringify(snap.exchangeRates) ||
@@ -1170,6 +1219,8 @@ export default function Settings() {
     if (!snap) return;
     setStoreSettings({ ...snap.storeSettings });
     setPrimaryCurrency(snap.primaryCurrency ?? 'USD');
+    if ((snap as any).slot1Code) setSlot1Code((snap as any).slot1Code);
+    if ((snap as any).slot2Code) setSlot2Code((snap as any).slot2Code);
     if (snap.enabledCurrencies) {
       setEnabledCurrencies({ ...snap.enabledCurrencies });
     }
@@ -1210,28 +1261,22 @@ export default function Settings() {
 
   // Handlers
   const handleSaveSettings = async () => {
-    // 1. تحقق أسعار الصرف (فقط عند التواجد في تبويب المتجر والعملات أو الحفظ العام)
-    const rawTryRate = Number(exchangeRates.TRY);
-    const rawSypRate = Number(exchangeRates.SYP);
-    const tryRate = Number.isFinite(rawTryRate) && rawTryRate >= 0 ? rawTryRate : 0;
-    const sypRate = Number.isFinite(rawSypRate) && rawSypRate >= 0 ? rawSypRate : 0;
-
+    // 1. تحقق أسعار الصرف ديناميكياً للخانات المستخدمة
     if (activeTab === 'store' || !activeTab) {
-      if (exchangeRates.TRY !== '' && exchangeRates.TRY !== undefined && (!Number.isFinite(rawTryRate) || rawTryRate < 0)) {
-        toast({
-          title: t('common.error'),
-          description: `${t('settings.invalidExchangeRates')} (TRY)`,
-          variant: 'destructive',
-        });
-        return;
-      }
-      if (exchangeRates.SYP !== '' && exchangeRates.SYP !== undefined && (!Number.isFinite(rawSypRate) || rawSypRate < 0)) {
-        toast({
-          title: t('common.error'),
-          description: `${t('settings.invalidExchangeRates')} (SYP)`,
-          variant: 'destructive',
-        });
-        return;
+      for (const slot of [slot1Code, slot2Code]) {
+        if (!slot || slot === 'USD') continue;
+        const val = exchangeRates[slot];
+        if (val !== '' && val !== undefined) {
+          const num = Number(val);
+          if (!Number.isFinite(num) || num <= 0) {
+            toast({
+              title: t('common.error'),
+              description: `${t('settings.invalidExchangeRates')} (${currencyNames[slot] || slot})`,
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
       }
     }
 
@@ -1278,6 +1323,8 @@ export default function Settings() {
 
       const saveResult = await saveUnifiedStoreSettings({
         updatedAt: Date.now(),
+        slot1Code,
+        slot2Code,
         storeSettings,
         primaryCurrency,
         enabledCurrencies: cleanEnabledCurrencies,
@@ -1286,11 +1333,17 @@ export default function Settings() {
           for (const [k, v] of Object.entries(exchangeRates)) {
             if (v !== '' && v !== undefined) {
               const num = Number(v);
-              if (Number.isFinite(num) && num >= 0) res[k] = num;
+              if (Number.isFinite(num) && num > 0) res[k] = num;
             }
           }
-          if (exchangeRates[slot1Code]) res[slot1Code] = Number(exchangeRates[slot1Code]) || 1;
-          if (exchangeRates[slot2Code]) res[slot2Code] = Number(exchangeRates[slot2Code]) || 1;
+          if (slot1Code && exchangeRates[slot1Code] !== '' && exchangeRates[slot1Code] !== undefined) {
+            const num = Number(exchangeRates[slot1Code]);
+            if (Number.isFinite(num) && num > 0) res[slot1Code] = num;
+          }
+          if (slot2Code && exchangeRates[slot2Code] !== '' && exchangeRates[slot2Code] !== undefined) {
+            const num = Number(exchangeRates[slot2Code]);
+            if (Number.isFinite(num) && num > 0) res[slot2Code] = num;
+          }
           return res;
         })() as any,
         currencyNames,
@@ -1324,6 +1377,8 @@ export default function Settings() {
       settingsSnapshotRef.current = {
         storeSettings: { ...storeSettings },
         primaryCurrency,
+        slot1Code,
+        slot2Code,
         enabledCurrencies: { ...cleanEnabledCurrencies },
         exchangeRates: { ...exchangeRates },
         currencyNames: { ...currencyNames },

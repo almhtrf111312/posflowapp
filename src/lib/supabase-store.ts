@@ -614,7 +614,7 @@ export async function hasCloudData(tableName: string): Promise<boolean> {
 
 // Fetch store settings
 // ✅ Uses getOwnerIdForInsert to fetch owner's store settings for cashiers
-export async function fetchStoreSettings(timeoutMs: number = 3800): Promise<StoreSettingsRow | null> {
+export async function fetchStoreSettings(timeoutMs: number = 1500): Promise<StoreSettingsRow | null> {
   // For reading, use owner ID so cashiers see their owner's settings
   const ownerId = await getOwnerIdForInsert();
   if (!ownerId) return null;

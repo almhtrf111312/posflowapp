@@ -256,29 +256,39 @@ export default function Reports() {
     }
   }, []);
 
-  // السحب السحابي الشامل — مخصص للتشغيل الصامت أو عند النقر اليدوي على زر "تحديث البيانات"
+  // السحب السحابي الذكي حسب التبويب النشط
   const [isRefreshingCloud, setIsRefreshingCloud] = useState(false);
   const loadCloudData = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsRefreshingCloud(true);
     try {
-      const [invoices, products, customers, partners, categories, expenses, debts, purchases] = await Promise.all([
+      const needCustomers = activeReport === 'customers' || !isSilent;
+      const needPartners = activeReport === 'partners' || activeReport === 'partner-detailed' || !isSilent;
+      const needCategories = activeReport === 'categories' || !isSilent;
+      const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing' || !isSilent;
+      const needDebts = activeReport === 'debts' || activeReport === 'daily-closing' || !isSilent;
+      const needPurchases = activeReport === 'purchases' || !isSilent;
+
+      const results = await Promise.all([
         loadInvoicesCloud(),
         loadProductsCloud(),
-        loadCustomersCloud(),
-        loadPartnersCloud(),
-        loadCategoriesCloud(),
-        loadExpensesCloud(),
-        loadDebtsCloud(),
-        loadPurchaseInvoicesCloud().catch(() => [])
+        needCustomers ? loadCustomersCloud() : Promise.resolve(null),
+        needPartners ? loadPartnersCloud() : Promise.resolve(null),
+        needCategories ? loadCategoriesCloud() : Promise.resolve(null),
+        needExpenses ? loadExpensesCloud() : Promise.resolve(null),
+        needDebts ? loadDebtsCloud() : Promise.resolve(null),
+        needPurchases ? loadPurchaseInvoicesCloud().catch(() => []) : Promise.resolve(null),
       ]);
-      setCloudInvoices(invoices);
-      setCloudProducts(products);
-      setCloudCustomers(customers);
-      setCloudPartners(partners);
-      setCloudCategories(categories);
-      setCloudExpenses(expenses);
-      setCloudDebts(debts);
-      setCloudPurchases(purchases || []);
+
+      const [invoices, products, customers, partners, categories, expenses, debts, purchases] = results;
+      if (invoices) setCloudInvoices(invoices);
+      if (products) setCloudProducts(products);
+      if (customers) setCloudCustomers(customers);
+      if (partners) setCloudPartners(partners);
+      if (categories) setCloudCategories(categories);
+      if (expenses) setCloudExpenses(expenses);
+      if (debts) setCloudDebts(debts);
+      if (purchases) setCloudPurchases(purchases || []);
+
       if (!isSilent) {
         toast.success(isRTL ? 'تم تحديث بيانات التقارير بنجاح' : 'Reports data updated successfully');
       }
@@ -289,7 +299,33 @@ export default function Reports() {
       setIsRefreshingCloud(false);
       setIsLoading(false);
     }
-  }, [t, isRTL]);
+  }, [t, isRTL, activeReport]);
+
+  // 🚀 المرحلة 9.1: التحميل المجزأ الهادئ حسب التبويب النشط (Lazy Tab Fetching)
+  useEffect(() => {
+    if (!isPageActive) return;
+
+    // جلب الفواتير والمنتجات تلقائياً من الكاش أولاً مع إنعاش في الخلفية
+    loadInvoicesCloud().then(invs => { if (invs) setCloudInvoices(invs); }).catch(() => {});
+    loadProductsCloud().then(prods => { if (prods) setCloudProducts(prods); }).catch(() => {});
+
+    // جلب جداول النطاق فقط عند تفعيل التبويب المخصص لها
+    if (activeReport === 'debts' || activeReport === 'daily-closing') {
+      loadDebtsCloud().then(d => { if (d) setCloudDebts(d); }).catch(() => {});
+    }
+    if (activeReport === 'purchases') {
+      loadPurchaseInvoicesCloud().then(p => { if (p) setCloudPurchases(p); }).catch(() => {});
+    }
+    if (activeReport === 'partners' || activeReport === 'partner-detailed') {
+      loadPartnersCloud().then(p => { if (p) setCloudPartners(p); }).catch(() => {});
+    }
+    if (activeReport === 'expenses' || activeReport === 'daily-closing') {
+      loadExpensesCloud().then(e => { if (e) setCloudExpenses(e); }).catch(() => {});
+    }
+    if (activeReport === 'customers') {
+      loadCustomersCloud().then(c => { if (c) setCloudCustomers(c); }).catch(() => {});
+    }
+  }, [activeReport, isPageActive]);
 
   const isPageActiveRef = useRef(isPageActive);
   useEffect(() => {

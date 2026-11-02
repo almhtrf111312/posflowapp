@@ -719,38 +719,49 @@ export interface SaveSettingsResult {
  *   يتم اعتماد الإعدادات السحابية وتحديث localStorage والعملات والضرائب فوراً.
  * - يمنع منعاً باتاً رفع الإعدادات الافتراضية للسحابة أثناء عملية السحب.
  */
-export async function pullStoreSettingsWithGuard(): Promise<UnifiedStoreSettings> {
-  const localSettings = loadUnifiedStoreSettings();
-  try {
-    const cloudSettings = await fetchStoreSettings();
-    if (!cloudSettings) {
-      return localSettings;
-    }
-
-    const cloudSync = (cloudSettings.sync_settings && typeof cloudSettings.sync_settings === 'object'
-      ? cloudSettings.sync_settings as Record<string, unknown>
-      : {}) as Record<string, any>;
-    const cloudUpdatedAt = Number(cloudSync.updatedAt) || (cloudSettings.updated_at ? new Date(cloudSettings.updated_at as string).getTime() : 0);
-    const localUpdatedAt = Number(localSettings.updatedAt) || 0;
-
-    // إذا كانت جلسة محلية جديدة دون طابع زمني أو كان السحابي أحدث
-    if (!localUpdatedAt || cloudUpdatedAt > localUpdatedAt) {
-      console.log(`[StoreSettingsSync] Adopting cloud settings (cloud: ${cloudUpdatedAt}, local: ${localUpdatedAt})`);
-      applyCloudStoreSettings(cloudSettings);
-      const merged = mergeStoreSettings(loadUnifiedStoreSettings(), cloudSettings);
-      merged.updatedAt = cloudUpdatedAt || Date.now();
-      applySettingsToRuntime(merged);
-      return merged;
-    } else {
-      console.log(`[StoreSettingsSync] Local settings are current (local: ${localUpdatedAt} >= cloud: ${cloudUpdatedAt})`);
-      return localSettings;
-    }
-  } catch (err) {
-    console.warn('[StoreSettingsSync] Failed to pull store settings from cloud:', err);
-    return localSettings;
-  }
-}
-
+let bgSettingsPulling = false;
+
+export async function pullStoreSettingsWithGuard(): Promise<UnifiedStoreSettings> {
+  const localSettings = loadUnifiedStoreSettings();
+
+  // 🚀 Zero-Wait: إرجاع الإعدادات المحلية فوراً (0ms) وإطلاق استعلام السحابة في الخلفية بهدوء
+  if (typeof navigator !== 'undefined' && navigator.onLine && !bgSettingsPulling) {
+    bgSettingsPulling = true;
+    (async () => {
+      try {
+        const cloudSettings = await fetchStoreSettings(1500);
+        if (!cloudSettings) return;
+
+        const cloudSync = (cloudSettings.sync_settings && typeof cloudSettings.sync_settings === 'object'
+          ? cloudSettings.sync_settings as Record<string, unknown>
+          : {}) as Record<string, any>;
+
+        const cloudUpdatedAt = Number(cloudSync.updatedAt) || (cloudSettings.updated_at ? new Date(cloudSettings.updated_at as string).getTime() : 0);
+        const currentLocal = loadUnifiedStoreSettings();
+        const currentLocalUpdatedAt = Number(currentLocal.updatedAt) || 0;
+
+        if (!currentLocalUpdatedAt || cloudUpdatedAt > currentLocalUpdatedAt) {
+          console.log(`[StoreSettingsSync] Background adopted cloud settings (cloud: ${cloudUpdatedAt}, local: ${currentLocalUpdatedAt})`);
+          applyCloudStoreSettings(cloudSettings);
+          const merged = mergeStoreSettings(loadUnifiedStoreSettings(), cloudSettings);
+          merged.updatedAt = cloudUpdatedAt || Date.now();
+          applySettingsToRuntime(merged);
+          try {
+            const { emitEvent, EVENTS } = await import('./events');
+            emitEvent(EVENTS.SETTINGS_UPDATED, merged);
+          } catch { /* noop */ }
+        }
+      } catch (err) {
+        console.warn('[StoreSettingsSync] Background pull failed:', err);
+      } finally {
+        bgSettingsPulling = false;
+      }
+    })();
+  }
+
+  return localSettings;
+}
+
 /**
  * حفظ الإعدادات الموحدة:
  * 1. حفظ محلي فوري وتطبيق على الواجهة بدون أي انتظار مع طابع زمني جديد updatedAt.

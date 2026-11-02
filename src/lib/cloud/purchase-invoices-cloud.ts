@@ -130,9 +130,9 @@ export async function loadPurchaseInvoicesCloud(): Promise<PurchaseInvoice[]> {
     return local || [];
   }
 
-  // 1. Instant Cache-First return (0ms)
+  // 1. Instant Cache-First return (0ms) - True SWR
   const cached = purchaseInvoicesCache || loadPurchaseInvoicesLocally();
-  if (cached && cached.length > 0) {
+  if (cached !== null) {
     // Launch background fetch silently without blocking UI
     if (typeof navigator !== 'undefined' && navigator.onLine) {
       if (Date.now() - purchaseCacheTimestamp >= PURCHASE_CACHE_TTL) {

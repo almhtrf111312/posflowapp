@@ -416,11 +416,11 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
     } catch { /* ignore */ }
   }
 
-  // 3. Cache-First: Always serve local cache immediately (0ms)
+  // 3. Cache-First: Always serve local cache immediately (0ms) - True SWR
   const localInvoices = loadInvoicesFromLocalCache();
-  const cachedData = (localInvoices && localInvoices.length > 0) ? localInvoices : invoicesCache;
+  const cachedData = localInvoices !== null ? localInvoices : invoicesCache;
 
-  if (cachedData && cachedData.length > 0) {
+  if (cachedData !== null) {
     invoicesCache = cachedData;
     // Launch background fetch if online and TTL expired
     if (userId && typeof navigator !== 'undefined' && navigator.onLine) {

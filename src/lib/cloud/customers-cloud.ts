@@ -137,11 +137,11 @@ export const loadCustomersCloud = async (): Promise<Customer[]> => {
     return mergeSyncQueueCustomers(local || customersCache || []);
   }
 
-  // 1. Instant Cache-First return (0ms)
+  // 1. Instant Cache-First return (0ms) - True SWR
   const local = loadCustomersLocally();
-  const cachedData = (local && local.length > 0) ? local : customersCache;
+  const cachedData = local !== null ? local : customersCache;
 
-  if (cachedData && cachedData.length > 0) {
+  if (cachedData !== null) {
     customersCache = cachedData;
     if (typeof navigator !== 'undefined' && navigator.onLine) {
       if (Date.now() - cacheTimestamp >= CACHE_TTL) {

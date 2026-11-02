@@ -71,6 +71,29 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       if (error) throw new Error(error.message);
       return true;
     }
+    case 'debt_writeoff': {
+      const debtId = String(data.debtId || data.id || '');
+      const reason = String(data.reason || 'شطب دين عبر المزامنة');
+      if (!debtId) throw new Error('Missing debt id for writeoff');
+      
+      // استدعاء المعالجة الذرية لشطب الدين سحابياً
+      const { error } = await sb.rpc('writeoff_debt_atomic', {
+        _debt_id: debtId,
+        _reason: reason,
+        _operation_id: String(data.operationId || operation.id)
+      });
+      if (error) {
+        // إذا لم تكن الدالة متوفرة، يتم التحديث المباشر لحالة الدين
+        return assertSuccess(
+          sb.from('debts').update({
+            status: 'written_off',
+            notes: reason,
+            updated_at: new Date().toISOString()
+          }).eq('id', debtId)
+        );
+      }
+      return true;
+    }
     case 'customer_create': {
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');

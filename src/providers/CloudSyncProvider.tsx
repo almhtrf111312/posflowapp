@@ -2,7 +2,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/hooks/use-auth';
-import { setCurrentUserId, fetchStoreSettings, saveStoreSettings } from '@/lib/supabase-store';
+import { setCurrentUserId, fetchStoreSettings, saveStoreSettings, saveStoreSettingsDirect } from '@/lib/supabase-store';
+import { refundInvoiceCloud, refundInvoicePartialCloud, loadCachedInvoicesSync } from '@/lib/cloud/invoices-cloud';
 import { EVENTS, emitEvent, emitAppRefresh } from '@/lib/events';
 import { useRealtimeSync } from '@/hooks/use-realtime-sync';
 import { executePendingCloudClear } from '@/lib/clear-demo-data';
@@ -395,7 +396,6 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         let isLocallyRefunded = false;
         if (bInv && (operation.type === 'invoice_create' || operation.type === 'debt_sale_bundle')) {
           try {
-            const { loadCachedInvoicesSync } = await import('@/lib/cloud/invoices-cloud');
             const localInvoices = loadCachedInvoicesSync() || [];
             const target = localInvoices.find(inv => inv.id === bInv || inv.invoiceNumber === bInv);
             if (target && (target.status === 'refunded' || target.status === 'cancelled')) {
@@ -424,21 +424,18 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           return await processPurchaseInvoiceFromQueue((operation.data as unknown) as Parameters<typeof processPurchaseInvoiceFromQueue>[0]);
         }
         if (operation.type === 'invoice_refund') {
-          const { refundInvoiceCloud } = await import('@/lib/cloud/invoices-cloud');
           const invoiceNumber = (operation.data as { invoiceNumber: string }).invoiceNumber;
           const res = await refundInvoiceCloud(invoiceNumber, 'offline-sync');
           // An already-refunded invoice is an idempotent success; a real failure retries.
           return res === true || (typeof res === 'object' && (res.success || res.alreadyRefunded === true));
         }
         if (operation.type === 'invoice_refund_partial') {
-          const { refundInvoicePartialCloud } = await import('@/lib/cloud/invoices-cloud');
           const { invoiceNumber, itemsToRefund, operationId } = operation.data as { invoiceNumber: string; itemsToRefund: any[]; operationId?: string };
           const res = await refundInvoicePartialCloud(invoiceNumber, itemsToRefund, operationId || `legacy-${operation.id}`);
           if (!res.success) throw new Error(res.error || 'فشل الاسترداد الجزئي');
           return true;
         }
         if (operation.type === 'store_settings_update') {
-          const { saveStoreSettingsDirect } = await import('@/lib/supabase-store');
           return await saveStoreSettingsDirect(operation.data as Record<string, unknown>);
         }
         return processGenericQueuedOperation(operation);

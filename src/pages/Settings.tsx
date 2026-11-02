@@ -1807,7 +1807,6 @@ export default function Settings() {
                     setStoreSettings={setStoreSettings}
                     handleLogoUpload={handleLogoUpload}
                     handleRemoveLogo={handleRemoveLogo}
-                    logoInputRef={logoInputRef}
                     setProductFieldsConfig={setProductFieldsConfig}
                     setProductFieldsChanged={setProductFieldsChanged}
                     setPendingStoreType={setPendingStoreType}

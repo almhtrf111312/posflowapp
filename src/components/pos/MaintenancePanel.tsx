@@ -41,7 +41,6 @@ import { toast } from '@/lib/sonner-bridge';
 import { addInvoiceCloud } from '@/lib/cloud/invoices-cloud';
 import { distributeDetailedProfitCloud } from '@/lib/cloud/partners-cloud';
 import { addDebtFromInvoiceCloud } from '@/lib/cloud/debts-cloud';
-import { addExpenseCloud } from '@/lib/cloud/expenses-cloud';
 import { getCurrencySymbolByCode, resolveInvoiceCurrencySymbol } from '@/lib/currencies';
 import { loadCustomersCloud } from '@/lib/cloud/customers-cloud';
 import { addActivityLog } from '@/lib/activity-log';
@@ -235,16 +234,8 @@ export function MaintenancePanel({
         });
       }
 
-      // ✅ تسجيل تكلفة القطع كمصروف تلقائي (إذا كانت أكبر من 0) - Cloud API
-      if (partsCost > 0) {
-        await addExpenseCloud({
-          type: 'equipment',
-          customType: 'قطع غيار صيانة',
-          amount: partsCost,
-          notes: `قطع غيار لخدمة صيانة - العميل: ${effectiveName} - الفاتورة: ${invoice.id}`,
-          date: new Date().toISOString().split('T')[0],
-        });
-      }
+      // ✅ تصحيح محاسبي: تكلفة القطع (partsCost) مخصومة مسبقاً من مجمل الربح (COGS)
+      // ولا يتم تسجيلها كمصروف تشغيلي إضافي لمنع الخصم المزدوج وتجنب تزييف عجز/فائض الوردية النقدية
 
       // ✅ Distribute profit to partners (category: صيانة) - Cloud API
       if (profit > 0) {
@@ -259,6 +250,26 @@ export function MaintenancePanel({
       // ✅ Create debt record if payment is debt - Cloud API
       if (paymentType === 'debt') {
         await addDebtFromInvoiceCloud(invoice.id, effectiveName, customerPhone, servicePrice);
+      }
+
+      // ✅ تسجيل النقد في الوردية والصندوق فوراً إذا كان الدفع نقداً
+      if (paymentType === 'cash' && servicePrice > 0) {
+        try {
+          const { updateCashboxBalance } = await import('@/lib/cashbox-store');
+          updateCashboxBalance(servicePrice, 'sale', selectedCurrency.code, servicePriceInCurrency);
+
+          const { syncActiveShiftTransactionCloud } = await import('@/lib/cloud/cashbox-cloud');
+          await syncActiveShiftTransactionCloud(
+            'sale',
+            servicePrice,
+            selectedCurrency.code,
+            servicePriceInCurrency,
+            matchedCustomer?.id,
+            `خدمة صيانة - ${effectiveName} - ${invoice.id}`
+          );
+        } catch (err) {
+          console.warn('[MaintenancePanel] Failed to record cash in shift:', err);
+        }
       }
 
       // Log activity with detailed information

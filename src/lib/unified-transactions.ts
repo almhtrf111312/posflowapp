@@ -50,6 +50,7 @@ export interface TransactionResult {
 }
 
 /**
+ * @deprecated [LEGACY_DORMANT] كود قديم غير مستخدم. المسار الفعلي للنظام يعتمد حصراً على processPosSaleAtomic و CartPanel.
  * 1. عملية بيع نقدي متكاملة
  * - التحقق من المخزون
  * - خصم الكميات من المنتجات
@@ -142,6 +143,7 @@ export const processCashSale = async (
 };
 
 /**
+ * @deprecated [LEGACY_DORMANT] كود قديم غير مستخدم. المسار الفعلي للنظام يعتمد حصراً على processPosSaleAtomic و CartPanel.
  * 2. عملية بيع بالدين متكاملة
  * - التحقق من المخزون
  * - خصم الكميات

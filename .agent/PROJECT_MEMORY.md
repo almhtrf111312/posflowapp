@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
 **Last Updated:** 2026-11-02
-**Current Version:** `v1.5.15 (Build 403)`
+**Current Version:** `v1.5.24 (Build 412)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -66,6 +66,14 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-02:** Release v1.5.24 (Build 412) — Large Store Readiness, Financial Immutability & Toast Fixes:
+  * Store Settings Crash Fix (`src/pages/Settings.tsx` & `src/components/settings/StoreInfoSection.tsx`): Removed undeclared `logoInputRef` prop which caused a runtime `ReferenceError` when opening store settings tab.
+  * Large Store Pagination (`src/lib/supabase-store.ts`): Implemented chunked auto-pagination in `fetchFromSupabase` using `.range(offset, offset + 999)` up to 50,000 rows, preventing silent PostgREST 1000-row cutoff across invoices, products, debts, expenses, and customers.
+  * Financial Immutability & Soft Cancellation (`src/lib/cloud/invoices-cloud.ts`): Replaced destructive physical `DELETE` on invoices with soft cancellation (`status: 'cancelled'`) and immediate profit reversal via `reverseProfitCloud`, preserving audit trail and tax compliance.
+  * Maintenance COGS & Cash Shift Fix (`src/components/pos/MaintenancePanel.tsx`): Eliminated duplicate expense recording for maintenance parts cost; linked cash maintenance payments directly to active shift transactions and cashbox balance.
+  * Fire-and-Forget Profit Sync Fix (`src/pages/Debts.tsx`, `src/pages/Invoices.tsx`, `src/lib/cloud/cash-sale-handler.ts`, `src/lib/cloud/debt-sale-handler.ts`): Added `await` and error logging to `confirmPendingProfitCloud` and `distributeDetailedProfitCloud`.
+  * Notification Clipping Fix (`src/lib/sonner-bridge.ts`, `src/components/ui/sonner.tsx`, `src/components/ui/SmartToast.tsx`, `src/index.css`): Separated title from message, expanded card width, removed root `overflow-hidden`, and scoped Xiaomi theme border-radius to icon only to prevent text clipping.
+  * Daily Closing Report Accuracy (`src/components/reports/DailyClosingReport.tsx`): Filtered out refunded and cancelled invoices from daily sales and profit calculations.
 * **2026-11-02:** Instant Telegram Release Pipeline & Automated Semantic Version Bumping:
   * Fast Telegram Release (`supabase/functions/trigger-public-release/index.ts` & `.github/workflows/telegram-public-release.yml`): Redirected public release trigger from `build-apk.yml` to `telegram-public-release.yml`; workflow fetches pre-built APK artifact from latest build and sends directly to Telegram channel in seconds without costly 15-minute rebuild.
   * Dual Version & Build Bump (`scripts/bump-version.js` & `.github/workflows/auto-version-bump.yml`): Defaulted `bumpType` to 'patch' so both `versionName` (semantic patch, e.g. 1.5.3 -> 1.5.4) and `versionCode` (build number) increment synchronously on every push to main; sanitized legacy 4-part versions into standard semver.

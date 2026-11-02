@@ -88,7 +88,7 @@ function formatSonnerDesc(data?: any): string | undefined {
 export const toast = Object.assign(
   (message: any, data?: any) => {
     const msg = typeof message === 'string' ? message : (message ? String(message) : '');
-    const desc = formatSonnerDesc(data) || msg;
+    const desc = formatSonnerDesc(data);
     showSmartToast({
       type: 'info',
       title: msg,
@@ -101,7 +101,7 @@ export const toast = Object.assign(
   {
     error: (message: any, data?: any) => {
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
-      const desc = formatSonnerDesc(data) || msg;
+      const desc = formatSonnerDesc(data);
       const isPersistent = data?.duration === Infinity || data?.persistent === true;
       showSmartToast({
         id: data?.id ? String(data.id) : undefined,
@@ -118,7 +118,7 @@ export const toast = Object.assign(
     },
     warning: (message: any, data?: any) => {
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
-      const desc = formatSonnerDesc(data) || msg;
+      const desc = formatSonnerDesc(data);
       showSmartToast({
         id: data?.id ? String(data.id) : undefined,
         type: 'warning',
@@ -134,7 +134,7 @@ export const toast = Object.assign(
     },
     info: (message: any, data?: any) => {
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
-      const desc = formatSonnerDesc(data) || msg;
+      const desc = formatSonnerDesc(data);
       showSmartToast({
         id: data?.id ? String(data.id) : undefined,
         type: 'info',
@@ -150,7 +150,7 @@ export const toast = Object.assign(
     },
     success: (message: any, data?: any) => {
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
-      const desc = formatSonnerDesc(data) || msg;
+      const desc = formatSonnerDesc(data);
       showSmartToast({
         id: data?.id ? String(data.id) : undefined,
         type: 'success',

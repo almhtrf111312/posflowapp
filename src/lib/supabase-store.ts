@@ -235,9 +235,12 @@ export async function withTimeout<T>(
   }
 }
 
-// Generic fetch function with error handling and timeout protection
+// Generic fetch function with error handling, timeout protection, and automatic pagination
 // ✅ يعتمد على RLS (get_owner_id) لتصفية البيانات تلقائياً
-// لا نضيف فلتر user_id يدوياً لأن الكاشير يجب أن يرى بيانات المالك
+// ✅ يدعم الترقيم التلقائي (Chunked Pagination) لمنع بتر البيانات الصامت عند سقف 1000 صف في المتاجر الكبيرة
+const SUPABASE_PAGE_SIZE = 1000;
+const MAX_PAGINATION_ROWS = 50000;
+
 export async function fetchFromSupabase<T = unknown>(
   tableName: string,
   orderBy?: { column: string; ascending?: boolean },
@@ -255,8 +258,8 @@ export async function fetchFromSupabase<T = unknown>(
   }
 
   try {
-    // ✅ الاستعلام بدون فلتر user_id - RLS ستتعامل مع التصفية
-    let query = sb.from(tableName).select('*');
+    // ✅ جلب الدفعة الأولى بطلب ذرّي بنطاق 0 إلى 999
+    let query = sb.from(tableName).select('*').range(0, SUPABASE_PAGE_SIZE - 1);
 
     if (orderBy) {
       query = query.order(orderBy.column, { ascending: orderBy.ascending ?? false });
@@ -275,14 +278,51 @@ export async function fetchFromSupabase<T = unknown>(
       return [];
     }
 
-    return (data || []) as T[];
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    // إذا كانت النتائج أقل من سقف الصفحة (1000)، نعيدها فوراً بطلب واحد 0ms تأخير إضافي
+    if (data.length < SUPABASE_PAGE_SIZE) {
+      return data as T[];
+    }
+
+    // للمتاجر الكبيرة: إذا بلغ الاستعلام سقف 1000 صف، نستمر بجلب باقي الصفحات تلقائياً
+    const allData: T[] = [...(data as T[])];
+    let offset = SUPABASE_PAGE_SIZE;
+
+    while (allData.length < MAX_PAGINATION_ROWS) {
+      let pageQuery = sb.from(tableName).select('*').range(offset, offset + SUPABASE_PAGE_SIZE - 1);
+      if (orderBy) {
+        pageQuery = pageQuery.order(orderBy.column, { ascending: orderBy.ascending ?? false });
+      }
+
+      const pageRes = await withTimeout(
+        Promise.resolve(pageQuery),
+        timeoutMs,
+        { data: null, error: new Error(`Timeout fetching page at offset ${offset} for ${tableName}`) } as any
+      );
+
+      if (pageRes?.error || !pageRes?.data || !Array.isArray(pageRes.data) || pageRes.data.length === 0) {
+        break;
+      }
+
+      allData.push(...(pageRes.data as T[]));
+
+      if (pageRes.data.length < SUPABASE_PAGE_SIZE) {
+        break; // وصلنا لآخر صفحة
+      }
+
+      offset += SUPABASE_PAGE_SIZE;
+    }
+
+    return allData;
   } catch (error) {
     console.warn(`[Supabase] Error fetching ${tableName}:`, error);
     return [];
   }
 }
 
-// Schema column whitelist for Supabase tables
 // Prevents HTTP 400 Bad Request errors caused by unexpected or computed client fields
 export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
   invoices: [

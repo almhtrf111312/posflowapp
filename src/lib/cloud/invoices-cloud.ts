@@ -828,7 +828,9 @@ const refreshCustomerStatsAfterDelete = async (customerId: string | null) => {
 
 export const deleteInvoiceCloud = async (id: string): Promise<boolean> => {
   if (isGuestDemoMode()) {
-    const currentList = (invoicesCache || loadInvoicesFromLocalCache() || []).filter(i => i.id !== id);
+    const currentList = (invoicesCache || loadInvoicesFromLocalCache() || []).map(i =>
+      i.id === id ? { ...i, status: 'cancelled' as InvoiceStatus, updatedAt: new Date().toISOString() } : i
+    );
     invoicesCache = currentList;
     saveInvoicesToLocalCache(currentList);
     emitEvent(EVENTS.INVOICES_UPDATED, null);
@@ -844,9 +846,21 @@ export const deleteInvoiceCloud = async (id: string): Promise<boolean> => {
   if (!cloudInvoice) return false;
 
   const invoiceBeforeDelete = await findLoadedInvoice(id);
-  const success = await deleteFromSupabase('invoices', cloudInvoice.id);
+
+  // ✅ التزام تدقيقي مالي: عدم الحذف الفيزيائي التدميري للفواتير لحماية السجل الضريبي والمحاسبي
+  // يتم استبدال الحذف بتحويل الحالة إلى 'cancelled' مع عكس الأرباح في جدول profit_records
+  const success = await updateInSupabase('invoices', cloudInvoice.id, {
+    status: 'cancelled',
+    updated_at: new Date().toISOString(),
+  });
 
   if (success) {
+    // ✅ عكس الأرباح في السحابة
+    const { reverseProfitCloud } = await import('./profits-cloud');
+    await reverseProfitCloud(id).catch(err => {
+      console.warn('[deleteInvoiceCloud] Failed to reverse profit record:', err);
+    });
+
     if (invoiceBeforeDelete) logInvoiceDeleted(invoiceBeforeDelete);
     invalidateInvoicesCache();
     emitEvent(EVENTS.INVOICES_UPDATED, null);

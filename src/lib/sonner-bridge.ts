@@ -46,7 +46,7 @@ function show(type: SmartType, message: unknown, data?: ToastData, defaultDurati
     id,
     type,
     title: msg,
-    description: descOf(data) || msg,
+    description: descOf(data),
     duration,
     primaryAction: actionOf(data),
   });

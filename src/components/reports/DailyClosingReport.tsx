@@ -59,6 +59,8 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
 
   const data = useMemo(() => {
     const dayInvoices = invoices.filter(inv => {
+      // ✅ استبعاد الفواتير المستردة والملغاة محاسبياً لمنع تضخيم الإقفال اليومي
+      if (inv.status === 'refunded' || inv.status === 'cancelled') return false;
       const d = toLocalDateString(inv.createdAt);
       return d === selectedDate;
     });

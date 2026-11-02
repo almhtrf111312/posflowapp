@@ -15,7 +15,6 @@ export interface StoreInfoSectionProps {
   setStoreSettings: React.Dispatch<React.SetStateAction<StoreInfo>>;
   handleLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveLogo: () => void;
-  logoInputRef?: React.RefObject<HTMLInputElement | null>;
   setProductFieldsConfig: (cfg: ProductFieldsConfig) => void;
   setProductFieldsChanged: (changed: boolean) => void;
   setPendingStoreType: (type: string) => void;

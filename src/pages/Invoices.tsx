@@ -1417,7 +1417,9 @@ export default function Invoices() {
 
       // تأكيد الأرباح المعلقة
       confirmPendingProfit(selectedDebtForPayment.invoiceId, paymentRatio);
-      confirmPendingProfitCloud(selectedDebtForPayment.invoiceId, paymentRatio);
+      await confirmPendingProfitCloud(selectedDebtForPayment.invoiceId, paymentRatio).catch(err => {
+        console.warn('[Invoices] Failed to confirm pending profit on debt payment:', err);
+      });
 
       // تحديث بيانات العميل فوراً
       try {

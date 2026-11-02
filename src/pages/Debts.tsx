@@ -406,7 +406,9 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
 
       // Confirm pending profits proportionally to payment (ظ…ط­ظ„ظٹط§ظ‹ + ط³ط­ط§ط¨ظٹط§ظ‹)
       confirmPendingProfit(selectedDebt.invoiceId, paymentRatio);
-      confirmPendingProfitCloud(selectedDebt.invoiceId, paymentRatio);
+      await confirmPendingProfitCloud(selectedDebt.invoiceId, paymentRatio).catch(err => {
+        console.warn('[Debts] Failed to confirm pending profit on debt payment:', err);
+      });
 
       // ✅ إعادة احتساب أرقام العميل من الفواتير النشطة بعد السداد فورياً
       try {

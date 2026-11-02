@@ -696,8 +696,7 @@ input, textarea {
   border-inline-start-width: 6px !important;
   color: hsl(var(--foreground)) !important;
   box-shadow: var(--glass-shadow), 0 8px 32px rgba(0, 0, 0, 0.15) !important;
-  border-radius: 9999px !important;
-  /* ensures pill shape on blur-theme */
+  border-radius: 1.25rem !important;
 }
 
 .blur-theme [data-sonner-toast] [data-title],
@@ -2398,7 +2397,7 @@ html {
   box-shadow: 0 16px 40px -6px rgba(0, 0, 0, 0.2), var(--xiaomi-specular-highlight) !important;
 }
 
-.theme-xiaomi .smart-toast-card > div:first-child > div {
+.theme-xiaomi .smart-toast-card .w-7.h-7 {
   border-radius: 9999px !important;
 }
 

@@ -537,8 +537,8 @@ export function SmartToast() {
       {/* بطاقة الإشعار الذكية المدمجة والمحسوبة وفق ألوان السمة */}
       <div
         className={cn(
-          "smart-toast-card pointer-events-auto cursor-grab active:cursor-grabbing overflow-hidden transform-gpu select-none touch-none",
-          "w-[calc(100vw-1.5rem)] max-w-[26rem] sm:max-w-[32rem] md:max-w-[36rem] rounded-2xl shadow-xl border border-border/80 bg-card/95 backdrop-blur-xl",
+          "smart-toast-card pointer-events-auto cursor-grab active:cursor-grabbing transform-gpu select-none touch-none",
+          "w-[calc(100vw-1.5rem)] sm:w-auto sm:min-w-[22rem] sm:max-w-[34rem] md:max-w-[38rem] rounded-2xl shadow-xl border border-border/80 bg-card/95 backdrop-blur-xl",
           animPhase === 'entering' && "transition-all duration-100 ease-out",
           animPhase === 'expanded' && "transition-all duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]",
           animPhase === 'retracting' && "dynamic-island-retract",
@@ -568,7 +568,7 @@ export function SmartToast() {
             <div className="min-w-0 flex-1 space-y-1">
               {/* السطر الأول: العملية ورقم الفاتورة */}
               <div className="flex items-start justify-between gap-1.5">
-                <h4 className="text-xs sm:text-sm font-bold text-foreground break-words leading-snug">
+                <h4 className="text-xs sm:text-sm font-bold text-foreground break-words whitespace-normal leading-snug">
                   {details.operationName}
                 </h4>
                 {details.invoiceNumber && (
@@ -580,7 +580,7 @@ export function SmartToast() {
 
               {/* السطر الثاني: التفاصيل الحقيقية للعملية والوصف الكامل دون قص */}
               {details.description && details.description !== details.operationName && (
-                <p className="text-[11px] sm:text-xs text-muted-foreground break-words leading-relaxed whitespace-pre-line">
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words whitespace-normal leading-relaxed">
                   {details.description}
                 </p>
               )}

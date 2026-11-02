@@ -15,6 +15,7 @@ import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
 import { getEnabledCurrencies, toUsd, fromUsd, round8, roundForCurrency } from '@/lib/money-engine';
+import { openShiftCloud, closeShiftCloud } from '@/lib/cloud/cashbox-cloud';
 import { addActivityLog } from '@/lib/activity-log';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -187,9 +188,19 @@ export default function CashShifts() {
     const activeDef = enabledCurrencies.find(c => c.code === activeShiftCurrency) || enabledCurrencies[0];
     const activeRate = activeDef ? activeDef.rate : 1;
 
-    openShiftFn(totalOpeningUSD, userId, userName, currencyOpeningsRecord, activeShiftCurrency, activeRate);
+    const newShift = openShiftFn(totalOpeningUSD, userId, userName, currencyOpeningsRecord, activeShiftCurrency, activeRate);
     addActivityLog('shift_opened', userId, userName, `${t('cashShifts.startShift')} - ${formatMoney(totalOpeningUSD, 'USD')}`);
     toast.success(t('cashShifts.shiftOpened'));
+
+    // مزامنة فتح الوردية مع السحابة فورياً
+    if (newShift?.id) {
+      void openShiftCloud({
+        shiftId: newShift.id,
+        cashierId: userId,
+        cashierName: userName,
+        openingBalance: totalOpeningUSD,
+      });
+    }
 
     setShowStartDialog(false);
     setOpenings({});
@@ -261,6 +272,16 @@ export default function CashShifts() {
 
         addActivityLog('shift_closed', userId, userName, `${t('cashShifts.closeShift')} - ${discrepancyText} (${formatMoney(totalClosingUSD, 'USD')})`);
         toast.success(t('cashShifts.shiftClosed'), { description: discrepancyText });
+
+        // مزامنة إغلاق الوردية مع السحابة فورياً
+        if (openShift?.id) {
+          void closeShiftCloud({
+            shiftId: openShift.id,
+            expectedBalance: shiftStatus.expectedCash,
+            actualBalance: totalClosingUSD,
+            varianceReason: adjustmentNote || (discrepancy !== 0 ? discrepancyText : undefined),
+          });
+        }
       }
     } catch (err) {
       console.error('[handleCloseShift]', err);

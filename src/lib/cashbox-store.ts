@@ -123,6 +123,17 @@ export const saveCashboxState = (state: CashboxState): void => {
   }
 };
 
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 // Load all shifts — tries user-scoped key first, then legacy key (backwards compat)
 export const loadShifts = (): Shift[] => {
   try {
@@ -130,7 +141,18 @@ export const loadShifts = (): Shift[] => {
     const stored = localStorage.getItem(userKey)
       || (userKey !== LEGACY_SHIFTS_KEY ? localStorage.getItem(LEGACY_SHIFTS_KEY) : null);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed: Shift[] = JSON.parse(stored);
+      let changed = false;
+      parsed.forEach(s => {
+        if (s.status === 'open' && (!s.id || !s.id.includes('-'))) {
+          s.id = generateUUID();
+          changed = true;
+        }
+      });
+      if (changed) {
+        saveShifts(parsed);
+      }
+      return parsed;
     }
   } catch {
     // ignore
@@ -218,7 +240,7 @@ export const openShift = (
   });
 
   const newShift: Shift = {
-    id: Date.now().toString(),
+    id: generateUUID(),
     openedAt: new Date().toISOString(),
     openingCash: roundCurrency(openingCash),
     userId,
@@ -296,7 +318,7 @@ export const closeShift = (
   // Create adjustment if there's a discrepancy
   if (discrepancy !== 0) {
     shift.adjustment = {
-      id: Date.now().toString(),
+      id: generateUUID(),
       type: discrepancy > 0 ? 'surplus' : 'shortage',
       amount: Math.abs(discrepancy),
       notes,
@@ -627,7 +649,7 @@ export const addShiftAdjustment = (
 
   // إنشاء سجل التعديل
   const adjustment: ShiftAdjustment = {
-    id: Date.now().toString(),
+    id: generateUUID(),
     type,
     amount: roundedAmount,
     reason,

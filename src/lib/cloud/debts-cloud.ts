@@ -543,8 +543,8 @@ export const deleteDebtByInvoiceIdCloud = async (invoiceId: string): Promise<boo
   }
 };
 
-// Delete debt by ID — مع عكس الفاتورة + العميل + أرباح الشركاء
-export const deleteDebtCloud = async (debtId: string): Promise<boolean> => {
+// Delete / Cancel debt by ID ذرياً — عبر cancel_debt_atomic
+export const deleteDebtCloud = async (debtId: string, reason = 'إلغاء الدين'): Promise<boolean> => {
   if (isGuestDemoMode()) {
     const currentList = (debtsCache || loadDebtsLocally() || []).filter(d => d.id !== debtId);
     debtsCache = currentList;
@@ -552,120 +552,70 @@ export const deleteDebtCloud = async (debtId: string): Promise<boolean> => {
     emitEvent(EVENTS.DEBTS_UPDATED, null);
     return true;
   }
-  // 1. قراءة الدين قبل الحذف
-  const debts = await loadDebtsCloud();
-  const debt = debts.find(d => d.id === debtId);
 
-  // 2. حذف الدين
-  const success = await deleteFromSupabase('debts', debtId);
-  if (!success) return false;
-
-  invalidateDebtsCache();
-  emitEvent(EVENTS.DEBTS_UPDATED, null);
-
-  // 3. عكس الآثار الجانبية إذا وُجد الدين
-  if (debt) {
-    try {
-      // 3a. تحديث الفاتورة المرتبطة — إعادتها لـ completed
-      if (debt.invoiceId && !debt.isCashDebt) {
-        const userId = getCurrentUserId();
-        if (userId) {
-          await sb
-            .from('invoices')
-            .update({
-              status: 'paid',
-              payment_type: 'cash',
-              debt_paid: 0,
-              debt_remaining: 0,
-            })
-            .or(`invoice_number.eq.${debt.invoiceId},id.eq.${debt.invoiceId}`);
-
-          emitEvent(EVENTS.INVOICES_UPDATED, null);
-        }
-      }
-
-      // 3b. ✅ إعادة احتساب أرقام العميل من الفواتير النشطة
-      if (debt.customerName) {
-        try {
-          const { loadCustomersCloud, updateCustomerStatsCloud, invalidateCustomersCache } = await import('./customers-cloud');
-          const { invalidateInvoicesCache } = await import('./invoices-cloud');
-          invalidateInvoicesCache();
-          const customers = await loadCustomersCloud();
-          const customer = customers.find(c =>
-            c.name.trim().toLowerCase() === debt.customerName.trim().toLowerCase() ||
-            (debt.customerPhone && c.phone === debt.customerPhone)
-          );
-          if (customer) {
-            await updateCustomerStatsCloud(customer.id);
-            invalidateCustomersCache();
-            emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
-          }
-        } catch (e) {
-          console.error('[deleteDebtCloud] Error updating customer stats:', e);
-        }
-      }
-
-      // 3c. عكس أرباح الشركاء المعلقة
-      if (debt.invoiceId) {
-        try {
-          const { revertProfitDistributionCloud } = await import('./partners-cloud');
-          await revertProfitDistributionCloud(debt.invoiceId);
-        } catch (e) {
-          console.error('[deleteDebtCloud] Error reverting partner profits:', e);
-        }
-      }
-    } catch (e) {
-      console.error('[deleteDebtCloud] Error in cascading cleanup:', e);
+  try {
+    const { error } = await (sb as any).rpc('cancel_debt_atomic', {
+      _debt_id: debtId,
+      _reason: reason,
+    });
+    if (error) {
+      console.warn('[deleteDebtCloud] cancel_debt_atomic failed, fallback to client delete:', error);
+      const success = await deleteFromSupabase('debts', debtId);
+      if (!success) return false;
     }
-  }
 
-  return true;
+    invalidateDebtsCache();
+    emitEvent(EVENTS.DEBTS_UPDATED, null);
+    emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
+    emitEvent(EVENTS.INVOICES_UPDATED, null);
+    return true;
+  } catch (err) {
+    console.error('Error deleting/cancelling debt:', err);
+    return false;
+  }
 };
 
 /**
- * إتلاف الدين (Write-off) - عملية محاسبية كاملة:
- * 1. إنشاء سجل في debt_writeoffs
- * 2. إنشاء مصروف من نوع 'debt_writeoff' (يخصم من رأس المال)
- * 3. عكس أرباح الشركاء المعلقة المرتبطة بالفاتورة
- * 4. تحديث الدين كـ "fully_paid" مع note + خفض رصيد العميل
+ * إتلاف / شطب الدين ذرياً عبر الخادم (writeoff_debt_atomic)
+ * 1. تسجيل إتلاف الدين في debt_writeoffs
+ * 2. تسجيل مصروف في expenses يخصم من رأس المال
+ * 3. تحديث الدين كـ "fully_paid" مع توثيق السبب
+ * 4. خفض مديونية العميل في customers
+ * 5. عكس أرباح الشركاء المعلقة
  */
 export const writeOffDebtCloud = async (
   debtId: string,
   reason: string
 ): Promise<boolean> => {
-  const userId = getCurrentUserId();
-  if (!userId) return false;
+  if (isGuestDemoMode()) {
+    const debts = loadDebtsLocally();
+    const updated = debts.map(d => d.id === debtId ? { ...d, status: 'fully_paid' as const, remainingDebt: 0, notes: `${d.notes || ''}\n[إتلاف دين] ${reason}`.trim() } : d);
+    saveDebtsLocally(updated);
+    debtsCache = updated;
+    emitEvent(EVENTS.DEBTS_UPDATED, null);
+    return true;
+  }
 
   const debts = await loadDebtsCloud();
   const debt = debts.find(d => d.id === debtId);
   if (!debt) return false;
 
-  const writeoffAmount = Number(debt.remainingDebt) || 0;
-  if (writeoffAmount <= 0) return false;
+  const operationId = `writeoff_${debtId}_${Date.now()}`;
 
   try {
-    // 1. سجل الإتلاف
-    await sb.from('debt_writeoffs').insert({
-      user_id: userId,
-      debt_id: debtId,
-      customer_name: debt.customerName,
-      amount: writeoffAmount,
-      reason,
-      capital_impact: writeoffAmount,
-      written_off_by: userId,
+    // 1. استدعاء الدالة الذرية السحابية لشطب الدين
+    const { error } = await (sb as any).rpc('writeoff_debt_atomic', {
+      _debt_id: debtId,
+      _reason: reason,
+      _operation_id: operationId,
     });
 
-    // 2. مصروف يخصم من رأس المال
-    await sb.from('expenses').insert({
-      user_id: userId,
-      expense_type: 'debt_writeoff',
-      amount: writeoffAmount,
-      description: `إتلاف دين - ${debt.customerName}`,
-      notes: reason,
-      date: new Date().toISOString().split('T')[0],
-    });
+    if (error) {
+      console.warn('[writeOffDebtCloud] RPC failed, queuing for sync:', error);
+      addToQueue('debt_writeoff', { debtId, reason, operationId });
+    }
 
-    // 3. عكس أرباح الشركاء المعلقة
+    // 2. عكس أرباح الشركاء المعلقة إن وجدت
     if (debt.invoiceId) {
       try {
         const { revertProfitDistributionCloud } = await import('./partners-cloud');
@@ -675,46 +625,24 @@ export const writeOffDebtCloud = async (
       }
     }
 
-    // 4. خفض رصيد العميل
-    if (debt.customerName) {
-      try {
-        const { loadCustomersCloud, updateCustomerCloud, invalidateCustomersCache } = await import('./customers-cloud');
-        const customers = await loadCustomersCloud();
-        const customer = customers.find(c =>
-          c.name.trim().toLowerCase() === debt.customerName.trim().toLowerCase() ||
-          (debt.customerPhone && c.phone === debt.customerPhone)
-        );
-        if (customer) {
-          await updateCustomerCloud(customer.id, {
-            totalDebt: Math.max(0, customer.totalDebt - writeoffAmount),
-          });
-          invalidateCustomersCache();
-          emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
-        }
-      } catch (e) {
-        console.error('[writeOffDebtCloud] customer update failed:', e);
-      }
-    }
-
-    // 5. تعليم الدين كـ مدفوع كلياً (مكتوب)
-    await sb
-      .from('debts')
-      .update({
-        status: 'fully_paid',
-        total_paid: Number(debt.totalDebt) || 0,
-        remaining_debt: 0,
-        notes: `${debt.notes || ''}\n[إتلاف دين] ${reason}`.trim(),
-      })
-      .eq('id', debtId);
-
     invalidateDebtsCache();
     emitEvent(EVENTS.DEBTS_UPDATED, null);
+    emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
+    emitEvent(EVENTS.EXPENSES_UPDATED, null);
     return true;
-  } catch (e) {
-    console.error('[writeOffDebtCloud] failed:', e);
-    return false;
+  } catch (error) {
+    console.error('Error in writeOffDebtCloud:', error);
+    try {
+      addToQueue('debt_writeoff', { debtId, reason, operationId });
+      invalidateDebtsCache();
+      emitEvent(EVENTS.DEBTS_UPDATED, null);
+      return true;
+    } catch {
+      return false;
+    }
   }
 };
+
 export const getDebtsStatsCloud = async () => {
   const debts = await loadDebtsCloud();
   return {

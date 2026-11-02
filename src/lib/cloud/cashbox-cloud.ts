@@ -9,7 +9,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseSupabase = SupabaseClient<any, 'public', any>;
 const sb = supabase as unknown as LooseSupabase;
-import { getCurrentUserId, setCurrentUserId } from '../supabase-store';
+import { getCurrentUserId, setCurrentUserId, getOwnerIdForInsert } from '../supabase-store';
 import { addToQueue } from '../sync-queue';
 import { roundCurrency } from '../utils';
 
@@ -51,6 +51,7 @@ export interface CloudShift {
 }
 
 export const openShiftCloud = async (params: {
+  shiftId?: string;
   cashierId?: string | null;
   cashierName?: string | null;
   openingBalance: number;
@@ -58,27 +59,32 @@ export const openShiftCloud = async (params: {
   const userId = await ensureUserId();
   if (!userId) return null;
 
-  const payload = {
-    user_id: userId,
-    cashier_id: params.cashierId || null,
+  const ownerId = (await getOwnerIdForInsert()) || userId;
+
+  const payload: Record<string, unknown> = {
+    user_id: ownerId,
+    cashier_id: params.cashierId || userId,
     cashier_name: params.cashierName || null,
     opening_balance: roundCurrency(params.openingBalance),
     expected_balance: roundCurrency(params.openingBalance),
     reconciliation_status: 'open' as const,
   };
+  if (params.shiftId) {
+    payload.id = params.shiftId;
+  }
 
   try {
     const { data, error } = await sb
       .from('cash_shifts')
-      .insert(payload)
+      .upsert(payload, { onConflict: 'id' })
       .select('id')
       .single();
     if (error) throw error;
-    return data?.id || null;
+    return data?.id || params.shiftId || null;
   } catch (e) {
     console.warn('[cashbox-cloud] open shift failed, queued:', e);
     try { addToQueue('shift_open', payload); } catch { /* noop */ }
-    return null;
+    return params.shiftId || null;
   }
 };
 
@@ -108,8 +114,7 @@ export const closeShiftCloud = async (params: {
     const { error } = await sb
       .from('cash_shifts')
       .update(payload)
-      .eq('id', params.shiftId)
-      .eq('user_id', userId);
+      .eq('id', params.shiftId);
     if (error) throw error;
     return true;
   } catch (e) {
@@ -132,9 +137,11 @@ export const addShiftTransactionCloud = async (params: {
   const userId = await ensureUserId();
   if (!userId) return false;
 
+  const ownerId = (await getOwnerIdForInsert()) || userId;
+
   const payload: Record<string, unknown> = {
     shift_id: params.shiftId,
-    user_id: userId,
+    user_id: ownerId,
     type: params.type,
     amount: roundCurrency(params.amount),
     reference_id: params.referenceId || null,
@@ -188,13 +195,10 @@ export const syncActiveShiftTransactionCloud = async (
 };
 
 export const loadCloudShifts = async (limit = 50): Promise<CloudShift[]> => {
-  const userId = await ensureUserId();
-  if (!userId) return [];
   try {
     const { data, error } = await sb
       .from('cash_shifts')
       .select('*')
-      .eq('user_id', userId)
       .order('opened_at', { ascending: false })
       .limit(limit);
     if (error) throw error;

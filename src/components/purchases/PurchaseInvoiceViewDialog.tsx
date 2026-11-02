@@ -189,14 +189,14 @@ export function PurchaseInvoiceViewDialog({
 
   const handleDelete = async () => {
     if (!invoice) return;
-    if (!window.confirm(`هل أنت متأكد من حذف فاتورة المشتريات رقم #${invoice.invoice_number}؟`)) {
+    if (!window.confirm(`هل أنت متأكد من إلغاء فاتورة المشتريات رقم #${invoice.invoice_number}؟ سيتم عكس المخزون والتكلفة بأمان.`)) {
       return;
     }
     setDeleting(true);
     try {
       const success = await deletePurchaseInvoiceCloud(invoice.id);
       if (success) {
-        toast.success(`تم حذف فاتورة المشتريات #${invoice.invoice_number} بنجاح`);
+        toast.success(`تم إلغاء فاتورة المشتريات #${invoice.invoice_number} وعكس أثرها المخزني بنجاح`);
         emitEvent(EVENTS.PURCHASES_UPDATED);
         emitEvent(EVENTS.PRODUCTS_UPDATED);
         onOpenChange(false);
@@ -292,6 +292,10 @@ export function PurchaseInvoiceViewDialog({
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                         مستبدلة بتعديل لاحق
                       </span>
+                    ) : invoice?.status === 'cancelled' ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
+                        ملغاة (تم عكس المخزون والتكلفة)
+                      </span>
                     ) : invoice?.status === 'finalized' ? (
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                         <CheckCircle2 className="w-3 h-3" />
@@ -311,7 +315,7 @@ export function PurchaseInvoiceViewDialog({
             {/* Quick header actions */}
             {!isEditing && invoice && (
               <div className="flex items-center gap-1.5 shrink-0">
-                {canEdit && invoice.status !== 'superseded' && (
+                {canEdit && invoice.status !== 'superseded' && invoice.status !== 'cancelled' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -328,10 +332,10 @@ export function PurchaseInvoiceViewDialog({
                   size="sm"
                   className="gap-1 h-8 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                   onClick={handleDelete}
-                  disabled={loading || deleting}
+                  disabled={loading || deleting || invoice.status === 'cancelled'}
                 >
                   {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline">حذف</span>
+                  <span className="hidden sm:inline">{invoice.status === 'cancelled' ? 'ملغاة' : 'إلغاء'}</span>
                 </Button>
               </div>
             )}

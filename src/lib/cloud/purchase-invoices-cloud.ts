@@ -22,7 +22,9 @@ import { isGuestDemoMode } from '@/lib/demo-data';
    actual_items_count: number;
    actual_total_quantity: number;
    actual_grand_total: number;
-   status: 'draft' | 'reconciled' | 'finalized' | 'superseded';
+   status: 'draft' | 'reconciled' | 'finalized' | 'superseded' | 'cancelled';
+  payment_status?: string;
+  payment_method?: string;
   replaced_by?: string;
   operation_id?: string;
   edit_reason?: string;
@@ -411,6 +413,12 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
   
             if (product) {
               // ⚖️ الكمية والتكلفة (المتوسط المرجح) تُحسب ذرياً في الخادم — المخزون السالب يُغطّى بسعر الشراء الجديد أولاً
+              // حفظ تكلفة ما قبل الشراء في سطر البند لضمان العكس الدقيق لاحقاً
+              await supabase
+                .from('purchase_invoice_items')
+                .update({ cost_price_before: product.cost_price })
+                .eq('id', item.id);
+
               const { error: wacErr } = await (supabase as any).rpc('receive_stock_wac', {
                 _product_id: item.product_id,
                 _quantity: item.quantity,
@@ -462,40 +470,68 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
           }
 
           if (existingProduct) {
-            const oldQty = existingProduct.quantity || 0;
-            const oldCost = Number(existingProduct.cost_price) || 0;
-            const newQuantity = noInventory ? 99999 : oldQty + item.quantity;
-            const avgCost = newQuantity > 0 && item.quantity > 0
-              ? round8(((oldQty * oldCost) + (item.quantity * item.cost_price)) / newQuantity)
-              : (item.cost_price ?? oldCost);
-
-            const purchaseHistory = Array.isArray(existingProduct.purchase_history)
-              ? existingProduct.purchase_history
-              : [];
-
-            purchaseHistory.push({
-              invoice_id: invoiceId,
-              invoice_number: invoice.invoice_number,
-              supplier_name: invoice.supplier_name,
-              date: invoice.invoice_date,
-              quantity: item.quantity,
-              cost_price: item.cost_price,
-              added_at: new Date().toISOString()
-            });
-
-            await supabase
-              .from('products')
-              .update({
-                quantity: newQuantity,
-                cost_price: avgCost,
-                purchase_history: purchaseHistory as unknown as import('@/integrations/supabase/types').Json
-              })
-              .eq('id', existingProduct.id);
-
+            // ربط البند بالمنتج وحفظ تكلفة ما قبل الشراء فورياً
             await supabase
               .from('purchase_invoice_items')
-              .update({ product_id: existingProduct.id })
+              .update({
+                product_id: existingProduct.id,
+                cost_price_before: existingProduct.cost_price
+              })
               .eq('id', item.id);
+
+            if (noInventory) {
+              const purchaseHistory = Array.isArray(existingProduct.purchase_history)
+                ? existingProduct.purchase_history
+                : [];
+
+              purchaseHistory.push({
+                invoice_id: invoiceId,
+                invoice_number: invoice.invoice_number,
+                supplier_name: invoice.supplier_name,
+                date: invoice.invoice_date,
+                quantity: item.quantity,
+                cost_price: item.cost_price,
+                added_at: new Date().toISOString()
+              });
+
+              await supabase
+                .from('products')
+                .update({
+                  cost_price: item.cost_price,
+                  purchase_history: purchaseHistory as unknown as import('@/integrations/supabase/types').Json
+                })
+                .eq('id', existingProduct.id);
+            } else {
+              // ⚖️ استدعاء دالة receive_stock_wac الموحدة لضمان القفل الذري وتوثيق stock_movements
+              const { error: wacErr } = await (supabase as any).rpc('receive_stock_wac', {
+                _product_id: existingProduct.id,
+                _quantity: item.quantity,
+                _unit_cost: item.cost_price || 0,
+                _reference: `purchase_invoice:${invoice.invoice_number}`,
+              });
+              if (wacErr) throw wacErr;
+
+              const purchaseHistory = Array.isArray(existingProduct.purchase_history)
+                ? existingProduct.purchase_history
+                : [];
+
+              purchaseHistory.push({
+                invoice_id: invoiceId,
+                invoice_number: invoice.invoice_number,
+                supplier_name: invoice.supplier_name,
+                date: invoice.invoice_date,
+                quantity: item.quantity,
+                cost_price: item.cost_price,
+                added_at: new Date().toISOString()
+              });
+
+              await supabase
+                .from('products')
+                .update({
+                  purchase_history: purchaseHistory as unknown as import('@/integrations/supabase/types').Json
+                })
+                .eq('id', existingProduct.id);
+            }
           } else {
             // Create new product with safe defaults
             const newProductData: Record<string, unknown> = {
@@ -546,7 +582,10 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
             if (newProduct) {
               await supabase
                 .from('purchase_invoice_items')
-                .update({ product_id: newProduct.id })
+                .update({
+                  product_id: newProduct.id,
+                  cost_price_before: 0
+                })
                 .eq('id', item.id);
             }
           }
@@ -617,158 +656,57 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
  }
  
  // Delete purchase invoice with full inventory deduction and financial reversal
- export async function deletePurchaseInvoiceCloud(invoiceId: string): Promise<boolean> {
-   try {
-     const isOfflineInvoice = invoiceId.startsWith('local_');
- 
-     // 1. Load invoice and its items before deleting
-     let invoice: PurchaseInvoice | null = null;
-     let items: PurchaseInvoiceItem[] = [];
- 
-     if (!isOfflineInvoice) {
-       const result = await loadPurchaseInvoiceWithItems(invoiceId);
-       invoice = result.invoice;
-       items = result.items;
-     } else {
-       const localInvoices = loadPurchaseInvoicesLocally();
-       invoice = localInvoices.find(i => i.id === invoiceId) || null;
-     }
- 
-     // 2. Inventory reversal: Deduct item quantities and remove purchase history
-     if (items.length > 0 && !isNoInventoryMode()) {
-       for (const item of items) {
-          if (!item.quantity || item.quantity <= 0) continue;
+ /**
+ * إلغاء فاتورة المشتريات ذرياً عبر الخادم (Atomic Compensation Reversal)
+ * يمنع الحذف المادي بـ DELETE تنفيذاً للقاعدة المالية الصارمة،
+ * ويقوم بقفل المنتجات وعكس المخزون وحساب الـ WAC بدقة وتوثيق stock_movements (purchase_reversal)
+ */
+export async function cancelPurchaseInvoiceCloud(invoiceId: string, reason?: string): Promise<boolean> {
+  try {
+    const isOfflineInvoice = invoiceId.startsWith('local_');
 
-          interface TargetProductRow { id: string; quantity: number; cost_price: number; purchase_history: unknown[] }
-          let targetProduct: TargetProductRow | null = null;
-         if (item.product_id) {
-           const { data } = await supabase
-             .from('products')
-             .select('id, quantity, cost_price, purchase_history')
-             .eq('id', item.product_id)
-             .maybeSingle();
-           targetProduct = data as unknown as TargetProductRow | null;
-         }
- 
-         if (!targetProduct && invoice?.user_id) {
-           if (item.barcode?.trim()) {
-             const { data } = await supabase
-               .from('products')
-               .select('id, quantity, cost_price, purchase_history')
-               .eq('user_id', invoice.user_id)
-               .eq('barcode', item.barcode.trim())
-               .maybeSingle();
-             targetProduct = data as unknown as TargetProductRow | null;
-           }
-           if (!targetProduct && item.product_name?.trim()) {
-             const { data } = await supabase
-               .from('products')
-               .select('id, quantity, cost_price, purchase_history')
-               .eq('user_id', invoice.user_id)
-               .ilike('name', item.product_name.trim())
-               .maybeSingle();
-             targetProduct = data as unknown as TargetProductRow | null;
-           }
-         }
- 
-         if (targetProduct) {
-           const currentQty = targetProduct.quantity || 0;
-           const newQty = Math.max(0, currentQty - item.quantity);
-           const oldHistory = Array.isArray(targetProduct.purchase_history)
-             ? targetProduct.purchase_history
-             : [];
-            const updatedHistory = (oldHistory as Array<Record<string, unknown>>).filter((h) =>
-             h.invoice_id !== invoiceId &&
-             h.invoice_id !== invoice?.invoice_number &&
-             h.invoice_number !== invoice?.invoice_number
-           );
-           const lastEntry = updatedHistory.length > 0 ? updatedHistory[updatedHistory.length - 1] : null;
-            const newCostPrice: number = (lastEntry?.cost_price as number | undefined) ?? targetProduct.cost_price;
- 
-           await supabase
-             .from('products')
-             .update({
-               quantity: newQty,
-               purchase_history: updatedHistory as unknown as import('@/integrations/supabase/types').Json,
-               cost_price: newCostPrice,
-               updated_at: new Date().toISOString(),
-             })
-             .eq('id', targetProduct.id);
-         }
-       }
-     }
- 
-     // 3. Financial reversal: Remove any associated expenses
-     if (invoice?.invoice_number) {
-       try {
-         // Bind the invoice number as a parameter (no filter-string interpolation)
-         const safe = String(invoice.invoice_number).replace(/[\\%_]/g, (c) => `\\${c}`);
-         await supabase.from('expenses').delete().ilike('notes', `%${safe}%`);
-         await supabase.from('expenses').delete().ilike('description', `%${safe}%`);
-       } catch (e) {
-         console.warn('Could not cleanup cloud expenses for invoice:', e);
-       }
- 
-       // Cleanup local expenses cache
-       try {
-         const rawExpenses = localStorage.getItem('hyperpos_expenses_v1');
-         if (rawExpenses) {
-           const parsed = JSON.parse(rawExpenses);
-           if (Array.isArray(parsed)) {
-              const filtered = (parsed as Array<Record<string, string | undefined>>).filter((e) =>
-               !e.notes?.includes(invoice.invoice_number) &&
-               !e.description?.includes(invoice.invoice_number) &&
-               !e.title?.includes(invoice.invoice_number)
-             );
-             if (filtered.length !== parsed.length) {
-               localStorage.setItem('hyperpos_expenses_v1', JSON.stringify(filtered));
-               emitEvent(EVENTS.EXPENSES_UPDATED);
-             }
-           }
-         }
-        } catch (localErr) {
-          console.warn('[deletePurchaseInvoiceCloud] local expenses cleanup failed:', localErr);
-        }
+    if (!isOfflineInvoice) {
+      // 1. استدعاء دالة الإلغاء الذرية في السيرفر
+      const { error } = await (supabase as any).rpc('cancel_purchase_invoice_atomic', {
+        _invoice_id: invoiceId,
+        _reason: reason || 'إلغاء فاتورة مشتريات'
+      });
+
+      if (error) {
+        console.error('[cancelPurchaseInvoiceCloud] RPC error:', error);
+        throw error;
       }
- 
-     // 4. Delete invoice items from cloud
-     if (!isOfflineInvoice) {
-       await supabase
-         .from('purchase_invoice_items')
-         .delete()
-         .eq('invoice_id', invoiceId);
- 
-       // 5. Delete purchase invoice record
-       const { error } = await supabase
-         .from('purchase_invoices')
-         .delete()
-         .eq('id', invoiceId);
- 
-       if (error) {
-         console.error('Error deleting purchase invoice:', error);
-         return false;
-       }
-     }
- 
-     // 6. Update local invoices cache
-     const localInvoices = loadPurchaseInvoicesLocally();
-     const updatedInvoices = localInvoices.filter(i => i.id !== invoiceId);
-     savePurchaseInvoicesLocally(updatedInvoices);
- 
-     // 7. Emit updates across app
-     emitEvent(EVENTS.PURCHASES_UPDATED);
-     emitEvent(EVENTS.PRODUCTS_UPDATED);
-     emitEvent(EVENTS.EXPENSES_UPDATED);
- 
-     return true;
-   } catch (error) {
-     console.error('Error in deletePurchaseInvoiceCloud:', error);
-     return false;
-   }
- }
- 
- // Update purchase invoice status
- export async function updatePurchaseInvoiceStatusCloud(
+    }
+
+    // 2. تحديث الكاش المحلي: وسم الفاتورة كملغاة بدلاً من مسحها مادياً
+    const localInvoices = loadPurchaseInvoicesLocally();
+    const updatedInvoices = localInvoices.map((inv) =>
+      inv.id === invoiceId ? { ...inv, status: 'cancelled' as const } : inv
+    );
+    savePurchaseInvoicesLocally(updatedInvoices);
+
+    if (purchaseInvoicesCache) {
+      purchaseInvoicesCache = purchaseInvoicesCache.map((inv) =>
+        inv.id === invoiceId ? { ...inv, status: 'cancelled' as const } : inv
+      );
+    }
+
+    // 3. إشعار التطبيق بتحديث المشتريات والمخزون والمصاريف
+    emitEvent(EVENTS.PURCHASES_UPDATED);
+    emitEvent(EVENTS.PRODUCTS_UPDATED);
+    emitEvent(EVENTS.EXPENSES_UPDATED);
+
+    return true;
+  } catch (error) {
+    console.error('Error in cancelPurchaseInvoiceCloud:', error);
+    return false;
+  }
+}
+
+// إبقاء الاسم القديم للتوافقية الكاملة مع الواجهات
+export const deletePurchaseInvoiceCloud = cancelPurchaseInvoiceCloud;
+
+export async function updatePurchaseInvoiceStatusCloud(
    invoiceId: string, 
    status: 'draft' | 'reconciled' | 'finalized'
  ): Promise<boolean> {
@@ -822,6 +760,7 @@ export interface EditPurchaseInvoiceLine {
   category?: string;
   quantity: number;
   cost_price: number;
+  cost_price_before?: number;
   sale_price?: number;
 }
 

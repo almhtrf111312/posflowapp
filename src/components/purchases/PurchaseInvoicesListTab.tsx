@@ -65,13 +65,16 @@ export function PurchaseInvoicesListTab() {
 
   const stats = useMemo(() => {
     const totalCount = invoices.length;
-    const totalAmount = invoices.reduce(
-      (sum, inv) => sum + (inv.actual_grand_total || inv.expected_grand_total || 0),
-      0
-    );
+    const totalAmount = invoices
+      .filter((inv) => inv.status !== 'cancelled')
+      .reduce(
+        (sum, inv) => sum + (inv.actual_grand_total || inv.expected_grand_total || 0),
+        0
+      );
     const finalizedCount = invoices.filter((inv) => inv.status === 'finalized').length;
     const draftCount = invoices.filter((inv) => inv.status === 'draft').length;
-    return { totalCount, totalAmount, finalizedCount, draftCount };
+    const cancelledCount = invoices.filter((inv) => inv.status === 'cancelled').length;
+    return { totalCount, totalAmount, finalizedCount, draftCount, cancelledCount };
   }, [invoices]);
 
   const filteredInvoices = useMemo(() => {
@@ -268,12 +271,20 @@ export function PurchaseInvoicesListTab() {
                           </span>
                         )}
                         <Badge
-                          variant={inv.status === 'finalized' ? 'default' : 'secondary'}
+                          variant={inv.status === 'finalized' ? 'default' : inv.status === 'cancelled' ? 'destructive' : 'secondary'}
                           className={
-                            inv.status === 'finalized' ? 'bg-emerald-600 hover:bg-emerald-700' : ''
+                            inv.status === 'finalized'
+                              ? 'bg-emerald-600 hover:bg-emerald-700'
+                              : inv.status === 'cancelled'
+                              ? 'bg-destructive/80 hover:bg-destructive text-destructive-foreground'
+                              : ''
                           }
                         >
-                          {inv.status === 'finalized' ? 'مؤكدة بالمخزون' : 'مسودة'}
+                          {inv.status === 'finalized'
+                            ? 'مؤكدة بالمخزون'
+                            : inv.status === 'cancelled'
+                            ? 'ملغاة'
+                            : 'مسودة'}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">

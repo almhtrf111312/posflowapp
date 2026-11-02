@@ -189,12 +189,16 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
   };
 
   const handleSubmit = () => {
-    if (!productName || !quantity || !costPrice) return;
+    const factor = Number.parseInt(conversionFactor) || 1;
+    const isBulk = trackByUnit === 'bulk' && factor > 1;
 
-    // حساب التكلفة المرجعية بالدولار لضمان دقة المتوسط المرجح للتكلفة (WAC) وحساب الأرباح السحابية
-    // cost_price_usd = cost_price_local / exchange_rate
-    const costPriceNum = Number.parseFloat(costPrice) || 0;
+    const bulkCostPriceNum = bulkCostPrice ? Number.parseFloat(bulkCostPrice) : undefined;
+    const bulkCostPriceUSD = bulkCostPriceNum !== undefined ? m.toUsd(bulkCostPriceNum, inputCurrency, currentRate) : undefined;
+
+    const costPriceNum = costPrice ? Number.parseFloat(costPrice) : (isBulk && bulkCostPriceNum ? bulkCostPriceNum / factor : 0);
     const costPriceUSD = m.toUsd(costPriceNum, inputCurrency, currentRate);
+
+    if (!productName || !quantity || (!costPrice && !bulkCostPrice)) return;
 
     const salePriceNum = salePrice ? Number.parseFloat(salePrice) : undefined;
     const salePriceUSD = salePriceNum !== undefined ? m.toUsd(salePriceNum, inputCurrency, currentRate) : undefined;
@@ -202,19 +206,22 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
     const wholesalePriceNum = wholesalePrice ? Number.parseFloat(wholesalePrice) : undefined;
     const wholesalePriceUSD = wholesalePriceNum !== undefined ? m.toUsd(wholesalePriceNum, inputCurrency, currentRate) : undefined;
 
-    const bulkCostPriceNum = bulkCostPrice ? Number.parseFloat(bulkCostPrice) : undefined;
-    const bulkCostPriceUSD = bulkCostPriceNum !== undefined ? m.toUsd(bulkCostPriceNum, inputCurrency, currentRate) : undefined;
-
     const bulkSalePriceNum = bulkSalePrice ? Number.parseFloat(bulkSalePrice) : undefined;
     const bulkSalePriceUSD = bulkSalePriceNum !== undefined ? m.toUsd(bulkSalePriceNum, inputCurrency, currentRate) : undefined;
+
+    // أتمتة تحويل الكمية والتكلفة إلى الوحدة الصغرى (القطع) حصراً لحماية سلامة المخزون
+    const rawQty = Number.parseInt(quantity) || 1;
+    const baseQuantity = isBulk ? rawQty * factor : rawQty;
+    const baseCostPriceUSD = isBulk && bulkCostPriceUSD ? bulkCostPriceUSD / factor : costPriceUSD;
+    const baseSalePriceUSD = isBulk && bulkSalePriceUSD && !salePriceUSD ? bulkSalePriceUSD / factor : salePriceUSD;
 
     onAdd({
       product_name: productName,
       barcode: barcode || undefined,
       category: category || undefined,
-      quantity: Number.parseInt(quantity),
-      cost_price: costPriceUSD,
-      sale_price: salePriceUSD,
+      quantity: baseQuantity,
+      cost_price: baseCostPriceUSD,
+      sale_price: baseSalePriceUSD,
       product_id: selectedProduct?.id,
       wholesale_price: wholesalePriceUSD,
       expiry_date: expiryDate || undefined,
@@ -234,7 +241,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
       track_by_unit: trackByUnit,
       bulk_unit: bulkUnit,
       small_unit: smallUnit,
-      conversion_factor: Number.parseInt(conversionFactor) || 1,
+      conversion_factor: factor,
       bulk_cost_price: bulkCostPriceUSD !== undefined ? Number.parseFloat(bulkCostPriceUSD.toFixed(4)) : undefined,
       bulk_sale_price: bulkSalePriceUSD !== undefined ? Number.parseFloat(bulkSalePriceUSD.toFixed(4)) : undefined,
     });

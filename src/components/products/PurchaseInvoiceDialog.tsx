@@ -23,8 +23,13 @@ import {
   Plus,
   Camera,
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  Wallet
 } from 'lucide-react';
+import { addWithdrawalFromShift } from '@/lib/cashbox-store';
+import { addActivityLog } from '@/lib/activity-log';
+import { formatMoney } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   addPurchaseInvoiceCloud,
   addPurchaseInvoiceItemCloud,
@@ -68,6 +73,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
   const [supplierCompany, setSupplierCompany] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
 
   // Invoice state
   const [currentInvoice, setCurrentInvoice] = useState<PurchaseInvoice | null>(null);
@@ -86,6 +92,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
       setSupplierCompany('');
       setInvoiceDate(new Date().toISOString().split('T')[0]);
       setNotes('');
+      setPaymentMethod('cash');
       setCurrentInvoice(null);
       setInvoiceItems([]);
       setShowItemForm(false);
@@ -136,6 +143,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
       expected_items_count: 0,
       expected_total_quantity: 0,
       expected_grand_total: 0,
+      payment_method: paymentMethod,
       notes: notes || undefined
     });
     setLoading(false);
@@ -368,6 +376,27 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
 
     setLoading(true);
 
+    const totalCost = currentInvoice.actual_grand_total || invoiceItems.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.cost_price) || 0), 0);
+
+    // تسجيل سحب مصروفات نقدية من الوردية النشطة إذا كان السداد نقداً لمنع عجز الصندوق
+    const recordShiftCashWithdrawal = async () => {
+      if (paymentMethod === 'cash' && totalCost > 0) {
+        addWithdrawalFromShift(totalCost, 'USD');
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            addActivityLog(
+              'expense',
+              user.id,
+              user.email || 'كاشير',
+              `فاتورة مشتريات نقداً من الصندوق (#${currentInvoice.invoice_number} - ${currentInvoice.supplier_name}): ${formatMoney(totalCost)}`,
+              { totalCost, invoiceNumber: currentInvoice.invoice_number, supplierName: currentInvoice.supplier_name, type: 'purchase_invoice' }
+            );
+          }
+        } catch { /* ignore log error */ }
+      }
+    };
+
     // If offline or local invoice, queue the entire invoice for later sync
     const hasInternetForFinalize = isOfflineInvoice ? false : await checkRealInternetAccess(2500);
     if (isOfflineInvoice || !hasInternetForFinalize) {
@@ -390,6 +419,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
       });
       setLoading(false);
       deductFromCapital();
+      await recordShiftCashWithdrawal();
       toast.success(t('purchaseInvoice.finalized') + ' (offline)', { icon: '📴' });
       emitEvent(EVENTS.PURCHASES_UPDATED);
       emitEvent(EVENTS.PRODUCTS_UPDATED);
@@ -412,6 +442,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
 
       if (success) {
         deductFromCapital();
+        await recordShiftCashWithdrawal();
         toast.success(t('purchaseInvoice.finalized'));
         emitEvent(EVENTS.PURCHASES_UPDATED);
         emitEvent(EVENTS.PRODUCTS_UPDATED);
@@ -442,6 +473,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
       });
       setLoading(false);
       deductFromCapital();
+      await recordShiftCashWithdrawal();
       toast.success(t('purchaseInvoice.finalized') + ' (queued)', { icon: '📴' });
       emitEvent(EVENTS.PURCHASES_UPDATED);
       emitEvent(EVENTS.PRODUCTS_UPDATED);
@@ -598,6 +630,31 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     className="resize-none rounded-xl"
                   />
                 </div>
+
+                <div className="sm:col-span-2 space-y-2 p-3 bg-muted/40 rounded-xl border border-border/50">
+                  <Label className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-foreground">
+                    <Wallet className="w-4 h-4 text-primary" />
+                    طريقة السداد / الدفع
+                  </Label>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={(v) => setPaymentMethod(v as 'cash' | 'credit')}
+                    className="flex flex-wrap gap-4 pt-1"
+                  >
+                    <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                      <RadioGroupItem value="cash" id="invoice-pay-cash" />
+                      <Label htmlFor="invoice-pay-cash" className="cursor-pointer text-xs sm:text-sm font-medium">
+                        نقداً من الصندوق (سحب من الوردية النشطة)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                      <RadioGroupItem value="credit" id="invoice-pay-credit" />
+                      <Label htmlFor="invoice-pay-credit" className="cursor-pointer text-xs sm:text-sm font-medium text-muted-foreground">
+                        آجل (ذمم موردين - بدون سحب نقدي)
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
             )}
 
@@ -690,6 +747,12 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     <div className="p-2.5 rounded-xl bg-muted/40">
                       <span className="text-muted-foreground block text-[11px]">{t('purchaseInvoice.itemsAdded')}</span>
                       <span className="font-bold text-foreground">{invoiceItems.length}</span>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-muted/40">
+                      <span className="text-muted-foreground block text-[11px]">طريقة السداد</span>
+                      <span className="font-bold text-foreground">
+                        {paymentMethod === 'cash' ? 'نقداً من الصندوق (سحب وردية)' : 'آجل (ذمم موردين)'}
+                      </span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
                       <span className="text-muted-foreground block text-[11px]">{t('common.total')}</span>

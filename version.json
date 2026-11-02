@@ -1,8 +1,14 @@
 {
-  "versionCode": 406,
-  "versionName": "1.5.18",
-  "lastUpdated": "2026-11-02T00:40:42.681Z",
+  "versionCode": 407,
+  "versionName": "1.5.19",
+  "lastUpdated": "2026-11-02T00:56:53.921Z",
   "buildHistory": [
+    {
+      "versionCode": 407,
+      "versionName": "1.5.19",
+      "date": "2026-11-02",
+      "description": "Release v1.5.19 (Build 407)"
+    },
     {
       "versionCode": 406,
       "versionName": "1.5.18",
@@ -116,12 +122,6 @@
       "versionName": "1.5.3.384",
       "date": "2026-10-31",
       "description": "Release v1.5.3.384 (Build 388)"
-    },
-    {
-      "versionCode": 387,
-      "versionName": "1.5.3.384",
-      "date": "2026-10-31",
-      "description": "تأمين تصفير الأجهزة: إلزام دالة التصفير الذاتية بشرط الـ5 أيام وإظهار سبب الرفض، وسد منفذ التصفير المجهول"
     }
   ]
 }

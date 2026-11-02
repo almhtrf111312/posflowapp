@@ -217,8 +217,8 @@ export default function Notifications() {
               </div>
 
               <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-bold text-foreground flex flex-wrap items-center gap-2 break-words">
                     {b.title}
                     {isUpdate && (
                       <Badge variant="outline" className="border-primary/50 text-primary text-[10px] px-1.5 py-0">

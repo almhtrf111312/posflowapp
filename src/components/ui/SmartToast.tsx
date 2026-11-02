@@ -142,14 +142,12 @@ function resolveToastDetails(toast: SmartToastData): ParsedToastDetails {
   if (str.includes('إضافة منتج') || str.includes('تم حفظ المنتج') || str.includes('إضافة الصنف') || toast.operation === 'product_added') {
     if (!formattedItemName && toast.description && typeof toast.description === 'string' && !toast.description.includes('نجاح')) {
       formattedItemName = `📦 ${toast.description}`;
-      formattedDescription = undefined;
     } else if (formattedItemName) {
       formattedItemName = `📦 ${formattedItemName}`;
     }
   } else if (str.includes('تعديل منتج') || str.includes('تحديث بيانات') || str.includes('تعديل الصنف') || toast.operation === 'product_updated') {
     if (!formattedItemName && toast.description && typeof toast.description === 'string') {
       formattedItemName = `✏️ تم تحديث بيانات ${toast.description}`;
-      formattedDescription = undefined;
     } else if (formattedItemName) {
       formattedItemName = `✏️ تم تحديث بيانات ${formattedItemName}`;
     }
@@ -158,7 +156,6 @@ function resolveToastDetails(toast: SmartToastData): ParsedToastDetails {
       formattedItemName = '☁️ تم التزامن مع السحابة بنجاح';
     } else if (formattedDescription && typeof formattedDescription === 'string') {
       formattedItemName = `☁️ ${formattedDescription}`;
-      formattedDescription = undefined;
     }
   } else if (cat === 'cash_sale' || cat === 'debt_sale' || str.includes('فاتورة')) {
     if (invoiceNum && !formattedItemName && !formattedDescription) {
@@ -541,7 +538,7 @@ export function SmartToast() {
       <div
         className={cn(
           "smart-toast-card pointer-events-auto cursor-grab active:cursor-grabbing overflow-hidden transform-gpu select-none touch-none",
-          "w-full max-w-[21rem] sm:max-w-[22rem] rounded-2xl shadow-xl border border-border/80 bg-card/95 backdrop-blur-xl",
+          "w-[calc(100vw-1.5rem)] max-w-[26rem] sm:max-w-[32rem] md:max-w-[36rem] rounded-2xl shadow-xl border border-border/80 bg-card/95 backdrop-blur-xl",
           animPhase === 'entering' && "transition-all duration-100 ease-out",
           animPhase === 'expanded' && "transition-all duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)]",
           animPhase === 'retracting' && "dynamic-island-retract",
@@ -561,55 +558,66 @@ export function SmartToast() {
         onPointerCancel={handlePointerCancel}
       >
         {/* محتوى الإشعار المدمج المباشر بدون أسطر فارغة */}
-        <div className="px-3 py-2 flex items-center justify-between gap-2.5">
-          {/* الأيقونة + العنوان والتفاصيل في سطرين مدمجين */}
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className={cn("w-7 h-7 rounded-xl border flex items-center justify-center shrink-0 relative", config.bg, config.border, config.text)}>
+        <div className="px-3.5 py-2.5 flex items-start justify-between gap-2.5">
+          {/* الأيقونة + العنوان والتفاصيل */}
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
+            <div className={cn("w-7 h-7 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 relative", config.bg, config.border, config.text)}>
               {config.icon}
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 space-y-1">
               {/* السطر الأول: العملية ورقم الفاتورة */}
-              <div className="flex items-center gap-1.5">
-                <h4 className="text-xs font-black text-foreground truncate">
+              <div className="flex items-start justify-between gap-1.5">
+                <h4 className="text-xs sm:text-sm font-bold text-foreground break-words leading-snug">
                   {details.operationName}
                 </h4>
                 {details.invoiceNumber && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted font-mono font-bold text-muted-foreground shrink-0 border border-border/40">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted font-mono font-bold text-muted-foreground shrink-0 border border-border/40 mt-0.5">
                     #{details.invoiceNumber}
                   </span>
                 )}
               </div>
 
-              {/* السطر الثاني: التفاصيل الحقيقية للعملية (القطعة / السعر / الحالة) */}
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate mt-0.5">
-                {details.itemName ? (
-                  <span className="font-semibold text-foreground/90 truncate">
-                    {details.itemName}
-                  </span>
-                ) : details.description ? (
-                  <span className="truncate">{details.description}</span>
-                ) : (
-                  <span>{details.statusBadge || 'تمت العملية بنجاح'}</span>
-                )}
+              {/* السطر الثاني: التفاصيل الحقيقية للعملية والوصف الكامل دون قص */}
+              {details.description && details.description !== details.operationName && (
+                <p className="text-[11px] sm:text-xs text-muted-foreground break-words leading-relaxed whitespace-pre-line">
+                  {details.description}
+                </p>
+              )}
 
-                {details.price && (
-                  <span className="font-mono font-bold text-primary shrink-0 mr-auto">
-                    ({details.price})
-                  </span>
-                )}
-              </div>
+              {/* تفاصيل إضافية: اسم الصنف، السعر، والحالة */}
+              {(details.itemName || details.price || (!details.description && details.statusBadge)) && (
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground pt-0.5">
+                  {details.itemName && (
+                    <span className="font-semibold text-foreground/90 break-words">
+                      {details.itemName}
+                    </span>
+                  )}
+
+                  {!details.description && details.statusBadge && (
+                    <span>{details.statusBadge}</span>
+                  )}
+
+                  {details.price && (
+                    <span className="font-mono font-bold text-primary shrink-0 mr-auto">
+                      ({details.price})
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* زر إغلاق أنيق وصغير */}
+          {/* زر إغلاق أنيق ومريح للمس */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               retractNotification();
             }}
-            className="w-5 h-5 rounded-md text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 transition-colors"
+            className="w-6 h-6 -mr-1 rounded-lg text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0 transition-colors hover:bg-muted/50 mt-0.5"
+            title="إغلاق التنبيه"
+            aria-label="إغلاق التنبيه"
           >
             <X className="w-3.5 h-3.5" />
           </button>

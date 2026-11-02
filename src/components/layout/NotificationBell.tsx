@@ -288,7 +288,7 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
                             <div className="flex items-center justify-between gap-1.5">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <p className={cn(
-                                  "font-semibold text-xs sm:text-sm text-foreground truncate",
+                                  "font-semibold text-xs sm:text-sm text-foreground break-words leading-tight",
                                   !notification.read && "font-bold text-primary"
                                 )}>
                                   {titleText}
@@ -317,7 +317,7 @@ export const NotificationBell = forwardRef<HTMLButtonElement, NotificationBellPr
 
                             {/* السطر الثاني: الطرف / البند • المبلغ (أو نص الإشعار الموجز) */}
                             <div className="flex items-center justify-between gap-1 mt-0.5">
-                              <p className="text-xs text-muted-foreground truncate" dir="auto">
+                              <p className="text-xs text-muted-foreground break-words leading-relaxed whitespace-pre-line" dir="auto">
                                 {summaryLine}
                               </p>
                               {!notification.persistent && (

@@ -1,8 +1,14 @@
 {
-  "versionCode": 410,
-  "versionName": "1.5.22",
-  "lastUpdated": "2026-11-02T01:30:37.923Z",
+  "versionCode": 411,
+  "versionName": "1.5.23",
+  "lastUpdated": "2026-11-02T04:44:00.000Z",
   "buildHistory": [
+    {
+      "versionCode": 411,
+      "versionName": "1.5.23",
+      "date": "2026-11-02",
+      "description": "Release v1.5.23 (Build 411)"
+    },
     {
       "versionCode": 410,
       "versionName": "1.5.22",

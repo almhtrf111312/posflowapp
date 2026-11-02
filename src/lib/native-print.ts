@@ -601,13 +601,21 @@ export function invoiceToReceiptLines(invoice: PrintableInvoice): ReceiptLine[] 
   lines.push({ text: 'الصنف           الكمية      المجموع', align: 'right', bold: true, size: 0.9 });
   lines.push({ text: '--------------------------------', align: 'center' });
 
-  // 4. Items List
+  // 4. Items List (بدون قص لأسماء الأصناف الطويلة)
   for (const item of invoice.items) {
     const formattedPrice = formatCurrency(item.total, effectiveSymbol, undefined, rawCurrency, invoice.currencyName);
-    lines.push({
-      text: `${item.name.slice(0, 16)}  ×${item.quantity}  ${formattedPrice}`,
-      align: 'right',
-    });
+    if (item.name.length > 16) {
+      lines.push({ text: item.name, align: 'right', bold: true, size: 0.9 });
+      lines.push({
+        text: `                ×${item.quantity}  ${formattedPrice}`,
+        align: 'right',
+      });
+    } else {
+      lines.push({
+        text: `${item.name.padEnd(16, ' ')}  ×${item.quantity}  ${formattedPrice}`,
+        align: 'right',
+      });
+    }
   }
 
   lines.push({ text: '--------------------------------', align: 'center' });

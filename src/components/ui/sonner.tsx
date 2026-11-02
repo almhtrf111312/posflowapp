@@ -47,7 +47,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         duration: defaultDuration,
         classNames: {
           toast: cn(
-            "group toast w-auto min-w-0 max-w-[calc(100vw-1.5rem)] sm:min-w-[20rem] sm:max-w-[30rem]",
+            "group toast w-auto min-w-0 max-w-[calc(100vw-1.5rem)] sm:min-w-[20rem] sm:max-w-[34rem]",
             "group-[.toaster]:bg-card group-[.toaster]:text-card-foreground",
             "group-[.toaster]:border group-[.toaster]:border-border/80 dark:group-[.toaster]:border-white/10",
             "group-[.toaster]:shadow-2xl group-[.toaster]:rounded-2xl",
@@ -58,8 +58,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
               ? "group-[.toaster]:border-r-[5px] group-[.toaster]:border-l"
               : "group-[.toaster]:border-l-[5px] group-[.toaster]:border-r"
           ),
-          title: "group-[.toast]:font-bold group-[.toast]:text-card-foreground group-[.toast]:text-sm sm:group-[.toast]:text-base leading-snug",
-          description: "group-[.toast]:text-muted-foreground group-[.toast]:text-xs sm:group-[.toast]:text-sm group-[.toast]:mt-1 leading-relaxed",
+          title: "group-[.toast]:font-bold group-[.toast]:text-card-foreground group-[.toast]:text-sm sm:group-[.toast]:text-base leading-snug break-words whitespace-normal",
+          description: "group-[.toast]:text-muted-foreground group-[.toast]:text-xs sm:group-[.toast]:text-sm group-[.toast]:mt-1 leading-relaxed break-words whitespace-normal",
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:rounded-xl group-[.toast]:text-xs group-[.toast]:font-semibold group-[.toast]:px-4 group-[.toast]:py-2 group-[.toast]:shadow-sm hover:opacity-90 transition-opacity",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-xl group-[.toast]:text-xs group-[.toast]:px-3.5 group-[.toast]:py-2",
           closeButton: "group-[.toast]:opacity-80 hover:opacity-100",

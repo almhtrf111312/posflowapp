@@ -159,6 +159,7 @@ export async function sendLocalNotification(
             id: notifId,
             title,
             body,
+            summaryText: 'FlowPOS Pro',
             channelId: targetChannel.id,
             smallIcon: 'ic_launcher',
             // No schedule date => immediate dispatch via NotificationManager

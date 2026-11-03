@@ -537,6 +537,7 @@ export type Database = {
           customer_name: string | null
           debt_id: string
           id: string
+          notes: string | null
           partner_impact: Json | null
           reason: string | null
           user_id: string
@@ -550,6 +551,7 @@ export type Database = {
           customer_name?: string | null
           debt_id: string
           id?: string
+          notes?: string | null
           partner_impact?: Json | null
           reason?: string | null
           user_id: string
@@ -563,6 +565,7 @@ export type Database = {
           customer_name?: string | null
           debt_id?: string
           id?: string
+          notes?: string | null
           partner_impact?: Json | null
           reason?: string | null
           user_id?: string
@@ -875,6 +878,7 @@ export type Database = {
           subtotal: number | null
           tax_amount: number | null
           tax_inclusive: boolean
+          tax_mode: string | null
           tax_rate: number | null
           time: string
           total: number | null
@@ -913,6 +917,7 @@ export type Database = {
           subtotal?: number | null
           tax_amount?: number | null
           tax_inclusive?: boolean
+          tax_mode?: string | null
           tax_rate?: number | null
           time?: string
           total?: number | null
@@ -951,6 +956,7 @@ export type Database = {
           subtotal?: number | null
           tax_amount?: number | null
           tax_inclusive?: boolean
+          tax_mode?: string | null
           tax_rate?: number | null
           time?: string
           total?: number | null
@@ -1436,6 +1442,8 @@ export type Database = {
           invoice_date: string
           invoice_number: string
           notes: string | null
+          payment_method: string | null
+          payment_status: string | null
           status: string | null
           supplier_company: string | null
           supplier_name: string
@@ -1455,6 +1463,8 @@ export type Database = {
           invoice_date?: string
           invoice_number: string
           notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           status?: string | null
           supplier_company?: string | null
           supplier_name: string
@@ -1474,6 +1484,8 @@ export type Database = {
           invoice_date?: string
           invoice_number?: string
           notes?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
           status?: string | null
           supplier_company?: string | null
           supplier_name?: string
@@ -2332,6 +2344,14 @@ export type Database = {
         Returns: Json
       }
       can_add_cashier: { Args: { _owner_id: string }; Returns: boolean }
+      cancel_debt_atomic: {
+        Args: { _debt_id: string; _reason?: string }
+        Returns: Json
+      }
+      cancel_purchase_invoice_atomic: {
+        Args: { _invoice_id: string; _reason?: string }
+        Returns: boolean
+      }
       check_and_bind_device: { Args: { p_device_id: string }; Returns: Json }
       clean_old_error_logs: { Args: never; Returns: number }
       count_owner_cashiers: { Args: { _owner_id: string }; Returns: number }
@@ -2339,7 +2359,20 @@ export type Database = {
         Args: { _amount: number; _product_id: string }
         Returns: number
       }
+      delete_debt_atomic: {
+        Args: { _debt_id: string; _reason?: string }
+        Returns: Json
+      }
       delete_owner_cascade: { Args: { _owner_id: string }; Returns: boolean }
+      distribute_sale_profit_to_partners_atomic: {
+        Args: {
+          _category_profits: Json
+          _customer_name: string
+          _invoice_id: string
+          _is_debt: boolean
+        }
+        Returns: Json
+      }
       edit_purchase_invoice_atomic: {
         Args: {
           _invoice_id: string
@@ -2401,6 +2434,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_user_storage_stats: {
+        Args: { _target_user_id: string }
+        Returns: Json
+      }
       hard_delete_product_atomic: {
         Args: { _product_id: string }
         Returns: Json
@@ -2416,6 +2453,16 @@ export type Database = {
       is_first_user: { Args: never; Returns: boolean }
       is_license_valid: { Args: { _user_id: string }; Returns: boolean }
       issue_offline_lease: { Args: { p_device_id: string }; Returns: Json }
+      partner_withdrawal_atomic: {
+        Args: {
+          _amount: number
+          _notes?: string
+          _partner_id: string
+          _shift_id?: string
+          _withdrawal_type: string
+        }
+        Returns: Json
+      }
       process_pos_sale_atomic: {
         Args: {
           _currency: string
@@ -2436,21 +2483,7 @@ export type Database = {
           _total: number
           _warehouse_id: string
         }
-        Returns: {
-          already_processed: boolean
-          cogs: number
-          debt_paid: number
-          debt_remaining: number
-          discount: number
-          invoice_id: string
-          invoice_number: string
-          profit: number
-          stock_shortage: boolean
-          subtotal: number
-          success: boolean
-          tax_amount: number
-          total: number
-        }[]
+        Returns: Json
       }
       recalc_pos_invoice_profit: {
         Args: { _invoice_id: string }
@@ -2515,6 +2548,10 @@ export type Database = {
       }
       send_support_message: {
         Args: { _conversation_id?: string; _message: string }
+        Returns: Json
+      }
+      writeoff_debt_atomic: {
+        Args: { _debt_id: string; _operation_id: string; _reason: string }
         Returns: Json
       }
     }

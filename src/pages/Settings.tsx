@@ -963,6 +963,11 @@ export default function Settings() {
             keepDays: String(merged.backupSettings.keepDays || '7'),
           },
           hideMaintenanceSection: merged.hideMaintenanceSection,
+          taxEnabled: merged.taxEnabled,
+          taxRate: merged.taxRate,
+          discountPercentEnabled: merged.discountPercentEnabled,
+          discountFixedEnabled: merged.discountFixedEnabled,
+          barcodeScanMode: merged.barcodeScanMode,
           productFieldsConfig: merged.productFieldsConfig || loadProductFieldsConfig(),
         };
       } catch (e) {
@@ -1403,8 +1408,6 @@ export default function Settings() {
       settingsSnapshotRef.current = {
         storeSettings: { ...storeSettings },
         primaryCurrency,
-        slot1Code,
-        slot2Code,
         enabledCurrencies: { ...cleanEnabledCurrencies },
         exchangeRates: { ...exchangeRates, ...cleanExchangeRates } as any,
         currencyNames: { ...cleanCurrencyNames },
@@ -1909,7 +1912,7 @@ export default function Settings() {
                     setPrimaryCurrency={setPrimaryCurrency}
                     enabledCurrencies={enabledCurrencies}
                     setEnabledCurrencies={setEnabledCurrencies}
-                    exchangeRates={exchangeRates}
+                    exchangeRates={exchangeRates as any}
                     setExchangeRates={setExchangeRates}
                     currencyNames={currencyNames}
                     setCurrencyNames={setCurrencyNames}

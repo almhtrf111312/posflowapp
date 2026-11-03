@@ -18,7 +18,8 @@ import {
   Tag,
   Banknote,
   PiggyBank,
-  Receipt
+  Receipt,
+  Loader2
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -125,6 +126,7 @@ export default function Partners() {
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [showAddCapitalDialog, setShowAddCapitalDialog] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -208,8 +210,20 @@ export default function Partners() {
   };
 
   const handleAddPartner = async () => {
-    if (!formData.name || !formData.phone) {
+    if (isSubmitting) return;
+
+    const cleanName = formData.name.trim();
+    if (!cleanName || !formData.phone) {
       toast.error(t('partners.fillRequiredFields'));
+      return;
+    }
+
+    // 🔒 التحقق من عدم وجود الاسم محلياً وسحابياً لمنع التكرار
+    const isDuplicate = partners.some(
+      p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (isDuplicate) {
+      toast.error('يوجد شريك مسجل بهذا الاسم مسبقاً');
       return;
     }
 
@@ -219,67 +233,95 @@ export default function Partners() {
       return;
     }
 
-    // ✅ استخدام الدالة السحابية
-    const newPartner = await addPartnerCloud({
-      name: formData.name,
-      phone: formData.phone,
-      email: formData.email || undefined,
-      sharePercentage: mainShare,
-      expenseSharePercentage: formData.expenseSharePercentage || 0,
-      categoryShares: formData.categoryShares,
-      accessAll: formData.accessAll,
-      sharesExpenses: formData.sharesExpenses,
-      joinedDate: new Date().toISOString().split('T')[0],
-      totalProfitEarned: 0,
-      totalWithdrawn: 0,
-      totalExpensesPaid: 0,
-      currentBalance: 0,
-      initialCapital: 0,
-      currentCapital: 0,
-      confirmedProfit: 0,
-      pendingProfit: 0,
-    });
+    setIsSubmitting(true);
+    try {
+      // ✅ استخدام الدالة السحابية
+      const newPartner = await addPartnerCloud({
+        name: cleanName,
+        phone: formData.phone.trim(),
+        email: formData.email?.trim() || undefined,
+        sharePercentage: mainShare,
+        expenseSharePercentage: formData.expenseSharePercentage || 0,
+        categoryShares: formData.categoryShares,
+        accessAll: formData.accessAll,
+        sharesExpenses: formData.sharesExpenses,
+        joinedDate: new Date().toISOString().split('T')[0],
+        totalProfitEarned: 0,
+        totalWithdrawn: 0,
+        totalExpensesPaid: 0,
+        currentBalance: 0,
+        initialCapital: 0,
+        currentCapital: 0,
+        confirmedProfit: 0,
+        pendingProfit: 0,
+      });
 
-    if (newPartner) {
-      await refreshPartners();
-      setShowAddDialog(false);
-      resetForm();
-      toast.success(t('partners.partnerAdded'));
-      import('@/lib/activity-log').then(({ logActivity }) => logActivity('partner_added', `إضافة شريك: ${newPartner.name}`, { id: newPartner.id }));
-    } else {
+      if (newPartner) {
+        await refreshPartners();
+        setShowAddDialog(false);
+        resetForm();
+        toast.success(t('partners.partnerAdded'));
+        import('@/lib/activity-log').then(({ logActivity }) => logActivity('partner_added', `إضافة شريك: ${newPartner.name}`, { id: newPartner.id }));
+      } else {
+        toast.error(t('partners.error'));
+      }
+    } catch (err) {
+      console.error('Error adding partner:', err);
       toast.error(t('partners.error'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEditPartner = async () => {
-    if (!selectedPartner || !formData.name) {
+    if (isSubmitting) return;
+
+    const cleanName = formData.name.trim();
+    if (!selectedPartner || !cleanName) {
       toast.error(t('partners.fillRequiredFields'));
+      return;
+    }
+
+    // 🔒 التحقق من عدم تكرار الاسم مع شريك آخر
+    const isDuplicate = partners.some(
+      p => p.id !== selectedPartner.id && p.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (isDuplicate) {
+      toast.error('يوجد شريك مسجل بهذا الاسم مسبقاً');
       return;
     }
 
     const mainShare = calculateMainShare();
 
-    // ✅ استخدام الدالة السحابية
-    const success = await updatePartnerCloud(selectedPartner.id, {
-      name: formData.name,
-      phone: formData.phone,
-      email: formData.email || undefined,
-      sharePercentage: mainShare,
-      categoryShares: formData.categoryShares,
-      accessAll: formData.accessAll,
-      sharesExpenses: formData.sharesExpenses,
-    });
+    setIsSubmitting(true);
+    try {
+      // ✅ استخدام الدالة السحابية
+      const success = await updatePartnerCloud(selectedPartner.id, {
+        name: cleanName,
+        phone: formData.phone.trim(),
+        email: formData.email?.trim() || undefined,
+        sharePercentage: mainShare,
+        categoryShares: formData.categoryShares,
+        accessAll: formData.accessAll,
+        sharesExpenses: formData.sharesExpenses,
+      });
 
-    if (success) {
-      const editedName = formData.name;
-      const editedId = selectedPartner.id;
-      await refreshPartners();
-      setShowEditDialog(false);
-      setSelectedPartner(null);
-      toast.success(t('partners.partnerUpdated'));
-      import('@/lib/activity-log').then(({ logActivity }) => logActivity('partner_updated', `تعديل شريك: ${editedName}`, { id: editedId }));
-    } else {
+      if (success) {
+        const editedName = cleanName;
+        const editedId = selectedPartner.id;
+        await refreshPartners();
+        setShowEditDialog(false);
+        setSelectedPartner(null);
+        toast.success(t('partners.partnerUpdated'));
+        import('@/lib/activity-log').then(({ logActivity }) => logActivity('partner_updated', `تعديل شريك: ${editedName}`, { id: editedId }));
+      } else {
+        toast.error(t('partners.error'));
+      }
+    } catch (err) {
+      console.error('Error updating partner:', err);
       toast.error(t('partners.error'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -302,6 +344,7 @@ export default function Partners() {
   };
 
   const handleWithdraw = async () => {
+    if (isSubmitting) return;
     if (!selectedPartner || withdrawAmount <= 0) {
       toast.error(t('partners.enterValidAmount'));
       return;
@@ -365,6 +408,7 @@ export default function Partners() {
   };
 
   const handleAddCapital = async () => {
+    if (isSubmitting) return;
     if (!selectedPartner || capitalAmount <= 0) {
       toast.error(t('partners.enterValidAmount'));
       return;
@@ -790,8 +834,8 @@ export default function Partners() {
               <Button variant="outline" className="flex-1" onClick={() => setShowAddDialog(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button className="flex-1" onClick={handleAddPartner}>
-                <Save className="w-4 h-4" />
+              <Button className="flex-1" onClick={handleAddPartner} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {t('common.save')}
               </Button>
             </div>
@@ -918,8 +962,8 @@ export default function Partners() {
               <Button variant="outline" className="flex-1" onClick={() => setShowEditDialog(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button className="flex-1" onClick={handleEditPartner}>
-                <Save className="w-4 h-4" />
+              <Button className="flex-1" onClick={handleEditPartner} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {t('common.saveChanges')}
               </Button>
             </div>
@@ -1301,8 +1345,8 @@ export default function Partners() {
                 <Button variant="outline" className="flex-1" onClick={() => setShowWithdrawDialog(false)}>
                   {t('common.cancel')}
                 </Button>
-                <Button className="flex-1 bg-warning hover:bg-warning/90 text-warning-foreground" onClick={handleWithdraw}>
-                  <Save className="w-4 h-4" />
+                <Button className="flex-1 bg-warning hover:bg-warning/90 text-warning-foreground" onClick={handleWithdraw} disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {t('partners.confirmWithdraw')}
                 </Button>
               </div>
@@ -1360,8 +1404,8 @@ export default function Partners() {
                 <Button variant="outline" className="flex-1" onClick={() => setShowAddCapitalDialog(false)}>
                   {t('common.cancel')}
                 </Button>
-                <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground" onClick={handleAddCapital}>
-                  <Save className="w-4 h-4" />
+                <Button className="flex-1 bg-success hover:bg-success/90 text-success-foreground" onClick={handleAddCapital} disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {t('partners.confirmDeposit')}
                 </Button>
               </div>

@@ -272,6 +272,19 @@ export const getPartnerByIdCloud = async (id: string): Promise<Partner | null> =
 export const addPartnerCloud = async (
   partnerData: Omit<Partner, 'id' | 'capitalWithdrawals' | 'capitalHistory' | 'pendingProfitDetails' | 'profitHistory' | 'withdrawalHistory' | 'expenseHistory'>
 ): Promise<Partner | null> => {
+  const cleanName = (partnerData.name || '').trim();
+  if (!cleanName) return null;
+
+  // 🔒 التحقق السحابي لمنع تكرار اسم الشريك
+  const existingPartners = await loadPartnersCloud();
+  const isDuplicate = existingPartners.some(
+    p => p.name.trim().toLowerCase() === cleanName.toLowerCase()
+  );
+  if (isDuplicate) {
+    console.warn('[PartnersCloud] Duplicate partner name rejected:', cleanName);
+    return null;
+  }
+
   const inserted = await insertToSupabase<CloudPartner>('partners', {
     name: partnerData.name,
     phone: partnerData.phone || null,

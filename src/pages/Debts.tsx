@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/lib/sonner-bridge';
+import { getEquivalentCurrencies } from '@/lib/currencies';
 import { showSmartToast } from '@/hooks/use-smart-toast';
 import { useCurrency, formatInCurrency, loadDefaultCurrencyCode, loadEnabledCurrencies } from '@/hooks/use-currency';
 import { resolveCurrencyMeta } from '@/lib/currencies';
@@ -748,17 +749,23 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                   </div>
                   <div className="text-left whitespace-nowrap shrink-0">
                     <span className="text-[9.5px] text-muted-foreground block font-sans">المتبقي</span>
-                    <span className={cn(
-                      "text-base font-black font-mono whitespace-nowrap",
-                      debt.remainingDebt > 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
-                    )}>
-                      {formatInCurrency(debt.remainingDebt, currencyCode, exchangeRate).formatted}
-                    </span>
-                    {isNonUsd && (
-                      <span className="text-[9px] text-muted-foreground font-mono block">
-                        {formatInCurrency(debt.remainingDebt, currencyCode, exchangeRate).usdEquivalent}
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className={cn(
+                        "text-base font-black font-mono whitespace-nowrap",
+                        debt.remainingDebt > 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                      )}>
+                        ${Number(debt.remainingDebt || 0).toFixed(2)}
                       </span>
-                    )}
+                      {debt.remainingDebt > 0 && (
+                        <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-end">
+                          {getEquivalentCurrencies(debt.remainingDebt).equivalents.map(eq => (
+                            <span key={eq.code} className="text-[9px] font-mono px-1 py-0.2 bg-muted/80 text-muted-foreground rounded font-bold">
+                              ≈ {eq.formatted}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

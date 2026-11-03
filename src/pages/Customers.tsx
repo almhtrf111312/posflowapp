@@ -28,6 +28,7 @@ import { getStoreSettings } from '@/lib/native-print';
 import { shareDebtStatement } from '@/lib/native-share';
 import { DebtStatementCanvasData } from '@/lib/invoice-canvas-generator';
 import { loadDebtsCloud, Debt } from '@/lib/cloud/debts-cloud';
+import { getEquivalentCurrencies } from '@/lib/currencies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -548,17 +549,30 @@ export default function Customers() {
                   <div className="mt-2.5 pt-2 border-t border-dashed border-border flex items-end justify-between">
                     <div className="text-[10px] text-muted-foreground space-y-0.5 min-w-0">
                       <div className="font-medium text-muted-foreground">
-                        {t('customers.purchases')}: <span className="font-mono font-bold text-foreground whitespace-nowrap">{formatCurrency(customer.totalPurchases)}</span>
+                        {t('customers.purchases')}: <span className="font-mono font-bold text-foreground whitespace-nowrap">${Number(customer.totalPurchases || 0).toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="text-left whitespace-nowrap shrink-0">
                       <span className="text-[9.5px] text-muted-foreground block font-sans">{t('customers.debts')}</span>
-                      <span className={cn(
-                        "text-sm font-black font-mono whitespace-nowrap",
-                        customer.totalDebt > 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
-                      )}>
-                        {formatCurrency(customer.totalDebt)}
-                      </span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        {/* القيمة الأساسية الثابتة بالدولار */}
+                        <span className={cn(
+                          "text-sm font-black font-mono whitespace-nowrap",
+                          customer.totalDebt > 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
+                        )}>
+                          ${Number(customer.totalDebt || 0).toFixed(2)}
+                        </span>
+                        {/* العملات الموازية المفعلة */}
+                        {customer.totalDebt > 0 && (
+                          <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-end">
+                            {getEquivalentCurrencies(customer.totalDebt).equivalents.map(eq => (
+                              <span key={eq.code} className="text-[9px] font-mono px-1 py-0.2 bg-muted/80 text-muted-foreground rounded font-bold">
+                                ≈ {eq.formatted}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

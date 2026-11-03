@@ -49,7 +49,8 @@ import { cn, formatNumber } from '@/lib/utils';
 import { toast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
 import { useTheme } from '@/hooks/use-theme';
-import { savePartners, Partner } from '@/lib/partners-store';
+import { Partner } from '@/lib/partners-store';
+import { savePartnersCloud } from '@/lib/cloud/partners-cloud';
 import { APP_FONTS, AppFontId, getStoredAppFont, setStoredAppFont } from '@/lib/app-font-config';
 import { UI_SCALE_OPTIONS, UIScaleId, getStoredUIScale, setStoredUIScale } from '@/lib/ui-scale-config';
 import { emitEvent, EVENTS } from '@/lib/events';
@@ -506,7 +507,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
           expenseHistory: [],
           joinedDate: now,
         }));
-        savePartners(partnersToSave);
+        await savePartnersCloud(partnersToSave);
       }
     }
 

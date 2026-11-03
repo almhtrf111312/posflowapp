@@ -21,6 +21,8 @@ import {
   Receipt
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getEquivalentCurrencies } from '@/lib/currencies';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 // ✅ استخدام الدوال السحابية بدلاً من المحلية
@@ -927,7 +929,7 @@ export default function Partners() {
 
       {/* View Partner Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5 text-primary" />
@@ -1005,6 +1007,177 @@ export default function Partners() {
                     {t('partners.withdrawBalance')}
                   </Button>
                 )}
+              </div>
+
+              {/* Detailed Partner Statement Tabs */}
+              <div className="pt-4 border-t border-border">
+                <Tabs defaultValue="profits" className="w-full">
+                  <TabsList className="grid grid-cols-3 w-full bg-muted/60 p-1 rounded-xl">
+                    <TabsTrigger value="profits" className="text-xs font-bold gap-1.5 data-[state=active]:bg-background">
+                      <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                      الأرباح
+                    </TabsTrigger>
+                    <TabsTrigger value="expenses" className="text-xs font-bold gap-1.5 data-[state=active]:bg-background">
+                      <Receipt className="w-3.5 h-3.5 text-rose-500" />
+                      المصاريف
+                    </TabsTrigger>
+                    <TabsTrigger value="capital" className="text-xs font-bold gap-1.5 data-[state=active]:bg-background">
+                      <Wallet className="w-3.5 h-3.5 text-blue-500" />
+                      رأس المال والمسحوبات
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* 1. تبويب الأرباح */}
+                  <TabsContent value="profits" className="mt-3 space-y-2">
+                    {(!selectedPartner.profitHistory || selectedPartner.profitHistory.length === 0) ? (
+                      <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border text-xs">
+                        لا توجد سجلات أرباح مسجلة لهذا الشريك حتى الآن
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {selectedPartner.profitHistory.map((p, idx) => {
+                          const eq = getEquivalentCurrencies(p.amount);
+                          return (
+                            <div key={p.id || idx} className="p-2.5 rounded-lg border border-border/80 bg-card/60 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono font-bold text-foreground">#{p.invoiceId}</span>
+                                  {p.category && (
+                                    <span className="bg-primary/10 text-primary text-[10px] px-1.5 py-0.2 rounded font-semibold">
+                                      {p.category}
+                                    </span>
+                                  )}
+                                  <span className={cn(
+                                    "text-[9.5px] px-1.5 py-0.2 rounded font-medium",
+                                    p.isDebt ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                  )}>
+                                    {p.isDebt ? 'بيع آجل' : 'نقدي'}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground font-mono">
+                                  {p.createdAt ? new Date(p.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                                </div>
+                              </div>
+                              <div className="text-left">
+                                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 block text-sm">
+                                  +${Number(p.amount || 0).toFixed(2)}
+                                </span>
+                                {eq.equivalents.length > 0 && (
+                                  <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-end">
+                                    {eq.equivalents.map(c => (
+                                      <span key={c.code} className="text-[9px] font-mono px-1 py-0.2 bg-muted/80 text-muted-foreground rounded font-bold">
+                                        ≈ {c.formatted}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* 2. تبويب المصاريف */}
+                  <TabsContent value="expenses" className="mt-3 space-y-2">
+                    {(!selectedPartner.expenseHistory || selectedPartner.expenseHistory.length === 0) ? (
+                      <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border text-xs">
+                        لا توجد استقطاعات مصاريف مسجلة لهذا الشريك
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                        {selectedPartner.expenseHistory.map((exp, idx) => (
+                          <div key={exp.expenseId || idx} className="p-2.5 rounded-lg border border-border/80 bg-card/60 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-foreground">{exp.type || 'مصروف عام'}</span>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                <span>{exp.date || (exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('ar-EG') : '-')}</span>
+                                {exp.notes && <span className="mr-2 text-foreground/70">({exp.notes})</span>}
+                              </div>
+                            </div>
+                            <div className="text-left font-mono">
+                              <span className="font-bold text-rose-600 dark:text-rose-400 text-sm">
+                                -${Number(exp.amount || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* 3. تبويب حركة رأس المال والمسحوبات */}
+                  <TabsContent value="capital" className="mt-3 space-y-3">
+                    {/* حركة رأس المال */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-[11px] font-bold text-muted-foreground flex items-center gap-1">
+                        <PiggyBank className="w-3.5 h-3.5 text-blue-500" />
+                        حركات رأس المال (إيداعات وتعديلات)
+                      </h4>
+                      {(!selectedPartner.capitalHistory || selectedPartner.capitalHistory.length === 0) ? (
+                        <div className="text-center py-3 text-muted-foreground bg-muted/20 rounded-lg border border-dashed border-border text-[11px]">
+                          لا توجد حركات رأس مال مسجلة
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                          {selectedPartner.capitalHistory.map((cap, idx) => (
+                            <div key={cap.id || idx} className="p-2 rounded-lg border border-border/70 bg-card/50 flex items-center justify-between text-xs">
+                              <div>
+                                <span className={cn(
+                                  "font-bold text-[11px] px-1.5 py-0.2 rounded",
+                                  cap.type === 'deposit' ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-amber-500/10 text-amber-600"
+                                )}>
+                                  {cap.type === 'deposit' ? 'إيداع رأس مال' : 'سحب رأس مال'}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground mr-2 font-mono">{cap.date}</span>
+                                {cap.notes && <p className="text-[10px] text-muted-foreground mt-0.5">{cap.notes}</p>}
+                              </div>
+                              <span className="font-mono font-bold text-foreground">
+                                ${Number(cap.amount || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* المسحوبات */}
+                    <div className="space-y-1.5 pt-2 border-t border-border/60">
+                      <h4 className="text-[11px] font-bold text-muted-foreground flex items-center gap-1">
+                        <ArrowDownLeft className="w-3.5 h-3.5 text-amber-500" />
+                        سجل المسحوبات (أرباح ورأس مال)
+                      </h4>
+                      {(!selectedPartner.withdrawalHistory || selectedPartner.withdrawalHistory.length === 0) ? (
+                        <div className="text-center py-3 text-muted-foreground bg-muted/20 rounded-lg border border-dashed border-border text-[11px]">
+                          لا توجد مسحوبات مسجلة
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                          {selectedPartner.withdrawalHistory.map((w, idx) => (
+                            <div key={w.id || idx} className="p-2 rounded-lg border border-border/70 bg-card/50 flex items-center justify-between text-xs">
+                              <div>
+                                <span className={cn(
+                                  "font-bold text-[11px] px-1.5 py-0.2 rounded",
+                                  w.type === 'profit' ? "bg-emerald-500/10 text-emerald-600" : "bg-purple-500/10 text-purple-600"
+                                )}>
+                                  {w.type === 'profit' ? 'سحب أرباح' : 'سحب رأس مال'}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground mr-2 font-mono">{w.date}</span>
+                                {w.notes && <p className="text-[10px] text-muted-foreground mt-0.5">{w.notes}</p>}
+                              </div>
+                              <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                                -${Number(w.amount || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </div>
           )}

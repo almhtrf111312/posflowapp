@@ -702,3 +702,30 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
 export function loadNormalizedCurrencySettings(): NormalizedCurrencySettings {
   return normalizeCurrencySettings();
 }
+
+/**
+ * إرجاع القيمة بالدولار وما يوازيها في العملات المفعلة الإضافية (Slot 1 & Slot 2)
+ */
+export function getEquivalentCurrencies(amountUsd: number) {
+  const norm = loadNormalizedCurrencySettings();
+  const equivalents: { code: string; symbol: string; formatted: string }[] = [];
+  const validAmount = Number(amountUsd) || 0;
+
+  const nonUsdCurrencies = (norm.enabledCurrencies || Object.values(norm.currencies))
+    .filter(c => c.code !== 'USD' && c.enabled && Number(c.rate) > 0);
+
+  for (const def of nonUsdCurrencies) {
+    const rate = Number(def.rate) || 1;
+    const converted = Math.round(validAmount * rate * 100) / 100;
+    equivalents.push({
+      code: def.code,
+      symbol: def.symbol,
+      formatted: `${converted.toLocaleString()} ${def.symbol}`,
+    });
+  }
+
+  return {
+    usd: `$${(Math.round(validAmount * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+    equivalents,
+  };
+}

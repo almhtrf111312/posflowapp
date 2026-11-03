@@ -44,7 +44,7 @@ import { loadCustomers, Customer } from '@/lib/customers-store';
 import { getNextInvoiceNumber } from '@/lib/invoices-store';
 import { addActivityLog } from '@/lib/activity-log';
 import { addGrossProfit } from '@/lib/profits-store';
-import { distributeDetailedProfit } from '@/lib/partners-store';
+import { distributeDetailedProfitCloud } from '@/lib/cloud/partners-cloud';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
 import { printHTML, printInvoice, PrintableInvoice, getStoreSettings, getPrintSettings } from '@/lib/native-print';
@@ -872,12 +872,12 @@ export function CartPanel({
         .map(([category, profit]) => ({ category, profit: Number(profit) }));
 
       if (categoryProfits.length > 0) {
-        distributeDetailedProfit(
+        distributeDetailedProfitCloud(
           categoryProfits,
           invoiceNumber,
           customerNameSnapshot || 'عميل نقدي',
           false
-        );
+        ).catch(err => console.warn('[POS] Partner profit distribution failed:', err));
       }
 
       // 2. ✅ إضافة الفاتورة لطابور المزامنة sync-queue
@@ -1356,12 +1356,12 @@ export function CartPanel({
         .map(([category, profit]) => ({ category, profit: Number(profit) }));
 
       if (debtCategoryProfits.length > 0) {
-        distributeDetailedProfit(
+        distributeDetailedProfitCloud(
           debtCategoryProfits,
           invoiceNumber,
-          customerNameSnapshot || 'عميل بيع مؤجل',
+          selectedCustomer?.name || 'عميل بيع مؤجل',
           true
-        );
+        ).catch(err => console.warn('[POS] Debt partner profit distribution failed:', err));
       }
 
       // 2. ✅ إضافة حزمة البيع الآجل لطابور المزامنة sync-queue

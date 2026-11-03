@@ -24,6 +24,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getEquivalentCurrencies } from '@/lib/currencies';
+import { getCurrencyDef, getEnabledCurrencies, fromUsd } from '@/lib/money-engine';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 // ✅ استخدام الدوال السحابية بدلاً من المحلية
@@ -127,6 +128,16 @@ export default function Partners() {
   const [showAddCapitalDialog, setShowAddCapitalDialog] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewCurrencyCode, setViewCurrencyCode] = useState<string>('USD');
+
+  const convertForView = (usdAmount: number) => {
+    if (viewCurrencyCode === 'USD') {
+      return '$' + formatNumber(usdAmount);
+    }
+    const currDef = getCurrencyDef(viewCurrencyCode);
+    const converted = fromUsd(usdAmount, viewCurrencyCode, currDef.rate);
+    return formatNumber(converted) + ' ' + currDef.symbol;
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -301,6 +312,7 @@ export default function Partners() {
         phone: formData.phone.trim(),
         email: formData.email?.trim() || undefined,
         sharePercentage: mainShare,
+        expenseSharePercentage: formData.sharesExpenses ? (Number(formData.expenseSharePercentage) || mainShare) : 0, // ⬅️ الإصلاح هنا
         categoryShares: formData.categoryShares,
         accessAll: formData.accessAll,
         sharesExpenses: formData.sharesExpenses,
@@ -467,6 +479,7 @@ export default function Partners() {
 
   const openViewDialog = (partner: Partner) => {
     setSelectedPartner(partner);
+    setViewCurrencyCode('USD');
     setShowViewDialog(true);
   };
 
@@ -672,15 +685,47 @@ export default function Partners() {
               )}
             </div>
 
-            {/* Financial Stats */}
+            {/* Financial Stats في كرت الشريك */}
             <div className="grid grid-cols-2 gap-2 py-3 md:py-4 border-t border-border">
               <div className="text-center">
                 <p className="text-[10px] md:text-xs text-muted-foreground">{t('partners.profits')}</p>
-                <p className="text-sm md:text-base font-bold text-success">{formatCurrency(partner.currentBalance || 0)}</p>
+                <p className="text-sm md:text-base font-bold text-success font-mono">
+                  ${formatNumber(partner.currentBalance || 0)}
+                </p>
+                {/* المعادل بالعملات الإضافية النشطة (مثل التركي أو السوري) */}
+                {(() => {
+                  const eq = getEquivalentCurrencies(partner.currentBalance || 0);
+                  if (eq.equivalents.length === 0) return null;
+                  return (
+                    <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
+                      {eq.equivalents.map(c => (
+                        <span key={c.code} className="text-[9.5px] font-mono px-1 py-0.2 bg-success/10 text-success rounded font-medium">
+                          ≈ {c.formatted}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
+
               <div className="text-center">
                 <p className="text-[10px] md:text-xs text-muted-foreground">{t('partners.capital')}</p>
-                <p className="text-sm md:text-base font-bold text-info">{formatCurrency(partner.currentCapital || 0)}</p>
+                <p className="text-sm md:text-base font-bold text-info font-mono">
+                  ${formatNumber(partner.currentCapital || 0)}
+                </p>
+                {(() => {
+                  const eq = getEquivalentCurrencies(partner.currentCapital || 0);
+                  if (eq.equivalents.length === 0) return null;
+                  return (
+                    <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
+                      {eq.equivalents.map(c => (
+                        <span key={c.code} className="text-[9.5px] font-mono px-1 py-0.2 bg-info/10 text-info rounded font-medium">
+                          ≈ {c.formatted}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -987,6 +1032,27 @@ export default function Partners() {
           </DialogHeader>
           {selectedPartner && (
             <div className="space-y-4 py-4">
+              {/* شريط اختيار العملة في أعلى نافذة العرض */}
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <span className="text-xs font-semibold text-muted-foreground">عرض القيم بعملة:</span>
+                <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl">
+                  {getEnabledCurrencies().map(curr => (
+                    <button
+                      key={curr.code}
+                      onClick={() => setViewCurrencyCode(curr.code)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-xs font-bold transition-all",
+                        viewCurrencyCode === curr.code
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {curr.symbol} {curr.code}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Basic Info */}
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center">
@@ -1004,11 +1070,11 @@ export default function Partners() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-success/10 rounded-lg p-4 text-center">
                   <p className="text-sm text-muted-foreground">{t('partners.profits')}</p>
-                  <p className="text-2xl font-bold text-success">${formatNumber(selectedPartner.currentBalance || 0)}</p>
+                  <p className="text-2xl font-bold text-success font-mono">{convertForView(selectedPartner.currentBalance || 0)}</p>
                 </div>
                 <div className="bg-info/10 rounded-lg p-4 text-center">
                   <p className="text-sm text-muted-foreground">{t('partners.capital')}</p>
-                  <p className="text-2xl font-bold text-info">${formatNumber(selectedPartner.currentCapital || 0)}</p>
+                  <p className="text-2xl font-bold text-info font-mono">{convertForView(selectedPartner.currentCapital || 0)}</p>
                 </div>
               </div>
 
@@ -1020,15 +1086,15 @@ export default function Partners() {
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">{t('partners.totalProfitEarned')}</span>
-                  <span className="font-medium text-success">${formatNumber(selectedPartner.totalProfitEarned)}</span>
+                  <span className="font-medium text-success font-mono">{convertForView(selectedPartner.totalProfitEarned || 0)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">{t('partners.totalWithdrawn')}</span>
-                  <span className="font-medium text-warning">${formatNumber(selectedPartner.totalWithdrawn)}</span>
+                  <span className="font-medium text-warning font-mono">{convertForView(selectedPartner.totalWithdrawn || 0)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">{t('partners.totalCapital')}</span>
-                  <span className="font-medium text-info">${formatNumber(selectedPartner.initialCapital || 0)}</span>
+                  <span className="font-medium text-info font-mono">{convertForView(selectedPartner.initialCapital || 0)}</span>
                 </div>
               </div>
 
@@ -1107,11 +1173,11 @@ export default function Partners() {
                                   {p.createdAt ? new Date(p.createdAt).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
                                 </div>
                               </div>
-                              <div className="text-left">
-                                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 block text-sm">
-                                  +${Number(p.amount || 0).toFixed(2)}
+                              <div className="text-left font-mono">
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400 block text-sm">
+                                  +{convertForView(p.amount || 0)}
                                 </span>
-                                {eq.equivalents.length > 0 && (
+                                {viewCurrencyCode === 'USD' && eq.equivalents.length > 0 && (
                                   <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-end">
                                     {eq.equivalents.map(c => (
                                       <span key={c.code} className="text-[9px] font-mono px-1 py-0.2 bg-muted/80 text-muted-foreground rounded font-bold">
@@ -1149,7 +1215,7 @@ export default function Partners() {
                             </div>
                             <div className="text-left font-mono">
                               <span className="font-bold text-rose-600 dark:text-rose-400 text-sm">
-                                -${Number(exp.amount || 0).toFixed(2)}
+                                -{convertForView(exp.amount || 0)}
                               </span>
                             </div>
                           </div>
@@ -1185,7 +1251,7 @@ export default function Partners() {
                                 {cap.notes && <p className="text-[10px] text-muted-foreground mt-0.5">{cap.notes}</p>}
                               </div>
                               <span className="font-mono font-bold text-foreground">
-                                ${Number(cap.amount || 0).toFixed(2)}
+                                {convertForView(cap.amount || 0)}
                               </span>
                             </div>
                           ))}
@@ -1218,7 +1284,7 @@ export default function Partners() {
                                 {w.notes && <p className="text-[10px] text-muted-foreground mt-0.5">{w.notes}</p>}
                               </div>
                               <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
-                                -${Number(w.amount || 0).toFixed(2)}
+                                -{convertForView(w.amount || 0)}
                               </span>
                             </div>
                           ))}

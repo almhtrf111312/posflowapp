@@ -14,7 +14,7 @@ const sb = supabase as unknown as LooseSupabase;
 import { emitEvent, EVENTS } from '../events';
 import { addToQueue } from '../sync-queue';
 import { triggerAutoBackup } from '../local-auto-backup';
-import { loadPartnersCloud, updatePartnerCloud } from './partners-cloud';
+import { loadPartnersCloud, updatePartnerCloud, invalidatePartnersCache } from './partners-cloud';
 import { removeOperatingExpense } from '../profits-store';
 import { round8 } from '../utils';
 
@@ -323,6 +323,7 @@ export const addExpenseCloud = async (expenseData: {
     expensesCache = list;
     cacheTimestamp = Date.now();
     saveExpensesLocally(list);
+    invalidatePartnersCache();
     emitEvent(EVENTS.EXPENSES_UPDATED, null);
     emitEvent(EVENTS.PARTNERS_UPDATED, null);
     triggerAutoBackup(`مصروف جديد: ${expenseData.type}`);
@@ -339,6 +340,7 @@ export const addExpenseCloud = async (expenseData: {
     const { error: rpcError } = await sb.rpc('add_expense_atomic', payload);
     if (!rpcError) {
       invalidateExpensesCache();
+      invalidatePartnersCache(); // ⬅️ إضافة تفريغ كاش الشركاء حتى يظهر الاستقطاع فورياً
       const existing = expensesCache || loadExpensesLocally() || [];
       const list = [localExpense, ...existing.filter(e => e.id !== localExpense.id)];
       expensesCache = list;
@@ -369,6 +371,7 @@ export const addExpenseCloud = async (expenseData: {
       const { error: insertError } = await sb.from('expenses').insert(directPayload);
       if (!insertError) {
         invalidateExpensesCache();
+        invalidatePartnersCache();
         const existing = expensesCache || loadExpensesLocally() || [];
         const list = [localExpense, ...existing.filter(e => e.id !== localExpense.id)];
         expensesCache = list;

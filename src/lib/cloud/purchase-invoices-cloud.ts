@@ -56,6 +56,7 @@ import { isGuestDemoMode } from '@/lib/demo-data';
    expected_total_quantity: number;
    expected_grand_total: number;
    notes?: string;
+  payment_method?: string;
  }
  
  export interface CreatePurchaseInvoiceItemInput {

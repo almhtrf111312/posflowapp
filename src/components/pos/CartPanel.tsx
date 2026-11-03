@@ -1936,14 +1936,16 @@ export function CartPanel({
                     type="button"
                     onClick={() => onCurrencyChange?.(curr)}
                     className={cn(
-                      "px-2.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 border cursor-pointer select-none",
+                      "px-2.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 border cursor-pointer select-none flex items-center gap-1",
                       isSelected
                         ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
                         : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted"
                     )}
                   >
                     <span>{curr.symbol}</span>
-                    <span className="mr-1 text-[10px] opacity-80">{curr.code}</span>
+                    {curr.symbol?.trim().toUpperCase() !== curr.code?.trim().toUpperCase() && (
+                      <span className="text-[10px] opacity-80">{curr.code}</span>
+                    )}
                   </button>
                 );
               })}

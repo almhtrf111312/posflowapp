@@ -268,13 +268,21 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
       ).map(([code, value]) => [code.toUpperCase(), Number(value)])),
     };
 
+    const resolvedSlot1 = (parsed?.slot1Code || parsed?.syncSettings?.slot1Code || '').trim().toUpperCase();
+    const resolvedSlot2 = (parsed?.slot2Code || parsed?.syncSettings?.slot2Code || '').trim().toUpperCase();
+    const resolvedPrimary = (parsed?.primaryCurrency || 'USD').trim().toUpperCase();
+
     const rawEnabled = parsed?.enabledCurrencies || {};
-    const enabledCurrencies = {
-      USD: rawEnabled.USD !== false,
-      ...Object.fromEntries(Object.entries(rawEnabled)
-        .filter(([code]) => code.toUpperCase() !== 'USD')
-        .map(([code, enabled]) => [code.toUpperCase(), enabled === true])),
+    // 🔒 حصر العملات المفعلة في البطاقات الثلاث الحالية فقط وطرد أي عملات سابقة
+    const enabledCurrencies: Record<string, boolean> = {
+      USD: rawEnabled.USD !== false || resolvedPrimary === 'USD',
     };
+    if (resolvedSlot1 && resolvedSlot1 !== 'USD') {
+      enabledCurrencies[resolvedSlot1] = rawEnabled[resolvedSlot1] === true || rawEnabled[parsed?.slot1Code] === true;
+    }
+    if (resolvedSlot2 && resolvedSlot2 !== 'USD' && resolvedSlot2 !== resolvedSlot1) {
+      enabledCurrencies[resolvedSlot2] = rawEnabled[resolvedSlot2] === true || rawEnabled[parsed?.slot2Code] === true;
+    }
     const rawDisplayModes = parsed?.currencyDisplayMode || {};
     const currencyDisplayMode = Object.fromEntries(
       Object.entries(rawDisplayModes)
@@ -295,9 +303,9 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
     return {
       updatedAt: typeof parsed?.updatedAt === 'number' ? parsed.updatedAt : undefined,
       storeSettings,
-      primaryCurrency: parsed?.primaryCurrency || 'USD',
-      slot1Code: parsed?.slot1Code || parsed?.syncSettings?.slot1Code || 'TRY',
-      slot2Code: parsed?.slot2Code || parsed?.syncSettings?.slot2Code || 'SYP',
+      primaryCurrency: resolvedPrimary || 'USD',
+      slot1Code: resolvedSlot1,
+      slot2Code: resolvedSlot2,
       enabledCurrencies,
       exchangeRates,
       currencyNames,
@@ -378,24 +386,44 @@ export function mergeStoreSettings(
     || base.primaryCurrency
     || 'USD';
 
-  // 3. العملات المفعلة (احترام صريح للتعطيل ومنع إعادة إحياء العملات المعطلة)
+  // تحديد كود البطاقة الأولى والثانية بدقة حسب الطابع الزمني الأحدث (بدون فرض TRY أو SYP كقيم إجبارية)
+  const rawSlot1 = isLocalNewer
+    ? (base.slot1Code || (typeof cloudSync.slot1Code === 'string' ? cloudSync.slot1Code : ''))
+    : ((typeof cloudSync.slot1Code === 'string' && cloudSync.slot1Code) || base.slot1Code || '');
+  const mergedSlot1Code = (rawSlot1 || '').trim().toUpperCase();
+
+  const rawSlot2 = isLocalNewer
+    ? (base.slot2Code || (typeof cloudSync.slot2Code === 'string' ? cloudSync.slot2Code : ''))
+    : ((typeof cloudSync.slot2Code === 'string' && cloudSync.slot2Code) || base.slot2Code || '');
+  const mergedSlot2Code = (rawSlot2 || '').trim().toUpperCase();
+
+  // 3. العملات المفعلة (حصار صارم بالبطاقات الثلاث فقط: USD, mergedSlot1Code, mergedSlot2Code)
   const cloudEnabled = cloudSync.enabledCurrencies || {};
   const localEnabled = base.enabledCurrencies || DEFAULT_UNIFIED_SETTINGS.enabledCurrencies;
-  const currencyCodes = new Set([...Object.keys(cloudEnabled), ...Object.keys(localEnabled)]);
-  const mergedEnabled: Record<string, boolean> = { USD: true };
-  currencyCodes.forEach((code) => {
-    const upper = code.toUpperCase();
-    if (upper === 'USD') return;
-    // إذا كان هناك تعطيل صريح محلياً (false)، يتم اعتماده فوراً ولا يُسمح للسحابة بإعادة إحيائها
-    if (localEnabled[code] === false || localEnabled[upper] === false) {
-      mergedEnabled[upper] = false;
-      return;
+  const resolveSlotEnabled = (code: string, defaultVal: boolean): boolean => {
+    const lVal = localEnabled[code];
+    const cVal = cloudEnabled[code];
+    if (isLocalNewer) {
+      return lVal !== undefined ? lVal === true : (cVal !== undefined ? cVal === true : defaultVal);
     }
-    const cloudValue = cloudEnabled[code] !== undefined ? cloudEnabled[code] : cloudEnabled[upper];
-    mergedEnabled[upper] = cloudValue !== undefined
-      ? cloudValue === true
-      : (localEnabled[code] === true || localEnabled[upper] === true);
-  });
+    if (lVal === false) return false;
+    return cVal !== undefined ? cVal === true : (lVal === true || defaultVal);
+  };
+
+  const mergedEnabled: Record<string, boolean> = {
+    USD: isLocalNewer
+      ? (localEnabled.USD !== false)
+      : (cloudEnabled.USD !== undefined ? cloudEnabled.USD !== false : localEnabled.USD !== false),
+  };
+  if (mergedSlot1Code && mergedSlot1Code !== 'USD') {
+    mergedEnabled[mergedSlot1Code] = resolveSlotEnabled(mergedSlot1Code, false);
+  }
+  if (mergedSlot2Code && mergedSlot2Code !== 'USD' && mergedSlot2Code !== mergedSlot1Code) {
+    mergedEnabled[mergedSlot2Code] = resolveSlotEnabled(mergedSlot2Code, false);
+  }
+  if (mergedPrimary && mergedEnabled[mergedPrimary.toUpperCase()] === undefined && mergedPrimary.toUpperCase() === 'USD') {
+    mergedEnabled.USD = true;
+  }
 
   // 4. أسماء العملات (منع الفراغ دائماً)
   const cloudNames = cloudSync.currencyNames || {};
@@ -538,8 +566,8 @@ export function mergeStoreSettings(
     updatedAt: mergedUpdatedAt,
     storeSettings: mergedStore,
     primaryCurrency: isLocalNewer ? (base.primaryCurrency || mergedPrimary) : mergedPrimary,
-    slot1Code: (isLocalNewer && base.slot1Code) ? base.slot1Code : ((typeof cloudSync.slot1Code === 'string' && cloudSync.slot1Code) || base.slot1Code || 'TRY'),
-    slot2Code: (isLocalNewer && base.slot2Code) ? base.slot2Code : ((typeof cloudSync.slot2Code === 'string' && cloudSync.slot2Code) || base.slot2Code || 'SYP'),
+    slot1Code: mergedSlot1Code,
+    slot2Code: mergedSlot2Code,
     enabledCurrencies: mergedEnabled,
     exchangeRates: mergedRates,
     currencyNames: mergedNames,
@@ -746,49 +774,49 @@ export interface SaveSettingsResult {
  *   يتم اعتماد الإعدادات السحابية وتحديث localStorage والعملات والضرائب فوراً.
  * - يمنع منعاً باتاً رفع الإعدادات الافتراضية للسحابة أثناء عملية السحب.
  */
-let bgSettingsPulling = false;
-
-export async function pullStoreSettingsWithGuard(): Promise<UnifiedStoreSettings> {
-  const localSettings = loadUnifiedStoreSettings();
-
-  // 🚀 Zero-Wait: إرجاع الإعدادات المحلية فوراً (0ms) وإطلاق استعلام السحابة في الخلفية بهدوء
-  if (typeof navigator !== 'undefined' && navigator.onLine && !bgSettingsPulling) {
-    bgSettingsPulling = true;
-    (async () => {
-      try {
-        const cloudSettings = await fetchStoreSettings(1500);
-        if (!cloudSettings) return;
-
-        const cloudSync = (cloudSettings.sync_settings && typeof cloudSettings.sync_settings === 'object'
-          ? cloudSettings.sync_settings as Record<string, unknown>
-          : {}) as Record<string, any>;
-
-        const cloudUpdatedAt = Number(cloudSync.updatedAt) || (cloudSettings.updated_at ? new Date(cloudSettings.updated_at as string).getTime() : 0);
-        const currentLocal = loadUnifiedStoreSettings();
-        const currentLocalUpdatedAt = Number(currentLocal.updatedAt) || 0;
-
-        if (!currentLocalUpdatedAt || cloudUpdatedAt > currentLocalUpdatedAt) {
-          console.log(`[StoreSettingsSync] Background adopted cloud settings (cloud: ${cloudUpdatedAt}, local: ${currentLocalUpdatedAt})`);
-          applyCloudStoreSettings(cloudSettings);
-          const merged = mergeStoreSettings(loadUnifiedStoreSettings(), cloudSettings);
-          merged.updatedAt = cloudUpdatedAt || Date.now();
-          applySettingsToRuntime(merged);
-          try {
-            const { emitEvent, EVENTS } = await import('./events');
-            emitEvent(EVENTS.SETTINGS_UPDATED, merged);
-          } catch { /* noop */ }
-        }
-      } catch (err) {
-        console.warn('[StoreSettingsSync] Background pull failed:', err);
-      } finally {
-        bgSettingsPulling = false;
-      }
-    })();
-  }
-
-  return localSettings;
-}
-
+let bgSettingsPulling = false;
+
+export async function pullStoreSettingsWithGuard(): Promise<UnifiedStoreSettings> {
+  const localSettings = loadUnifiedStoreSettings();
+
+  // 🚀 Zero-Wait: إرجاع الإعدادات المحلية فوراً (0ms) وإطلاق استعلام السحابة في الخلفية بهدوء
+  if (typeof navigator !== 'undefined' && navigator.onLine && !bgSettingsPulling) {
+    bgSettingsPulling = true;
+    (async () => {
+      try {
+        const cloudSettings = await fetchStoreSettings(1500);
+        if (!cloudSettings) return;
+
+        const cloudSync = (cloudSettings.sync_settings && typeof cloudSettings.sync_settings === 'object'
+          ? cloudSettings.sync_settings as Record<string, unknown>
+          : {}) as Record<string, any>;
+
+        const cloudUpdatedAt = Number(cloudSync.updatedAt) || (cloudSettings.updated_at ? new Date(cloudSettings.updated_at as string).getTime() : 0);
+        const currentLocal = loadUnifiedStoreSettings();
+        const currentLocalUpdatedAt = Number(currentLocal.updatedAt) || 0;
+
+        if (!currentLocalUpdatedAt || cloudUpdatedAt > currentLocalUpdatedAt) {
+          console.log(`[StoreSettingsSync] Background adopted cloud settings (cloud: ${cloudUpdatedAt}, local: ${currentLocalUpdatedAt})`);
+          applyCloudStoreSettings(cloudSettings);
+          const merged = mergeStoreSettings(loadUnifiedStoreSettings(), cloudSettings);
+          merged.updatedAt = cloudUpdatedAt || Date.now();
+          applySettingsToRuntime(merged);
+          try {
+            const { emitEvent, EVENTS } = await import('./events');
+            emitEvent(EVENTS.SETTINGS_UPDATED, merged);
+          } catch { /* noop */ }
+        }
+      } catch (err) {
+        console.warn('[StoreSettingsSync] Background pull failed:', err);
+      } finally {
+        bgSettingsPulling = false;
+      }
+    })();
+  }
+
+  return localSettings;
+}
+
 /**
  * حفظ الإعدادات الموحدة:
  * 1. حفظ محلي فوري وتطبيق على الواجهة بدون أي انتظار مع طابع زمني جديد updatedAt.
@@ -801,21 +829,30 @@ export async function saveUnifiedStoreSettings(
   // 1. تحميل الإعدادات الحالية ودمج الجزئيات معها
   const current = loadUnifiedStoreSettings();
   const updatedAt = partial.updatedAt || Date.now();
+  const nextSlot1 = (partial.slot1Code !== undefined ? partial.slot1Code : (current.slot1Code || '')).trim().toUpperCase();
+  const nextSlot2 = (partial.slot2Code !== undefined ? partial.slot2Code : (current.slot2Code || '')).trim().toUpperCase();
+  const rawNextEnabled = partial.enabledCurrencies ?? current.enabledCurrencies ?? {};
+  const sanitizedEnabledCurrencies: Record<string, boolean> = {
+    USD: rawNextEnabled.USD !== false,
+  };
+  if (nextSlot1 && nextSlot1 !== 'USD') {
+    sanitizedEnabledCurrencies[nextSlot1] = rawNextEnabled[nextSlot1] === true;
+  }
+  if (nextSlot2 && nextSlot2 !== 'USD' && nextSlot2 !== nextSlot1) {
+    sanitizedEnabledCurrencies[nextSlot2] = rawNextEnabled[nextSlot2] === true;
+  }
+
   const merged: UnifiedStoreSettings = {
     ...current,
     ...partial,
     updatedAt,
-    slot1Code: partial.slot1Code || current.slot1Code || 'TRY',
-    slot2Code: partial.slot2Code || current.slot2Code || 'SYP',
+    slot1Code: nextSlot1,
+    slot2Code: nextSlot2,
     storeSettings: {
       ...current.storeSettings,
       ...(partial.storeSettings || {}),
     },
-    enabledCurrencies: {
-      ...current.enabledCurrencies,
-      ...(partial.enabledCurrencies || {}),
-      USD: true,
-    },
+    enabledCurrencies: sanitizedEnabledCurrencies,
     exchangeRates: {
       ...current.exchangeRates,
       ...(partial.exchangeRates || {}),

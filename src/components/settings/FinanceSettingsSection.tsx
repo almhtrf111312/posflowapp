@@ -211,14 +211,11 @@ export function FinanceSettingsSection({
                                     setExchangeRates(prev => ({ ...prev, [nextCode]: String(selected.suggestedRate) }));
                                   }
                                   // تنظيف الكود القديم وتفعيل الكود الجديد فقط
-                                  setEnabledCurrencies(prev => {
-                                    const next = { ...prev };
-                                    if (oldCode && oldCode !== nextCode && oldCode !== slot2Code && oldCode !== 'USD') {
-                                      delete next[oldCode];
-                                    }
-                                    next[nextCode] = true;
-                                    return next;
-                                  });
+                                  setEnabledCurrencies(prev => ({
+                                    USD: prev.USD !== false,
+                                    [nextCode]: true,
+                                    ...(slot2Code && slot2Code !== nextCode && slot2Code !== 'USD' ? { [slot2Code]: prev[slot2Code] === true } : {}),
+                                  }));
                                   if (primaryCurrency === slot1Code) {
                                     setPrimaryCurrency(nextCode);
                                   }
@@ -343,14 +340,11 @@ export function FinanceSettingsSection({
                                     setExchangeRates(prev => ({ ...prev, [nextCode]: String(selected.suggestedRate) }));
                                   }
                                   // تنظيف الكود القديم وتفعيل الكود الجديد فقط
-                                  setEnabledCurrencies(prev => {
-                                    const next = { ...prev };
-                                    if (oldCode && oldCode !== nextCode && oldCode !== slot1Code && oldCode !== 'USD') {
-                                      delete next[oldCode];
-                                    }
-                                    next[nextCode] = true;
-                                    return next;
-                                  });
+                                  setEnabledCurrencies(prev => ({
+                                    USD: prev.USD !== false,
+                                    ...(slot1Code && slot1Code !== nextCode && slot1Code !== 'USD' ? { [slot1Code]: prev[slot1Code] === true } : {}),
+                                    [nextCode]: true,
+                                  }));
                                   if (primaryCurrency === slot2Code) {
                                     setPrimaryCurrency(nextCode);
                                   }

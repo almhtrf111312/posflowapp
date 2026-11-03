@@ -138,6 +138,11 @@ function buildStateFromStorage(): MoneyEngineState {
         const symbols: Record<string, any> = { ...(parsed.currencySymbols || {}) };
         const names: Record<string, any> = { ...(parsed.currencyNames || {}) };
         const enabledMap: Record<string, any> = { ...(parsed.enabledCurrencies || {}) };
+        const slot1Code = normalizeCurrencyCode(parsed.slot1Code || parsed.syncSettings?.slot1Code || '');
+        const slot2Code = normalizeCurrencyCode(parsed.slot2Code || parsed.syncSettings?.slot2Code || '');
+        const allowedActiveSlots = new Set<string>(['USD']);
+        if (slot1Code) allowedActiveSlots.add(slot1Code);
+        if (slot2Code) allowedActiveSlots.add(slot2Code);
         const displayModes: Record<string, unknown> = { ...(parsed.currencyDisplayMode || {}) };
         for (const [code, mode] of Object.entries(displayModes)) {
           if (mode === 'symbol' || mode === 'name' || mode === 'both') {
@@ -224,10 +229,9 @@ function buildStateFromStorage(): MoneyEngineState {
             decimals: existing?.decimals ?? getDefaultDecimals(code),
             symbolPosition: existing?.symbolPosition ?? getDefaultSymbolPosition(code, resolvedSymbol),
             enabled:
-              code === 'USD' ||
-              code === activeCode ||
-              rawEnabled === true ||
-              existing?.enabled === true,
+              allowedActiveSlots.has(code) &&
+              (code === activeCode ||
+                (code === 'USD' ? rawEnabled !== false : rawEnabled === true)),
             isCustom: existing?.isCustom ?? !DEFAULT_DEFINITIONS[code],
           };
         }
@@ -263,6 +267,10 @@ function buildStateFromStorage(): MoneyEngineState {
     };
   }
   currencies.USD.rate = 1;
+  const hasAnyEnabled = Object.values(currencies).some(c => c.enabled);
+  if (!hasAnyEnabled) {
+    currencies.USD.enabled = true;
+  }
   currencies.USD.enabled = true;
 
   return {
@@ -344,7 +352,7 @@ export function getActiveCurrencyDef(): CurrencyDefinition {
 
 export function getEnabledCurrencies(): CurrencyDefinition[] {
   const state = getMoneyState();
-  return Object.values(state.currencies).filter((c) => c.enabled || c.code === 'USD' || c.code === state.activeCode);
+  return Object.values(state.currencies).filter((c) => c.enabled === true);
 }
 
 export function round8(usd: number): number {

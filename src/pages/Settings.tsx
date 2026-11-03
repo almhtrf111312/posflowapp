@@ -464,7 +464,7 @@ export default function Settings() {
     const otherConfigured = Object.keys({ ...ratesMap, ...namesMap, ...symbolsMap })
       .filter(c => c !== 'USD' && !activeNonUsd.includes(c));
     const candidateCodes = [...activeNonUsd, ...otherConfigured];
-    return candidateCodes[0] || detectCurrencyCodeFromMeta(symbolsMap.TRY, namesMap.TRY, 'TRY');
+    return candidateCodes[0] || '';
   });
 
   const [slot2Code, setSlot2Code] = useState<string>(() => {
@@ -478,8 +478,8 @@ export default function Settings() {
     const otherConfigured = Object.keys({ ...ratesMap, ...namesMap, ...symbolsMap })
       .filter(c => c !== 'USD' && !activeNonUsd.includes(c));
     const candidateCodes = [...activeNonUsd, ...otherConfigured];
-    const s1Candidate = candidateCodes[0] || 'TRY';
-    return candidateCodes.find(c => c !== s1Candidate) || detectCurrencyCodeFromMeta(symbolsMap.SYP, namesMap.SYP, s1Candidate === 'SYP' ? 'TRY' : 'SYP');
+    const s1Candidate = candidateCodes[0] || '';
+    return candidateCodes.find(c => c !== s1Candidate) || '';
   });
 
   const [primaryCurrency, setPrimaryCurrency] = useState<string>(
@@ -490,8 +490,11 @@ export default function Settings() {
     const base: Record<string, boolean> = {
       USD: initialUnified?.enabledCurrencies?.USD !== false && persisted?.enabledCurrencies?.USD !== false,
     };
-    for (const [code, c] of Object.entries(initialNormalized.currencies)) {
-      base[code] = c.enabled;
+    if (slot1Code && slot1Code !== 'USD') {
+      base[slot1Code] = initialNormalized.currencies[slot1Code]?.enabled === true;
+    }
+    if (slot2Code && slot2Code !== 'USD' && slot2Code !== slot1Code) {
+      base[slot2Code] = initialNormalized.currencies[slot2Code]?.enabled === true;
     }
     return base;
   });
@@ -892,10 +895,10 @@ export default function Settings() {
           const otherConfigured = Object.keys({ ...ratesMap, ...namesMap, ...symbolsMap })
             .filter(c => c !== 'USD' && !activeNonUsd.includes(c));
           const candidateCodes = [...activeNonUsd, ...otherConfigured];
-          s1Code = candidateCodes[0] || detectCurrencyCodeFromMeta(merged.currencySymbols?.TRY, merged.currencyNames?.TRY, 'TRY');
-          s2Code = candidateCodes.find(c => c !== s1Code) || detectCurrencyCodeFromMeta(merged.currencySymbols?.SYP, merged.currencyNames?.SYP, s1Code === 'SYP' ? 'TRY' : 'SYP');
+          s1Code = candidateCodes[0] || '';
+          s2Code = candidateCodes.find(c => c !== s1Code) || '';
         } else if (!s2Code) {
-          s2Code = s1Code === 'SYP' ? 'TRY' : 'SYP';
+          s2Code = '';
         }
         setSlot1Code(s1Code);
         setSlot2Code(s2Code);
@@ -905,12 +908,19 @@ export default function Settings() {
         const loadedRates: Record<string, string> = {};
         const loadedNames: Record<string, string> = {};
         const loadedSymbols: Record<string, string> = {};
-        const loadedEnabled: Record<string, boolean> = {};
+        const loadedEnabled: Record<string, boolean> = {
+          USD: initialNorm.currencies.USD?.enabled !== false,
+        };
         for (const [code, c] of Object.entries(initialNorm.currencies)) {
           loadedRates[code] = String(c.rate);
           loadedNames[code] = c.name;
           loadedSymbols[code] = c.symbol;
-          loadedEnabled[code] = c.enabled;
+        }
+        if (s1Code && s1Code !== 'USD') {
+          loadedEnabled[s1Code] = initialNorm.currencies[s1Code]?.enabled === true;
+        }
+        if (s2Code && s2Code !== 'USD' && s2Code !== s1Code) {
+          loadedEnabled[s2Code] = initialNorm.currencies[s2Code]?.enabled === true;
         }
         setExchangeRates(loadedRates);
         setCurrencyNames(loadedNames);

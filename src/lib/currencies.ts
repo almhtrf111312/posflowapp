@@ -599,6 +599,11 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
       if (raw) settings = JSON.parse(raw);
     } catch {}
   }
+  if (typeof settings === 'string') {
+    try {
+      settings = JSON.parse(settings);
+    } catch {}
+  }
 
   const enabledMap = settings?.enabledCurrencies || {};
   const namesMap = settings?.currencyNames || {};
@@ -606,110 +611,86 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
   const ratesMap = settings?.exchangeRates || {};
   let rawPrimary = normalizeCurrencyCode((settings?.primaryCurrency || 'USD') as string);
 
+  // تحديد كود الخانتين الفعليتين المعتمدتين في المتجر فقط (بدون فرض TRY أو SYP كقيم افتراضية إجبارية)
+  const rawSlot1 = settings?.slot1Code || settings?.syncSettings?.slot1Code;
+  const rawSlot2 = settings?.slot2Code || settings?.syncSettings?.slot2Code;
+
+  const slot1Code = rawSlot1 && String(rawSlot1).toUpperCase() !== 'USD'
+    ? String(rawSlot1).trim().toUpperCase()
+    : (symbolsMap.TRY || namesMap.TRY ? detectCurrencyCodeFromMeta(symbolsMap.TRY, namesMap.TRY, '') : '');
+
+  const slot2Code = rawSlot2 && String(rawSlot2).toUpperCase() !== 'USD'
+    ? String(rawSlot2).trim().toUpperCase()
+    : (symbolsMap.SYP || namesMap.SYP ? detectCurrencyCodeFromMeta(symbolsMap.SYP, namesMap.SYP, '') : '');
+
+  // القائمة البيضاء الصارمة للبطاقات الثلاث فقط
+  const allowedSlotCodes = new Set<string>(['USD']);
+  if (slot1Code) allowedSlotCodes.add(slot1Code);
+  if (slot2Code) allowedSlotCodes.add(slot2Code);
+
   const currencies: Record<string, StoreCurrencyConfig> = {};
 
   // 1. العملة الأساسية/المرجعية USD
+  const isUsdEnabled = enabledMap.USD !== false;
   currencies.USD = {
     code: 'USD',
     name: (namesMap.USD && namesMap.USD.trim()) || 'دولار أمريكي',
     symbol: (symbolsMap.USD && symbolsMap.USD.trim()) || '$',
     rate: 1,
     decimals: 2,
-    enabled: true,
+    enabled: isUsdEnabled,
   };
 
-  const processedRealCodes = new Set<string>(['USD']);
-  const legacySlots = ['TRY', 'SYP'];
+  // 2. بناء البطاقتين الإضافيتين (slot1Code و slot2Code) حصراً وتجاهل أي عملات تاريخية أخرى
+  for (const [slotIndex, code] of [slot1Code, slot2Code].entries()) {
+    if (!code || code === 'USD' || currencies[code]) continue;
 
-  // 2. معالجة كافة العملات المخزنة بكودها المباشر أولاً (مثل EGP, SAR, QAR) لضمان أولوية السعر المباشر الحديث
-  const allCodes = new Set([
-    ...Object.keys(enabledMap),
-    ...Object.keys(ratesMap),
-    ...Object.keys(namesMap),
-    ...Object.keys(symbolsMap),
-  ]);
+    const legacyFallbackKey = slotIndex === 0 ? 'TRY' : 'SYP';
+    const legacyDetected = detectCurrencyCodeFromMeta(symbolsMap[legacyFallbackKey], namesMap[legacyFallbackKey], legacyFallbackKey);
+    const canUseLegacySlot = legacyDetected === code;
 
-  for (const rawCode of allCodes) {
-    const code = rawCode.trim().toUpperCase();
-    if (!code || processedRealCodes.has(code) || legacySlots.includes(code)) continue;
+    const sym = symbolsMap[code] || (canUseLegacySlot ? symbolsMap[legacyFallbackKey] : undefined);
+    const name = namesMap[code] || (canUseLegacySlot ? namesMap[legacyFallbackKey] : undefined);
+    const directRate = Number(ratesMap[code]);
+    const legacyRate = canUseLegacySlot ? Number(ratesMap[legacyFallbackKey]) : 0;
+    const effectiveRate = Number.isFinite(directRate) && directRate > 0 ? directRate : legacyRate;
 
-    const sym = symbolsMap[rawCode] || symbolsMap[code];
-    const name = namesMap[rawCode] || namesMap[code];
-    const rate = Number(ratesMap[rawCode] ?? ratesMap[code]);
+    const isExplicitlyEnabled =
+      enabledMap[code] !== undefined
+        ? enabledMap[code] === true
+        : (canUseLegacySlot && enabledMap[legacyFallbackKey] === true);
+
     const catalogItem = getPredefinedCurrency(code);
-    const isExplicitlyEnabled = code === 'USD' ? true : (enabledMap[rawCode] === true || enabledMap[code] === true);
-
     currencies[code] = {
       code,
       name: (name && name.trim()) || catalogItem?.name || code,
       symbol: toEnglishCurrencySymbol((sym && sym.trim()) || catalogItem?.symbol || code, code),
-      rate: Number.isFinite(rate) && rate > 0 ? rate : (catalogItem?.suggestedRate || 1),
+      rate: Number.isFinite(effectiveRate) && effectiveRate > 0 ? effectiveRate : (catalogItem?.suggestedRate || 1),
       decimals: getDefaultDecimals(code),
       enabled: isExplicitlyEnabled === true,
     };
-    processedRealCodes.add(code);
+
+    if (rawPrimary === legacyFallbackKey && canUseLegacySlot) {
+      rawPrimary = code;
+    }
   }
 
-  // 3. معالجة الخانات القديمة TRY / SYP (مع إعطاء الأولوية للقيمة المباشرة إن كانت العملة المخصصة موجودة مسبقاً)
-  for (const slotKey of legacySlots) {
-    const sym = symbolsMap[slotKey];
-    const name = namesMap[slotKey];
-    const slotRate = Number(ratesMap[slotKey]);
-
-    if (!sym && !name && !slotRate && enabledMap[slotKey] !== true) {
-      continue;
-    }
-
-    const detectedCode = detectCurrencyCodeFromMeta(sym, name, slotKey);
-    const finalCode = detectedCode;
-
-    // إذا تم تحويل الخانة القديمة إلى عملة أخرى (مثل EGP)
-    if (finalCode !== slotKey && rawPrimary === slotKey) {
-      rawPrimary = finalCode;
-    }
-
-    // إذا كانت العملة المكتشفة (مثل EGP) قد تمت معالجتها بكودها المباشر في الخطوة 2،
-    // نحتفظ بسعرها المباشر الحديث ولا نسمح للخانة القديمة (TRY/SYP) بالكتابة فوقه!
-    if (processedRealCodes.has(finalCode)) {
-      if (enabledMap[slotKey] === true && enabledMap[finalCode] === undefined) {
-        currencies[finalCode].enabled = true;
-      }
-      continue;
-    }
-
-    const directRate = Number(ratesMap[finalCode]);
-    const effectiveRate = Number.isFinite(directRate) && directRate > 0 ? directRate : slotRate;
-    const isExplicitlyEnabled =
-      enabledMap[finalCode] !== undefined
-        ? enabledMap[finalCode] === true
-        : enabledMap[slotKey] === true;
-    const catalogItem = getPredefinedCurrency(finalCode);
-
-    const finalName = (namesMap[finalCode] && namesMap[finalCode].trim()) || (name && name.trim()) || catalogItem?.name || finalCode;
-    const finalSymbol = (symbolsMap[finalCode] && symbolsMap[finalCode].trim()) || (sym && sym.trim()) || catalogItem?.symbol || finalCode;
-    const finalRate = Number.isFinite(effectiveRate) && effectiveRate > 0 ? effectiveRate : (catalogItem?.suggestedRate || 1);
-    const decimals = getDefaultDecimals(finalCode);
-
-    currencies[finalCode] = {
-      code: finalCode,
-      name: finalName,
-      symbol: toEnglishCurrencySymbol(finalSymbol, finalCode),
-      rate: finalRate,
-      decimals,
-      enabled: isExplicitlyEnabled === true,
-    };
-    processedRealCodes.add(finalCode);
-  }
-
-  // 4. ضبط كود العملة الأساسية
-  let primaryCurrencyCode = rawPrimary;
+  // 3. ضبط كود العملة الأساسية والتأكد من أنها ضمن البطاقات المفعلة
+  let primaryCurrencyCode = allowedSlotCodes.has(rawPrimary) ? rawPrimary : 'USD';
   if (!currencies[primaryCurrencyCode] || !currencies[primaryCurrencyCode].enabled) {
     const firstEnabled = Object.values(currencies).find(c => c.enabled);
-    primaryCurrencyCode = firstEnabled ? firstEnabled.code : 'USD';
+    if (firstEnabled) {
+      primaryCurrencyCode = firstEnabled.code;
+    } else {
+      primaryCurrencyCode = 'USD';
+      currencies.USD.enabled = true;
+    }
   }
 
-  // فلترة صارمة: فقط العملات المفعّلة صراحةً (active !== false و enabled !== false)
-  const enabledCurrencies = Object.values(currencies).filter(c => (c as any).active !== false && c.enabled !== false);
+  // 4. فلترة صارمة: فقط العملات المفعلة ضمن البطاقات الثلاث المعتمدة
+  const enabledCurrencies = Object.values(currencies).filter(
+    c => allowedSlotCodes.has(c.code) && (c as any).active !== false && c.enabled === true
+  );
 
   return {
     primaryCurrencyCode,

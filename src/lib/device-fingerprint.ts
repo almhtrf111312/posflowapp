@@ -2,6 +2,17 @@
 // Creates a unique device identifier for device binding
 
 const DEVICE_ID_KEY = 'hyperpos_device_id';
+const BACKUP_DEVICE_ID_KEY = 'flowpos_persistent_hardware_id';
+
+// Helper to save device ID to both primary and persistent backup storages
+const persistDeviceId = (id: string): void => {
+  try {
+    localStorage.setItem(DEVICE_ID_KEY, id);
+    localStorage.setItem(BACKUP_DEVICE_ID_KEY, id);
+  } catch (e) {
+    console.warn('[DeviceFingerprint] Failed to persist device ID to storage:', e);
+  }
+};
 
 // Generate a cryptographically secure device ID using UUID v4
 const generateSecureDeviceId = (): string => {
@@ -23,48 +34,65 @@ const generateSecureDeviceId = (): string => {
 // Get or generate device ID
 export const getDeviceId = async (): Promise<string> => {
   try {
-    // First check if we have a stored device ID
-    let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-    
-    // If deviceId already exists as a Capacitor hardware ID, return it immediately
-    if (deviceId && deviceId.startsWith('CAP-')) {
-      return deviceId;
-    }
+    // 1. فحص المعرف المحفوظ في التخزين الأساسي والاحتياطي
+    let deviceId = localStorage.getItem(DEVICE_ID_KEY) || localStorage.getItem(BACKUP_DEVICE_ID_KEY);
 
-    // جلب معرف جهاز أندرويد الثابت عبر @capacitor/device
+    // التحقق مما إذا كان الجهاز يعمل في بيئة Capacitor على نظام Android أو بيئة أصلية
+    let isCapacitorNative = false;
     try {
-      const { Device } = await import('@capacitor/device');
-      if (Device && typeof Device.getId === 'function') {
-        const info = await Device.getId();
-        if (info?.identifier) {
-          deviceId = `CAP-${info.identifier}`;
-          localStorage.setItem(DEVICE_ID_KEY, deviceId);
-          return deviceId;
-        }
-      }
+      const { Capacitor } = await import('@capacitor/core');
+      isCapacitorNative = Capacitor.isNativePlatform();
     } catch {
-      // إذا لم يكن التطبيق يعمل داخل بيئة Capacitor Native
+      isCapacitorNative = typeof window !== 'undefined' &&
+        !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
     }
 
+    // 2. إذا كان الجهاز أندرويد حقيقي عبر Capacitor
+    if (isCapacitorNative) {
+      // إذا كان المعرف المحفوظ موجوداً بالفعل ويبدأ بـ CAP-، نتأكد من حفظه في المكانين ونعيده
+      if (deviceId && deviceId.startsWith('CAP-')) {
+        persistDeviceId(deviceId);
+        return deviceId;
+      }
+
+      // استدعاء Device.getId() وانتظاره والتأكد من بادئة CAP-
+      try {
+        const { Device } = await import('@capacitor/device');
+        if (Device && typeof Device.getId === 'function') {
+          const info = await Device.getId();
+          if (info?.identifier) {
+            const rawId = info.identifier.trim();
+            deviceId = rawId.startsWith('CAP-') ? rawId : `CAP-${rawId}`;
+            persistDeviceId(deviceId);
+            return deviceId;
+          }
+        }
+      } catch (nativeErr) {
+        console.warn('[DeviceFingerprint] Failed to fetch Capacitor Device.getId():', nativeErr);
+      }
+    }
+
+    // 3. في بيئات الويب أو في حال كان هناك معرف محفوظ مسبقاً
     if (deviceId) {
+      persistDeviceId(deviceId);
       return deviceId;
     }
 
-    // Generate browser fingerprint
+    // توليد بصمة متصفح آمنة مشفرة وحفظها في التخزين الأساسي والاحتياطي
     deviceId = generateSecureDeviceId();
-    localStorage.setItem(DEVICE_ID_KEY, deviceId);
-    
+    persistDeviceId(deviceId);
+
     return deviceId;
   } catch (error) {
     console.error('Error getting device ID:', error);
-    // Fallback to a simple random ID
-    const randBytes = new Uint8Array(8); crypto.getRandomValues(randBytes);
-    const fallbackId = `FB-${Date.now()}-${Array.from(randBytes).map(b => b.toString(36)).join('')}`.toUpperCase();
-    try {
-      localStorage.setItem(DEVICE_ID_KEY, fallbackId);
-    } catch {
-      // Ignore storage errors
+    // Fallback to existing or new random ID
+    let fallbackId = localStorage.getItem(BACKUP_DEVICE_ID_KEY) || localStorage.getItem(DEVICE_ID_KEY);
+    if (!fallbackId) {
+      const randBytes = new Uint8Array(8);
+      crypto.getRandomValues(randBytes);
+      fallbackId = `FB-${Date.now()}-${Array.from(randBytes).map(b => b.toString(36)).join('')}`.toUpperCase();
     }
+    persistDeviceId(fallbackId);
     return fallbackId;
   }
 };
@@ -73,6 +101,7 @@ export const getDeviceId = async (): Promise<string> => {
 export const clearDeviceId = (): void => {
   try {
     localStorage.removeItem(DEVICE_ID_KEY);
+    localStorage.removeItem(BACKUP_DEVICE_ID_KEY);
   } catch {
     // Ignore errors
   }

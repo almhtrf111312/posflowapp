@@ -217,14 +217,17 @@ const clearAllUserSessionCaches = async () => {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && (key.startsWith('hyperpos_') || key.startsWith('flowpos_') || key.startsWith('fps_swr_'))) {
-        // استثناء إعدادات اللغة والثيم والحساب المحفوظة الضرورية
+        // استثناء إعدادات اللغة والثيم والحساب وبصمة الجهاز المحفوظة الضرورية
         if (
           key !== 'hyperpos_language' &&
           key !== 'hyperpos_theme' &&
           key !== 'hyperpos_stay_logged_in' &&
           key !== 'hyperpos_setup_complete' &&
           key !== 'hyperpos_privacy_accepted' &&
-          key !== 'hyperpos_privacy_version'
+          key !== 'hyperpos_privacy_version' &&
+          key !== 'hyperpos_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند الخروج
+          key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
+          key !== 'flowpos_persistent_hardware_id' // 👈 حماية البصمة الاحتياطية الدائمة
         ) {
           keysToRemove.push(key);
         }

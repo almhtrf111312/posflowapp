@@ -252,7 +252,10 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           key !== 'hyperpos_setup_complete' &&
           key !== 'hyperpos_privacy_accepted' &&
           key !== 'hyperpos_privacy_version' &&
-          key !== 'hyperpos_recurring_expenses_v1') {
+          key !== 'hyperpos_recurring_expenses_v1' &&
+          key !== 'hyperpos_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند تغيير المستخدم
+          key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
+          key !== 'flowpos_persistent_hardware_id') { // 👈 حماية البصمة الاحتياطية الدائمة
         keysToRemove.push(key);
       }
     }

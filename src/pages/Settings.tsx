@@ -1406,7 +1406,7 @@ export default function Settings() {
         slot1Code,
         slot2Code,
         enabledCurrencies: { ...cleanEnabledCurrencies },
-        exchangeRates: { ...exchangeRates, ...cleanExchangeRates },
+        exchangeRates: { ...exchangeRates, ...cleanExchangeRates } as any,
         currencyNames: { ...cleanCurrencyNames },
         currencySymbols: { ...cleanCurrencySymbols },
         currencyDisplayMode: { ...currencyDisplayMode },

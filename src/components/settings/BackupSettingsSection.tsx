@@ -28,7 +28,7 @@ export interface BackupSettingsSectionProps {
   isSyncing: boolean;
   backups: any[];
   handleRestoreBackup: (backup: any) => void;
-  handleDeleteBackup: (id: string) => void;
+  handleDeleteBackup: (backup: any) => void;
   importInputRef: React.RefObject<HTMLInputElement | null>;
 }
 

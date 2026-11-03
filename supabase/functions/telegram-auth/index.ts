@@ -137,10 +137,10 @@ serve(async (req) => {
           botToken,
           chatId,
           "👋 مرحباً بك في بوت الخدمة الذاتية لنظام *Flow POS Pro*.\n\n" +
-          "🔐 يمكنك من هنا:\n" +
-          "1️⃣ استلام رموز استعادة كلمة المرور لحسابك فوراً.\n" +
-          "2️⃣ تصفير جهازك المسجل ونقل الحساب لهاتفك الجديد (مرة كل 5 أيام).\n\n" +
-          "📱 للبدء، اضغط على زر *«مشاركة رقم الهاتف للتحقق»* أدناه لربط حسابك:",
+            "🔐 يمكنك من هنا:\n" +
+            "1️⃣ استلام رموز استعادة كلمة المرور لحسابك فوراً.\n" +
+            "2️⃣ تصفير جهازك المسجل ونقل الحساب لهاتفك الجديد (مرة كل 5 أيام).\n\n" +
+            "📱 للبدء، اضغط على زر *«مشاركة رقم الهاتف للتحقق»* أدناه لربط حسابك:",
           {
             keyboard: [
               [{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }],
@@ -148,7 +148,7 @@ serve(async (req) => {
             ],
             resize_keyboard: true,
             one_time_keyboard: false,
-          }
+          },
         );
         return new Response("OK", { status: 200 });
       }
@@ -156,11 +156,11 @@ serve(async (req) => {
       // -------------------------------------------------------------
       // أمر تصفير الجهاز: /reset_device أو الضغط على زر الكيبورد
       // -------------------------------------------------------------
-      const isResetCmd = typeof message.text === "string" && (
-        message.text.trim().startsWith("/reset_device") ||
-        message.text.includes("إعادة تعيين جهازي") ||
-        message.text.trim() === "/reset"
-      );
+      const isResetCmd =
+        typeof message.text === "string" &&
+        (message.text.trim().startsWith("/reset_device") ||
+          message.text.includes("إعادة تعيين جهازي") ||
+          message.text.trim() === "/reset");
 
       if (isResetCmd) {
         console.log(`[TelegramAuth] Reset device requested from chat ${chatId}`);
@@ -177,51 +177,60 @@ serve(async (req) => {
             botToken,
             chatId,
             "⚠️ *حسابك غير مربوط بالبوت بعد*:\n\n" +
-            "يرجى الضغط أولاً على *«مشاركة رقم الهاتف للتحقق»* أو إرسال /start لربط حسابك برقم الهاتف المسجل في النظام، ثم طلب تصفير الجهاز.",
+              "يرجى الضغط أولاً على *«مشاركة رقم الهاتف للتحقق»* أو إرسال /start لربط حسابك برقم الهاتف المسجل في النظام، ثم طلب تصفير الجهاز.",
             {
-              keyboard: [
-                [{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }],
-              ],
+              keyboard: [[{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }]],
               resize_keyboard: true,
-            }
+            },
           );
           return new Response("OK", { status: 200 });
         }
 
         // 2. استدعاء دالة الـ SQL المحمية الخاضعة لقيد الـ 5 أيام
-        const { data: resetRes, error: rpcErr } = await serviceClient.rpc('request_device_reset_secure', {
-          p_user_id: profile.user_id
+        const { data: resetRes, error: rpcErr } = await serviceClient.rpc("request_device_reset_secure", {
+          p_user_id: profile.user_id,
         });
 
         if (rpcErr || !resetRes) {
           await sendTelegramMessage(
             botToken,
             chatId,
-            "❌ حدث خطأ مؤقت في الاتصال بقاعدة البيانات أثناء تصفير الجهاز. يرجى المحاولة لاحقاً أو التواصل مع المطور."
+            "❌ حدث خطأ مؤقت في الاتصال بقاعدة البيانات أثناء تصفير الجهاز. يرجى المحاولة لاحقاً أو التواصل مع المطور.",
           );
           return new Response("OK", { status: 200 });
         }
 
-        // 3. في حال كان الحساب مقيداً بمهلة الـ 5 أيام
+        // 3. رسالة واضحة بحسب نتيجة الدالة: مهلة أمنية أم غياب ترخيص أم خطأ آخر
         if (!resetRes.success) {
-          await sendTelegramMessage(
-            botToken,
-            chatId,
-            `⏳ *تنبيه أمني - قيود الترخيص*:\n\n` +
-            `${resetRes.error}\n\n` +
-            `⚠️ حماية لحسابك، يُسمح بتغيير الهاتف مرة واحدة كل 5 أيام. إذا كنت بحاجة ماسة للنقل الفوري تواصل مع المطور مباشرة.`
-          );
+          const accountName = profile.full_name || "المستخدم";
+          const cooldown = resetRes.cooldown === true;
+
+          const message = cooldown
+            ? `⏳ *تعذّر نقل الحساب مؤقتاً*\n\n` +
+              `الحساب: *${accountName}*\n\n` +
+              `${resetRes.error}\n\n` +
+              `🛡️ لحماية الحساب، يُسمح بفك ارتباط الجهاز مرة واحدة كل 5 أيام. ` +
+              `إذا كان النقل ضرورياً قبل انتهاء المهلة، تواصل مع إدارة النظام.`
+            : `⚠️ *تعذّر فك ارتباط الجهاز*\n\n` +
+              `الحساب: *${accountName}*\n\n` +
+              `${resetRes.error}\n\n` +
+              `ℹ️ هذه الرسالة لا تعني بالضرورة وجود مهلة 5 أيام. ` +
+              `تحقق من وجود ترخيص فعال للحساب أو تواصل مع إدارة النظام.`;
+
+          await sendTelegramMessage(botToken, chatId, message);
           return new Response("OK", { status: 200 });
         }
 
-        // 4. إشعار النجاح وفك الارتباط
+        // 4. رسالة نجاح توضح الحساب الذي تم فك ارتباطه
         await sendTelegramMessage(
           botToken,
           chatId,
-          `✅ *تمت إعادة تعيين جهازك بنجاح!*\n\n` +
-          `أهلاً بك يا *${profile.full_name || 'العميل'}*، تم فك ارتباط جهازك السابق في نظام *Flow POS Pro*.\n\n` +
-          `📱 يمكنك الآن فتح التطبيق وتسجيل الدخول من هاتفك الجديد مباشرة.`
+          `✅ *تم فك ارتباط الجهاز بنجاح!*\n\n` +
+            `الحساب: *${profile.full_name || "المستخدم"}*\n\n` +
+            `تم إلغاء ربط الجهاز السابق لهذا الحساب. يمكنك الآن فتح التطبيق ` +
+            `وتسجيل الدخول من هاتفك الجديد، وسيُربط الترخيص بهذا الجهاز عند أول دخول ناجح.`,
         );
+
         return new Response("OK", { status: 200 });
       }
       // Case B: User shared contact

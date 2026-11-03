@@ -349,14 +349,12 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'recorded_at', 'is_reversed', 'reversed_at', 'created_at'
   ],
   cash_shifts: [
-    'id', 'user_id', 'cashier_id', 'cashier_name', 'opening_cash', 'closing_cash',
-    'actual_cash', 'difference', 'opening_time', 'closing_time', 'status', 'notes',
-    'total_sales', 'total_cash_sales', 'total_debt_sales', 'total_expenses',
-    'total_refunds', 'created_at', 'updated_at'
+    'id', 'user_id', 'cashier_id', 'cashier_name', 'opened_at', 'closed_at',
+    'opening_balance', 'expected_balance', 'actual_balance', 'variance',
+    'variance_reason', 'reconciliation_status', 'notes', 'created_at', 'updated_at'
   ],
   shift_transactions: [
-    'id', 'user_id', 'shift_id', 'type', 'amount', 'notes', 'transaction_time',
-    'invoice_id', 'expense_id', 'debt_payment_id', 'created_at'
+    'id', 'user_id', 'shift_id', 'type', 'amount', 'reference_id', 'notes', 'created_at'
   ],
   purchase_invoices: [
     'id', 'user_id', 'invoice_number', 'supplier_name', 'supplier_company', 'invoice_date',
@@ -366,22 +364,32 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
   ],
   purchase_invoice_items: [
     'id', 'invoice_id', 'product_id', 'product_name', 'barcode', 'category',
-    'quantity', 'cost_price', 'sale_price', 'total_cost', 'created_at'
+    'quantity', 'cost_price', 'cost_price_before', 'sale_price', 'total_cost', 'created_at'
   ],
   customers: [
-    'id', 'user_id', 'name', 'phone', 'email', 'address', 'notes', 'balance',
-    'total_spent', 'total_invoices', 'last_purchase_date', 'created_at', 'updated_at'
+    'id', 'user_id', 'cashier_id', 'name', 'phone', 'email', 'address',
+    'total_debt', 'total_purchases', 'invoice_count', 'last_purchase', 'created_at', 'updated_at'
   ],
   debts: [
-    'id', 'user_id', 'customer_id', 'customer_name', 'invoice_id', 'invoice_number',
-    'total_debt', 'remaining_debt', 'status', 'due_date', 'notes', 'created_at', 'updated_at'
+    'id', 'user_id', 'cashier_id', 'customer_name', 'customer_phone', 'invoice_id',
+    'total_debt', 'total_paid', 'remaining_debt', 'status', 'due_date', 'notes',
+    'is_cash_debt', 'created_at', 'updated_at'
   ],
   expenses: [
-    'id', 'user_id', 'title', 'amount', 'category', 'date', 'notes', 'payment_method',
-    'cashier_id', 'cashier_name', 'created_at', 'updated_at'
+    'id', 'user_id', 'cashier_id', 'expense_type', 'amount', 'description',
+    'distributions', 'date', 'notes', 'status', 'is_reversed', 'reversed_at',
+    'reversed_by', 'reversed_reason', 'reversal_reason', 'created_at'
   ],
   categories: [
-    'id', 'user_id', 'name', 'color', 'icon', 'parent_id', 'sort_order', 'created_at', 'updated_at'
+    'id', 'user_id', 'name', 'created_at'
+  ],
+  maintenance_services: [
+    'id', 'user_id', 'customer_name', 'customer_phone', 'description',
+    'service_price', 'parts_cost', 'profit', 'payment_type', 'status', 'created_at'
+  ],
+  activity_log: [
+    'id', 'user_id', 'actor_id', 'actor_name', 'actor_role', 'action_type',
+    'description', 'entity_id', 'entity_name', 'entity_type', 'metadata', 'created_at'
   ],
   partners: [
     'id', 'user_id', 'name', 'phone', 'email', 'percentage', 'share_percentage', 'notes',
@@ -569,9 +577,10 @@ export async function upsertToSupabase<T = unknown>(
   }
 
   try {
+    const sanitized = filterTablePayload(tableName, data);
     const { data: upserted, error } = await sb
       .from(tableName)
-      .upsert({ ...data, user_id: ownerId }, { onConflict: conflictColumn })
+      .upsert({ ...sanitized, user_id: ownerId }, { onConflict: conflictColumn })
       .select()
       .single();
 

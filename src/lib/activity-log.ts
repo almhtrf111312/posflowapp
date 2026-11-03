@@ -149,6 +149,22 @@ export function addActivityLog(
   logs.unshift(log); // Add to beginning
   saveActivityLogs(logs);
 
+  // رفع صامت في الخلفية لجدول activity_log ليتمكن المالك من مراجعة السجل من أي جهاز
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    import('./supabase-store').then(async ({ getOwnerIdForInsert }) => {
+      const ownerId = await getOwnerIdForInsert();
+      if (!ownerId) return;
+      await (supabase as any).from('activity_log').insert({
+        user_id: ownerId,
+        actor_id: userId && /^[0-9a-f-]{36}$/i.test(userId) ? userId : null,
+        actor_name: userName,
+        action_type: type,
+        description,
+        metadata: (details ? { ...details, deviceInfo: log.deviceInfo } : { deviceInfo: log.deviceInfo }) as any,
+      });
+    }).catch(() => {});
+  }
+
   return log;
 }
 

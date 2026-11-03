@@ -423,6 +423,22 @@ export const recordPaymentCloud = async (
   }
   const opId = operationId || `debtpay_${debtId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const amt = round8(amount);
+
+  // تسجيل حركة النقدية في الصندوق للوردية النشطة (تدعم الأونلاين والأوفلاين تلقائياً)
+  if (method === 'cash') {
+    import('./cashbox-cloud').then(({ syncActiveShiftTransactionCloud }) => {
+      void syncActiveShiftTransactionCloud(
+        'debt_payment',
+        amt,
+        currency,
+        currencyAmount,
+        debtId,
+        'قبض دفعة دين',
+        exchangeRate
+      );
+    }).catch(() => {});
+  }
+
   const queuePayment = (): Debt | null => {
     addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method }, 10);
     const list = (debtsCache || loadDebtsLocally() || []).map(d => {
@@ -456,21 +472,7 @@ export const recordPaymentCloud = async (
     });
   }
 
-  // مزامنة حركة النقد سحابياً في جدول حركات الوردية
-  if (method === 'cash') {
-    try {
-      const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
-      await syncActiveShiftTransactionCloud(
-        'debt_payment',
-        amt,
-        currency,
-        currencyAmount,
-        debtId,
-        `تسديد دين للعميل ${fresh?.customerName || ''}`,
-        exchangeRate
-      );
-    } catch { /* silent */ }
-  }
+
 
   if (fresh) return fresh;
   return {

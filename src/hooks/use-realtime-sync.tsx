@@ -21,9 +21,12 @@ const SYNC_TABLES = [
   { name: 'warehouses', event: EVENTS.WAREHOUSES_UPDATED },
   { name: 'stock_transfers', event: EVENTS.STOCK_TRANSFERS_UPDATED },
   { name: 'stock_movements', event: EVENTS.PRODUCTS_UPDATED },
-  { name: 'purchases', event: EVENTS.PURCHASES_UPDATED },
+  { name: 'purchase_invoices', event: EVENTS.PURCHASES_UPDATED },
   { name: 'maintenance_services', event: EVENTS.MAINTENANCE_UPDATED },
   { name: 'recurring_expenses', event: EVENTS.RECURRING_EXPENSES_UPDATED },
+  { name: 'cash_shifts', event: EVENTS.CASH_SHIFTS_UPDATED },
+  { name: 'shift_transactions', event: EVENTS.CASHBOX_UPDATED },
+  { name: 'profit_records', event: EVENTS.PROFITS_UPDATED },
 ];
 
 export function useRealtimeSync() {

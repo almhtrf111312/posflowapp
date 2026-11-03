@@ -74,6 +74,122 @@ interface RepairRequest {
 
 const SERVICES_STORAGE_KEY = 'hyperpos_services_v1';
 
+// Helper to generate standard UUID
+const generateServiceUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+interface CloudMaintenanceRow {
+  id: string;
+  user_id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  description: string | null;
+  parts_cost: number | null;
+  payment_type: string | null;
+  profit: number | null;
+  service_price: number | null;
+  status: string | null;
+  created_at: string | null;
+}
+
+function requestToCloudPayload(req: RepairRequest) {
+  const meta = {
+    deviceType: req.deviceType,
+    deviceModel: req.deviceModel,
+    issue: req.issue,
+    diagnosis: req.diagnosis,
+    technician: req.technician,
+    estimatedDate: req.estimatedDate,
+    notes: req.notes,
+    completedAt: req.completedAt,
+    deliveredAt: req.deliveredAt,
+    amountReceived: req.amountReceived,
+    estimatedCost: req.estimatedCost,
+    finalCost: req.finalCost,
+    createdById: req.createdById,
+    createdByName: req.createdByName,
+  };
+
+  return {
+    id: req.id,
+    customer_name: req.customerName,
+    customer_phone: req.customerPhone || null,
+    description: JSON.stringify(meta),
+    service_price: req.finalCost ?? req.estimatedCost ?? 0,
+    parts_cost: req.partsCost ?? 0,
+    profit: req.profit ?? 0,
+    payment_type: req.paymentType || null,
+    status: req.status,
+    created_at: req.createdAt ? (req.createdAt.includes('T') ? req.createdAt : `${req.createdAt}T00:00:00.000Z`) : new Date().toISOString(),
+  };
+}
+
+function cloudRowToRequest(row: CloudMaintenanceRow): RepairRequest {
+  let meta: any = {};
+  if (row.description) {
+    try {
+      meta = JSON.parse(row.description);
+    } catch {
+      meta = { issue: row.description };
+    }
+  }
+
+  return {
+    id: row.id,
+    customerName: row.customer_name || 'عميل',
+    customerPhone: row.customer_phone || '',
+    deviceType: meta.deviceType || 'هاتف',
+    deviceModel: meta.deviceModel || '',
+    issue: meta.issue || '',
+    diagnosis: meta.diagnosis,
+    estimatedCost: meta.estimatedCost ?? (row.service_price !== null ? Number(row.service_price) : undefined),
+    finalCost: meta.finalCost ?? (row.service_price !== null ? Number(row.service_price) : undefined),
+    status: (row.status as RepairRequest['status']) || 'pending',
+    createdAt: row.created_at ? row.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+    estimatedDate: meta.estimatedDate,
+    completedAt: meta.completedAt,
+    notes: meta.notes,
+    technician: meta.technician,
+    partsCost: row.parts_cost !== null ? Number(row.parts_cost) : undefined,
+    amountReceived: meta.amountReceived ?? (row.service_price !== null ? Number(row.service_price) : undefined),
+    profit: row.profit !== null ? Number(row.profit) : undefined,
+    paymentType: (row.payment_type as 'cash' | 'debt') || undefined,
+    deliveredAt: meta.deliveredAt,
+    createdById: meta.createdById,
+    createdByName: meta.createdByName,
+  };
+}
+
+const syncServiceToCloud = async (req: RepairRequest) => {
+  const payload = requestToCloudPayload(req);
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    const { addToQueue } = await import('@/lib/sync-queue');
+    addToQueue('maintenance_upsert', payload);
+    return;
+  }
+
+  try {
+    const { upsertToSupabase } = await import('@/lib/supabase-store');
+    const res = await upsertToSupabase('maintenance_services', payload);
+    if (!res) {
+      const { addToQueue } = await import('@/lib/sync-queue');
+      addToQueue('maintenance_upsert', payload);
+    }
+  } catch {
+    const { addToQueue } = await import('@/lib/sync-queue');
+    addToQueue('maintenance_upsert', payload);
+  }
+};
+
+
 // Load services from localStorage
 const loadServices = (): RepairRequest[] => {
   try {
@@ -138,6 +254,49 @@ export default function Services() {
   useEffect(() => {
     saveServices(requests);
   }, [requests]);
+
+  // Cloud sync: fetch & merge on mount and on EVENTS.MAINTENANCE_UPDATED
+  useEffect(() => {
+    const fetchCloudServices = async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      try {
+        const { fetchFromSupabase } = await import('@/lib/supabase-store');
+        const rows = await fetchFromSupabase<CloudMaintenanceRow>('maintenance_services', {
+          column: 'created_at',
+          ascending: false,
+        });
+        if (rows && rows.length > 0) {
+          setRequests(prev => {
+            const byId = new Map<string, RepairRequest>();
+            for (const r of prev) {
+              byId.set(r.id, r);
+            }
+            for (const row of rows) {
+              const req = cloudRowToRequest(row);
+              byId.set(req.id, req);
+            }
+            const merged = Array.from(byId.values()).sort((a, b) =>
+              (b.createdAt || '').localeCompare(a.createdAt || '')
+            );
+            saveServices(merged);
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn('[Services] Cloud fetch skipped:', err);
+      }
+    };
+
+    void fetchCloudServices();
+
+    const handleMaintenanceUpdate = () => {
+      void fetchCloudServices();
+    };
+    window.addEventListener(EVENTS.MAINTENANCE_UPDATED, handleMaintenanceUpdate);
+    return () => {
+      window.removeEventListener(EVENTS.MAINTENANCE_UPDATED, handleMaintenanceUpdate);
+    };
+  }, []);
 
   // Dialogs & Views
   const [activeView, setActiveView] = useState<'list' | 'add' | 'edit'>('list');
@@ -228,7 +387,7 @@ export default function Services() {
     const deviceLabel = deviceTypes.find(d => d.key === formData.deviceType)?.label || formData.deviceType;
 
     const newRequest: RepairRequest = {
-      id: `REP_${Date.now()}`,
+      id: generateServiceUUID(),
       customerName: formData.customerName,
       customerPhone: formData.customerPhone,
       deviceType: deviceLabel,
@@ -246,6 +405,7 @@ export default function Services() {
     };
 
     setRequests([newRequest, ...requests]);
+    void syncServiceToCloud(newRequest);
     setShowAddDialog(false);
     resetForm();
     toast.success(t('services.requestAdded'));
@@ -276,6 +436,20 @@ export default function Services() {
         }
         : r
     ));
+    const updatedReq: RepairRequest = {
+      ...selectedRequest,
+      customerName: formData.customerName,
+      customerPhone: formData.customerPhone,
+      deviceType: deviceLabel,
+      deviceModel: formData.deviceModel,
+      issue: formData.issue,
+      diagnosis: formData.diagnosis || undefined,
+      estimatedCost: formData.estimatedCost || undefined,
+      estimatedDate: formData.estimatedDate || undefined,
+      notes: formData.notes || undefined,
+      technician: formData.technician || undefined,
+    };
+    void syncServiceToCloud(updatedReq);
     setShowEditDialog(false);
     setSelectedRequest(null);
     resetForm();
@@ -285,9 +459,11 @@ export default function Services() {
   const handleRefundRequest = () => {
     if (!selectedRequest) return;
 
+    const updatedRefund: RepairRequest = { ...selectedRequest, status: 'refunded' as const };
     setRequests(requests.map(r =>
-      r.id === selectedRequest.id ? { ...r, status: 'refunded' as const } : r
+      r.id === selectedRequest.id ? updatedRefund : r
     ));
+    void syncServiceToCloud(updatedRefund);
     setShowDeleteDialog(false);
     setSelectedRequest(null);
     toast.success('تم استرداد الطلب بنجاح');
@@ -312,9 +488,11 @@ export default function Services() {
       updates.completedAt = new Date().toISOString().split('T')[0];
     }
 
+    const updatedStatusReq: RepairRequest = { ...request, ...updates };
     setRequests(requests.map(r =>
-      r.id === request.id ? { ...r, ...updates } : r
+      r.id === request.id ? updatedStatusReq : r
     ));
+    void syncServiceToCloud(updatedStatusReq);
     toast.success(t('services.statusUpdated').replace('{status}', statusConfig[newStatus].label));
   };
 
@@ -333,9 +511,11 @@ export default function Services() {
       finalCost: deliveryData.amountReceived,
     };
 
+    const updatedDeliveryReq: RepairRequest = { ...selectedRequest, ...updates };
     setRequests(requests.map(r =>
-      r.id === selectedRequest.id ? { ...r, ...updates } : r
+      r.id === selectedRequest.id ? updatedDeliveryReq : r
     ));
+    void syncServiceToCloud(updatedDeliveryReq);
 
     setShowDeliveryDialog(false);
     setSelectedRequest(null);

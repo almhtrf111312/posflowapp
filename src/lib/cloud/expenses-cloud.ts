@@ -394,6 +394,22 @@ export const addExpenseCloud = async (expenseData: {
 
 // Delete or reverse expense
 export const deleteExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم'): Promise<boolean> => {
+  if (!navigator.onLine) {
+    addToQueue('expense_reverse', {
+      id,
+      reason,
+      reversed_at: new Date().toISOString(),
+    });
+    try { removeOperatingExpense(id); } catch { /* noop */ }
+    invalidateExpensesCache();
+    const existing = expensesCache || loadExpensesLocally() || [];
+    const list = existing.filter(e => e.id !== id);
+    expensesCache = list;
+    saveExpensesLocally(list);
+    emitEvent(EVENTS.EXPENSES_UPDATED, null);
+    return true;
+  }
+
   const expenses = await loadExpensesCloud();
   const expense = expenses.find(e => e.id === id);
   

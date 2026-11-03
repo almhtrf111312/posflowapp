@@ -115,8 +115,12 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       if (data._operation === 'product_add') {
         const product = data.product;
         if (!product || typeof product !== 'object') throw new Error('Invalid offline product');
+        const ownerId = await getOwnerIdForInsert();
+        if (!ownerId) throw new Error('No owner id');
         const cleanProduct = filterTablePayload('products', product as Record<string, unknown>);
-        return assertSuccess(sb.from('products').insert(cleanProduct));
+        return assertSuccess(
+          sb.from('products').upsert({ ...cleanProduct, user_id: ownerId }, { onConflict: 'id' })
+        );
       }
       if (data._operation === 'product_update') {
         if (!data.id || !data.updates || typeof data.updates !== 'object') throw new Error('Invalid product update');
@@ -155,6 +159,44 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
     case 'recurring_expense_delete': {
       if (!data.id) throw new Error('Missing recurring expense id');
       return assertSuccess(sb.from('recurring_expenses').delete().eq('id', String(data.id)));
+    }
+    case 'category_create': {
+      const ownerId = await getOwnerIdForInsert();
+      if (!ownerId) throw new Error('No owner id');
+      const cleanData = filterTablePayload('categories', data);
+      return assertSuccess(sb.from('categories').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id', ignoreDuplicates: true }));
+    }
+    case 'category_update': {
+      const { id, ...updates } = data;
+      if (!id) throw new Error('Missing category id');
+      const cleanUpdates = filterTablePayload('categories', updates);
+      return assertSuccess(sb.from('categories').update(cleanUpdates).eq('id', String(id)));
+    }
+    case 'category_delete': {
+      if (!data.id) throw new Error('Missing category id');
+      return assertSuccess(sb.from('categories').delete().eq('id', String(data.id)));
+    }
+    case 'expense_reverse': {
+      if (!data.id) throw new Error('Missing expense id');
+      return assertSuccess(
+        sb.from('expenses').update({
+          is_reversed: true,
+          reversed_at: String(data.reversed_at || new Date().toISOString()),
+          reversed_reason: String(data.reason || 'تراجع بواسطة المستخدم'),
+        }).eq('id', String(data.id))
+      );
+    }
+    case 'maintenance_upsert': {
+      const ownerId = await getOwnerIdForInsert();
+      if (!ownerId) throw new Error('No owner id');
+      const cleanData = filterTablePayload('maintenance_services', data);
+      return assertSuccess(
+        sb.from('maintenance_services').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id' })
+      );
+    }
+    case 'maintenance_delete': {
+      if (!data.id) throw new Error('Missing maintenance service id');
+      return assertSuccess(sb.from('maintenance_services').delete().eq('id', String(data.id)));
     }
     default:
       throw new Error(`Unsupported sync operation: ${operation.type}`);

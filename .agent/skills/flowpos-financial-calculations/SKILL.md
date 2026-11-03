@@ -28,6 +28,7 @@ When a formula in the reference conflicts with executed code, the code is correc
 6. **Tax is not profit:** tax collected for the government is never counted as company profit or cost.
 7. **Discount allocation:** a discount reduces revenue and profit proportionally across lines, as described in section 5.
 8. **Negative and zero guards:** division by a zero subtotal must return zero (the SQL allocation uses a guard for `subtotal > 0`).
+9. **Autonomous Calculator MCP Verification:** Whenever a task reviews, edits, or tests financial calculations, tax inclusive/exclusive extractions, discounts, or profit allocations, the agent MUST use the `accounting-calculator` MCP tool (`decimal.js` / `ROUND_HALF_UP`) to eliminate floating-point guessing and verify exact mathematical parity. Non-financial tasks (UI styling, navigation, button labels) automatically bypass this tool.
 
 ## 3. Sales totals (formulas 1.1 to 1.5 of the reference)
 

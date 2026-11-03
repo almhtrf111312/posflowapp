@@ -30,6 +30,7 @@ The audit validates that all changes conform to FlowPOS Pro's offline-first arch
 * [ ] **Base Currency Rule:** USD (`USD`) is the immutable system accounting base. All stored ledger records, profit distributions, and cost prices are pegged to USD.
 * [ ] **Multi-Currency Display:** Never hardcode `$` or currency symbols in invoices or receipts. Always resolve dynamically via `resolveInvoiceCurrencySymbol` or `formatCurrency(amount, currency)`.
 * [ ] **Exchange Rate Rounding:** Conversion calculations must respect decimal limits per currency (e.g. IQD has 0 decimals, USD has 2 decimals).
+* [ ] **Accounting Calculator MCP Verification:** Whenever reviewing or modifying code touching money, rates, taxes, discounts, or profit allocations, the agent MUST verify the math with the `accounting-calculator` tool (`decimal.js` / `ROUND_HALF_UP`) to prevent floating-point errors. Non-financial tasks automatically bypass this check.
 
 ### 3. Hardware & Platform Runtime Safety
 * [ ] **Capacitor Guards:** Every call to `@capacitor/*` (Camera, Barcode, Filesystem, Share) must be wrapped in `if (Capacitor.isNativePlatform())` or fallback gracefully to web alternatives.

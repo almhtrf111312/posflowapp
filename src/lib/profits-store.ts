@@ -342,3 +342,63 @@ export const clearAllProfitRecords = (): void => {
   localStorage.removeItem(EXPENSE_RECORDS_KEY);
   emitEvent(EVENTS.PROFITS_UPDATED, []);
 };
+
+/**
+ * جلب سجلات الأرباح والمصروفات من السحابة ودمجها في الكاش المحلي
+ * لضمان تطابق صافي الربح والتقارير بين الهاتف والكمبيوتر
+ */
+export const syncProfitRecordsFromCloud = async (): Promise<void> => {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+  try {
+    const { fetchFromSupabase } = await import('./supabase-store');
+    interface CloudProfitRow {
+      id: string;
+      invoice_id: string;
+      gross_profit: number;
+      cogs: number;
+      revenue: number;
+      recorded_at: string;
+      created_at: string;
+      is_reversed: boolean;
+    }
+
+    const cloudRows = await fetchFromSupabase<CloudProfitRow>('profit_records', {
+      column: 'recorded_at',
+      ascending: false,
+    });
+
+    if (cloudRows && cloudRows.length > 0) {
+      const localRecords = loadProfitRecords();
+      const bySaleId = new Map<string, ProfitRecord>();
+
+      // السجلات المحلية أولاً ثم السحابية النشطة غير المستردة
+      for (const r of localRecords) {
+        bySaleId.set(r.saleId, r);
+      }
+
+      for (const row of cloudRows) {
+        if (row.is_reversed) {
+          bySaleId.delete(row.invoice_id);
+          continue;
+        }
+        const dateStr = (row.recorded_at || row.created_at || new Date().toISOString()).split('T')[0];
+        bySaleId.set(row.invoice_id, {
+          id: row.id,
+          saleId: row.invoice_id,
+          date: dateStr,
+          grossProfit: roundCurrency(Number(row.gross_profit) || 0),
+          cogs: roundCurrency(Number(row.cogs) || 0),
+          saleTotal: roundCurrency(Number(row.revenue) || 0),
+          createdAt: row.created_at || new Date().toISOString(),
+        });
+      }
+
+      const merged = Array.from(bySaleId.values()).sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt)
+      );
+      saveProfitRecords(merged);
+    }
+  } catch (err) {
+    console.warn('[ProfitsStore] Cloud sync skipped:', err);
+  }
+};

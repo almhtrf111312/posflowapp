@@ -8,6 +8,7 @@ import {
 } from '../supabase-store';
 import { emitEvent, EVENTS } from '../events';
 import { isGuestDemoMode } from '../demo-data';
+import { addToQueue } from '../sync-queue';
 
 export interface CloudCategory {
   id: string;
@@ -247,6 +248,18 @@ export const deduplicateCategoriesCloud = async (): Promise<{ removed: number; r
   return { removed: duplicateIds.length, remaining: unique.length };
 };
 
+
+const generateCategoryUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 // Add category
 export const addCategoryCloud = async (name: string): Promise<Category | null> => {
   if (isGuestDemoMode()) {
@@ -271,6 +284,21 @@ export const addCategoryCloud = async (name: string): Promise<Category | null> =
     return duplicate;
   }
 
+  if (!navigator.onLine) {
+    const newCat: Category = {
+      id: generateCategoryUUID(),
+      name: trimmedName,
+      createdAt: new Date().toISOString(),
+    };
+    const current = categoriesCache || loadCategoriesLocally() || [];
+    categoriesCache = [...current.filter(c => c.id !== newCat.id), newCat];
+    cacheTimestamp = Date.now();
+    saveCategoriesLocally(categoriesCache);
+    addToQueue('category_create', { id: newCat.id, name: trimmedName });
+    emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+    return newCat;
+  }
+
   const inserted = await insertToSupabase<CloudCategory>('categories', { name: trimmedName });
   
   if (inserted) {
@@ -284,7 +312,19 @@ export const addCategoryCloud = async (name: string): Promise<Category | null> =
     return newCat;
   }
   
-  return null;
+  // Fallback if insertToSupabase failed
+  const newCat: Category = {
+    id: generateCategoryUUID(),
+    name: trimmedName,
+    createdAt: new Date().toISOString(),
+  };
+  const current = categoriesCache || loadCategoriesLocally() || [];
+  categoriesCache = [...current.filter(c => c.id !== newCat.id), newCat];
+  cacheTimestamp = Date.now();
+  saveCategoriesLocally(categoriesCache);
+  addToQueue('category_create', { id: newCat.id, name: trimmedName });
+  emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+  return newCat;
 };
 
 // Update category
@@ -299,6 +339,16 @@ export const updateCategoryCloud = async (id: string, name: string): Promise<boo
     return false;
   }
 
+  if (!navigator.onLine) {
+    const current = categoriesCache || loadCategoriesLocally() || [];
+    categoriesCache = current.map(c => c.id === id ? { ...c, name: trimmedName } : c);
+    cacheTimestamp = Date.now();
+    saveCategoriesLocally(categoriesCache);
+    addToQueue('category_update', { id, name: trimmedName });
+    emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+    return true;
+  }
+
   const success = await updateInSupabase('categories', id, { name: trimmedName });
   
   if (success) {
@@ -308,9 +358,17 @@ export const updateCategoryCloud = async (id: string, name: string): Promise<boo
     saveCategoriesLocally(categoriesCache);
 
     emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+    return true;
   }
-  
-  return success;
+
+  // Fallback if update failed
+  const current = categoriesCache || loadCategoriesLocally() || [];
+  categoriesCache = current.map(c => c.id === id ? { ...c, name: trimmedName } : c);
+  cacheTimestamp = Date.now();
+  saveCategoriesLocally(categoriesCache);
+  addToQueue('category_update', { id, name: trimmedName });
+  emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+  return true;
 };
 
 // Delete category
@@ -322,6 +380,17 @@ export const deleteCategoryCloud = async (id: string): Promise<boolean> => {
     emitEvent(EVENTS.CATEGORIES_UPDATED, null);
     return true;
   }
+
+  if (!navigator.onLine) {
+    const current = categoriesCache || loadCategoriesLocally() || [];
+    categoriesCache = current.filter(c => c.id !== id);
+    cacheTimestamp = Date.now();
+    saveCategoriesLocally(categoriesCache);
+    addToQueue('category_delete', { id });
+    emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+    return true;
+  }
+
   const success = await deleteFromSupabase('categories', id);
   
   if (success) {
@@ -331,9 +400,17 @@ export const deleteCategoryCloud = async (id: string): Promise<boolean> => {
     saveCategoriesLocally(categoriesCache);
 
     emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+    return true;
   }
-  
-  return success;
+
+  // Fallback if delete failed
+  const current = categoriesCache || loadCategoriesLocally() || [];
+  categoriesCache = current.filter(c => c.id !== id);
+  cacheTimestamp = Date.now();
+  saveCategoriesLocally(categoriesCache);
+  addToQueue('category_delete', { id });
+  emitEvent(EVENTS.CATEGORIES_UPDATED, null);
+  return true;
 };
 
 // Get local categories immediately (0ms, no network)

@@ -53,3 +53,8 @@ This document enshrines the **non-negotiable domain rules** for the FlowPOS Pro 
 * **Application:**
   * Stable cashier-facing terms (e.g., "فاتورة نقدية", "بيع آجل", "طباعة", "مشاركة", "إلغاء", "تسجيل دفعة", "حفظ") are locked to preserve cashier muscle memory and training.
   * Modifications to translation dictionaries (`i18n.ts`) must only add new missing keys and must never arbitrarily overwrite established keys without explicit user request.
+
+### 9. Accounting Precision & Calculator MCP Protocol
+* **Rule:** Floating-point approximations in financial and accounting logic are strictly forbidden. All monetary operations must be anchored in exact decimal arithmetic (`round8`, `roundCurrency`, `Decimal.js` with `ROUND_HALF_UP`).
+* **Autonomous Review Trigger:** Whenever a task reviews, edits, or tests financial calculations, invoices, profit distributions, or debt settlements, the agent MUST activate the `accounting-calculator` MCP verification protocol.
+* **Smart Bypass:** If the task is non-financial (UI appearance, general layout, button text, routing), the agent automatically skips the accounting calculator to conserve tokens and speed up execution.

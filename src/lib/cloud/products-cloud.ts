@@ -870,11 +870,23 @@ export const addProductCloud = async (product: Omit<Product, 'id' | 'status'>): 
     emitEvent(EVENTS.PRODUCTS_UPDATED, null);
     return demoProduct;
   }
+  // Helper لتوليد UUID قياسي متوافق مع قاعدة البيانات ودالة البيع الذرية
+  const generateProductUUID = (): string => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
   const cloudData = toCloudProduct(product);
 
   // === OFFLINE SUPPORT ===
   if (!navigator.onLine) {
-    const tempId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tempId = generateProductUUID();
     const userId = getCurrentUserId() || 'offline';
     const now = new Date().toISOString();
 
@@ -897,12 +909,12 @@ export const addProductCloud = async (product: Omit<Product, 'id' | 'status'>): 
     const { addToQueue } = await import('../sync-queue');
     addToQueue('sale', {
       _operation: 'product_add',
-      product: { ...cloudData, user_id: userId },
+      product: { id: tempId, ...cloudData, user_id: userId },
       tempId,
     });
 
     emitEvent(EVENTS.PRODUCTS_UPDATED, null);
-    console.log('[addProductCloud] 📴 Saved offline, queued for sync:', tempId);
+    console.log('[addProductCloud] 📴 Saved offline with valid UUID, queued for sync:', tempId);
     return offlineProduct;
   }
   // === END OFFLINE SUPPORT ===
@@ -932,7 +944,7 @@ export const addProductCloud = async (product: Omit<Product, 'id' | 'status'>): 
     return newProduct;
   }
   // Fallback to local cache + sync-queue if direct cloud insert failed
-  const tempId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const tempId = generateProductUUID();
   const userId = getCurrentUserId() || 'offline';
   const offlineProduct: Product = {
     ...product,
@@ -950,7 +962,7 @@ export const addProductCloud = async (product: Omit<Product, 'id' | 'status'>): 
   const { addToQueue } = await import('../sync-queue');
   addToQueue('sale', {
     _operation: 'product_add',
-    product: { ...cloudData, user_id: userId },
+    product: { id: tempId, ...cloudData, user_id: userId },
     tempId,
   });
 

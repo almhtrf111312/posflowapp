@@ -14,6 +14,10 @@ import { loadPurchaseInvoicesCloud } from './purchase-invoices-cloud';
 import { loadCategoriesCloud } from './categories-cloud';
 import { loadExpensesCloud } from './expenses-cloud';
 import { loadWarehousesCloud } from './warehouses-cloud';
+import { loadProductsCloud } from './products-cloud';
+import { loadPartnersCloud } from './partners-cloud';
+import { loadCloudShifts } from './cashbox-cloud';
+import { syncProfitRecordsFromCloud } from '../profits-store';
 import { isGuestDemoMode } from '../demo-data';
 
 let isWarmingUp = false;
@@ -37,6 +41,7 @@ export const warmupAllCaches = async (force: boolean = false): Promise<void> => 
   try {
     // Run all preloaders concurrently in the background without blocking UI
     await Promise.allSettled([
+      loadProductsCloud().catch(e => console.warn('[CacheWarmup] Products preload error:', e)),
       loadInvoicesCloud().catch(e => console.warn('[CacheWarmup] Invoices preload error:', e)),
       loadCustomersCloud().catch(e => console.warn('[CacheWarmup] Customers preload error:', e)),
       loadDebtsCloud().catch(e => console.warn('[CacheWarmup] Debts preload error:', e)),
@@ -44,6 +49,9 @@ export const warmupAllCaches = async (force: boolean = false): Promise<void> => 
       loadCategoriesCloud().catch(e => console.warn('[CacheWarmup] Categories preload error:', e)),
       loadExpensesCloud().catch(e => console.warn('[CacheWarmup] Expenses preload error:', e)),
       loadWarehousesCloud().catch(e => console.warn('[CacheWarmup] Warehouses preload error:', e)),
+      loadPartnersCloud().catch(e => console.warn('[CacheWarmup] Partners preload error:', e)),
+      loadCloudShifts().catch(e => console.warn('[CacheWarmup] Shifts preload error:', e)),
+      syncProfitRecordsFromCloud().catch(e => console.warn('[CacheWarmup] Profits preload error:', e)),
     ]);
     console.log('[CacheWarmup] ✅ All tabs cached & ready for offline access');
   } catch (err) {

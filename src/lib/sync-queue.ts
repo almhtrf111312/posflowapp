@@ -42,7 +42,13 @@ export type OperationType =
   | 'store_settings_update' // Offline store & print settings update
   | 'recurring_expense_create'
   | 'recurring_expense_update'
-  | 'recurring_expense_delete';
+  | 'recurring_expense_delete'
+  | 'category_create'
+  | 'category_update'
+  | 'category_delete'
+  | 'expense_reverse'
+  | 'maintenance_upsert'
+  | 'maintenance_delete';
 
 export interface QueuedOperation {
   id: string;
@@ -433,6 +439,13 @@ export const processQueue = async (
         pending = [targetOp, ...pending.filter(op => op.id !== targetOperationId)];
       }
     }
+    // ضمان رفع المنتجات المضافة أوفلاين أولاً قبل فواتير البيع لتفادي تعليق الفواتير
+    pending = pending.sort((a, b) => {
+      const aIsProdAdd = a.type === 'sale' && a.data?._operation === 'product_add' ? 0 : 1;
+      const bIsProdAdd = b.type === 'sale' && b.data?._operation === 'product_add' ? 0 : 1;
+      return aIsProdAdd - bIsProdAdd;
+    });
+
     console.log(`[SyncQueue] Processing ${pending.length} operations...`);
     
     for (const operation of pending) {

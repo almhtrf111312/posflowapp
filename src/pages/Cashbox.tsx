@@ -29,6 +29,7 @@ import {
   Shift,
 } from '@/lib/cashbox-store';
 import { EVENTS } from '@/lib/events';
+import { openShiftCloud, closeShiftCloud, loadCloudShifts } from '@/lib/cloud/cashbox-cloud';
 
 export default function Cashbox() {
   const { user, profile } = useAuth();
@@ -52,6 +53,37 @@ export default function Cashbox() {
     setCashboxState(loadCashboxState());
     setShifts(loadShifts());
     setActiveShift(getActiveShift());
+
+    // خلفي: دمج الورديات السحابية
+    loadCloudShifts().then((cloudShifts) => {
+      if (cloudShifts && cloudShifts.length > 0) {
+        setShifts(prev => {
+          const localIds = new Set(prev.map(s => s.id));
+          const newFromCloud = cloudShifts
+            .filter(cs => !localIds.has(cs.id))
+            .map(cs => ({
+              id: cs.id,
+              openedAt: cs.opened_at,
+              closedAt: cs.closed_at || undefined,
+              openingCash: Number(cs.opening_balance) || 0,
+              closingCash: cs.actual_balance !== null && cs.actual_balance !== undefined ? Number(cs.actual_balance) : undefined,
+              expectedCash: Number(cs.expected_balance) || 0,
+              discrepancy: cs.variance !== null && cs.variance !== undefined ? Number(cs.variance) : undefined,
+              userId: cs.cashier_id || cs.user_id || '',
+              userName: cs.cashier_name || 'كاشير',
+              status: (cs.closed_at ? 'closed' : 'open') as 'open' | 'closed',
+              salesTotal: 0,
+              expensesTotal: 0,
+              depositsTotal: 0,
+              withdrawalsTotal: 0,
+              cogsTotal: 0,
+              grossProfitTotal: 0,
+            }));
+          if (newFromCloud.length === 0) return prev;
+          return [...prev, ...newFromCloud].sort((a, b) => b.openedAt.localeCompare(a.openedAt));
+        });
+      }
+    }).catch(() => {});
   };
 
   useEffect(() => {
@@ -62,11 +94,13 @@ export default function Cashbox() {
     window.addEventListener(EVENTS.CASHBOX_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.SHIFTS_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.INVOICES_UPDATED, handleUpdate);
+    window.addEventListener(EVENTS.CASH_SHIFTS_UPDATED, handleUpdate);
 
     return () => {
       window.removeEventListener(EVENTS.CASHBOX_UPDATED, handleUpdate);
       window.removeEventListener(EVENTS.SHIFTS_UPDATED, handleUpdate);
       window.removeEventListener(EVENTS.INVOICES_UPDATED, handleUpdate);
+      window.removeEventListener(EVENTS.CASH_SHIFTS_UPDATED, handleUpdate);
     };
   }, []);
 
@@ -91,7 +125,15 @@ export default function Cashbox() {
     const userName = profile?.full_name || user?.email || 'مستخدم';
     const userId = user?.id || '';
 
-    openShift(amount, userId, userName);
+    const newShift = openShift(amount, userId, userName);
+    if (newShift?.id) {
+      void openShiftCloud({
+        shiftId: newShift.id,
+        cashierId: userId,
+        cashierName: userName,
+        openingBalance: amount,
+      });
+    }
 
     addActivityLog(
       'shift_opened',
@@ -119,6 +161,15 @@ export default function Cashbox() {
     if (!result) {
       toast.error('لا توجد وردية مفتوحة');
       return;
+    }
+
+    if (result.shift?.id) {
+      void closeShiftCloud({
+        shiftId: result.shift.id,
+        expectedBalance: result.shift.expectedCash || 0,
+        actualBalance: amount,
+        varianceReason: closingNotes || undefined,
+      });
     }
 
     const userName = profile?.full_name || user?.email || 'مستخدم';

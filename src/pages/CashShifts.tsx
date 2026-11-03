@@ -15,7 +15,7 @@ import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
 import { getEnabledCurrencies, toUsd, fromUsd, round8, roundForCurrency } from '@/lib/money-engine';
-import { openShiftCloud, closeShiftCloud } from '@/lib/cloud/cashbox-cloud';
+import { openShiftCloud, closeShiftCloud, loadCloudShifts } from '@/lib/cloud/cashbox-cloud';
 import { addActivityLog } from '@/lib/activity-log';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -120,6 +120,37 @@ export default function CashShifts() {
       const status = calculateShiftStatus(currentShift);
       setShiftStatus(status);
     }
+
+    // خلفي: دمج الورديات السحابية
+    loadCloudShifts().then((cloudShifts) => {
+      if (cloudShifts && cloudShifts.length > 0) {
+        setShifts(prev => {
+          const localIds = new Set(prev.map(s => s.id));
+          const newFromCloud = cloudShifts
+            .filter(cs => !localIds.has(cs.id))
+            .map(cs => ({
+              id: cs.id,
+              openedAt: cs.opened_at,
+              closedAt: cs.closed_at || undefined,
+              openingCash: Number(cs.opening_balance) || 0,
+              closingCash: cs.actual_balance !== null && cs.actual_balance !== undefined ? Number(cs.actual_balance) : undefined,
+              expectedCash: Number(cs.expected_balance) || 0,
+              discrepancy: cs.variance !== null && cs.variance !== undefined ? Number(cs.variance) : undefined,
+              userId: cs.cashier_id || cs.user_id || '',
+              userName: cs.cashier_name || 'كاشير',
+              status: (cs.closed_at ? 'closed' : 'open') as 'open' | 'closed',
+              salesTotal: 0,
+              expensesTotal: 0,
+              depositsTotal: 0,
+              withdrawalsTotal: 0,
+              cogsTotal: 0,
+              grossProfitTotal: 0,
+            }));
+          if (newFromCloud.length === 0) return prev;
+          return [...prev, ...newFromCloud].sort((a, b) => b.openedAt.localeCompare(a.openedAt));
+        });
+      }
+    }).catch(() => {});
   };
 
   useEffect(() => {

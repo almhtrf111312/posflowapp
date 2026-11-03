@@ -338,12 +338,12 @@ export function UsersTab() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">{t('settings.username')}</label>
+              <label className="text-sm font-medium">{t('settings.username' as any)}</label>
               <Input
                 ref={userNameInputRef}
                 value={userForm.name}
                 onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                placeholder={t('settings.username')}
+                placeholder={t('settings.username' as any)}
               />
             </div>
             {!selectedUser && (

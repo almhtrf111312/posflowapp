@@ -744,7 +744,7 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
 
   // 3. Fallback locally from activity log
   try {
-    const { getActivityLogs } = await import('@/lib/activity-log');
+    const { loadActivityLogs: getActivityLogs } = await import('@/lib/activity-log');
     const logs = getActivityLogs();
     const dayLogs = logs.filter(l => 
       (l.type === 'debt_payment' || l.type === 'debt_paid') &&

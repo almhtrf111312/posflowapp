@@ -580,9 +580,11 @@ export function SmartToast() {
 
               {/* السطر الثاني: التفاصيل الحقيقية للعملية والوصف الكامل دون قص */}
               {details.description && details.description !== details.operationName && (
-                <p className="text-[11px] sm:text-xs text-muted-foreground break-words whitespace-normal leading-relaxed">
-                  {details.description}
-                </p>
+                <div className="max-h-48 overflow-y-auto">
+                  <p className="text-[11px] sm:text-xs text-muted-foreground break-words whitespace-normal leading-relaxed">
+                    {details.description}
+                  </p>
+                </div>
               )}
 
               {/* تفاصيل إضافية: اسم الصنف، السعر، والحالة */}

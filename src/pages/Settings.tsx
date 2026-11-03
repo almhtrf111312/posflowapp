@@ -2747,13 +2747,12 @@ export default function Settings() {
       {/* Floating Action Buttons (FAB) موحد ومطابق للمظهر */}
       <div
         className={cn(
-          "fixed bottom-6 z-50 flex items-center gap-3 transition-[opacity,transform] duration-300 ease-in-out",
+          "fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-3 transition-[opacity,transform] duration-300 ease-in-out",
           isRTL ? "left-6" : "right-6",
           (hasUnsavedChanges || isSaveSuccess)
             ? "scale-100 opacity-100"
             : "scale-0 opacity-0 pointer-events-none"
         )}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <Button
           onClick={handleSaveSettings}

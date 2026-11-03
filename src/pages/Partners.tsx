@@ -685,27 +685,32 @@ export default function Partners() {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap gap-2 pt-3 md:pt-4 border-t border-border">
-              <Button variant="outline" size="sm" className="flex-1 h-8 md:h-9 text-xs md:text-sm" onClick={() => openViewDialog(partner)}>
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pt-3 md:pt-4 border-t border-border">
+              <Button variant="outline" size="sm" className="sm:flex-1 h-8 md:h-9 text-xs md:text-sm" onClick={() => openViewDialog(partner)}>
                 <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 {t('common.view')}
               </Button>
-              <Button size="sm" className="flex-1 h-8 md:h-9 bg-success hover:bg-success/90 text-success-foreground text-xs md:text-sm" onClick={() => openAddCapitalDialog(partner)}>
+              <Button size="sm" className="sm:flex-1 h-8 md:h-9 bg-success hover:bg-success/90 text-success-foreground text-xs md:text-sm" onClick={() => openAddCapitalDialog(partner)}>
                 <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 {t('partners.deposit')}
               </Button>
               {((partner.currentBalance || 0) > 0 || (partner.currentCapital || 0) > 0) && (
-                <Button size="sm" className="flex-1 h-8 md:h-9 bg-warning hover:bg-warning/90 text-warning-foreground text-xs md:text-sm" onClick={() => openWithdrawDialog(partner)}>
+                <Button size="sm" className="sm:flex-1 h-8 md:h-9 bg-warning hover:bg-warning/90 text-warning-foreground text-xs md:text-sm" onClick={() => openWithdrawDialog(partner)}>
                   <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   {t('partners.withdraw')}
                 </Button>
               )}
-              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9" onClick={() => openEditDialog(partner)}>
-                <Edit className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 text-destructive" onClick={() => openDeleteDialog(partner)}>
-                <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              </Button>
+              <div className={cn(
+                "flex items-center justify-end gap-1",
+                !((partner.currentBalance || 0) > 0 || (partner.currentCapital || 0) > 0) && "col-span-2 sm:col-span-1"
+              )}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9" onClick={() => openEditDialog(partner)} title={t('common.edit') || 'تعديل'}>
+                  <Edit className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-9 text-destructive" onClick={() => openDeleteDialog(partner)} title={t('common.delete') || 'حذف'}>
+                  <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         ))}
@@ -1067,7 +1072,7 @@ export default function Partners() {
                     </TabsTrigger>
                     <TabsTrigger value="capital" className="text-xs font-bold gap-1.5 data-[state=active]:bg-background">
                       <Wallet className="w-3.5 h-3.5 text-blue-500" />
-                      رأس المال والمسحوبات
+                      رأس المال
                     </TabsTrigger>
                   </TabsList>
 
@@ -1230,7 +1235,7 @@ export default function Partners() {
 
       {/* Withdraw Dialog */}
       <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArrowDownLeft className="w-5 h-5 text-warning" />
@@ -1357,7 +1362,7 @@ export default function Partners() {
 
       {/* Add Capital Dialog */}
       <Dialog open={showAddCapitalDialog} onOpenChange={setShowAddCapitalDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpRight className="w-5 h-5 text-success" />

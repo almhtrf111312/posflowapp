@@ -2554,7 +2554,7 @@ export default function POS() {
 
           onClick={() => handleSetCartOpen(true)}
 
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 
 
                      w-16 h-16 rounded-full 
 

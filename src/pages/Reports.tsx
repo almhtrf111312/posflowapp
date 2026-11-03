@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { usePageActivity } from '@/contexts/PageActivityContext';
 import {
@@ -65,16 +65,16 @@ import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/clou
 import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PartnerProfitDetailedReport } from '@/components/reports/PartnerProfitDetailedReport';
-import { ProfitTrendChart } from '@/components/reports/ProfitTrendChart';
-import { DistributorInventoryReport } from '@/components/reports/DistributorInventoryReport';
-import { DistributorCustodyValueReport } from '@/components/reports/DistributorCustodyValueReport';
-import { PurchaseInvoicesReport } from '@/components/reports/PurchaseInvoicesReport';
-import { DebtsReport } from '@/components/reports/DebtsReport';
-import { CashierPerformanceReport } from '@/components/reports/CashierPerformanceReport';
-import { MaintenanceReport } from '@/components/reports/MaintenanceReport';
-import { DailyClosingReport } from '@/components/reports/DailyClosingReport';
-import { LibraryReport } from '@/components/reports/LibraryReport';
+const PartnerProfitDetailedReport = lazy(() => import('@/components/reports/PartnerProfitDetailedReport').then(m => ({ default: m.PartnerProfitDetailedReport })));
+const ProfitTrendChart = lazy(() => import('@/components/reports/ProfitTrendChart').then(m => ({ default: m.ProfitTrendChart })));
+const DistributorInventoryReport = lazy(() => import('@/components/reports/DistributorInventoryReport').then(m => ({ default: m.DistributorInventoryReport })));
+const DistributorCustodyValueReport = lazy(() => import('@/components/reports/DistributorCustodyValueReport').then(m => ({ default: m.DistributorCustodyValueReport })));
+const PurchaseInvoicesReport = lazy(() => import('@/components/reports/PurchaseInvoicesReport').then(m => ({ default: m.PurchaseInvoicesReport })));
+const DebtsReport = lazy(() => import('@/components/reports/DebtsReport').then(m => ({ default: m.DebtsReport })));
+const CashierPerformanceReport = lazy(() => import('@/components/reports/CashierPerformanceReport').then(m => ({ default: m.CashierPerformanceReport })));
+const MaintenanceReport = lazy(() => import('@/components/reports/MaintenanceReport').then(m => ({ default: m.MaintenanceReport })));
+const DailyClosingReport = lazy(() => import('@/components/reports/DailyClosingReport').then(m => ({ default: m.DailyClosingReport })));
+const LibraryReport = lazy(() => import('@/components/reports/LibraryReport').then(m => ({ default: m.LibraryReport })));
 import { downloadJSON } from '@/lib/file-download';
 import { loadPurchaseInvoicesCloud, loadPurchaseInvoicesLocally } from '@/lib/cloud/purchase-invoices-cloud';
 import {
@@ -261,12 +261,13 @@ export default function Reports() {
   const loadCloudData = useCallback(async (isSilent = false) => {
     if (!isSilent) setIsRefreshingCloud(true);
     try {
-      const needCustomers = activeReport === 'customers' || !isSilent;
-      const needPartners = activeReport === 'partners' || activeReport === 'partner-detailed' || !isSilent;
-      const needCategories = activeReport === 'categories' || !isSilent;
-      const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing' || !isSilent;
-      const needDebts = activeReport === 'debts' || activeReport === 'daily-closing' || !isSilent;
-      const needPurchases = activeReport === 'purchases' || !isSilent;
+      const isSalesTab = activeReport === 'sales' || activeReport === 'sales-detailed' || activeReport === 'overview' || activeReport === 'top-products' || activeReport === 'all';
+      const needCustomers = activeReport === 'customers' || (!isSalesTab && !isSilent);
+      const needPartners = activeReport === 'partners' || activeReport === 'partner-detailed';
+      const needCategories = activeReport === 'categories' || (!isSilent && !isSalesTab);
+      const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing';
+      const needDebts = activeReport === 'debts' || activeReport === 'daily-closing';
+      const needPurchases = activeReport === 'purchases';
 
       const results = await Promise.all([
         loadInvoicesCloud(),
@@ -2685,12 +2686,14 @@ export default function Reports() {
             ) : viewTab === 'comprehensive' ? (
               <div className="space-y-4">
                 <div className="w-full min-w-0 max-w-full overflow-hidden">
-                  <ProfitTrendChart
-                    days={60}
-                    startDate={dateRange.from}
-                    endDate={dateRange.to}
-                    displayMode={reportDisplayMode === 'smart' ? 'chart' : 'table'}
-                  />
+                  <Suspense fallback={<div className="h-48 flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin" /></div>}>
+                    <ProfitTrendChart
+                      days={60}
+                      startDate={dateRange.from}
+                      endDate={dateRange.to}
+                      displayMode={reportDisplayMode === 'smart' ? 'chart' : 'table'}
+                    />
+                  </Suspense>
                 </div>
                 {reportData.topCustomers.length > 0 && (
                   <div className="bg-card rounded-2xl border border-border/70 p-4 shadow-sm">
@@ -3098,12 +3101,14 @@ export default function Reports() {
         {/* Profit Trend */}
         {activeReport === 'profits' && (
           <div className="w-full min-w-0 max-w-full overflow-hidden">
-            <ProfitTrendChart
-              days={60}
-              startDate={dateRange.from}
-              endDate={dateRange.to}
-              displayMode={reportDisplayMode === 'smart' ? 'chart' : 'table'}
-            />
+            <Suspense fallback={<div className="h-48 flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin" /></div>}>
+              <ProfitTrendChart
+                days={60}
+                startDate={dateRange.from}
+                endDate={dateRange.to}
+                displayMode={reportDisplayMode === 'smart' ? 'chart' : 'table'}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -3238,34 +3243,52 @@ export default function Reports() {
         {activeReport === 'top-products' && <TopProductsReport dateRange={dateRange} />}
 
         {/* Purchases */}
-        {activeReport === 'purchases' && <PurchaseInvoicesReport dateRange={dateRange} hideInternalExport={true} />}
+        {activeReport === 'purchases' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <PurchaseInvoicesReport dateRange={dateRange} hideInternalExport={true} />
+          </Suspense>
+        )}
 
         {/* Debts */}
-        {activeReport === 'debts' && <DebtsReport dateRange={dateRange} hideInternalExport={true} />}
+        {activeReport === 'debts' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <DebtsReport dateRange={dateRange} hideInternalExport={true} />
+          </Suspense>
+        )}
 
         {/* Cashier Performance */}
         {activeReport === 'cashier-performance' && (
-          <CashierPerformanceReport
-            dateRange={dateRange}
-            invoices={cloudInvoices}
-            isLoading={isLoading}
-            hideInternalExport={true}
-            displayMode={reportDisplayMode}
-          />
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <CashierPerformanceReport
+              dateRange={dateRange}
+              invoices={cloudInvoices}
+              isLoading={isLoading}
+              hideInternalExport={true}
+              displayMode={reportDisplayMode}
+            />
+          </Suspense>
         )}
 
         {/* Maintenance */}
         {activeReport === 'maintenance' && (
-          <MaintenanceReport dateRange={dateRange} invoices={cloudInvoices} isLoading={isLoading} hideInternalExport={true} />
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <MaintenanceReport dateRange={dateRange} invoices={cloudInvoices} isLoading={isLoading} hideInternalExport={true} />
+          </Suspense>
         )}
 
         {/* Daily Closing */}
         {activeReport === 'daily-closing' && (
-          <DailyClosingReport invoices={cloudInvoices} expenses={cloudExpenses} debts={cloudDebts} isLoading={isLoading} dateRange={dateRange} hideInternalExport={true} />
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <DailyClosingReport invoices={cloudInvoices} expenses={cloudExpenses} debts={cloudDebts} isLoading={isLoading} dateRange={dateRange} hideInternalExport={true} />
+          </Suspense>
         )}
 
         {/* Library */}
-        {activeReport === 'library' && <LibraryReport dateRange={dateRange} />}
+        {activeReport === 'library' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <LibraryReport dateRange={dateRange} />
+          </Suspense>
+        )}
 
         {/* Customers */}
         {reportData.hasData && activeReport === 'customers' && (
@@ -3424,11 +3447,23 @@ export default function Reports() {
         )}
 
         {/* Partner Detailed */}
-        {activeReport === 'partner-detailed' && <PartnerProfitDetailedReport dateRange={dateRange} />}
+        {activeReport === 'partner-detailed' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <PartnerProfitDetailedReport dateRange={dateRange} />
+          </Suspense>
+        )}
 
         {/* Distributor Reports */}
-        {activeReport === 'distributor-inventory' && <DistributorInventoryReport />}
-        {activeReport === 'custody-value' && <DistributorCustodyValueReport />}
+        {activeReport === 'distributor-inventory' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <DistributorInventoryReport />
+          </Suspense>
+        )}
+        {activeReport === 'custody-value' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <DistributorCustodyValueReport />
+          </Suspense>
+        )}
 
         {/* Informative placeholder for proposed reports requiring additional backend ledgers */}
         {(() => {

@@ -304,10 +304,12 @@ export function ArchiveSection() {
               <ScrollArea className="max-h-96">
                 <div className="space-y-2">
                   {archivedNotifications.map(notification => (
-                    <div key={notification.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border/50">
+                    <div key={notification.id} className="flex items-start justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border/50">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{notification.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{notification.message}</p>
+                        <p className="text-sm font-medium text-foreground break-words whitespace-normal leading-snug">{notification.title}</p>
+                        <div className="max-h-48 overflow-y-auto mt-0.5">
+                          <p className="text-xs text-muted-foreground break-words whitespace-normal leading-relaxed">{notification.message}</p>
+                        </div>
                         <p className="text-[10px] text-muted-foreground mt-1">{formatTimeAgo(notification.timestamp)}</p>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">

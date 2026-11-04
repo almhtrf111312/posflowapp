@@ -330,19 +330,27 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'cashier_id', 'cashier_name', 'customer_id', 'customer_name', 'customer_phone',
     'subtotal', 'discount', 'discount_percentage', 'tax_rate', 'tax_amount', 'total',
     'profit', 'currency', 'exchange_rate', 'payment_type', 'status', 'debt_paid',
-    'debt_remaining', 'notes', 'operation_id', 'warehouse_id', 'created_at', 'updated_at'
+    'debt_remaining', 'notes', 'operation_id', 'warehouse_id',
+    // ✅ الأعمدة المعتمدة والموجودة فعلياً:
+    'tax_inclusive', 'settlement_kind', 'settlement_diff_usd',
+    'created_at', 'updated_at'
   ],
   invoice_items: [
     'id', 'invoice_id', 'product_id', 'product_name', 'barcode', 'category', 'quantity',
     'unit_price', 'cost_price', 'amount_original', 'amount_usd', 'profit', 'unit',
     'conversion_factor', 'stock_warehouse_id', 'created_at'
   ],
+  // ✅ إصلاح N-04: تمكين الحقول المعتمدة للمنتجات
   products: [
-    'id', 'user_id', 'name', 'barcode', 'barcode2', 'barcode3', 'variant_label', 'category', 'cost_price', 'sale_price',
-    'wholesale_price', 'quantity', 'min_stock_level', 'expiry_date', 'image_url',
-    'custom_fields', 'purchase_history', 'is_taxable', 'tax_rate', 'track_stock',
+    'id', 'user_id', 'name', 'barcode', 'barcode2', 'barcode3', 'variant_label', 'category',
+    'cost_price', 'sale_price', 'wholesale_price', 'quantity', 'min_stock_level', 'expiry_date',
+    'image_url', 'custom_fields', 'purchase_history', 'is_taxable', 'tax_rate', 'track_stock',
     'is_active', 'archived', 'labor_cost', 'bulk_unit', 'small_unit', 'conversion_factor',
-    'bulk_cost_price', 'bulk_sale_price', 'track_by_unit', 'created_at', 'updated_at'
+    'bulk_cost_price', 'bulk_sale_price', 'track_by_unit',
+    'unit', 'supplier', 'location', 'notes', 'description', 'warranty_months',
+    'serial_number', 'batch_number', 'weight', 'size', 'color', 'fabric_type',
+    'author', 'publisher', 'table_number', 'order_notes',
+    'created_at', 'updated_at'
   ],
   profit_records: [
     'id', 'user_id', 'invoice_id', 'revenue', 'cogs', 'gross_profit', 'currency',
@@ -391,9 +399,13 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'id', 'user_id', 'actor_id', 'actor_name', 'actor_role', 'action_type',
     'description', 'entity_id', 'entity_name', 'entity_type', 'metadata', 'created_at'
   ],
+  // ✅ إصلاح BUG-01: تمكين كافة الحقول المحاسبية للشركاء
   partners: [
     'id', 'user_id', 'name', 'phone', 'email', 'percentage', 'share_percentage', 'notes',
-    'is_active', 'created_at', 'updated_at'
+    'capital', 'current_balance', 'total_profit_earned', 'total_withdrawn',
+    'expense_share_percentage', 'shares_expenses', 'confirmed_profit', 'pending_profit',
+    'profit_history', 'withdrawal_history', 'expense_history', 'category_shares',
+    'is_full_partner', 'joined_at', 'status', 'is_active', 'created_at', 'updated_at'
   ],
   warehouses: [
     'id', 'user_id', 'name', 'location', 'type', 'is_default', 'is_active', 'notes',
@@ -405,6 +417,7 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
   recurring_expenses: [
     'id', 'user_id', 'name', 'expense_type', 'custom_type', 'amount', 'description',
     'interval', 'interval_days', 'next_due_date', 'last_paid_date', 'auto_pay',
+    'currency', 'original_amount', // ✅ الأعمدة الفعلية المضافة بالهجرة
     'notes', 'is_active', 'created_at', 'updated_at'
   ]
 };

@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
-**Last Updated:** 2026-11-02
-**Current Version:** `v1.5.24 (Build 412)`
+**Last Updated:** 2026-11-04
+**Current Version:** `v1.5.37 (Build 425)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -66,6 +66,10 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-04:** Release v1.5.37 (Build 425) — Supabase Whitelist Update & Central Sale & Profit Engine Local Migration:
+  * Front-End Whitelist (`src/lib/supabase-store.ts`): Updated `TABLE_ALLOWED_COLUMNS` for `invoices` (added `tax_inclusive`, `settlement_kind`, `settlement_diff_usd`), `partners` (restored accounting and history fields: `capital`, `current_balance`, `total_profit_earned`, `total_withdrawn`, `expense_share_percentage`, `shares_expenses`, `confirmed_profit`, `pending_profit`, `profit_history`, `withdrawal_history`, `expense_history`, `category_shares`, `is_full_partner`, `joined_at`, `status`), `products` (added `unit`, `supplier`, `location`, `notes`, `description`, `warranty_months`, `serial_number`, `batch_number`, `weight`, `size`, `color`, `fabric_type`, `author`, `publisher`, `table_number`, `order_notes`), and `recurring_expenses` (added `currency`, `original_amount`).
+  * Backend SQL Migration (`supabase/migrations/20261104230000_process_pos_sale_atomic_and_profit_recalc.sql`): Synchronized local database schema with the cloud engine: unified 17-parameter `process_pos_sale_atomic` with owner resolution (`get_owner_id`), carton conversion factor stock deduction, idempotency guarantee (`operation_id`), and 8-decimal tax-isolated profit recalculation (`recalc_pos_invoice_profit`).
+  * Verification: `npm run build` passed with exit code 0.
 * **2026-11-02:** Release v1.5.24 (Build 412) — Large Store Readiness, Financial Immutability & Toast Fixes:
   * Store Settings Crash Fix (`src/pages/Settings.tsx` & `src/components/settings/StoreInfoSection.tsx`): Removed undeclared `logoInputRef` prop which caused a runtime `ReferenceError` when opening store settings tab.
   * Large Store Pagination (`src/lib/supabase-store.ts`): Implemented chunked auto-pagination in `fetchFromSupabase` using `.range(offset, offset + 999)` up to 50,000 rows, preventing silent PostgREST 1000-row cutoff across invoices, products, debts, expenses, and customers.

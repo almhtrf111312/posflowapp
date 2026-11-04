@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { MessageCircle, Phone, Globe, User, Headphones } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { MessageCircle, Phone, Globe, User, Headphones, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/hooks/use-language';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -13,7 +14,11 @@ import { InlineSupportChatPanel } from '@/components/support/InlineSupportChatPa
 interface DevInfo { name?: string; phone?: string; website?: string }
 
 export default function ContactDeveloper() {
-  const { t, direction } = useLanguage();
+  const { t, direction, isRTL } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const supportReason = (location.state as any)?.supportReason as string | undefined;
+  const userEmail = (location.state as any)?.email as string | undefined;
   const { isBoss } = useUserRole();
   const [info, setInfo] = useState<DevInfo>({});
   const [chatOpen, setChatOpen] = useState(false);
@@ -30,11 +35,103 @@ export default function ContactDeveloper() {
     });
   }, []);
 
+  const reasonDetails = (() => {
+    switch (supportReason) {
+      case 'inactive':
+        return {
+          title: 'الحساب معطل',
+          desc: 'تم تعطيل هذا الحساب من قبل الإدارة. يرجى التواصل مع الدعم الفني أو المطور لإعادة التنشيط.',
+          severity: 'destructive',
+        };
+      case 'owner_inactive':
+        return {
+          title: 'حساب المتجر متوقف',
+          desc: 'تم إيقاف حساب المتجر الأساسي التابع له. يرجى مراجعة إدارة متجرك أو التواصل مع المطور.',
+          severity: 'destructive',
+        };
+      case 'revoked':
+        return {
+          title: 'تم إلغاء الترخيص',
+          desc: 'تم إلغاء ترخيص هذا الحساب أو الجهاز. يرجى التواصل مع المطور لتسوية الترخيص وإعادة التفعيل.',
+          severity: 'destructive',
+        };
+      case 'expired':
+        return {
+          title: 'انتهت صلاحية الترخيص',
+          desc: 'انتهت فترة صلاحية الترخيص (تجريبي أو سنوي). يرجى التواصل مع المطور لتجديد الاشتراك.',
+          severity: 'warning',
+        };
+      case 'activation_required':
+        return {
+          title: 'مطلوب كود التفعيل',
+          desc: 'يتطلب النظام كود تفعيل للمتابعة. يمكنك طلب كود التفعيل عبر قنوات الدعم أدناه.',
+          severity: 'info',
+        };
+      default:
+        return supportReason ? {
+          title: 'مطلوب مراجعة الدعم الفني',
+          desc: 'يتطلب حسابك التواصل مع الدعم الفني لمتابعة الاستخدام.',
+          severity: 'warning',
+        } : null;
+    }
+  })();
+
   const site = info.website?.trim();
   const siteUrl = site ? (site.startsWith('http') ? site : `https://${site}`) : '';
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-5 pt-12 md:pt-4" dir={direction}>
+      {/* Support Reason Alert Banner */}
+      {reasonDetails && (
+        <div className={`rounded-2xl border p-5 shadow-sm space-y-3 ${
+          reasonDetails.severity === 'destructive'
+            ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground'
+            : reasonDetails.severity === 'warning'
+            ? 'border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100'
+            : 'border-primary/30 bg-primary/10 text-foreground'
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className={`p-2.5 rounded-xl shrink-0 ${
+              reasonDetails.severity === 'destructive'
+                ? 'bg-destructive/20 text-destructive'
+                : reasonDetails.severity === 'warning'
+                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                : 'bg-primary/20 text-primary'
+            }`}>
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0 space-y-1">
+              <h3 className="text-base font-bold text-foreground">
+                {reasonDetails.title}
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {reasonDetails.desc}
+              </p>
+              {userEmail && (
+                <div className="pt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>البريد الإلكتروني المرتبط:</span>
+                  <code className="font-mono bg-background/80 px-2 py-0.5 rounded border border-border text-foreground font-semibold" dir="ltr">
+                    {userEmail}
+                  </code>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="pt-2 border-t border-border/50 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/login')}
+              className="gap-2 text-xs"
+            >
+              {isRTL ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+              العودة لتسجيل الدخول
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Developer Info Card */}
       <div className="rounded-2xl border border-border bg-card p-6 text-center space-y-3 shadow-sm">
         <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">

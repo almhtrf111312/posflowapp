@@ -1,6 +1,6 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
-**Last Updated:** 2026-11-04
+**Last Updated:** 2026-11-05
 **Current Version:** `v1.5.37 (Build 425)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
@@ -66,6 +66,11 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-05:** Release v1.5.47 — Support Route & Blocked Account Flow (Stages 1-4):
+  * Public Route Rollout (`src/App.tsx`): Registered `/contact-developer` outside `ProtectedRoute` to resolve 404 and unauthorized redirect loops for non-logged-in users.
+  * Blocked Account Redirect (`src/hooks/use-auth.tsx` & `src/pages/Login.tsx`): Enhanced `signIn` to return explicit `blockedReason` (`inactive`, `owner_inactive`, `revoked`); automatically redirects blocked users to `/contact-developer` with context instead of leaving them stuck on login screen.
+  * Activation Screen Support Access (`src/components/license/ActivationScreen.tsx`): Updated license activation screen to route directly to `/contact-developer` with `supportReason` (`expired` or `activation_required`) and user email.
+  * Dynamic Support Context Banner (`src/pages/ContactDeveloper.tsx`): Added top alert card rendering tailored Arabic guidance and associated user email based on `supportReason` with a back button to login.
 * **2026-11-04:** Release v1.5.39 (Build 427) — Task 3: Cash Shifts, Debt Payments, Shift Transactions & Proportional Profit:
   * Cash Shift Cloud Sync (`src/lib/cloud/cashbox-cloud.ts` & `src/lib/cloud/sync-operation-processor.ts`): Resolved root cause of 0 cloud shifts by enforcing `opened_at` timestamp and `user_id: ownerId` on `cash_shifts` insert/upsert; added `cash_shift_upsert` to sync queue operations ensuring shifts and transactions persist safely offline-to-cloud.
   * Debt Payment Shift Linking (`src/pages/Debts.tsx` & `src/lib/cloud/debts-cloud.ts`): Passed active `shift_id` from open cashbox shift to `recordPaymentWithInvoiceSyncCloud`, automatically recording debt payments into active cash shift transactions and updating expected cash balances.

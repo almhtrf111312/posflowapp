@@ -1,8 +1,14 @@
 {
-  "versionCode": 435,
-  "versionName": "1.5.47",
-  "lastUpdated": "2026-11-04T21:41:55.619Z",
+  "versionCode": 436,
+  "versionName": "1.5.48",
+  "lastUpdated": "2026-11-04T22:17:22.331Z",
   "buildHistory": [
+    {
+      "versionCode": 436,
+      "versionName": "1.5.48",
+      "date": "2026-11-04",
+      "description": "Release v1.5.48 (Build 436)"
+    },
     {
       "versionCode": 435,
       "versionName": "1.5.47",
@@ -116,12 +122,6 @@
       "versionName": "1.5.29",
       "date": "2026-11-03",
       "description": "Comprehensive sync & offline fix (Build 417)"
-    },
-    {
-      "versionCode": 416,
-      "versionName": "1.5.28",
-      "date": "2026-11-02",
-      "description": "Auto-bump on push (01c3a04)"
     }
   ]
 }

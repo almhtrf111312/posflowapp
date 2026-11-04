@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +13,8 @@ import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 export function ActivationScreen() {
   const { activateCode, isTrial, isExpired } = useLicense();
   const { t, direction, isRTL } = useLanguage();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -79,10 +81,12 @@ export function ActivationScreen() {
   };
 
   const handleContactDeveloper = () => {
-    if (!developerPhone) return;
-    const message = encodeURIComponent(t('license.wantCode'));
-    const cleanPhone = developerPhone.replace(/[^\d+]/g, '');
-    window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+    navigate('/contact-developer', {
+      state: {
+        supportReason: isExpired ? 'expired' : 'activation_required',
+        email: user?.email,
+      },
+    });
   };
 
   if (success) {
@@ -162,12 +166,10 @@ export function ActivationScreen() {
           <div className="pt-4 border-t space-y-3">
             <p className="text-sm text-muted-foreground text-center">{t('license.getCodeContact')}</p>
             <ContactLinksSection />
-            {developerPhone && (
-              <Button variant="outline" className="w-full gap-2" onClick={handleContactDeveloper}>
-                <MessageCircle className="w-4 h-4" />
-                {t('license.contactDeveloper')}
-              </Button>
-            )}
+            <Button type="button" variant="outline" className="w-full gap-2" onClick={handleContactDeveloper}>
+              <MessageCircle className="w-4 h-4" />
+              {t('license.contactDeveloper')}
+            </Button>
             <Button variant="ghost" className="w-full text-muted-foreground hover:text-foreground gap-2" onClick={handleSignOut} disabled={isSigningOut}>
               {isSigningOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
               <span className="ms-2">{t('license.signOutOther')}</span>

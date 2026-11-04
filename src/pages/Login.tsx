@@ -354,12 +354,19 @@ export default function Login() {
 
     setIsLoading(true);
 
-    const { error, data } = await signIn(email, password, stayLoggedIn);
+    const { error, data, blockedReason } = await signIn(email, password, stayLoggedIn);
 
     if (error) {
+      setIsLoading(false);
+      if (blockedReason) {
+        navigate('/contact-developer', {
+          replace: true,
+          state: { supportReason: blockedReason, email: email.trim() },
+        });
+        return;
+      }
       const friendlyMessage = getAuthErrorMessage(error, 'login');
       toast.error(friendlyMessage);
-      setIsLoading(false);
       return;
     }
 
@@ -454,9 +461,17 @@ export default function Login() {
       // تسجيل الدخول بالجهاز الجديد فوراً
       setIsLoading(true);
       await clearGuestDemoData(true);
-      const { error: loginError } = await signIn(targetEmail, password, stayLoggedIn);
+      const { error: loginError, blockedReason: reauthBlockedReason } = await signIn(targetEmail, password, stayLoggedIn);
 
       if (loginError) {
+        setIsLoading(false);
+        if (reauthBlockedReason) {
+          navigate('/contact-developer', {
+            replace: true,
+            state: { supportReason: reauthBlockedReason, email: targetEmail.trim() },
+          });
+          return;
+        }
         toast.error(getAuthErrorMessage(loginError, 'login'));
         return;
       }

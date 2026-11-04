@@ -455,6 +455,7 @@ const PageFallback = () => (
         <Route path="/login" element={<FeatureErrorBoundary featureName="تسجيل الدخول"><Login /></FeatureErrorBoundary>} />
         <Route path="/signup" element={<FeatureErrorBoundary featureName="إنشاء حساب"><Signup /></FeatureErrorBoundary>} />
         <Route path="/reset-password" element={<FeatureErrorBoundary featureName="استعادة كلمة المرور"><ResetPassword /></FeatureErrorBoundary>} />
+        <Route path="/contact-developer" element={<FeatureErrorBoundary featureName="تواصل مع المطور"><ContactDeveloper /></FeatureErrorBoundary>} />
 
         {/* Full-screen protected routes (no MainLayout) */}
         <Route path="/" element={<ProtectedRoute><FeatureErrorBoundary featureName="نقطة البيع"><IndexRoute /></FeatureErrorBoundary></ProtectedRoute>} />

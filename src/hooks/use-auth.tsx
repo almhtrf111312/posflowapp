@@ -104,6 +104,12 @@ interface Profile {
   allowed_pages: string[] | null;
 }
 
+export type SignInResult = {
+  error: Error | null;
+  blockedReason?: 'inactive' | 'owner_inactive' | 'revoked' | string;
+  data?: { user: User; session: Session };
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -111,7 +117,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAutoLoginChecking: boolean;
   stayLoggedIn: boolean;
-  signIn: (email: string, password: string, stayLoggedIn?: boolean) => Promise<{ error: Error | null; data?: { user: User; session: Session } }>;
+  signIn: (email: string, password: string, stayLoggedIn?: boolean) => Promise<SignInResult>;
   signUp: (email: string, password: string, fullName: string, phone?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -604,7 +610,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchProfile, cachedInitial.user]);
 
-  const signIn = async (email: string, password: string, rememberMe: boolean = false): Promise<{ error: Error | null; data?: { user: User; session: Session } }> => {
+  const signIn = async (email: string, password: string, rememberMe: boolean = false): Promise<SignInResult> => {
     try {
       // Cleanly wipe any demo leftovers before establishing real user session
       if (isGuestDemoMode()) {
@@ -649,8 +655,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setSession(null);
           setProfile(null);
-          toast.error('تم تعطيل هذا الحساب أو إلغاء ترخيصه، يرجى التواصل مع الإدارة');
-          return { error: new Error('تم تعطيل هذا الحساب أو إلغاء ترخيصه، يرجى التواصل مع الإدارة') };
+          return {
+            error: new Error('تم تعطيل هذا الحساب أو إلغاء ترخيصه'),
+            blockedReason: (accountCheck.reason as 'inactive' | 'owner_inactive' | 'revoked') || 'inactive',
+          };
         }
       }
       

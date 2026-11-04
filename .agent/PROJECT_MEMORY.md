@@ -169,6 +169,17 @@
 * **2026-10-26 (v1.1.5 - Build 335 | Commit `c8f5c60` & `ae0f888`):** High-Precision Financial Math Engine:
   * 8-decimal intermediate USD precision engine (`money-engine.ts`) preventing rounding drift across QAR, KWD, SYP, TRY, and USD.
   * Dynamic currency decimals (0, 2, 3) and unified cash shifts accounting with automated tests (`financial-precision.test.ts`).
+* **2026-11-05 (Tasks 7 & 8 - Debt Profit Release, Period Closures & Tax/Reporting Guard):**
+  * **Plan 7 (Debt Payment Atomic Linking & Proportional Partner Profit Release):**
+    * Created `supabase/migrations/20261105000000_debt_payment_partner_profit_and_accounting_closures.sql`.
+    * Merged proportional partner profit confirmation directly into `record_debt_payment_atomic`: locks partners `FOR UPDATE`, computes payment ratio (`amount / total_debt`), moves confirmed profit from `pending_profit` to `confirmed_profit` and `current_balance`, and maintains partial balance in `pending_profit_details`.
+    * Linked payments directly to active `shift_id`, inserting into `shift_transactions` with conflict guards and incrementing `cash_shifts.expected_balance`.
+    * Updated `debts-cloud.ts` to trigger `invalidatePartnersCache()` and emit `PARTNERS_UPDATED` on every debt payment.
+  * **Plan 8 (Accounting Period Closures & Reporting Guard):**
+    * Created `accounting_period_closures` table with RLS store isolation policies.
+    * Implemented `close_accounting_period_atomic(_period_start, _period_end)` RPC generating tamper-proof historical snapshots of revenue, COGS, gross/net profits, and partner distributions.
+    * Added `accounting_period_closures` to `TABLE_ALLOWED_COLUMNS` in `supabase-store.ts` and `types.ts`.
+    * Updated `Reports.tsx` filters to exclude `written_off` invoices from sales and profit totals, preserving the invariant that taxes and written-off debts are never counted as profit.
 * **2026-11-04 (Tasks 6 & 7 - Store Isolation, RLS Hardening & Atomic Debt Write-off):**
   * **Plan 6 (Store Isolation, Cashier Sandboxing & RLS Policies):**
     * Created `supabase/migrations/20261104235500_store_isolation_and_debt_writeoff_atomic.sql`.

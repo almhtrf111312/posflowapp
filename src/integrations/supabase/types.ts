@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_period_closures: {
+        Row: {
+          closed_by: string
+          created_at: string
+          gross_profit: number
+          id: string
+          net_profit: number
+          partner_distributions: Json
+          period_end: string
+          period_start: string
+          total_cogs: number
+          total_expenses: number
+          total_revenue: number
+          user_id: string
+        }
+        Insert: {
+          closed_by: string
+          created_at?: string
+          gross_profit?: number
+          id?: string
+          net_profit?: number
+          partner_distributions?: Json
+          period_end: string
+          period_start: string
+          total_cogs?: number
+          total_expenses?: number
+          total_revenue?: number
+          user_id: string
+        }
+        Update: {
+          closed_by?: string
+          created_at?: string
+          gross_profit?: number
+          id?: string
+          net_profit?: number
+          partner_distributions?: Json
+          period_end?: string
+          period_start?: string
+          total_cogs?: number
+          total_expenses?: number
+          total_revenue?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       activation_codes: {
         Row: {
           assigned_email: string | null
@@ -2366,6 +2411,13 @@ export type Database = {
           _shift_id: string
           _actual_balance: number
           _variance_reason?: string | null
+        }
+        Returns: Json
+      }
+      close_accounting_period_atomic: {
+        Args: {
+          _period_start: string
+          _period_end: string
         }
         Returns: Json
       }

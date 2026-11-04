@@ -476,8 +476,12 @@ export const recordPaymentCloud = async (
   }
   const res = (data || {}) as Record<string, unknown>;
   invalidateDebtsCache();
+  import('./partners-cloud').then(({ invalidatePartnersCache }) => {
+    invalidatePartnersCache();
+  }).catch(() => {});
   emitEvent(EVENTS.DEBTS_UPDATED, null);
   emitEvent(EVENTS.INVOICES_UPDATED, null);
+  emitEvent(EVENTS.PARTNERS_UPDATED, null);
   const debts = await loadDebtsCloud();
   const fresh = debts.find(d => d.id === debtId);
   if (fresh?.customerId) {

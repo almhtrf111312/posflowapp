@@ -535,7 +535,7 @@ export default function Reports() {
       if (!isDateInRange(invDate, dateRange.from, dateRange.to)) return false;
       if (!isValidType) return false;
       // Exclude refunded and cancelled
-      if (inv.status === 'refunded' || inv.status === 'cancelled') return false;
+      if (inv.status === 'refunded' || inv.status === 'cancelled' || inv.status === 'written_off') return false;
       // Apply status filter
       if (filters.status !== 'all' && inv.status !== filters.status) return false;
       // Apply cashier filter
@@ -770,7 +770,7 @@ export default function Reports() {
         .filter(inv => {
           const invDate = toLocalDateString(inv.createdAt);
           return (inv.type === 'sale' || inv.type === 'maintenance') &&
-            inv.status !== 'refunded' && inv.status !== 'cancelled' &&
+            inv.status !== 'refunded' && inv.status !== 'cancelled' && inv.status !== 'written_off' &&
             isDateInRange(invDate, prevFromStr, prevToStr);
         })
         .reduce((sum, inv) => sum + inv.total, 0);
@@ -819,7 +819,7 @@ export default function Reports() {
       const isValidType = inv.type === 'sale' || inv.type === 'maintenance';
       if (!isDateInRange(invDate, dateRange.from, dateRange.to)) return false;
       if (!isValidType) return false;
-      if (inv.status === 'refunded' || inv.status === 'cancelled') return false;
+      if (inv.status === 'refunded' || inv.status === 'cancelled' || inv.status === 'written_off') return false;
       if (filters.status !== 'all' && inv.status !== filters.status) return false;
       if (filters.cashierId !== 'all' && (inv.cashierName || (t('reports.unspecified') || 'غير محدد')) !== filters.cashierId) return false;
       if (filters.paymentType !== 'all' && inv.paymentType !== filters.paymentType) return false;

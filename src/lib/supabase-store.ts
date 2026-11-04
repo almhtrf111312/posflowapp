@@ -419,6 +419,12 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'interval', 'interval_days', 'next_due_date', 'last_paid_date', 'auto_pay',
     'currency', 'original_amount', // ✅ الأعمدة الفعلية المضافة بالهجرة
     'notes', 'is_active', 'created_at', 'updated_at'
+  ],
+  accounting_period_closures: [
+    'id', 'user_id', 'period_start', 'period_end',
+    'total_revenue', 'total_cogs', 'gross_profit',
+    'total_expenses', 'net_profit', 'partner_distributions',
+    'closed_by', 'created_at'
   ]
 };
 

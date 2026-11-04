@@ -1,8 +1,14 @@
 {
-  "versionCode": 430,
-  "versionName": "1.5.42",
-  "lastUpdated": "2026-11-04T20:59:33.692Z",
+  "versionCode": 431,
+  "versionName": "1.5.43",
+  "lastUpdated": "2026-11-04T21:04:11.145Z",
   "buildHistory": [
+    {
+      "versionCode": 431,
+      "versionName": "1.5.43",
+      "date": "2026-11-04",
+      "description": "Release v1.5.43 (Build 431)"
+    },
     {
       "versionCode": 430,
       "versionName": "1.5.42",
@@ -116,12 +122,6 @@
       "versionName": "1.5.24",
       "date": "2026-11-02",
       "description": "Release v1.5.24 (Build 412)"
-    },
-    {
-      "versionCode": 411,
-      "versionName": "1.5.23",
-      "date": "2026-11-02",
-      "description": "Release v1.5.23 (Build 411)"
     }
   ]
 }

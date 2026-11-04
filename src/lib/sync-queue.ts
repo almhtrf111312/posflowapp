@@ -34,6 +34,7 @@ export type OperationType =
   | 'shift_open'
   | 'shift_close'
   | 'shift_transaction'
+  | 'cash_shift_upsert'
   | 'debt_writeoff'
   | 'quick_purchase'    // Quick single-item purchase (bakery mode)
   | 'purchase_invoice'  // Full purchase invoice with items

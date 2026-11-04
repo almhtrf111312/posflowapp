@@ -2523,7 +2523,12 @@ export type Database = {
         }[]
       }
       record_debt_payment_atomic: {
-        Args: { _amount: number; _debt_id: string; _operation_id: string }
+        Args: {
+          _amount: number
+          _debt_id: string
+          _operation_id: string
+          _shift_id?: string
+        }
         Returns: Json
       }
       refund_invoice_atomic: {

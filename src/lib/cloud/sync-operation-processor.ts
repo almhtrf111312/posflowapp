@@ -32,7 +32,20 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       }).eq('invoice_id', String(data.invoiceId || '')).eq('is_reversed', false));
     case 'shift_open': {
       const cleanData = filterTablePayload('cash_shifts', data);
-      return assertSuccess(sb.from('cash_shifts').insert(cleanData));
+      const ownerId = await getOwnerIdForInsert();
+      if (!ownerId) throw new Error('No owner id');
+      return assertSuccess(sb.from('cash_shifts').insert({ ...cleanData, user_id: ownerId }));
+    }
+    case 'cash_shift_upsert': {
+      const cleanData = filterTablePayload('cash_shifts', data);
+      const ownerId = await getOwnerIdForInsert();
+      if (!ownerId) throw new Error('No owner id');
+      return assertSuccess(
+        sb.from('cash_shifts').upsert(
+          { ...cleanData, user_id: ownerId },
+          { onConflict: 'id' }
+        )
+      );
     }
     case 'shift_close': {
       const { shiftId, userId: _userId, uniqueKey: _uniqueKey, ...updates } = data;
@@ -42,7 +55,9 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
     }
     case 'shift_transaction': {
       const cleanData = filterTablePayload('shift_transactions', data);
-      return assertSuccess(sb.from('shift_transactions').insert(cleanData));
+      const ownerId = await getOwnerIdForInsert();
+      if (!ownerId) throw new Error('No owner id');
+      return assertSuccess(sb.from('shift_transactions').insert({ ...cleanData, user_id: ownerId }));
     }
     case 'expense': {
       const cleanData = filterTablePayload('expenses', data);

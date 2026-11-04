@@ -62,16 +62,15 @@ export const openShiftCloud = async (params: {
   const ownerId = (await getOwnerIdForInsert()) || userId;
 
   const payload: Record<string, unknown> = {
+    id: params.shiftId || crypto.randomUUID(),
     user_id: ownerId,
     cashier_id: params.cashierId || userId,
     cashier_name: params.cashierName || null,
+    opened_at: new Date().toISOString(),
     opening_balance: roundCurrency(params.openingBalance),
     expected_balance: roundCurrency(params.openingBalance),
     reconciliation_status: 'open' as const,
   };
-  if (params.shiftId) {
-    payload.id = params.shiftId;
-  }
 
   try {
     const { data, error } = await sb
@@ -80,11 +79,11 @@ export const openShiftCloud = async (params: {
       .select('id')
       .single();
     if (error) throw error;
-    return data?.id || params.shiftId || null;
+    return data?.id || (payload.id as string);
   } catch (e) {
     console.warn('[cashbox-cloud] open shift failed, queued:', e);
-    try { addToQueue('shift_open', payload); } catch { /* noop */ }
-    return params.shiftId || null;
+    try { addToQueue('cash_shift_upsert', payload); } catch { /* noop */ }
+    return (payload.id as string);
   }
 };
 

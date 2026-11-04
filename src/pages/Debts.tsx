@@ -383,6 +383,10 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
 
       const paymentRatio = remainingNow > 0 ? finalPaymentUSD / remainingNow : 1;
 
+      const { getActiveShift } = await import('@/lib/cashbox-store');
+      const activeShift = getActiveShift();
+      const currentShiftId = activeShift?.id || undefined;
+
       await recordPaymentWithInvoiceSyncCloud(
         selectedDebt.id,
         finalPaymentUSD,
@@ -390,7 +394,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
         paymentCurrency,
         parseFloat(paymentAmountInput) || finalPaymentUSD,
         currentDef.rate,
-        'cash'
+        'cash',
+        currentShiftId
       );
       paymentOpIdRef.current = `debtpay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 

@@ -398,7 +398,8 @@ export const recordPaymentCloud = async (
   currency: string = 'USD',
   currencyAmount?: number,
   exchangeRate?: number,
-  method: 'cash' | 'transfer' = 'cash'
+  method: 'cash' | 'transfer' = 'cash',
+  shiftId?: string
 ): Promise<Debt | null> => {
   if (isGuestDemoMode()) {
     const debts = debtsCache || loadDebtsLocally() || [];
@@ -440,7 +441,7 @@ export const recordPaymentCloud = async (
   }
 
   const queuePayment = (): Debt | null => {
-    addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method }, 10);
+    addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: shiftId || null }, 10);
     const list = (debtsCache || loadDebtsLocally() || []).map(d => {
       if (d.id !== debtId) return d;
       const totalPaid = round8((d.totalPaid || 0) + amt);
@@ -452,11 +453,24 @@ export const recordPaymentCloud = async (
     return list.find(d => d.id === debtId) || null;
   };
   if (!navigator.onLine) return queuePayment();
-  const { data, error } = await sb.rpc('record_debt_payment_atomic', {
+  const rpcArgs: Record<string, unknown> = {
     _debt_id: debtId,
     _amount: amt,
     _operation_id: opId,
-  });
+  };
+  if (shiftId) {
+    rpcArgs._shift_id = shiftId;
+  }
+  let { data, error } = await sb.rpc('record_debt_payment_atomic', rpcArgs);
+  if (error && error.message?.includes('_shift_id')) {
+    const fallback = await sb.rpc('record_debt_payment_atomic', {
+      _debt_id: debtId,
+      _amount: amt,
+      _operation_id: opId,
+    });
+    data = fallback.data;
+    error = fallback.error;
+  }
   if (error) {
     throw new Error(error.message || 'فشل تسجيل الدفعة');
   }
@@ -492,8 +506,9 @@ export const recordPaymentWithInvoiceSyncCloud = async (
   currency: string = 'USD',
   currencyAmount?: number,
   exchangeRate?: number,
-  method: 'cash' | 'transfer' = 'cash'
-): Promise<Debt | null> => recordPaymentCloud(debtId, amount, operationId, currency, currencyAmount, exchangeRate, method);
+  method: 'cash' | 'transfer' = 'cash',
+  shiftId?: string
+): Promise<Debt | null> => recordPaymentCloud(debtId, amount, operationId, currency, currencyAmount, exchangeRate, method, shiftId);
 
 const roundMoney = (n: number) => Math.round(n * 100) / 100;
 

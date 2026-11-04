@@ -66,6 +66,12 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-04:** Release v1.5.39 (Build 427) — Task 3: Cash Shifts, Debt Payments, Shift Transactions & Proportional Profit:
+  * Cash Shift Cloud Sync (`src/lib/cloud/cashbox-cloud.ts` & `src/lib/cloud/sync-operation-processor.ts`): Resolved root cause of 0 cloud shifts by enforcing `opened_at` timestamp and `user_id: ownerId` on `cash_shifts` insert/upsert; added `cash_shift_upsert` to sync queue operations ensuring shifts and transactions persist safely offline-to-cloud.
+  * Debt Payment Shift Linking (`src/pages/Debts.tsx` & `src/lib/cloud/debts-cloud.ts`): Passed active `shift_id` from open cashbox shift to `recordPaymentWithInvoiceSyncCloud`, automatically recording debt payments into active cash shift transactions and updating expected cash balances.
+  * Immediate Cache Purge: Purged partner, customer, and cashbox caches upon debt payment.
+  * Backend SQL Patch (`supabase/migrations/20261104234500_cash_shifts_and_debt_payments_atomic.sql`): Added `shift_id` column to `debt_payments`, created `shift_tx_ref_uniq` unique index on `shift_transactions`, upgraded `record_debt_payment_atomic` with `_shift_id` parameter and automatic proportional partner profit confirmation, and upgraded `writeoff_debt_atomic` to clear lingering pending partner profits.
+  * Verification: `npm run build` passed with exit code 0.
 * **2026-11-04:** Release v1.5.38 (Build 426) — Task 2: Partners, Profit Allocation, Expense Sharing & Debt Profit Confirmation:
   * Backend SQL Patch (`supabase/migrations/20261104233000_partners_profit_expense_and_debt_atomic.sql`): Dropped duplicate signatures for `add_expense_atomic` and corrected expense deduction formula to use direct partner percentage (`_amt * (_partner_pct / 100.0)`) preventing 100% inflation; added atomic proportional debt profit confirmation (`confirm_partner_debt_profit_atomic`) transferring pending profit to confirmed balance upon partial debt settlements.
   * Partner Card Currency Standardization (`src/pages/Partners.tsx`): Standardized partner profits and capital to explicit USD with real-time equivalent currency capsules (`getEquivalentCurrencies`), eliminating misleading local currency labels on USD amounts.

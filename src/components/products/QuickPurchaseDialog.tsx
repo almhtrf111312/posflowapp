@@ -363,12 +363,24 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
           .eq('id', targetProductId)
           .single();
 
-        const currentQty = existingProd?.quantity || 0;
-        const currentCost = Number(existingProd?.cost_price) || 0;
-        const newQty = isNoInventoryMode() ? 99999 : currentQty + qtyNum;
-        const avgCost = newQty > 0 && costNumUSD > 0
-          ? Math.round(((currentQty * currentCost) + (qtyNum * costNumUSD)) / (currentQty + qtyNum) * 100) / 100
-          : costNumUSD;
+        let wacSuccess = false;
+        if (!isNoInventoryMode()) {
+          try {
+            const { error: wacErr } = await (supabase as unknown as LooseSupabase).rpc('receive_stock_wac', {
+              _product_id: targetProductId,
+              _quantity: qtyNum,
+              _unit_cost: costNumUSD,
+              _reference: 'شراء سريع: ' + productName.trim(),
+            });
+            if (!wacErr) {
+              wacSuccess = true;
+            } else {
+              console.warn('[QuickPurchase] receive_stock_wac RPC error, using client fallback:', wacErr);
+            }
+          } catch (e) {
+            console.warn('[QuickPurchase] receive_stock_wac failed, using client fallback:', e);
+          }
+        }
 
         const purchaseHistory = Array.isArray(existingProd?.purchase_history)
           ? [...existingProd.purchase_history]
@@ -385,11 +397,21 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
         });
 
         const updates: Record<string, unknown> = {
-          quantity: newQty,
-          cost_price: avgCost,
           purchase_history: purchaseHistory,
           updated_at: new Date().toISOString(),
         };
+
+        // If RPC failed or in no-inventory mode, update stock and cost from client fallback
+        if (!wacSuccess) {
+          const currentQty = existingProd?.quantity || 0;
+          const currentCost = Number(existingProd?.cost_price) || 0;
+          const newQty = isNoInventoryMode() ? 99999 : currentQty + qtyNum;
+          const avgCost = newQty > 0 && costNumUSD > 0
+            ? Math.round(((currentQty * currentCost) + (qtyNum * costNumUSD)) / (currentQty + qtyNum) * 100000000) / 100000000
+            : costNumUSD;
+          updates.quantity = newQty;
+          updates.cost_price = avgCost;
+        }
 
         if (saleNumUSD > 0) updates.sale_price = saleNumUSD;
         if (category) updates.category = category;

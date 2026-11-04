@@ -169,6 +169,16 @@
 * **2026-10-26 (v1.1.5 - Build 335 | Commit `c8f5c60` & `ae0f888`):** High-Precision Financial Math Engine:
   * 8-decimal intermediate USD precision engine (`money-engine.ts`) preventing rounding drift across QAR, KWD, SYP, TRY, and USD.
   * Dynamic currency decimals (0, 2, 3) and unified cash shifts accounting with automated tests (`financial-precision.test.ts`).
+* **2026-11-04 (Tasks 4 & 5 - Tasks 4 & 5 Stabilization Initiative):**
+  * **Task 4 (Purchases, Inventory & WAC Engine):**
+    * Created `supabase/migrations/20261104235000_wac_and_close_shift_atomic.sql` containing `receive_stock_wac` RPC: 8-decimal weighted average cost (WAC) engine, zero-stock division guard, and automatic audit documentation in `stock_movements`.
+    * Updated `QuickPurchaseDialog.tsx` to call `receive_stock_wac` atomically on the server before updating metadata/purchase history, with resilient client-side fallback.
+  * **Task 5 (Shifts, Cashbox Close, Variance Reconciliation & Partner Invalidation):**
+    * Added multi-currency columns (`currency`, `currency_amount`, `exchange_rate`) to `shift_transactions` in DB and frontend whitelist (`TABLE_ALLOWED_COLUMNS` in `supabase-store.ts`).
+    * Expanded `shift_transactions_type_check` constraint to allow `surplus` and `shortage` variance adjustment types.
+    * Implemented atomic server-side closing RPC `close_cash_shift_atomic` calculating expected balance and recording auto-reconciliation transactions.
+    * Integrated `closeShiftCloud` in `cashbox-cloud.ts` to call `close_cash_shift_atomic` with offline table-fallback.
+    * Linked `invalidatePartnersCache()` in `pos-sale-atomic.ts` to immediately sync partner profits and tax exclusions to `Reports.tsx`.
 * **2026-10-26 (v1.1.4 - Build 334 | Commit `4958f0f` & `e2516b3`):** Unified Capsule In-Page Tab Navigation:
   * Modern capsule styling across all tabs (`Tabs.tsx`, `BossPanel.tsx`, `Appearance.tsx`, etc.) matching reference product design.
 * **2026-10-25 (v1.1.1 - v1.1.3 | Builds 331-333):** Full-Screen Views & Camera Isolation:

@@ -1594,6 +1594,9 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          currency: string | null
+          currency_amount: number | null
+          exchange_rate: number | null
           id: string
           notes: string | null
           reference_id: string | null
@@ -1604,6 +1607,9 @@ export type Database = {
         Insert: {
           amount?: number
           created_at?: string
+          currency?: string | null
+          currency_amount?: number | null
+          exchange_rate?: number | null
           id?: string
           notes?: string | null
           reference_id?: string | null
@@ -1614,6 +1620,9 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          currency?: string | null
+          currency_amount?: number | null
+          exchange_rate?: number | null
           id?: string
           notes?: string | null
           reference_id?: string | null
@@ -2351,6 +2360,14 @@ export type Database = {
       cancel_purchase_invoice_atomic: {
         Args: { _invoice_id: string; _reason?: string }
         Returns: boolean
+      }
+      close_cash_shift_atomic: {
+        Args: {
+          _shift_id: string
+          _actual_balance: number
+          _variance_reason?: string | null
+        }
+        Returns: Json
       }
       check_and_bind_device: { Args: { p_device_id: string }; Returns: Json }
       clean_old_error_logs: { Args: never; Returns: number }

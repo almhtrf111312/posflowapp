@@ -96,6 +96,24 @@ export const closeShiftCloud = async (params: {
   const userId = await ensureUserId();
   if (!userId) return false;
 
+  // المحاولة الأولى: الإقفال الذري والتسوية التلقائية عبر الخادم
+  try {
+    const { data, error } = await sb.rpc('close_cash_shift_atomic', {
+      _shift_id: params.shiftId,
+      _actual_balance: roundCurrency(params.actualBalance),
+      _variance_reason: params.varianceReason || null,
+    });
+    if (!error && (data as { success?: boolean })?.success) {
+      return true;
+    }
+    if (error) {
+      console.warn('[cashbox-cloud] close_cash_shift_atomic RPC error, falling back:', error.message);
+    }
+  } catch (rpcErr) {
+    console.warn('[cashbox-cloud] close_cash_shift_atomic failed, falling back:', rpcErr);
+  }
+
+  // الاحتياط المحلي وغير المتصل: التحديث المباشر للجدول والإضافة للطابور
   const variance = roundCurrency(params.actualBalance - params.expectedBalance);
   const status: CloudShift['reconciliation_status'] =
     Math.abs(variance) < 0.01 ? 'matched' : (params.varianceReason ? 'matched' : 'unmatched');

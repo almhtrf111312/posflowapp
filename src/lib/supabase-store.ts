@@ -362,7 +362,9 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'variance_reason', 'reconciliation_status', 'notes', 'created_at', 'updated_at'
   ],
   shift_transactions: [
-    'id', 'user_id', 'shift_id', 'type', 'amount', 'reference_id', 'notes', 'created_at'
+    'id', 'user_id', 'shift_id', 'type', 'amount', 'reference_id', 'notes',
+    'currency', 'currency_amount', 'exchange_rate',
+    'created_at'
   ],
   purchase_invoices: [
     'id', 'user_id', 'invoice_number', 'supplier_name', 'supplier_company', 'invoice_date',

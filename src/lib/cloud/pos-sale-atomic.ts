@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { emitEvent, EVENTS } from '@/lib/events';
 
 import { invalidateInvoicesCache } from './invoices-cloud';
+import { invalidatePartnersCache } from './partners-cloud';
 
 import { isGuestDemoMode } from '@/lib/demo-data';
 
@@ -327,6 +328,7 @@ export async function processPosSaleAtomic(
 
 
     invalidateInvoicesCache();
+    invalidatePartnersCache();
 
     emitEvent(EVENTS.INVOICES_UPDATED, null);
 

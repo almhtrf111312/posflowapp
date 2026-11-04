@@ -2534,6 +2534,7 @@ export type Database = {
           _amount_usd: number
           _currency?: string
           _deposit_target?: string
+          _exchange_rate?: number
           _notes?: string
           _original_amount?: number
           _partner_id: string
@@ -2545,6 +2546,7 @@ export type Database = {
         Args: {
           _amount: number
           _currency?: string
+          _exchange_rate?: number
           _notes?: string
           _original_amount?: number
           _partner_id: string

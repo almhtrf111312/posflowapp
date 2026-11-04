@@ -215,6 +215,9 @@
   * Updated `src/types/index.ts`: Expanded `CurrencyCode` to support any standard currency code.
   * Updated `src/lib/currencies.ts` & `src/hooks/use-currency.tsx`: Fixed BHR -> BHD and connected all display and formatting functions to the in-memory engine while preserving 100% backward compatibility.
   * Configured GitHub Actions CI workflows (`build-apk.yml`, `build-windows.yml`) to automatically build and upload APK/EXE testing artifacts for `event-or-artifact`.
+* **2026-11-05 (Unified Financial, Storage & Reset SQL Bundle with Exchange Rates):**
+  * **Migration `20261105005000_unified_financial_storage_and_reset_bundle.sql`:** Merged full production SQL bundle: `partner_deposit_atomic` with `_exchange_rate`, upgraded `partner_withdrawal_atomic` with `_exchange_rate` and active shift decrement, robust `get_user_storage_stats` for Boss and store owners, and complete hierarchical cascade `reset_user_store_data` with exception safety.
+  * **Frontend & Cloud Integration (`src/lib/cloud/partners-cloud.ts` & `src/integrations/supabase/types.ts`):** Wired `_exchange_rate` parameter into `addCapitalWithCashboxCloud`, `withdrawProfitCloud`, and `withdrawCapitalCloud` ensuring accurate shift ledger accounting and 100% strict typing.
 * **2026-11-05 (Storage Stats, Type Deduplication, Written-off Invoices & Reset Data Fix):**
   * **Migration `20261105004000_storage_stats_and_reset_fix.sql`:** Updated `get_user_storage_stats` to allow both Boss and Admins to inspect their own storage and employees without permission failures, and hardened `reset_user_store_data` to clean all cashier transactions under the store's shifts to avoid foreign key violations.
   * **TypeScript Types Deduplication (`src/integrations/supabase/types.ts`):** Removed duplicate declaration of `request_device_reset_secure` preventing TS2300 compiler errors.

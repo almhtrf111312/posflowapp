@@ -384,11 +384,13 @@ export const addCapitalWithCashboxCloud = async (
   notes?: string,
   depositTarget: 'capital' | 'balance' = 'capital',
   currency: string = 'USD',
-  originalAmount?: number
+  originalAmount?: number,
+  exchangeRate?: number
 ): Promise<boolean> => {
   try {
     const roundedUsd = Math.round(amountUsd * 100) / 100;
     const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedUsd;
+    const rate = exchangeRate || (currency !== 'USD' && roundedUsd > 0 ? Math.round((origAmt / roundedUsd) * 10000) / 10000 : 1.0);
 
     // جلب معرف الوردية النشطة إن وجدت
     let shiftId: string | null = null;
@@ -411,7 +413,8 @@ export const addCapitalWithCashboxCloud = async (
           _notes: notes || null,
           _shift_id: shiftId,
           _currency: currency,
-          _original_amount: origAmt
+          _original_amount: origAmt,
+          _exchange_rate: rate
         });
         if (!error && (data as any)?.success) {
           rpcSuccess = true;
@@ -499,7 +502,8 @@ export const withdrawProfitCloud = async (
   notes?: string,
   allowNegative: boolean = false,
   currency: string = 'USD',
-  originalAmount?: number
+  originalAmount?: number,
+  exchangeRate?: number
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
@@ -510,6 +514,7 @@ export const withdrawProfitCloud = async (
 
   const roundedAmount = Math.round(amount * 100) / 100;
   const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
+  const rate = exchangeRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
   const withdrawalNote = notes || ('سحب أرباح - ' + partner.name);
 
   // 1. Resolve active shift ID if any
@@ -534,6 +539,7 @@ export const withdrawProfitCloud = async (
         _shift_id: shiftId,
         _currency: currency,
         _original_amount: origAmt,
+        _exchange_rate: rate,
       });
       if (!error && (data as any)?.success) {
         rpcSuccess = true;
@@ -607,7 +613,8 @@ export const withdrawCapitalCloud = async (
   amount: number,
   notes?: string,
   currency: string = 'USD',
-  originalAmount?: number
+  originalAmount?: number,
+  exchangeRate?: number
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
@@ -616,6 +623,7 @@ export const withdrawCapitalCloud = async (
 
   const roundedAmount = Math.round(amount * 100) / 100;
   const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
+  const rate = exchangeRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
   const withdrawalNote = notes || ('سحب رأس مال - ' + partner.name);
 
   // 1. Resolve active shift ID if any
@@ -640,6 +648,7 @@ export const withdrawCapitalCloud = async (
         _shift_id: shiftId,
         _currency: currency,
         _original_amount: origAmt,
+        _exchange_rate: rate,
       });
       if (!error && (data as any)?.success) {
         rpcSuccess = true;

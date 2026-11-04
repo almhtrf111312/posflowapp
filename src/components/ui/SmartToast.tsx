@@ -580,8 +580,8 @@ export function SmartToast() {
 
               {/* السطر الثاني: التفاصيل الحقيقية للعملية والوصف الكامل دون قص */}
               {details.description && details.description !== details.operationName && (
-                <div className="max-h-48 overflow-y-auto">
-                  <p className="text-[11px] sm:text-xs text-muted-foreground break-words whitespace-normal leading-relaxed">
+                <div className="w-full">
+                  <p className="text-[11px] sm:text-xs text-muted-foreground break-words whitespace-normal leading-relaxed select-text">
                     {details.description}
                   </p>
                 </div>
@@ -591,17 +591,17 @@ export function SmartToast() {
               {(details.itemName || details.price || (!details.description && details.statusBadge)) && (
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground pt-0.5">
                   {details.itemName && (
-                    <span className="font-semibold text-foreground/90 break-words">
+                    <span className="font-semibold text-foreground/90 bg-muted/60 px-2 py-0.5 rounded-md break-words whitespace-normal select-text">
                       {details.itemName}
                     </span>
                   )}
 
                   {!details.description && details.statusBadge && (
-                    <span>{details.statusBadge}</span>
+                    <span className="break-words whitespace-normal">{details.statusBadge}</span>
                   )}
 
                   {details.price && (
-                    <span className="font-mono font-bold text-primary shrink-0 mr-auto">
+                    <span className="font-mono font-bold text-primary shrink-0 mr-auto text-[11px]">
                       ({details.price})
                     </span>
                   )}

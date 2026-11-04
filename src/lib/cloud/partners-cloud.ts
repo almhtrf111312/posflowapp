@@ -797,6 +797,22 @@ export const distributeDetailedProfitCloud = async (
 export const confirmPendingProfitCloud = async (invoiceId: string, ratio: number = 1): Promise<void> => {
   if (!invoiceId || invoiceId.startsWith('CASH_')) return;
   
+  // 1. المحاولة الذرية عبر دالة الخادم confirm_partner_debt_profit_atomic
+  try {
+    const { data, error } = await sb.rpc('confirm_partner_debt_profit_atomic', {
+      _invoice_id: invoiceId,
+      _payment_ratio: ratio,
+    });
+    if (!error && (data as any)?.success) {
+      invalidatePartnersCache();
+      emitEvent(EVENTS.PARTNERS_UPDATED, null);
+      return;
+    }
+  } catch (rpcErr) {
+    console.warn('[confirmPendingProfitCloud] RPC fallback to client calculation:', rpcErr);
+  }
+
+  // 2. مسار التراجع الاحتياطي في حال تعذر استدعاء RPC
   const partners = await loadPartnersCloud();
   
   for (const partner of partners) {

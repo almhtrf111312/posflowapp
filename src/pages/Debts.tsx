@@ -415,8 +415,10 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       try {
         const { loadCustomersCloud, updateCustomerStatsCloud, invalidateCustomersCache } = await import('@/lib/cloud/customers-cloud');
         const { invalidateInvoicesCache } = await import('@/lib/cloud/invoices-cloud');
+        const { invalidatePartnersCache } = await import('@/lib/cloud/partners-cloud');
         invalidateInvoicesCache();
         invalidateCustomersCache();
+        invalidatePartnersCache();
         const customers = await loadCustomersCloud();
         const customer = customers.find(c =>
           c.name.trim().toLowerCase() === (selectedDebt.customerName || '').trim().toLowerCase() ||

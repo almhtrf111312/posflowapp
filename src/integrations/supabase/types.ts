@@ -2354,6 +2354,13 @@ export type Database = {
       }
       check_and_bind_device: { Args: { p_device_id: string }; Returns: Json }
       clean_old_error_logs: { Args: never; Returns: number }
+      confirm_partner_debt_profit_atomic: {
+        Args: {
+          _invoice_id: string
+          _payment_ratio: number
+        }
+        Returns: Json
+      }
       count_owner_cashiers: { Args: { _owner_id: string }; Returns: number }
       deduct_product_quantity: {
         Args: { _amount: number; _product_id: string }

@@ -312,7 +312,7 @@ export default function Partners() {
         phone: formData.phone.trim(),
         email: formData.email?.trim() || undefined,
         sharePercentage: mainShare,
-        expenseSharePercentage: formData.sharesExpenses ? (Number(formData.expenseSharePercentage) || mainShare) : 0, // ⬅️ الإصلاح هنا
+        expenseSharePercentage: formData.sharesExpenses ? Number(formData.expenseSharePercentage || 0) : 0,
         categoryShares: formData.categoryShares,
         accessAll: formData.accessAll,
         sharesExpenses: formData.sharesExpenses,
@@ -592,7 +592,7 @@ export default function Partners() {
               <Wallet className="w-4 h-4 md:w-5 md:h-5 text-warning" />
             </div>
             <div>
-              <p className="text-lg md:text-2xl font-bold text-foreground">{formatCurrency(stats.totalBalance)}</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">${formatNumber(stats.totalBalance, 2)}</p>
               <p className="text-xs md:text-sm text-muted-foreground">{t('partners.balances')}</p>
             </div>
           </div>
@@ -603,7 +603,7 @@ export default function Partners() {
               <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-success" />
             </div>
             <div>
-              <p className="text-lg md:text-2xl font-bold text-foreground">{formatCurrency(stats.totalProfit)}</p>
+              <p className="text-lg md:text-2xl font-bold text-foreground">${formatNumber(stats.totalProfit, 2)}</p>
               <p className="text-xs md:text-sm text-muted-foreground">{t('partners.profits')}</p>
             </div>
           </div>
@@ -689,43 +689,35 @@ export default function Partners() {
             <div className="grid grid-cols-2 gap-2 py-3 md:py-4 border-t border-border">
               <div className="text-center">
                 <p className="text-[10px] md:text-xs text-muted-foreground">{t('partners.profits')}</p>
-                <p className="text-sm md:text-base font-bold text-success font-mono">
-                  ${formatNumber(partner.currentBalance || 0)}
-                </p>
-                {/* المعادل بالعملات الإضافية النشطة (مثل التركي أو السوري) */}
-                {(() => {
-                  const eq = getEquivalentCurrencies(partner.currentBalance || 0);
-                  if (eq.equivalents.length === 0) return null;
-                  return (
-                    <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
-                      {eq.equivalents.map(c => (
-                        <span key={c.code} className="text-[9.5px] font-mono px-1 py-0.2 bg-success/10 text-success rounded font-medium">
-                          ≈ {c.formatted}
-                        </span>
-                      ))}
-                    </div>
-                  );
-                })()}
+                <div className="space-y-0.5">
+                  <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    ${formatNumber(partner.currentBalance || 0, 2)}
+                  </span>
+                  {/* إظهار كبسولة المعادل اللحظي للعملات الأخرى أسفل الرقم */}
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    {getEquivalentCurrencies(partner.currentBalance || 0).equivalents.map(eq => (
+                      <span key={eq.code} className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                        ≈ {eq.formatted}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="text-center">
                 <p className="text-[10px] md:text-xs text-muted-foreground">{t('partners.capital')}</p>
-                <p className="text-sm md:text-base font-bold text-info font-mono">
-                  ${formatNumber(partner.currentCapital || 0)}
-                </p>
-                {(() => {
-                  const eq = getEquivalentCurrencies(partner.currentCapital || 0);
-                  if (eq.equivalents.length === 0) return null;
-                  return (
-                    <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
-                      {eq.equivalents.map(c => (
-                        <span key={c.code} className="text-[9.5px] font-mono px-1 py-0.2 bg-info/10 text-info rounded font-medium">
-                          ≈ {c.formatted}
-                        </span>
-                      ))}
-                    </div>
-                  );
-                })()}
+                <div className="space-y-0.5">
+                  <span className="text-xl font-bold font-mono text-info">
+                    ${formatNumber(partner.currentCapital || 0, 2)}
+                  </span>
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    {getEquivalentCurrencies(partner.currentCapital || 0).equivalents.map(eq => (
+                      <span key={eq.code} className="text-[10px] font-mono text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                        ≈ {eq.formatted}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 

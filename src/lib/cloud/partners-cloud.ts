@@ -380,49 +380,114 @@ export const addCapitalCloud = async (
 export const addCapitalWithCashboxCloud = async (
   partnerId: string,
   partnerName: string,
-  amount: number,
-  notes?: string
+  amountUsd: number,
+  notes?: string,
+  depositTarget: 'capital' | 'balance' = 'capital',
+  currency: string = 'USD',
+  originalAmount?: number
 ): Promise<boolean> => {
   try {
-    // 1. تحديث سجل الشريك في Cloud
-    const partnerSuccess = await addCapitalCloud(partnerId, amount, notes);
-    
-    if (partnerSuccess) {
-      // 2. تحديث capital-store المحلي للتوافق
+    const roundedUsd = Math.round(amountUsd * 100) / 100;
+    const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedUsd;
+
+    // جلب معرف الوردية النشطة إن وجدت
+    let shiftId: string | null = null;
+    try {
+      const { getActiveShift } = await import('../cashbox-store');
+      const activeShift = getActiveShift();
+      if (activeShift?.id && activeShift.id.length >= 32) {
+        shiftId = activeShift.id;
+      }
+    } catch (_) {}
+
+    // 1. التنفيذ الذري في السحابة
+    let rpcSuccess = false;
+    if (navigator.onLine) {
+      try {
+        const { data, error } = await sb.rpc('partner_deposit_atomic', {
+          _partner_id: partnerId,
+          _amount_usd: roundedUsd,
+          _deposit_target: depositTarget,
+          _notes: notes || null,
+          _shift_id: shiftId,
+          _currency: currency,
+          _original_amount: origAmt
+        });
+        if (!error && (data as any)?.success) {
+          rpcSuccess = true;
+        }
+      } catch (e) {
+        console.warn('[addCapitalWithCashboxCloud] RPC fallback:', e);
+      }
+    }
+
+    // 2. تحديث التخزين المحلي والصندوق بالتوافق
+    if (depositTarget === 'capital') {
       const { loadCapitalState, saveCapitalState } = await import('../capital-store');
       const state = loadCapitalState();
-      const roundedAmount = Math.round(amount * 100) / 100;
-      
-      state.currentCapital = state.currentCapital + roundedAmount;
-      state.totalInvestments = state.totalInvestments + roundedAmount;
+      state.currentCapital += roundedUsd;
+      state.totalInvestments += roundedUsd;
       state.lastUpdated = new Date().toISOString();
-      
-      // إضافة للتاريخ
       state.transactions.unshift({
         id: Date.now().toString(),
         type: 'partner_investment',
-        amount: roundedAmount,
+        amount: roundedUsd,
         partnerId,
         partnerName,
-        description: notes || `استثمار من ${partnerName}`,
-        previousBalance: state.currentCapital - roundedAmount,
+        description: notes || `إيداع رأس مال من ${partnerName}`,
+        previousBalance: state.currentCapital - roundedUsd,
         newBalance: state.currentCapital,
         createdAt: new Date().toISOString(),
         createdBy: 'system',
       });
-      
       saveCapitalState(state);
-      
-      // 3. تحديث رصيد الصندوق (يعمل بدون وردية)
-      const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(roundedAmount, 'deposit');
-      
       emitEvent(EVENTS.CAPITAL_UPDATED, state);
     }
-    
-    return partnerSuccess;
+
+    // تحديث رصيد الشريك محلياً
+    const partner = await getPartnerByIdCloud(partnerId);
+    if (partner) {
+      const capRecord: CapitalTransaction = {
+        id: Date.now().toString(),
+        amount: roundedUsd,
+        type: 'deposit',
+        date: new Date().toISOString(),
+        notes: notes || (depositTarget === 'balance' ? 'إيداع رصيد للشريك' : 'إيداع رأس مال'),
+      };
+
+      if (depositTarget === 'balance') {
+        partner.currentBalance = Math.round((partner.currentBalance + roundedUsd) * 100) / 100;
+      } else {
+        partner.initialCapital = Math.round((partner.initialCapital + roundedUsd) * 100) / 100;
+        partner.currentCapital = Math.round((partner.currentCapital + roundedUsd) * 100) / 100;
+      }
+      partner.capitalHistory = [...(partner.capitalHistory || []), capRecord];
+
+      if (partnersCache) {
+        const idx = partnersCache.findIndex(p => p.id === partnerId);
+        if (idx !== -1) partnersCache[idx] = partner;
+        savePartnersLocally(partnersCache);
+      }
+      emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
+    }
+
+    // إذا فشل الـ RPC وكان أوفلاين ولم يكن depositTarget = balance، نستدعي addCapitalCloud كاحتياط
+    if (!rpcSuccess && depositTarget === 'capital') {
+      await addCapitalCloud(partnerId, roundedUsd, notes);
+    } else if (!rpcSuccess && depositTarget === 'balance' && partner) {
+      await updatePartnerCloud(partnerId, {
+        currentBalance: partner.currentBalance,
+        capitalHistory: partner.capitalHistory,
+      });
+    }
+
+    const { updateCashboxBalance } = await import('../cashbox-store');
+    updateCashboxBalance(origAmt, 'deposit', currency as any);
+
+    invalidatePartnersCache();
+    return true;
   } catch (error) {
-    console.error('Error adding capital with cashbox:', error);
+    console.error('Error in addCapitalWithCashboxCloud:', error);
     return false;
   }
 };
@@ -432,7 +497,9 @@ export const withdrawProfitCloud = async (
   partnerId: string,
   amount: number,
   notes?: string,
-  allowNegative: boolean = false
+  allowNegative: boolean = false,
+  currency: string = 'USD',
+  originalAmount?: number
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
@@ -442,6 +509,7 @@ export const withdrawProfitCloud = async (
   }
 
   const roundedAmount = Math.round(amount * 100) / 100;
+  const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
   const withdrawalNote = notes || ('سحب أرباح - ' + partner.name);
 
   // 1. Resolve active shift ID if any
@@ -464,6 +532,8 @@ export const withdrawProfitCloud = async (
         _withdrawal_type: 'profit',
         _notes: withdrawalNote,
         _shift_id: shiftId,
+        _currency: currency,
+        _original_amount: origAmt,
       });
       if (!error && (data as any)?.success) {
         rpcSuccess = true;
@@ -497,7 +567,7 @@ export const withdrawProfitCloud = async (
     // Update cash drawer locally
     try {
       const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(roundedAmount, 'withdrawal');
+      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
     } catch (e) {
       console.warn('[withdrawProfitCloud] cashbox update failed:', e);
     }
@@ -515,14 +585,14 @@ export const withdrawProfitCloud = async (
   if (success) {
     try {
       const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(roundedAmount, 'withdrawal');
+      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
     } catch (e) {
       console.warn('[withdrawProfitCloud] cashbox update failed:', e);
     }
 
     try {
       const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
-      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, 'USD', undefined, partnerId, withdrawalNote);
+      await syncActiveShiftTransactionCloud('withdrawal', origAmt, currency as any, undefined, partnerId, withdrawalNote);
     } catch (e) {
       console.warn('[withdrawProfitCloud] shift tx sync failed:', e);
     }
@@ -535,7 +605,9 @@ export const withdrawProfitCloud = async (
 export const withdrawCapitalCloud = async (
   partnerId: string,
   amount: number,
-  notes?: string
+  notes?: string,
+  currency: string = 'USD',
+  originalAmount?: number
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
@@ -543,6 +615,7 @@ export const withdrawCapitalCloud = async (
   if (amount > partner.currentCapital) return false;
 
   const roundedAmount = Math.round(amount * 100) / 100;
+  const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
   const withdrawalNote = notes || ('سحب رأس مال - ' + partner.name);
 
   // 1. Resolve active shift ID if any
@@ -565,6 +638,8 @@ export const withdrawCapitalCloud = async (
         _withdrawal_type: 'capital',
         _notes: withdrawalNote,
         _shift_id: shiftId,
+        _currency: currency,
+        _original_amount: origAmt,
       });
       if (!error && (data as any)?.success) {
         rpcSuccess = true;
@@ -590,7 +665,6 @@ export const withdrawCapitalCloud = async (
     notes: withdrawalNote,
   };
 
-  // 3. Fallback or update state
   if (rpcSuccess) {
     partner.currentCapital = Math.round((partner.currentCapital - roundedAmount) * 100) / 100;
     partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
@@ -604,10 +678,9 @@ export const withdrawCapitalCloud = async (
     }
     emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
 
-    // Update cash drawer locally
     try {
       const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(roundedAmount, 'withdrawal');
+      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
     } catch (e) {
       console.warn('[withdrawCapitalCloud] cashbox update failed:', e);
     }
@@ -626,14 +699,14 @@ export const withdrawCapitalCloud = async (
   if (success) {
     try {
       const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(roundedAmount, 'withdrawal');
+      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
     } catch (e) {
       console.warn('[withdrawCapitalCloud] cashbox update failed:', e);
     }
 
     try {
       const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
-      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, 'USD', undefined, partnerId, withdrawalNote);
+      await syncActiveShiftTransactionCloud('withdrawal', origAmt, currency as any, undefined, partnerId, withdrawalNote);
     } catch (e) {
       console.warn('[withdrawCapitalCloud] shift tx sync failed:', e);
     }
@@ -642,7 +715,6 @@ export const withdrawCapitalCloud = async (
   return success;
 };
 
-// Get partners stats
 export const getPartnersStatsCloud = async () => {
   const partners = await loadPartnersCloud();
   return {

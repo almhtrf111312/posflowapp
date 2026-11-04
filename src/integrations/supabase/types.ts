@@ -2536,10 +2536,24 @@ export type Database = {
       is_first_user: { Args: never; Returns: boolean }
       is_license_valid: { Args: { _user_id: string }; Returns: boolean }
       issue_offline_lease: { Args: { p_device_id: string }; Returns: Json }
+      partner_deposit_atomic: {
+        Args: {
+          _amount_usd: number
+          _currency?: string
+          _deposit_target?: string
+          _notes?: string
+          _original_amount?: number
+          _partner_id: string
+          _shift_id?: string
+        }
+        Returns: Json
+      }
       partner_withdrawal_atomic: {
         Args: {
           _amount: number
+          _currency?: string
           _notes?: string
+          _original_amount?: number
           _partner_id: string
           _shift_id?: string
           _withdrawal_type: string

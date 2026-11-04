@@ -215,6 +215,9 @@
   * Updated `src/types/index.ts`: Expanded `CurrencyCode` to support any standard currency code.
   * Updated `src/lib/currencies.ts` & `src/hooks/use-currency.tsx`: Fixed BHR -> BHD and connected all display and formatting functions to the in-memory engine while preserving 100% backward compatibility.
   * Configured GitHub Actions CI workflows (`build-apk.yml`, `build-windows.yml`) to automatically build and upload APK/EXE testing artifacts for `event-or-artifact`.
+* **2026-11-05 (Partner Multi-Currency & Atomic Deposit Rollout):**
+  * **Migration `20261105003000_partner_deposit_atomic.sql`:** Implemented `public.partner_deposit_atomic` supporting capital vs. balance deposits, currency conversion to USD base, and atomic cloud shift ledger recording. Upgraded `public.partner_withdrawal_atomic` with multi-currency (`_currency`, `_original_amount`) and active cash shift balance deduction.
+  * **Frontend (`src/pages/Partners.tsx` & `src/lib/cloud/partners-cloud.ts`):** Added deposit target selection (Capital vs. Available Balance), enabled currency selector capsules (USD/TRY/SYP), instant USD equivalent preview, and fixed withdrawal false rejections when withdrawing in non-USD currencies by computing currency-based maximums.
 * **2026-11-05 (Tasks 1-10 Rollout):** FlowPOS Pro Comprehensive Financial & Architecture Patch:
   * **Task 1:** Whitelisted real DB columns in `TABLE_ALLOWED_COLUMNS` (`src/lib/supabase-store.ts`) for invoices, partners, products, and recurring expenses. Created migration `20261104230000_process_pos_sale_atomic_and_profit_recalc.sql`.
   * **Task 2:** Direct percentage expense sharing in `add_expense_atomic`. Proportional debt profit confirmation in `confirm_partner_debt_profit_atomic`. Updated `Partners.tsx`, `debts-cloud.ts`, and types.

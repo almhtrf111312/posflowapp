@@ -24,7 +24,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getEquivalentCurrencies } from '@/lib/currencies';
-import { getCurrencyDef, getEnabledCurrencies, fromUsd } from '@/lib/money-engine';
+import { getCurrencyDef, getEnabledCurrencies, fromUsd, toUsd, roundForCurrency } from '@/lib/money-engine';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 // ✅ استخدام الدوال السحابية بدلاً من المحلية
@@ -157,8 +157,11 @@ export default function Partners() {
   const [withdrawAmount, setWithdrawAmount] = useState(0);
   const [withdrawType, setWithdrawType] = useState<'profit' | 'capital' | 'auto'>('auto');
   const [withdrawNotes, setWithdrawNotes] = useState('');
+  const [withdrawCurrency, setWithdrawCurrency] = useState<string>('USD');
   const [capitalAmount, setCapitalAmount] = useState(0);
   const [capitalNotes, setCapitalNotes] = useState('');
+  const [depositTarget, setDepositTarget] = useState<'capital' | 'balance'>('capital');
+  const [depositCurrency, setDepositCurrency] = useState<string>('USD');
 
   // Update form when categories change
   useEffect(() => {
@@ -362,19 +365,22 @@ export default function Partners() {
       return;
     }
 
-    const profitAvailable = selectedPartner.currentBalance || 0;
-    const capitalAvailable = selectedPartner.currentCapital || 0;
-    const totalAvailable = profitAvailable + capitalAvailable;
+    const profitAvailableUsd = selectedPartner.currentBalance || 0;
+    const capitalAvailableUsd = selectedPartner.currentCapital || 0;
+    const totalAvailableUsd = profitAvailableUsd + capitalAvailableUsd;
 
-    if (withdrawType === 'profit' && withdrawAmount > profitAvailable) {
+    // تحويل المبلغ المدخل من العملة المختارة إلى الدولار للمقارنة المحاسبية
+    const withdrawUsdAmount = Math.round(toUsd(withdrawAmount, withdrawCurrency) * 100) / 100;
+
+    if (withdrawType === 'profit' && withdrawUsdAmount > profitAvailableUsd + 0.001) {
       toast.error(t('partners.amountExceedsProfit'));
       return;
     }
-    if (withdrawType === 'capital' && withdrawAmount > capitalAvailable) {
+    if (withdrawType === 'capital' && withdrawUsdAmount > capitalAvailableUsd + 0.001) {
       toast.error(t('partners.amountExceedsCapital'));
       return;
     }
-    if (withdrawType === 'auto' && withdrawAmount > totalAvailable) {
+    if (withdrawType === 'auto' && withdrawUsdAmount > totalAvailableUsd + 0.001) {
       toast.error(t('partners.amountExceedsTotal'));
       return;
     }
@@ -382,28 +388,57 @@ export default function Partners() {
     let success = false;
     let resultMessage = '';
 
-    // ✅ استخدام الدوال السحابية للسحب
     if (withdrawType === 'profit' || withdrawType === 'auto') {
-      // سحب من الأرباح أولاً
-      const profitToWithdraw = Math.min(withdrawAmount, profitAvailable);
-      if (profitToWithdraw > 0) {
-        success = await withdrawProfitCloud(selectedPartner.id, profitToWithdraw, withdrawNotes);
-        resultMessage = `${t('partners.withdrawnFromProfit')} ${formatCurrency(profitToWithdraw)}`;
+      const profitToWithdrawUsd = Math.min(withdrawUsdAmount, profitAvailableUsd);
+      const profitToWithdrawOrig = withdrawCurrency === 'USD' ? profitToWithdrawUsd : fromUsd(profitToWithdrawUsd, withdrawCurrency);
+
+      if (profitToWithdrawUsd > 0) {
+        success = await withdrawProfitCloud(
+          selectedPartner.id,
+          profitToWithdrawUsd,
+          withdrawNotes,
+          false,
+          withdrawCurrency,
+          profitToWithdrawOrig
+        );
+        resultMessage = `${t('partners.withdrawnFromProfit')} ${formatCurrency(profitToWithdrawUsd)}`;
+        if (withdrawCurrency !== 'USD') {
+          resultMessage += ` (${formatNumber(profitToWithdrawOrig)} ${withdrawCurrency})`;
+        }
       } else {
-        success = true; // لا يوجد ربح للسحب، ستتم العملية من رأس المال
+        success = true;
       }
 
-      // إذا كان السحب التلقائي ويحتاج المزيد من رأس المال
-      if (withdrawType === 'auto' && withdrawAmount > profitAvailable) {
-        const fromCapital = withdrawAmount - profitAvailable;
-        const capitalSuccess = await withdrawCapitalCloud(selectedPartner.id, fromCapital, withdrawNotes);
+      if (withdrawType === 'auto' && withdrawUsdAmount > profitAvailableUsd) {
+        const fromCapitalUsd = Math.round((withdrawUsdAmount - profitAvailableUsd) * 100) / 100;
+        const fromCapitalOrig = withdrawCurrency === 'USD' ? fromCapitalUsd : fromUsd(fromCapitalUsd, withdrawCurrency);
+        const capitalSuccess = await withdrawCapitalCloud(
+          selectedPartner.id,
+          fromCapitalUsd,
+          withdrawNotes,
+          withdrawCurrency,
+          fromCapitalOrig
+        );
         success = success && capitalSuccess;
-        resultMessage += ` + ${formatCurrency(fromCapital)} ${t('partners.fromCapital')}`;
+        resultMessage += ` + ${formatCurrency(fromCapitalUsd)} ${t('partners.fromCapital')}`;
+        if (withdrawCurrency !== 'USD') {
+          resultMessage += ` (${formatNumber(fromCapitalOrig)} ${withdrawCurrency})`;
+        }
       }
     } else if (withdrawType === 'capital') {
-      // ✅ سحب من رأس المال مباشرة
-      success = await withdrawCapitalCloud(selectedPartner.id, withdrawAmount, withdrawNotes);
-      resultMessage = `${t('partners.withdrawnFromCapital')} ${formatCurrency(withdrawAmount)}`;
+      const fromCapitalUsd = withdrawUsdAmount;
+      const fromCapitalOrig = withdrawAmount;
+      success = await withdrawCapitalCloud(
+        selectedPartner.id,
+        fromCapitalUsd,
+        withdrawNotes,
+        withdrawCurrency,
+        fromCapitalOrig
+      );
+      resultMessage = `${t('partners.withdrawnFromCapital')} ${formatCurrency(fromCapitalUsd)}`;
+      if (withdrawCurrency !== 'USD') {
+        resultMessage += ` (${formatNumber(fromCapitalOrig)} ${withdrawCurrency})`;
+      }
     }
 
     if (success) {
@@ -413,6 +448,7 @@ export default function Partners() {
       setWithdrawAmount(0);
       setWithdrawType('auto');
       setWithdrawNotes('');
+      setWithdrawCurrency('USD');
       toast.success(resultMessage);
     } else {
       toast.error(t('partners.withdrawError'));
@@ -426,12 +462,17 @@ export default function Partners() {
       return;
     }
 
-    // ✅ استخدام الدالة السحابية الموحدة التي تضيف للصندوق تلقائياً (بدون وردية)
+    // حساب المعادل الفوري بالدولار بدقة
+    const depositUsdAmount = Math.round(toUsd(capitalAmount, depositCurrency) * 100) / 100;
+
     const success = await addCapitalWithCashboxCloud(
       selectedPartner.id,
       selectedPartner.name,
-      capitalAmount,
-      capitalNotes
+      depositUsdAmount,
+      capitalNotes,
+      depositTarget,
+      depositCurrency,
+      capitalAmount
     );
 
     if (success) {
@@ -440,7 +481,11 @@ export default function Partners() {
       setSelectedPartner(null);
       setCapitalAmount(0);
       setCapitalNotes('');
-      toast.success(`${t('partners.capitalAdded')} ${formatCurrency(capitalAmount)} (تمت الإضافة للصندوق)`);
+      setDepositTarget('capital');
+      setDepositCurrency('USD');
+      const actionName = depositTarget === 'balance' ? 'تم إيداع الرصيد' : t('partners.capitalAdded');
+      const extraCurr = depositCurrency !== 'USD' ? ` (${formatNumber(capitalAmount)} ${depositCurrency})` : '';
+      toast.success(`${actionName} ${formatCurrency(depositUsdAmount)}${extraCurr} (تم الربط مع الصندوق)`);
     } else {
       toast.error(t('partners.capitalAddError'));
     }
@@ -450,10 +495,12 @@ export default function Partners() {
     setSelectedPartner(partner);
     setCapitalAmount(0);
     setCapitalNotes('');
+    setDepositTarget('capital');
+    setDepositCurrency('USD');
     setShowAddCapitalDialog(true);
   };
 
-  const openEditDialog = (partner: Partner) => {
+    const openEditDialog = (partner: Partner) => {
     setSelectedPartner(partner);
     setFormData({
       name: partner.name,
@@ -1305,6 +1352,34 @@ export default function Partners() {
           </DialogHeader>
           {selectedPartner && (
             <div className="space-y-4 py-4">
+              {/* Currency Selector Capsules */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground block">عملة السحب والتسليم</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {getEnabledCurrencies().map(curr => {
+                    const isSelected = withdrawCurrency === curr.code;
+                    return (
+                      <button
+                        key={curr.code}
+                        type="button"
+                        onClick={() => {
+                          setWithdrawCurrency(curr.code);
+                          setWithdrawAmount(0);
+                        }}
+                        className={cn(
+                          "px-3 py-1 text-xs font-bold rounded-lg border transition-all",
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-muted/40 hover:bg-muted text-foreground border-border/60"
+                        )}
+                      >
+                        {curr.code} ({curr.symbol})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Available Balances */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-success/10 rounded-lg p-3 text-center">
@@ -1312,14 +1387,24 @@ export default function Partners() {
                     <TrendingUp className="w-4 h-4 text-success" />
                     <p className="text-xs text-muted-foreground">{t('partners.profits')}</p>
                   </div>
-                  <p className="text-xl font-bold text-success">${formatNumber(selectedPartner.currentBalance || 0)}</p>
+                  <p className="text-xl font-bold text-success">$${formatNumber(selectedPartner.currentBalance || 0)}</p>
+                  {withdrawCurrency !== 'USD' && (
+                    <p className="text-xs font-semibold text-success/80 mt-0.5">
+                      ≈ {formatNumber(fromUsd(selectedPartner.currentBalance || 0, withdrawCurrency))} {withdrawCurrency}
+                    </p>
+                  )}
                 </div>
                 <div className="bg-info/10 rounded-lg p-3 text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <PiggyBank className="w-4 h-4 text-info" />
                     <p className="text-xs text-muted-foreground">{t('partners.capital')}</p>
                   </div>
-                  <p className="text-xl font-bold text-info">${formatNumber(selectedPartner.currentCapital || 0)}</p>
+                  <p className="text-xl font-bold text-info">$${formatNumber(selectedPartner.currentCapital || 0)}</p>
+                  {withdrawCurrency !== 'USD' && (
+                    <p className="text-xs font-semibold text-info/80 mt-0.5">
+                      ≈ {formatNumber(fromUsd(selectedPartner.currentCapital || 0, withdrawCurrency))} {withdrawCurrency}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1350,13 +1435,26 @@ export default function Partners() {
 
               {/* Withdraw Amount */}
               <div>
-                <label className="text-sm font-medium mb-1.5 block">{t('partners.withdrawAmount')}</label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={withdrawAmount || ''}
-                  onChange={(e) => setWithdrawAmount(Number(e.target.value))}
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium">{t('partners.withdrawAmount')} ({withdrawCurrency})</label>
+                  {withdrawCurrency !== 'USD' && withdrawAmount > 0 && (
+                    <span className="text-xs font-bold text-primary">
+                      ≈ $${formatNumber(toUsd(withdrawAmount, withdrawCurrency))}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={withdrawAmount || ''}
+                    onChange={(e) => setWithdrawAmount(Number(e.target.value))}
+                    className="pr-14"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                    {withdrawCurrency}
+                  </span>
+                </div>
               </div>
 
               {/* Quick Withdraw Buttons */}
@@ -1365,8 +1463,11 @@ export default function Partners() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
-                    onClick={() => setWithdrawAmount(selectedPartner.currentBalance || 0)}
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      const maxProfit = fromUsd(selectedPartner.currentBalance || 0, withdrawCurrency);
+                      setWithdrawAmount(roundForCurrency(maxProfit, withdrawCurrency));
+                    }}
                   >
                     {t('partners.allProfit')}
                   </Button>
@@ -1375,8 +1476,11 @@ export default function Partners() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
-                    onClick={() => setWithdrawAmount(selectedPartner.currentCapital || 0)}
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      const maxCapital = fromUsd(selectedPartner.currentCapital || 0, withdrawCurrency);
+                      setWithdrawAmount(roundForCurrency(maxCapital, withdrawCurrency));
+                    }}
                   >
                     {t('partners.allCapital')}
                   </Button>
@@ -1385,8 +1489,11 @@ export default function Partners() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
-                    onClick={() => setWithdrawAmount((selectedPartner.currentBalance || 0) + (selectedPartner.currentCapital || 0))}
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      const maxTotal = fromUsd((selectedPartner.currentBalance || 0) + (selectedPartner.currentCapital || 0), withdrawCurrency);
+                      setWithdrawAmount(roundForCurrency(maxTotal, withdrawCurrency));
+                    }}
                   >
                     {t('partners.withdrawAll')}
                   </Button>
@@ -1418,45 +1525,130 @@ export default function Partners() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Capital Dialog */}
+      {/* Add Capital / Deposit Dialog */}
       <Dialog open={showAddCapitalDialog} onOpenChange={setShowAddCapitalDialog}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpRight className="w-5 h-5 text-success" />
-              {t('partners.addCapital')}
+              {depositTarget === 'balance' ? 'إيداع رصيد للشريك' : t('partners.addCapital')}
             </DialogTitle>
             <DialogDescription>
-              {t('partners.addCapitalFor')} {selectedPartner?.name}
+              {depositTarget === 'balance' ? 'إيداع رصيد أرباح أو تسوية مستحقات لـ' : t('partners.addCapitalFor')} {selectedPartner?.name}
             </DialogDescription>
           </DialogHeader>
           {selectedPartner && (
             <div className="space-y-4 py-4">
-              <div className="bg-info/10 rounded-lg p-4 text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <PiggyBank className="w-5 h-5 text-info" />
-                  <p className="text-sm text-muted-foreground">{t('partners.currentCapital')}</p>
+              {/* Deposit Target Capsules */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground block">وجهة الإيداع</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDepositTarget('capital')}
+                    className={cn(
+                      "p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center gap-1",
+                      depositTarget === 'capital'
+                        ? "bg-info/15 text-info border-info/50 shadow-sm"
+                        : "bg-muted/30 hover:bg-muted text-muted-foreground border-border/50"
+                    )}
+                  >
+                    <PiggyBank className="w-4 h-4" />
+                    <span>رأس مال استثماري</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDepositTarget('balance')}
+                    className={cn(
+                      "p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center gap-1",
+                      depositTarget === 'balance'
+                        ? "bg-success/15 text-success border-success/50 shadow-sm"
+                        : "bg-muted/30 hover:bg-muted text-muted-foreground border-border/50"
+                    )}
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    <span>رصيد متاح / تسوية</span>
+                  </button>
                 </div>
-                <p className="text-3xl font-bold text-info">${formatNumber(selectedPartner.currentCapital || 0)}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ({t('partners.total')}: ${formatNumber(selectedPartner.initialCapital || 0)})
+              </div>
+
+              {/* Currency Selector Capsules */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground block">عملة الإيداع المقبوضة</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {getEnabledCurrencies().map(curr => {
+                    const isSelected = depositCurrency === curr.code;
+                    return (
+                      <button
+                        key={curr.code}
+                        type="button"
+                        onClick={() => {
+                          setDepositCurrency(curr.code);
+                          setCapitalAmount(0);
+                        }}
+                        className={cn(
+                          "px-3 py-1 text-xs font-bold rounded-lg border transition-all",
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-muted/40 hover:bg-muted text-foreground border-border/60"
+                        )}
+                      >
+                        {curr.code} ({curr.symbol})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Current Balances Preview */}
+              <div className={cn("rounded-lg p-3.5 text-center transition-colors", depositTarget === 'capital' ? "bg-info/10" : "bg-success/10")}>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  {depositTarget === 'capital' ? (
+                    <PiggyBank className="w-4 h-4 text-info" />
+                  ) : (
+                    <TrendingUp className="w-4 h-4 text-success" />
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {depositTarget === 'capital' ? t('partners.currentCapital') : 'الرصيد المتاح الحالي'}
+                  </p>
+                </div>
+                <p className={cn("text-2xl font-bold", depositTarget === 'capital' ? "text-info" : "text-success")}>
+                  $${formatNumber(depositTarget === 'capital' ? (selectedPartner.currentCapital || 0) : (selectedPartner.currentBalance || 0))}
                 </p>
+                {depositCurrency !== 'USD' && (
+                  <p className="text-xs font-semibold text-muted-foreground mt-0.5">
+                    ≈ {formatNumber(fromUsd(depositTarget === 'capital' ? (selectedPartner.currentCapital || 0) : (selectedPartner.currentBalance || 0), depositCurrency))} {depositCurrency}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-1.5 block">{t('partners.depositAmount')}</label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={capitalAmount || ''}
-                  onChange={(e) => setCapitalAmount(Number(e.target.value))}
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-sm font-medium">{t('partners.depositAmount')} ({depositCurrency})</label>
+                  {depositCurrency !== 'USD' && capitalAmount > 0 && (
+                    <span className="text-xs font-bold text-primary">
+                      ≈ $${formatNumber(toUsd(capitalAmount, depositCurrency))}
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={capitalAmount || ''}
+                    onChange={(e) => setCapitalAmount(Number(e.target.value))}
+                    className="pr-14"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
+                    {depositCurrency}
+                  </span>
+                </div>
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-1.5 block">{t('common.notes')} ({t('common.optional')})</label>
                 <Textarea
-                  placeholder={t('partners.depositExample')}
+                  placeholder={depositTarget === 'balance' ? 'ملاحظة أو سبب إيداع الرصيد...' : t('partners.depositExample')}
                   value={capitalNotes}
                   onChange={(e) => setCapitalNotes(e.target.value)}
                   rows={2}
@@ -1476,7 +1668,6 @@ export default function Partners() {
           )}
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>

@@ -2311,10 +2311,10 @@ export type Database = {
       add_expense_atomic: {
         Args: {
           _amount: number
-          _date: string
-          _description: string
+          _date?: string
+          _description?: string
           _expense_type: string
-          _notes: string
+          _notes?: string
           _operation_id: string
         }
         Returns: Json
@@ -2483,7 +2483,21 @@ export type Database = {
           _total: number
           _warehouse_id: string
         }
-        Returns: Json
+        Returns: {
+          already_processed: boolean
+          cogs: number
+          debt_paid: number
+          debt_remaining: number
+          discount: number
+          invoice_id: string
+          invoice_number: string
+          profit: number
+          stock_shortage: boolean
+          subtotal: number
+          success: boolean
+          tax_amount: number
+          total: number
+        }[]
       }
       recalc_pos_invoice_profit: {
         Args: { _invoice_id: string }

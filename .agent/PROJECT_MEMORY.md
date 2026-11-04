@@ -215,6 +215,10 @@
   * Updated `src/types/index.ts`: Expanded `CurrencyCode` to support any standard currency code.
   * Updated `src/lib/currencies.ts` & `src/hooks/use-currency.tsx`: Fixed BHR -> BHD and connected all display and formatting functions to the in-memory engine while preserving 100% backward compatibility.
   * Configured GitHub Actions CI workflows (`build-apk.yml`, `build-windows.yml`) to automatically build and upload APK/EXE testing artifacts for `event-or-artifact`.
+* **2026-11-05 (Storage Stats, Type Deduplication, Written-off Invoices & Reset Data Fix):**
+  * **Migration `20261105004000_storage_stats_and_reset_fix.sql`:** Updated `get_user_storage_stats` to allow both Boss and Admins to inspect their own storage and employees without permission failures, and hardened `reset_user_store_data` to clean all cashier transactions under the store's shifts to avoid foreign key violations.
+  * **TypeScript Types Deduplication (`src/integrations/supabase/types.ts`):** Removed duplicate declaration of `request_device_reset_secure` preventing TS2300 compiler errors.
+  * **Reports & Invoice Types (`src/types/index.ts` & `src/lib/cloud/invoices-cloud.ts`):** Expanded `InvoiceStatus` to include `'written_off'` ensuring clean typing with `Reports.tsx` filters.
 * **2026-11-05 (Partner Multi-Currency & Atomic Deposit Rollout):**
   * **Migration `20261105003000_partner_deposit_atomic.sql`:** Implemented `public.partner_deposit_atomic` supporting capital vs. balance deposits, currency conversion to USD base, and atomic cloud shift ledger recording. Upgraded `public.partner_withdrawal_atomic` with multi-currency (`_currency`, `_original_amount`) and active cash shift balance deduction.
   * **Frontend (`src/pages/Partners.tsx` & `src/lib/cloud/partners-cloud.ts`):** Added deposit target selection (Capital vs. Available Balance), enabled currency selector capsules (USD/TRY/SYP), instant USD equivalent preview, and fixed withdrawal false rejections when withdrawing in non-USD currencies by computing currency-based maximums.

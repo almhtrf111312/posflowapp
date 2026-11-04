@@ -2421,13 +2421,6 @@ export type Database = {
         }
         Returns: Json
       }
-      request_device_reset_secure: {
-        Args: {
-          _license_key: string
-          _user_email: string
-        }
-        Returns: Json
-      }
       check_and_bind_device: { Args: { p_device_id: string }; Returns: Json }
       clean_old_error_logs: { Args: never; Returns: number }
       confirm_partner_debt_profit_atomic: {

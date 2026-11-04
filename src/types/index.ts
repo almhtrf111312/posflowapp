@@ -69,7 +69,7 @@ export interface InvoiceItem {
 }
 
 export type PaymentType = 'cash' | 'debt';
-export type InvoiceStatus = 'completed' | 'pending' | 'cancelled';
+export type InvoiceStatus = 'completed' | 'paid' | 'pending' | 'cancelled' | 'refunded' | 'written_off';
 
 export interface Invoice {
   id: string;

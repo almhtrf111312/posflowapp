@@ -24,7 +24,7 @@ import { isOperationCancelled } from '../cancellation-registry';
 
 export type InvoiceType = 'sale' | 'maintenance';
 export type PaymentType = 'cash' | 'debt';
-export type InvoiceStatus = 'paid' | 'pending' | 'cancelled' | 'refunded';
+export type InvoiceStatus = 'paid' | 'pending' | 'cancelled' | 'refunded' | 'written_off';
 
 export interface InvoiceItem {
   id: string;

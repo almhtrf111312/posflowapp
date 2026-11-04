@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { QueuedOperation } from '@/lib/sync-queue';
 import { filterTablePayload, getOwnerIdForInsert } from '@/lib/supabase-store';
+import { invalidatePartnersCache } from './partners-cloud';
 
 type LooseSupabase = SupabaseClient<any, 'public', any>;
 const sb = supabase as unknown as LooseSupabase;
@@ -61,16 +62,17 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
     }
     case 'expense': {
       const cleanData = filterTablePayload('expenses', data);
-      return assertSuccess(sb.from('expenses').insert(cleanData));
+      const ownerId = await getOwnerIdForInsert();
+      return assertSuccess(sb.from('expenses').insert({ ...cleanData, user_id: ownerId }));
     }
     case 'debt': {
       const cleanData = filterTablePayload('debts', data);
+      const ownerId = await getOwnerIdForInsert();
+      if (!ownerId) throw new Error('No owner id');
       if (cleanData.id) {
-        const ownerId = await getOwnerIdForInsert();
-        if (!ownerId) throw new Error('No owner id');
         return assertSuccess(sb.from('debts').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id', ignoreDuplicates: true }));
       }
-      return assertSuccess(sb.from('debts').insert(cleanData));
+      return assertSuccess(sb.from('debts').insert({ ...cleanData, user_id: ownerId }));
     }
     case 'expense_atomic': {
       const { uniqueKey: _u, ...args } = data;
@@ -99,14 +101,17 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       });
       if (error) {
         // إذا لم تكن الدالة متوفرة، يتم التحديث المباشر لحالة الدين
-        return assertSuccess(
+        const res = await assertSuccess(
           sb.from('debts').update({
             status: 'written_off',
             notes: reason,
             updated_at: new Date().toISOString()
           }).eq('id', debtId)
         );
+        invalidatePartnersCache();
+        return res;
       }
+      invalidatePartnersCache();
       return true;
     }
     case 'customer_create': {

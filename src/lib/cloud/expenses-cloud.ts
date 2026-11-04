@@ -4,6 +4,7 @@ import {
   insertToSupabase, 
   deleteFromSupabase,
   getCurrentUserId,
+  getOwnerIdForInsert,
   isCashierUser
 } from '../supabase-store';
 import { supabase } from '@/integrations/supabase/client';
@@ -288,6 +289,7 @@ export const addExpenseCloud = async (expenseData: {
   // Server does expense + partner shares together, idempotent by operation UUID.
   const operationId = crypto.randomUUID();
   const currentUid = getCurrentUserId() || '';
+  const ownerId = (await getOwnerIdForInsert()) || currentUid;
   const nowIso = new Date().toISOString();
   const roundedAmount = round8(expenseData.amount);
 
@@ -302,7 +304,7 @@ export const addExpenseCloud = async (expenseData: {
 
   const localExpense = toExpense({
     id: operationId,
-    user_id: currentUid,
+    user_id: ownerId,
     expense_type: expenseData.type,
     amount: roundedAmount,
     description: payload._description,
@@ -358,8 +360,8 @@ export const addExpenseCloud = async (expenseData: {
     try {
       const directPayload = {
         id: operationId,
-        user_id: currentUid,
-        cashier_id: currentUid || null,
+        user_id: ownerId,
+        cashier_id: currentUid !== ownerId ? currentUid : null,
         expense_type: expenseData.type,
         amount: roundedAmount,
         description: payload._description,

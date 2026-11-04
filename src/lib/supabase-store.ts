@@ -183,18 +183,16 @@ export const getOwnerIdForInsert = async (): Promise<string | null> => {
     // Cache the role
     currentUserRole = data.role;
 
-    // If admin or boss, they are their own owner
-    if (data.role === 'admin' || data.role === 'boss') {
+    // If admin or boss, or if owner_id is missing, user is their own owner
+    if (data.role === 'admin' || data.role === 'boss' || !data.owner_id) {
       currentOwnerId = userId;
       return userId;
     }
 
-    // If cashier with owner_id, use owner_id
-    if (data.role === 'cashier' && data.owner_id) {
-      currentOwnerId = data.owner_id;
-      console.log('[getOwnerIdForInsert] Cashier owner_id:', currentOwnerId);
-      return data.owner_id;
-    }
+    // If staff (cashier, distributor, etc.) with owner_id, use owner_id
+    currentOwnerId = data.owner_id;
+    console.log('[getOwnerIdForInsert] Staff owner_id:', currentOwnerId);
+    return data.owner_id;
 
     // Fallback to self
     return userId;

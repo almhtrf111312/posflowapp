@@ -169,6 +169,18 @@
 * **2026-10-26 (v1.1.5 - Build 335 | Commit `c8f5c60` & `ae0f888`):** High-Precision Financial Math Engine:
   * 8-decimal intermediate USD precision engine (`money-engine.ts`) preventing rounding drift across QAR, KWD, SYP, TRY, and USD.
   * Dynamic currency decimals (0, 2, 3) and unified cash shifts accounting with automated tests (`financial-precision.test.ts`).
+* **2026-11-04 (Tasks 6 & 7 - Store Isolation, RLS Hardening & Atomic Debt Write-off):**
+  * **Plan 6 (Store Isolation, Cashier Sandboxing & RLS Policies):**
+    * Created `supabase/migrations/20261104235500_store_isolation_and_debt_writeoff_atomic.sql`.
+    * Upgraded `get_owner_id(_user_id)` to reliably resolve owner for cashiers/distributors while keeping admins/boss as their own owners.
+    * Hardened RLS policies across `products`, `invoices`, and `debts` using `user_id = public.get_owner_id(auth.uid())`.
+    * Isolated `partners` table via RLS: strictly viewable and manageable by admin/boss (`has_role(..., 'admin') OR is_boss(...)`), hiding margins and partner capital from cashiers.
+    * Updated frontend `getOwnerIdForInsert()` in `supabase-store.ts`, `expenses-cloud.ts`, and `sync-operation-processor.ts` to guarantee all inserts by staff attach to the store's `owner_id` instead of the cashier's raw UID.
+    * Enforced cashier guard in `loadPartnersCloud()` returning empty sets to eliminate RLS permission errors.
+  * **Plan 7 (Cashbox, Shifts, Debt Write-off & Idempotent Accounting):**
+    * Implemented atomic RPC `writeoff_debt_atomic(_debt_id, _reason, _operation_id)` on PostgreSQL with idempotency checks.
+    * Automatically marks debt and associated invoice as `written_off`, deducts remaining debt from customer `total_debt`, and purges/recalculates `pending_profit` across all partners.
+    * Updated `writeOffDebtCloud` in `debts-cloud.ts` and `sync-operation-processor.ts` to trigger automatic partner cache invalidation upon debt write-off.
 * **2026-11-04 (Tasks 4 & 5 - Tasks 4 & 5 Stabilization Initiative):**
   * **Task 4 (Purchases, Inventory & WAC Engine):**
     * Created `supabase/migrations/20261104235000_wac_and_close_shift_atomic.sql` containing `receive_stock_wac` RPC: 8-decimal weighted average cost (WAC) engine, zero-stock division guard, and automatic audit documentation in `stock_movements`.

@@ -4,7 +4,8 @@ import {
   insertToSupabase, 
   updateInSupabase, 
   deleteFromSupabase,
-  getCurrentUserId 
+  getCurrentUserId,
+  isCashierUser
 } from '../supabase-store';
 import { emitEvent, EVENTS } from '../events';
 import { supabase } from '@/integrations/supabase/client';
@@ -197,6 +198,7 @@ const CACHE_TTL = 30000;
 let bgPartnersRefreshing = false;
 const refreshPartnersInBackground = async () => {
   if (bgPartnersRefreshing || !navigator.onLine) return;
+  if (await isCashierUser()) return;
   bgPartnersRefreshing = true;
   try {
     const cloudPartners = await fetchFromSupabase<CloudPartner>('partners', {
@@ -216,6 +218,7 @@ const refreshPartnersInBackground = async () => {
 
 // Load partners — local-first
 export const loadPartnersCloud = async (): Promise<Partner[]> => {
+  if (await isCashierUser()) return [];
   const userId = getCurrentUserId();
   if (!userId) {
     const local = loadPartnersLocally();

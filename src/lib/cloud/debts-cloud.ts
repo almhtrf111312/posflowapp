@@ -643,9 +643,14 @@ export const writeOffDebtCloud = async (
     }
 
     invalidateDebtsCache();
+    try {
+      const { invalidatePartnersCache } = await import('./partners-cloud');
+      invalidatePartnersCache();
+    } catch { /* ignore */ }
     emitEvent(EVENTS.DEBTS_UPDATED, null);
     emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
     emitEvent(EVENTS.EXPENSES_UPDATED, null);
+    emitEvent(EVENTS.PARTNERS_UPDATED, null);
     return true;
   } catch (error) {
     console.error('Error in writeOffDebtCloud:', error);

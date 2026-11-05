@@ -112,12 +112,7 @@ export type ReportDisplayMode = 'smart' | 'professional';
 const REPORT_DISPLAY_MODE_KEY = 'hyperpos_reports_display_mode_v1';
 
 function readReportDisplayMode(): ReportDisplayMode {
-  try {
-    const saved = localStorage.getItem(REPORT_DISPLAY_MODE_KEY);
-    return saved === 'professional' ? 'professional' : 'smart';
-  } catch {
-    return 'smart';
-  }
+  return 'smart';
 }
 
 export interface ReportEntry {
@@ -2260,40 +2255,12 @@ export default function Reports() {
                 {t('reports.financialReportsTitle') || 'التقارير المالية'}
               </h1>
 
-              {/* زر التبديل بين الواجهة الذكية والاحترافية بجانب الكلمة مباشرة */}
+              {/* الواجهة الذكية فقط مع إزالة الواجهة الاحترافية */}
               <div
-                role="group"
-                aria-label={t('reports.displayModeLabel')}
-                className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-muted/60 p-0.5 sm:p-1 shrink-0 shadow-2xs"
+                className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-bold text-primary shadow-2xs shrink-0"
               >
-                <button
-                  type="button"
-                  aria-pressed={reportDisplayMode === 'smart'}
-                  onClick={() => setReportDisplayMode('smart')}
-                  className={cn(
-                    'h-7 sm:h-8 rounded-full px-2.5 sm:px-3.5 gap-1.5 text-xs font-bold transition-all flex items-center whitespace-nowrap',
-                    reportDisplayMode === 'smart'
-                      ? 'bg-primary text-primary-foreground shadow-xs font-black'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
-                  <span>{t('reports.displayModeSmart') || 'ذكية'}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={reportDisplayMode === 'professional'}
-                  onClick={() => setReportDisplayMode('professional')}
-                  className={cn(
-                    'h-7 sm:h-8 rounded-full px-2.5 sm:px-3.5 gap-1.5 text-xs font-bold transition-all flex items-center whitespace-nowrap',
-                    reportDisplayMode === 'professional'
-                      ? 'bg-primary text-primary-foreground shadow-xs font-black'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <ClipboardList className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
-                  <span>{t('reports.displayModeProfessional') || 'احترافية'}</span>
-                </button>
+                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                <span>{t('reports.displayModeSmart') || 'الواجهة الذكية'}</span>
               </div>
             </div>
 

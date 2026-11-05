@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMoney } from '@/hooks/use-money';
-import { refreshMoneyState } from '@/lib/money-engine';
+import { refreshMoneyState, getCurrencyDef } from '@/lib/money-engine';
 import { getReportCurrency, REPORT_CURRENCY_KEY } from '@/lib/currencies';
 import { EVENTS } from '@/lib/events';
 import { Banknote } from 'lucide-react';
@@ -16,7 +16,19 @@ export function ReportCurrencyBanner() {
     return () => window.removeEventListener(EVENTS.SETTINGS_UPDATED, h as EventListener);
   }, []);
 
-  const active = getReportCurrency();
+  const enabledList = (m.enabledCurrencies || []).filter(c => c.enabled !== false);
+  const nonUsdCurrencies = enabledList.filter(c => !c.isUsd && c.code !== 'USD');
+
+  // ✅ إذا تم تعطيل العملات الإضافية (لا يوجد سوى الدولار)، يختفي الشريط بالكامل
+  if (nonUsdCurrencies.length === 0) {
+    return null;
+  }
+
+  let active = getReportCurrency();
+  // ✅ إذا كانت العملة المحفوظة مسبقاً معطلة حالياً، نعود فوراً للدولار لمنع عرض سعر وهمي لعملة معطلة
+  if (!enabledList.some(c => c.code === active.code)) {
+    active = getCurrencyDef('USD');
+  }
 
   const choose = (code: string) => {
     try {
@@ -27,8 +39,6 @@ export function ReportCurrencyBanner() {
     refreshMoneyState();
     window.dispatchEvent(new CustomEvent(EVENTS.SETTINGS_UPDATED));
   };
-
-  const enabledList = m.enabledCurrencies;
 
   return (
     <div className="flex items-center justify-between flex-wrap gap-2 px-3.5 py-2 bg-primary/5 border border-primary/20 rounded-xl text-xs text-muted-foreground mb-4">

@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { addActivityLog } from '@/lib/activity-log';
 import { isGuestDemoMode } from '@/lib/demo-data';
+import { normalizePhoneNumber } from '@/lib/phone-utils';
 
 export type UserType = 'cashier' | 'distributor' | 'pos';
 
@@ -208,12 +209,34 @@ export function useUsersManagement() {
         }
       }
 
-      // Normalize email to standard lowercase trimmed format
+      // Normalize email and phone to standard format
       const normalizedEmail = email.trim().toLowerCase();
+      const normalizedPhone = phone ? normalizePhoneNumber(phone) : undefined;
+
+      // Pre-check phone and email availability via database function
+      if (normalizedPhone || normalizedEmail) {
+        try {
+          const { data: checkResult, error: checkError } = await (supabase.rpc as any)('check_phone_email_availability', {
+            _phone: normalizedPhone || '',
+            _email: normalizedEmail,
+          });
+
+          if (!checkError && checkResult && !checkResult.available) {
+            toast({
+              title: 'خطأ في التحقق',
+              description: checkResult.error || 'البريد الإلكتروني أو رقم الهاتف غير متاح',
+              variant: 'destructive',
+            });
+            return false;
+          }
+        } catch (err) {
+          console.warn('[Users] Pre-check availability error:', err);
+        }
+      }
 
       // Call backend function to create the user - this won't affect the current session
       const { data, error } = await supabase.functions.invoke('create-user', {
-        body: { email: normalizedEmail, password, fullName, role, userType, phone, allowedPages },
+        body: { email: normalizedEmail, password, fullName, role, userType, phone: normalizedPhone, allowedPages },
       });
 
       let errorMessage = '';
@@ -356,14 +379,37 @@ export function useUsersManagement() {
     }
 
     try {
-      const updateData: { full_name: string; user_type?: string; phone?: string; allowed_pages?: string[] | null } = { full_name: fullName };
+      const normalizedPhone = phone !== undefined ? (phone.trim() ? normalizePhoneNumber(phone) : null) : undefined;
+
+      if (normalizedPhone) {
+        try {
+          const { data: checkResult, error: checkError } = await (supabase.rpc as any)('check_phone_email_availability', {
+            _phone: normalizedPhone,
+            _email: '',
+            _exclude_user_id: userId,
+          });
+
+          if (!checkError && checkResult && !checkResult.available) {
+            toast({
+              title: 'خطأ في التحقق',
+              description: checkResult.error || 'رقم الهاتف مسجل بالفعل لحساب آخر',
+              variant: 'destructive',
+            });
+            return false;
+          }
+        } catch (err) {
+          console.warn('[Users] Pre-check phone availability error:', err);
+        }
+      }
+
+      const updateData: { full_name: string; user_type?: string; phone?: string | null; allowed_pages?: string[] | null } = { full_name: fullName };
       
       if (userType) {
         updateData.user_type = userType;
       }
       
-      if (phone !== undefined) {
-        updateData.phone = phone;
+      if (normalizedPhone !== undefined) {
+        updateData.phone = normalizedPhone;
       }
 
       if (allowedPages !== undefined) {
@@ -381,9 +427,12 @@ export function useUsersManagement() {
 
       if (error) {
         console.error('Error updating profile:', error);
+        const isUniqueError = error.message?.includes('unique') || (error as any).code === '23505';
         toast({
           title: 'خطأ',
-          description: 'فشل في تحديث بيانات المستخدم: ' + error.message,
+          description: isUniqueError
+            ? 'رقم الهاتف مسجل بالفعل لحساب مستخدم آخر ولا يمكن استخدامه'
+            : 'فشل في تحديث بيانات المستخدم: ' + error.message,
           variant: 'destructive',
         });
         return false;

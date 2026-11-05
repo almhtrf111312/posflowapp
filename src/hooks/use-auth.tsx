@@ -94,10 +94,12 @@ const STAY_LOGGED_IN_KEY = 'hyperpos_stay_logged_in';
 const SESSION_CACHE_KEY = 'hyperpos_session_cache';
 const AUTO_LOGIN_ATTEMPTED_KEY = 'hyperpos_auto_login_attempted';
 
-interface Profile {
+export interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
+  phone?: string | null;
+  pin_hash?: string | null;
   avatar_url: string | null;
   preferred_language: string | null;
   user_type: 'cashier' | 'distributor' | 'pos' | null;

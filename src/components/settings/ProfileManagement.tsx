@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/sonner-bridge';
 import { isGuestDemoMode } from '@/lib/demo-data';
+import { normalizePhoneNumber } from '@/lib/phone-utils';
 import { 
   User, 
   Mail, 
@@ -52,9 +53,22 @@ export function ProfileManagement() {
   const [newEmail, setNewEmail] = useState('');
   const [isSavingEmail, setIsSavingEmail] = useState(false);
 
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
+
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [isSavingPin, setIsSavingPin] = useState(false);
+
   useEffect(() => {
     if (profile?.full_name) {
       setNewName(profile.full_name);
+    }
+    if (profile?.phone) {
+      setNewPhone(profile.phone);
     }
   }, [profile]);
 
@@ -149,6 +163,102 @@ export function ProfileManagement() {
       toast.error(error.message || t('profile.emailUpdateFailed'));
     } finally {
       setIsSavingEmail(false);
+    }
+  };
+
+  const handleUpdatePhone = async () => {
+    if (isGuestDemoMode()) {
+      toast.info('تعديل الحساب يتطلب حساباً رسمياً وغير متاح في النسخة التجريبية');
+      setIsEditingPhone(false);
+      return;
+    }
+
+    const normalized = normalizePhoneNumber(newPhone);
+
+    if (normalized) {
+      try {
+        const { data: checkResult, error: checkError } = await (supabase.rpc as any)('check_phone_email_availability', {
+          _phone: normalized,
+          _email: '',
+          _exclude_user_id: user?.id,
+        });
+
+        if (!checkError && checkResult && !checkResult.available) {
+          toast.error(checkResult.error || 'رقم الهاتف مسجل بالفعل لحساب آخر');
+          return;
+        }
+      } catch (err) {
+        console.warn('Phone check error:', err);
+      }
+    }
+
+    setIsSavingPhone(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ phone: normalized || null })
+        .eq('user_id', user?.id);
+
+      if (error) {
+        if (error.message?.includes('unique') || (error as any).code === '23505') {
+          toast.error('رقم الهاتف مسجل بالفعل لحساب آخر ولا يمكن استخدامه');
+        } else {
+          toast.error('حدث خطأ أثناء حفظ رقم الهاتف: ' + error.message);
+        }
+        return;
+      }
+
+      await refreshProfile();
+      toast.success('تم تحديث رقم الهاتف بنجاح');
+      setIsEditingPhone(false);
+    } catch (error: any) {
+      console.error('Error updating phone:', error);
+      toast.error('حدث خطأ أثناء حفظ رقم الهاتف');
+    } finally {
+      setIsSavingPhone(false);
+    }
+  };
+
+  const handleSavePin = async () => {
+    if (isGuestDemoMode()) {
+      toast.info('هذا الحساب تجريبي محلي بدون رمز PIN');
+      setShowPinDialog(false);
+      return;
+    }
+
+    const cleanPin = newPin.trim();
+    if (cleanPin.length < 4 || cleanPin.length > 8) {
+      toast.error('رمز الـ PIN يجب أن يتكون من 4 إلى 8 أرقام');
+      return;
+    }
+
+    if (cleanPin !== confirmPin.trim()) {
+      toast.error('تأكيد رمز الـ PIN غير متطابق');
+      return;
+    }
+
+    setIsSavingPin(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)('set_user_pin', {
+        _target_user_id: user?.id,
+        _raw_pin: cleanPin,
+      });
+
+      if (error) {
+        toast.error('فشل في تعيين رمز الـ PIN: ' + error.message);
+        return;
+      }
+
+      await refreshProfile();
+      toast.success('تم تعيين وتشفير رمز الدخول السريع (PIN) بنجاح');
+      setShowPinDialog(false);
+      setNewPin('');
+      setConfirmPin('');
+    } catch (err: any) {
+      console.error('Error setting PIN:', err);
+      toast.error('حدث خطأ أثناء تعيين الـ PIN');
+    } finally {
+      setIsSavingPin(false);
     }
   };
 
@@ -325,6 +435,53 @@ export function ProfileManagement() {
             )}
           </div>
 
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-xs sm:text-sm font-medium">
+              <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span>رقم الهاتف المعتمد</span>
+            </Label>
+            {isEditingPhone ? (
+              <div className="flex gap-2">
+                <Input
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="09XXXXXXXX / +963... / +90..."
+                  className="flex-1 min-w-0 font-mono text-left"
+                  dir="ltr"
+                />
+                <Button size="icon" onClick={handleUpdatePhone} disabled={isSavingPhone} className="shrink-0">
+                  {isSavingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                </Button>
+                <Button size="icon" variant="outline" onClick={() => { setIsEditingPhone(false); setNewPhone(profile?.phone || ''); }} className="shrink-0">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 p-3 bg-muted/60 rounded-xl min-w-0 border border-border/40 overflow-hidden">
+                <span dir="ltr" className="truncate flex-1 font-mono text-xs sm:text-sm text-foreground">
+                  {profile?.phone || 'غير محدد'}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="shrink-0 h-8 px-2.5 text-xs ms-1"
+                  onClick={() => {
+                    if (isGuestDemoMode()) {
+                      toast.info('تعديل الحساب يتطلب حساباً رسمياً وغير متاح في النسخة التجريبية');
+                      return;
+                    }
+                    setNewPhone(profile?.phone || '');
+                    setIsEditingPhone(true);
+                  }}
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  {t('profile.edit')}
+                </Button>
+              </div>
+            )}
+          </div>
+
           <Separator className="my-2" />
 
           {/* Password */}
@@ -349,6 +506,35 @@ export function ProfileManagement() {
               >
                 <Lock className="w-3.5 h-3.5" />
                 {t('profile.changeBtn')}
+              </Button>
+            </div>
+          </div>
+          <Separator className="my-2" />
+
+          {/* Quick Cashier PIN */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-xs sm:text-sm font-medium">
+              <KeyRound className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span>رمز الدخول السريع (PIN)</span>
+            </Label>
+            <div className="flex items-center justify-between gap-3 p-3 bg-muted/60 rounded-xl min-w-0 border border-border/40">
+              <span className="text-muted-foreground tracking-widest text-sm flex-1 font-mono">
+                {profile?.pin_hash ? '••••' : 'لم يتم تعيين رمز PIN'}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="shrink-0 h-8 px-2.5 text-xs"
+                onClick={() => {
+                  if (isGuestDemoMode()) {
+                    toast.info('هذا الحساب تجريبي محلي بدون رمز PIN');
+                    return;
+                  }
+                  setShowPinDialog(true);
+                }}
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                {profile?.pin_hash ? 'تغيير الـ PIN' : 'تعيين PIN'}
               </Button>
             </div>
           </div>
@@ -406,6 +592,70 @@ export function ProfileManagement() {
                   <Lock className="w-4 h-4" />
                   {t('password.changeBtn')}
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIN Setup Dialog */}
+      <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تعيين رمز الدخول السريع (PIN)</DialogTitle>
+            <DialogDescription>
+              أدخل رمز PIN من 4 إلى 8 أرقام لتسهيل وتسريع التبديل والبيع للكاشير بأمان مشفر.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>رمز الـ PIN الجديد (4 - 8 أرقام)</Label>
+              <div className="relative">
+                <Input
+                  type={showPin ? 'text' : 'password'}
+                  inputMode="numeric"
+                  maxLength={8}
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="••••"
+                  className="pe-10 font-mono tracking-widest text-center"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground"
+                >
+                  {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>تأكيد رمز الـ PIN</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={8}
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="••••"
+                className="font-mono tracking-widest text-center"
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowPinDialog(false); setNewPin(''); setConfirmPin(''); }}>
+              إلغاء
+            </Button>
+            <Button onClick={handleSavePin} disabled={isSavingPin || !newPin || newPin.length < 4}>
+              {isSavingPin ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin me-2" />
+                  جاري الحفظ...
+                </>
+              ) : (
+                'حفظ وتشفير الـ PIN'
               )}
             </Button>
           </DialogFooter>

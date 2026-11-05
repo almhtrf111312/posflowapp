@@ -1331,6 +1331,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          pin_hash: string | null
           preferred_language: string | null
           telegram_chat_id: number | null
           telegram_linked_at: string | null
@@ -1346,6 +1347,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          pin_hash?: string | null
           preferred_language?: string | null
           telegram_chat_id?: number | null
           telegram_linked_at?: string | null
@@ -1361,6 +1363,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          pin_hash?: string | null
           preferred_language?: string | null
           telegram_chat_id?: number | null
           telegram_linked_at?: string | null

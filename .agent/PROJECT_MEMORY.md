@@ -66,6 +66,11 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-05:** Release v1.5.48 — Password/PIN Hashing, Phone Normalization, Unique Guard & Pre-Check:
+  * Backend SQL Migration (`supabase/migrations/20261105210000_password_pin_hashing_and_phone_normalization.sql`): Added `pgcrypto` bcrypt cost 10 support, `pin_hash` column to profiles, atomic `set_user_pin` and timing-safe `verify_user_pin`, `normalize_phone_number` with Syria/Turkey/international formats, automatic normalization trigger, partial unique index `idx_profiles_phone_unique`, and proactive `check_phone_email_availability` RPC.
+  * Edge Function Protection (`supabase/functions/create-user/index.ts`): Added pre-check validation for phone and email uniqueness preventing silent takeover or duplicate registrations, with informative Arabic errors.
+  * Front-End Normalization & Pre-Check (`src/lib/phone-utils.ts`, `src/hooks/use-users-management.tsx`, `src/components/settings/UsersTab.tsx`): Centralized phone normalization utility; wired `check_phone_email_availability` into `addUser` and `updateUserProfile`; enabled phone editing for existing users.
+  * Profile Self-Management & Quick PIN (`src/components/settings/ProfileManagement.tsx`): Added phone management with uniqueness validation and Quick Cashier PIN setup/update modal using `set_user_pin`.
 * **2026-11-05:** Release v1.5.47 — Support Route & Blocked Account Flow (Stages 1-4):
   * Public Route Rollout (`src/App.tsx`): Registered `/contact-developer` outside `ProtectedRoute` to resolve 404 and unauthorized redirect loops for non-logged-in users.
   * Blocked Account Redirect (`src/hooks/use-auth.tsx` & `src/pages/Login.tsx`): Enhanced `signIn` to return explicit `blockedReason` (`inactive`, `owner_inactive`, `revoked`); automatically redirects blocked users to `/contact-developer` with context instead of leaving them stuck on login screen.

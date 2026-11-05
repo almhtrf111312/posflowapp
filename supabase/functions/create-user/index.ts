@@ -85,11 +85,53 @@ Deno.serve(async (req) => {
       );
     }
 
+    // 1. استخراج وتجهيز الهاتف والبريد
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    let normalizedPhone: string | null = null;
+
+    if (phone && phone.trim()) {
+      // تنظيف الأرقام وتوحيد التنسيق
+      let clean = phone.trim().replace(/[^\+0-9]/g, '');
+      if (clean.startsWith('00')) clean = '+' + clean.slice(2);
+      if (/^09[0-9]{8}$/.test(clean)) clean = '+963' + clean.slice(1);
+      if (/^05[0-9]{9}$/.test(clean)) clean = '+90' + clean.slice(1);
+      normalizedPhone = clean || null;
+    }
+
+    // 2. الفحص الاستباقي (Pre-Check Query) لمنع التكرار قبل أي عملية
+    if (normalizedPhone) {
+      const { data: existingProfile } = await adminClient
+        .from('profiles')
+        .select('user_id, full_name, phone')
+        .eq('phone', normalizedPhone)
+        .maybeSingle();
+
+      if (existingProfile) {
+        return new Response(
+          JSON.stringify({ 
+            error: `رقم الهاتف (${normalizedPhone}) مسجل بالفعل باسم المستخدم (${existingProfile.full_name || 'حساب آخر'}) ولا يمكن تكراره أو الاستيلاء عليه.` 
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // 3. فحص البريد الإلكتروني في جدول auth.users
+    const { data: existingUsers } = await adminClient.auth.admin.listUsers();
+    const emailTaken = existingUsers?.users?.some(u => u.email?.toLowerCase() === normalizedEmail);
+
+    if (emailTaken) {
+      return new Response(
+        JSON.stringify({ error: "البريد الإلكتروني مسجل بالفعل لحساب آخر ولا يمكن استخدامه" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log('Creating user');
 
     // Create user using admin API - this won't affect the current session
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password,
       email_confirm: true, // Auto-confirm the email
       user_metadata: {
@@ -177,8 +219,8 @@ Deno.serve(async (req) => {
     if (userType) {
       profileUpdate.user_type = userType;
     }
-    if (phone) {
-      profileUpdate.phone = phone;
+    if (normalizedPhone) {
+      profileUpdate.phone = normalizedPhone;
     }
     if (allowedPages && Array.isArray(allowedPages)) {
       profileUpdate.allowed_pages = allowedPages;

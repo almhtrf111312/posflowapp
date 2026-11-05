@@ -396,17 +396,17 @@ export function UsersTab() {
                 </div>
               </>
             )}
-            {!selectedUser && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('settings.phoneOptional')}</label>
-                <Input
-                  type="tel"
-                  value={userForm.phone}
-                  onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                  placeholder="+963 912 345 678"
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t('settings.phoneOptional')}</label>
+              <Input
+                type="tel"
+                value={userForm.phone}
+                onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                placeholder="09XXXXXXXX / +963... / +90..."
+                dir="ltr"
+                className="font-mono text-left"
+              />
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">{t('settings.userTypeLabel')}</label>
               <select

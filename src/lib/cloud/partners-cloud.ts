@@ -752,131 +752,113 @@ export const distributeDetailedProfitCloud = async (
   profits: CategoryProfit[],
   invoiceId: string,
   customerName: string,
-  isDebt: boolean
+  isDebt: boolean,
+  invoiceUuid?: string
 ): Promise<ProfitDistribution[]> => {
+  // ✅ المرحلة الأولى: محاولة التوزيع الذري عبر السيرفر مباشرة (يحل Race Condition + Cache Skew)
+  if (invoiceUuid) {
+    try {
+      const { data, error } = await sb.rpc('distribute_invoice_partner_profits_atomic', {
+        _invoice_id: invoiceUuid,
+      });
+      if (!error && (data as any)?.success) {
+        invalidatePartnersCache();
+        return ((data as any).distributions || []) as ProfitDistribution[];
+      }
+      if (error) {
+        console.warn('[distributeDetailedProfitCloud] Server RPC warn:', error.message);
+      }
+    } catch (err) {
+      console.error('[distributeDetailedProfitCloud] Atomic RPC call failed:', err);
+    }
+  }
+
+  // ✅ Fallback: التوزيع من الواجهة (للحالات بدون invoiceUuid أو عند فشل RPC)
   const partners = await loadPartnersCloud();
   const allDistributions: ProfitDistribution[] = [];
-  
+
   if (partners.length === 0 || profits.length === 0) return allDistributions;
-  
+
   const updatedPartners: Map<string, Partner> = new Map();
-  
-  // Process each category profit
+
   profits.forEach(({ category, profit }) => {
     if (profit <= 0) return;
-    
+
     let remainingProfit = profit;
-    
-    // ======= المرحلة 1: الشركاء المتخصصون في الصنف =======
-    const specializedPartners = partners.filter(p => 
-      !p.accessAll && p.categoryShares.some(cs => cs.enabled && cs.categoryName === category)
+
+    const specializedPartners = partners.filter(partner =>
+      !partner.accessAll && partner.categoryShares.some(cs => cs.enabled && cs.categoryName === category)
     );
-    
+
     specializedPartners.forEach(partner => {
       const categoryShare = partner.categoryShares.find(
         cs => cs.enabled && cs.categoryName === category
       );
-      
+
       if (categoryShare && categoryShare.percentage > 0) {
         const partnerShare = (profit * categoryShare.percentage) / 100;
         remainingProfit -= partnerShare;
-        
-        allDistributions.push({
-          partnerId: partner.id,
-          partnerName: partner.name,
-          amount: partnerShare,
-          percentage: categoryShare.percentage,
-        });
-        
-        // Get or create updated partner
+
+        allDistributions.push({ partnerId: partner.id, partnerName: partner.name, amount: partnerShare, percentage: categoryShare.percentage });
+
         const updatedPartner = updatedPartners.get(partner.id) || { ...partner };
-        
-        const profitRecord: ProfitRecord = {
-          id: Date.now().toString() + partner.id + category,
-          invoiceId,
-          amount: partnerShare,
-          category,
-          isDebt,
-          createdAt: new Date().toISOString(),
-        };
-        
+        const profitRecord: ProfitRecord = { id: Date.now().toString() + partner.id + category, invoiceId, amount: partnerShare, category, isDebt, createdAt: new Date().toISOString() };
+
         if (isDebt) {
           updatedPartner.pendingProfit += partnerShare;
-          updatedPartner.pendingProfitDetails = [
-            ...updatedPartner.pendingProfitDetails,
-            { invoiceId, amount: partnerShare, customerName, createdAt: new Date().toISOString() }
-          ];
+          updatedPartner.pendingProfitDetails = [...updatedPartner.pendingProfitDetails, { invoiceId, amount: partnerShare, customerName, createdAt: new Date().toISOString() }];
         } else {
           updatedPartner.confirmedProfit += partnerShare;
           updatedPartner.currentBalance += partnerShare;
           updatedPartner.totalProfitEarned += partnerShare;
         }
-        
+
         updatedPartner.profitHistory = [...updatedPartner.profitHistory, profitRecord];
         updatedPartners.set(partner.id, updatedPartner);
       }
     });
-    
-    // ======= المرحلة 2: الشركاء الكاملون =======
+
     if (remainingProfit > 0) {
-      const fullPartners = partners.filter(p => p.accessAll);
-      
+      const fullPartners = partners.filter(partner => partner.accessAll);
+
       fullPartners.forEach(partner => {
         if (partner.sharePercentage > 0) {
           const partnerShare = (remainingProfit * partner.sharePercentage) / 100;
-          
-          allDistributions.push({
-            partnerId: partner.id,
-            partnerName: partner.name,
-            amount: partnerShare,
-            percentage: partner.sharePercentage,
-          });
-          
+
+          allDistributions.push({ partnerId: partner.id, partnerName: partner.name, amount: partnerShare, percentage: partner.sharePercentage });
+
           const updatedPartner = updatedPartners.get(partner.id) || { ...partner };
-          
-          const profitRecord: ProfitRecord = {
-            id: Date.now().toString() + partner.id + category,
-            invoiceId,
-            amount: partnerShare,
-            category,
-            isDebt,
-            createdAt: new Date().toISOString(),
-          };
-          
+          const profitRecord: ProfitRecord = { id: Date.now().toString() + partner.id + category, invoiceId, amount: partnerShare, category, isDebt, createdAt: new Date().toISOString() };
+
           if (isDebt) {
             updatedPartner.pendingProfit += partnerShare;
-            updatedPartner.pendingProfitDetails = [
-              ...updatedPartner.pendingProfitDetails,
-              { invoiceId, amount: partnerShare, customerName, createdAt: new Date().toISOString() }
-            ];
+            updatedPartner.pendingProfitDetails = [...updatedPartner.pendingProfitDetails, { invoiceId, amount: partnerShare, customerName, createdAt: new Date().toISOString() }];
           } else {
             updatedPartner.confirmedProfit += partnerShare;
             updatedPartner.currentBalance += partnerShare;
             updatedPartner.totalProfitEarned += partnerShare;
           }
-          
+
           updatedPartner.profitHistory = [...updatedPartner.profitHistory, profitRecord];
           updatedPartners.set(partner.id, updatedPartner);
         }
       });
     }
   });
-  
-  // ✅ حفظ التحديثات في السحابة
+
   await Promise.all(
-    Array.from(updatedPartners.values()).map(p => updatePartnerCloud(p.id, {
-      confirmedProfit: p.confirmedProfit,
-      pendingProfit: p.pendingProfit,
-      pendingProfitDetails: p.pendingProfitDetails,
-      currentBalance: p.currentBalance,
-      totalProfitEarned: p.totalProfitEarned,
-      profitHistory: p.profitHistory,
+    Array.from(updatedPartners.values()).map(partner => updatePartnerCloud(partner.id, {
+      confirmedProfit: partner.confirmedProfit,
+      pendingProfit: partner.pendingProfit,
+      pendingProfitDetails: partner.pendingProfitDetails,
+      currentBalance: partner.currentBalance,
+      totalProfitEarned: partner.totalProfitEarned,
+      profitHistory: partner.profitHistory,
     }))
   );
-  
+
   return allDistributions;
 };
-
 // ✅ تأكيد الأرباح المعلقة عند سداد الدين - النسخة السحابية
 export const confirmPendingProfitCloud = async (invoiceId: string, ratio: number = 1): Promise<void> => {
   if (!invoiceId || invoiceId.startsWith('CASH_')) return;
@@ -934,59 +916,21 @@ export const confirmPendingProfitCloud = async (invoiceId: string, ratio: number
   }
 };
 
-// ✅ عكس أرباح الشركاء سحابياً عند المرتجع أو حذف الدين
-export const revertProfitDistributionCloud = async (invoiceId: string): Promise<void> => {
+// ✅ عكس أرباح الشركاء سحابياً عند المرتجع — يستدعي الدالة الذرية على السيرفر
+export const revertProfitDistributionCloud = async (invoiceId: string, ratio: number = 1.0): Promise<void> => {
   if (!invoiceId) return;
 
-  const partners = await loadPartnersCloud();
-
-  for (const partner of partners) {
-    let changed = false;
-    let pendingReverted = 0;
-    let confirmedReverted = 0;
-
-    // 1. عكس الأرباح المعلقة (pending)
-    const pendingMatches = partner.pendingProfitDetails.filter(d => d.invoiceId === invoiceId);
-    if (pendingMatches.length > 0) {
-      pendingReverted = pendingMatches.reduce((sum, d) => sum + d.amount, 0);
-      changed = true;
-    }
-
-    // 2. عكس الأرباح المؤكدة (confirmed) من profitHistory
-    const confirmedMatches = partner.profitHistory.filter(r => r.invoiceId === invoiceId && !r.isDebt);
-    if (confirmedMatches.length > 0) {
-      confirmedReverted = confirmedMatches.reduce((sum, r) => sum + r.amount, 0);
-      changed = true;
-    }
-
-    // 3. عكس الأرباح المسجلة كدين ولكن تم تأكيدها لاحقاً
-    const debtMatches = partner.profitHistory.filter(r => r.invoiceId === invoiceId && r.isDebt);
-    if (debtMatches.length > 0) {
-      // هذه كانت pending ثم confirmed — نحتاج خصمها من confirmed أيضاً
-      const debtAmount = debtMatches.reduce((sum, r) => sum + r.amount, 0);
-      // تحقق: إذا لم تكن في pending بعد (تم تأكيدها) → خصم من confirmed
-      const stillPending = pendingMatches.reduce((sum, d) => sum + d.amount, 0);
-      const alreadyConfirmedFromDebt = Math.max(0, debtAmount - stillPending);
-      if (alreadyConfirmedFromDebt > 0) {
-        confirmedReverted += alreadyConfirmedFromDebt;
-        changed = true;
-      }
-    }
-
-    if (!changed) continue;
-
-    const updatedPendingDetails = partner.pendingProfitDetails.filter(d => d.invoiceId !== invoiceId);
-    const updatedProfitHistory = partner.profitHistory.filter(r => r.invoiceId !== invoiceId);
-
-    await updatePartnerCloud(partner.id, {
-      pendingProfit: Math.max(0, partner.pendingProfit - pendingReverted),
-      confirmedProfit: Math.max(0, partner.confirmedProfit - confirmedReverted),
-      currentBalance: Math.max(0, partner.currentBalance - confirmedReverted),
-      totalProfitEarned: Math.max(0, partner.totalProfitEarned - confirmedReverted),
-      pendingProfitDetails: updatedPendingDetails,
-      profitHistory: updatedProfitHistory,
+  try {
+    // استدعاء دالة العكس الذرية بالسيرفر لضمان الأمان المحاسبي وقفل FOR UPDATE
+    const { error } = await sb.rpc('revert_invoice_partner_profits_atomic', {
+      _invoice_id: invoiceId,
+      _revert_ratio: ratio,
     });
-
-    console.log(`[revertProfitDistributionCloud] Partner ${partner.name}: reverted pending=${pendingReverted}, confirmed=${confirmedReverted} for invoice ${invoiceId}`);
+    if (error) {
+      console.warn('[revertProfitDistributionCloud] Server RPC notice:', error.message);
+    }
+    invalidatePartnersCache();
+  } catch (err) {
+    console.error('[revertProfitDistributionCloud] Failed:', err);
   }
 };

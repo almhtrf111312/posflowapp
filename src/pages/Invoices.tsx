@@ -1415,11 +1415,8 @@ export default function Invoices() {
         'cash'
       );
 
-      // تأكيد الأرباح المعلقة
+      // تأكيد الأرباح المعلقة (محلياً - السحابي يتم ذرياً داخل record_debt_payment_atomic)
       confirmPendingProfit(selectedDebtForPayment.invoiceId, paymentRatio);
-      await confirmPendingProfitCloud(selectedDebtForPayment.invoiceId, paymentRatio).catch(err => {
-        console.warn('[Invoices] Failed to confirm pending profit on debt payment:', err);
-      });
 
       // تحديث بيانات العميل فوراً
       try {

@@ -55,7 +55,6 @@ import {
 } from '@/lib/cloud/debts-cloud';
 import { getInvoiceByIdCloud, InvoiceItem } from '@/lib/cloud/invoices-cloud';
 import { confirmPendingProfit } from '@/lib/partners-store';
-import { confirmPendingProfitCloud } from '@/lib/cloud/partners-cloud';
 import { updateCustomerStatsCloud } from '@/lib/cloud/customers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
 import {
@@ -412,9 +411,6 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
 
       // Confirm pending profits proportionally to payment (ظ…ط­ظ„ظٹط§ظ‹ + ط³ط­ط§ط¨ظٹط§ظ‹)
       confirmPendingProfit(selectedDebt.invoiceId, paymentRatio);
-      await confirmPendingProfitCloud(selectedDebt.invoiceId, paymentRatio).catch(err => {
-        console.warn('[Debts] Failed to confirm pending profit on debt payment:', err);
-      });
 
       // ✅ إعادة احتساب أرقام العميل من الفواتير النشطة بعد السداد فورياً
       try {

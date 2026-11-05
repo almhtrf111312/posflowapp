@@ -83,7 +83,8 @@ export async function processCashSaleBundleFromQueue(
           categoryProfits,
           sale.invoiceNumber,
           bundle.customerName || 'عميل نقدي',
-          false
+          false,
+          sale.invoiceId // ✅ UUID للتوزيع الذري عبر السيرفر مباشرة
         ).catch(err => console.error('[CashSale] Partner distribution failed:', err));
       }
 

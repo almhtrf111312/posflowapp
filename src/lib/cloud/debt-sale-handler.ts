@@ -186,7 +186,13 @@ export async function processDebtSaleWithOfflineSupport(
       .map(([category, profit]) => ({ category, profit }));
     
     if (!sale.alreadyProcessed && categoryProfits.length > 0) {
-      await distributeDetailedProfitCloud(categoryProfits, sale.invoiceNumber, bundle.customerName, true).catch(err => {
+      await distributeDetailedProfitCloud(
+        categoryProfits,
+        sale.invoiceNumber,
+        bundle.customerName,
+        true,
+        sale.invoiceId // ✅ UUID للتوزيع الذري عبر السيرفر مباشرة
+      ).catch(err => {
         console.warn('[debt-sale-handler] Failed to distribute detailed profit on debt sale:', err);
       });
     }

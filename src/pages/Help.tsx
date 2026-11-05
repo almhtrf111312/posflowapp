@@ -9,7 +9,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { useLanguage } from '@/hooks/use-language';
 import { useUserRole } from '@/hooks/use-user-role';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -90,21 +89,7 @@ export default function HelpPage() {
           title={isAr ? 'مركز التعليمات والمساعدة' : 'Help & Documentation Center'}
           subtitle={isAr ? 'دليل الاستخدام والأسئلة الشائعة' : 'User guide and FAQs'}
           icon={<BookOpen className="w-5 h-5 text-primary" />}
-          actions={
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs shrink-0 self-start sm:self-auto gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('hyperpos:open-setup-wizard'));
-                }}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-primary" />
-                <span>{isAr ? 'معالج الإعداد الأولي' : 'Setup Wizard'}</span>
-              </Button>
-            </div>
-          }
+
         />
 
         {/* Modern 2-Button Segmented Navigation Tabs — Unified Capsule */}

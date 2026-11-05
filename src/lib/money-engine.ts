@@ -273,9 +273,23 @@ function buildStateFromStorage(): MoneyEngineState {
   }
   currencies.USD.enabled = true;
 
+  const safeActive = (currencies[activeCode] && currencies[activeCode].enabled) ? activeCode : 'USD';
+  const isReportValidAndEnabled = Boolean(currencies[reportCode] && currencies[reportCode].enabled);
+  const safeReport = isReportValidAndEnabled ? reportCode : safeActive;
+
+  // Sync localStorage if previously invalid or pointing to a disabled currency
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const storedReport = window.localStorage.getItem(REPORT_CURRENCY_KEY);
+      if (storedReport && (!currencies[storedReport] || !currencies[storedReport].enabled)) {
+        window.localStorage.setItem(REPORT_CURRENCY_KEY, safeReport);
+      }
+    } catch {}
+  }
+
   return {
-    activeCode,
-    reportCode: currencies[reportCode] ? reportCode : activeCode,
+    activeCode: safeActive,
+    reportCode: safeReport,
     currencies,
     currencyDisplayMode,
     inputPrefs,

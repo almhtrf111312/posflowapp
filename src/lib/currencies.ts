@@ -493,19 +493,30 @@ export function getActiveStoreCurrency(): ResolvedCurrencyMeta {
  */
 export const REPORT_CURRENCY_KEY = 'hyperpos_report_currency';
 
-export function getReportCurrency(): ResolvedCurrencyMeta {
-  const state = getMoneyState();
-  const def = getCurrencyDef(state.reportCode);
-  return {
-    code: def.code,
-    symbol: def.symbol,
-    displayLabel: getCurrencyDisplayLabel(def.code, def.symbol, def.name),
-    name: def.name,
-    rate: def.rate,
-    isUsd: def.code === 'USD',
-  };
-}
-
+export function getReportCurrency(): ResolvedCurrencyMeta {
+  const state = getMoneyState();
+  let def = getCurrencyDef(state.reportCode);
+
+  // إذا كانت العملة المطلوبة معطلة وليست دولار، نفرض الدولار فوراً ونطهر التخزين المحلي
+  if (!def.enabled && def.code !== 'USD') {
+    def = getCurrencyDef('USD');
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(REPORT_CURRENCY_KEY, 'USD');
+      }
+    } catch {}
+  }
+
+  return {
+    code: def.code,
+    symbol: def.symbol,
+    displayLabel: getCurrencyDisplayLabel(def.code, def.symbol, def.name),
+    name: def.name,
+    rate: def.rate,
+    isUsd: def.code === 'USD',
+  };
+}
+
 export function formatReportAmount(amountUsd: number): string {
   if (typeof amountUsd !== 'number' || isNaN(amountUsd)) return '0.00';
   const active = getReportCurrency();

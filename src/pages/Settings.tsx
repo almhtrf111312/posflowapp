@@ -1336,6 +1336,16 @@ export default function Settings() {
 
       setEnabledCurrencies(cleanEnabledCurrencies);
 
+      // تطهير عملة التقارير إذا أصبحت معطلة
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const savedReportCur = window.localStorage.getItem('hyperpos_report_currency');
+          if (savedReportCur && cleanEnabledCurrencies[savedReportCur] !== true) {
+            window.localStorage.setItem('hyperpos_report_currency', 'USD');
+          }
+        } catch {}
+      }
+
       // بناء خريطة أسعار الصرف والأسماء والرموز النظيفة مع منع تداخل الخانات القديمة TRY/SYP
       const cleanExchangeRates: Record<string, number> = { USD: 1 };
       for (const [k, v] of Object.entries(exchangeRates)) {

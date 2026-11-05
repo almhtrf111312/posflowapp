@@ -183,7 +183,7 @@ export default function Appearance() {
           <ThemeSection
             resetSignal={resetSignal}
             currentDraft={draftTheme}
-            onPendingChange={(pending) => {
+            onPendingChange={(pending, e) => {
               isCommittedRef.current = false;
               const savedTheme = savedThemeRef.current;
               const hasThemeChanges = pending.mode !== savedTheme.mode ||
@@ -193,9 +193,9 @@ export default function Appearance() {
                 pending.style !== savedTheme.style;
               setDraftTheme(hasThemeChanges ? pending : null);
               if (hasThemeChanges) {
-                previewTheme(pending.mode, pending.color, pending.blur, pending.transparency, pending.style);
+                previewTheme(pending.mode, pending.color, pending.blur, pending.transparency, pending.style, e);
               } else {
-                previewTheme(savedTheme.mode, savedTheme.color, savedTheme.blur, savedTheme.transparency, savedTheme.style);
+                previewTheme(savedTheme.mode, savedTheme.color, savedTheme.blur, savedTheme.transparency, savedTheme.style, e);
               }
             }}
           />

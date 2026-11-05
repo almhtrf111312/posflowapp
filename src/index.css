@@ -2741,3 +2741,31 @@ html[data-perf="lite"] * {
     will-change: transform;
   }
 }
+
+/* ===================================================================
+   Circular Theme Reveal Transition (الانتقال الدائري للثيم والألوان)
+   =================================================================== */
+
+/* 1. تعطيل حركات التلاشي الافتراضية لمنع الوميض */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none !important;
+  mix-blend-mode: normal !important;
+}
+
+/* 2. رفع طبقة المشهد الجديد ليتوسع فوق القديم */
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+/* 3. احترام تفضيلات المستخدم الخاصة بتقليل الحركة */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}

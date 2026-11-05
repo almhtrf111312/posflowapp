@@ -1,6 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getPlatformStoragePrefix } from '@/lib/app-font-config';
+import { executeCircularTransition, type ThemeTransitionEvent } from '@/lib/theme-transition';
+
+export type { ThemeTransitionEvent };
 
 export type ThemeMode = 'light' | 'dark';
 export type ThemeColor = 'emerald' | 'blue' | 'purple' | 'rose' | 'orange' | 'cyan' | 'indigo' | 'coral' | 'lime' | 'magenta' | 'coffee' | 'silver';
@@ -12,14 +15,14 @@ interface ThemeContextType {
   blurEnabled: boolean;
   transparencyLevel: number;
   themeStyle: ThemeStyle;
-  setMode: (mode: ThemeMode) => void;
-  setColor: (color: ThemeColor) => void;
+  setMode: (mode: ThemeMode, event?: ThemeTransitionEvent) => void;
+  setColor: (color: ThemeColor, event?: ThemeTransitionEvent) => void;
   setBlurEnabled: (enabled: boolean) => void;
   setTransparencyLevel: (level: number) => void;
-  setThemeStyle: (style: ThemeStyle) => void;
-  setTheme: (mode: ThemeMode, color: ThemeColor) => void;
-  setFullTheme: (mode: ThemeMode, color: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle) => void;
-  previewTheme: (mode: ThemeMode, color: ThemeColor, blur: boolean, transparency: number, style?: ThemeStyle) => void;
+  setThemeStyle: (style: ThemeStyle, event?: ThemeTransitionEvent) => void;
+  setTheme: (mode: ThemeMode, color: ThemeColor, event?: ThemeTransitionEvent) => void;
+  setFullTheme: (mode: ThemeMode, color: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle, event?: ThemeTransitionEvent) => void;
+  previewTheme: (mode: ThemeMode, color: ThemeColor, blur: boolean, transparency: number, style?: ThemeStyle, event?: ThemeTransitionEvent) => void;
   revertTheme: () => void;
 }
 
@@ -502,19 +505,23 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setMode = (newMode: ThemeMode) => {
-    triggerThemeTransition();
-    setModeState(newMode);
-    applyTheme(newMode, color);
-    applyBlurTheme(blurEnabled, newMode, transparencyLevel);
-    saveTheme(newMode, color, blurEnabled, transparencyLevel, themeStyle);
+  const setMode = (newMode: ThemeMode, event?: ThemeTransitionEvent) => {
+    executeCircularTransition(event, () => {
+      triggerThemeTransition();
+      setModeState(newMode);
+      applyTheme(newMode, color);
+      applyBlurTheme(blurEnabled, newMode, transparencyLevel);
+      saveTheme(newMode, color, blurEnabled, transparencyLevel, themeStyle);
+    });
   };
 
-  const setColor = (newColor: ThemeColor) => {
-    triggerThemeTransition();
-    setColorState(newColor);
-    applyTheme(mode, newColor);
-    saveTheme(mode, newColor, blurEnabled, transparencyLevel, themeStyle);
+  const setColor = (newColor: ThemeColor, event?: ThemeTransitionEvent) => {
+    executeCircularTransition(event, () => {
+      triggerThemeTransition();
+      setColorState(newColor);
+      applyTheme(mode, newColor);
+      saveTheme(mode, newColor, blurEnabled, transparencyLevel, themeStyle);
+    });
   };
 
   const setBlurEnabled = (enabled: boolean) => {
@@ -530,41 +537,49 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     saveTheme(mode, color, blurEnabled, level, themeStyle);
   };
 
-  const setThemeStyle = (newStyle: ThemeStyle) => {
-    triggerThemeTransition();
-    setThemeStyleState(newStyle);
-    applyThemeStyle(newStyle);
-    saveTheme(mode, color, blurEnabled, transparencyLevel, newStyle);
+  const setThemeStyle = (newStyle: ThemeStyle, event?: ThemeTransitionEvent) => {
+    executeCircularTransition(event, () => {
+      triggerThemeTransition();
+      setThemeStyleState(newStyle);
+      applyThemeStyle(newStyle);
+      saveTheme(mode, color, blurEnabled, transparencyLevel, newStyle);
+    });
   };
 
-  const setTheme = (newMode: ThemeMode, newColor: ThemeColor) => {
-    triggerThemeTransition();
-    setModeState(newMode);
-    setColorState(newColor);
-    applyTheme(newMode, newColor);
-    applyBlurTheme(blurEnabled, newMode, transparencyLevel);
-    saveTheme(newMode, newColor, blurEnabled, transparencyLevel, themeStyle);
+  const setTheme = (newMode: ThemeMode, newColor: ThemeColor, event?: ThemeTransitionEvent) => {
+    executeCircularTransition(event, () => {
+      triggerThemeTransition();
+      setModeState(newMode);
+      setColorState(newColor);
+      applyTheme(newMode, newColor);
+      applyBlurTheme(blurEnabled, newMode, transparencyLevel);
+      saveTheme(newMode, newColor, blurEnabled, transparencyLevel, themeStyle);
+    });
   };
 
-  const setFullTheme = (newMode: ThemeMode, newColor: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle) => {
-    triggerThemeTransition();
-    const t = transparency ?? transparencyLevel;
-    const s = style ?? themeStyle;
-    setModeState(newMode);
-    setColorState(newColor);
-    setBlurEnabledState(blur);
-    setTransparencyLevelState(t);
-    setThemeStyleState(s);
-    applyTheme(newMode, newColor);
-    applyBlurTheme(blur, newMode, t);
-    applyThemeStyle(s);
-    saveTheme(newMode, newColor, blur, t, s);
+  const setFullTheme = (newMode: ThemeMode, newColor: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle, event?: ThemeTransitionEvent) => {
+    executeCircularTransition(event, () => {
+      triggerThemeTransition();
+      const t = transparency ?? transparencyLevel;
+      const s = style ?? themeStyle;
+      setModeState(newMode);
+      setColorState(newColor);
+      setBlurEnabledState(blur);
+      setTransparencyLevelState(t);
+      setThemeStyleState(s);
+      applyTheme(newMode, newColor);
+      applyBlurTheme(blur, newMode, t);
+      applyThemeStyle(s);
+      saveTheme(newMode, newColor, blur, t, s);
+    });
   };
 
-  const previewTheme = useCallback((m: ThemeMode, c: ThemeColor, b: boolean, t: number, s?: ThemeStyle) => {
-    applyTheme(m, c);
-    applyBlurTheme(b, m, t);
-    if (s) applyThemeStyle(s);
+  const previewTheme = useCallback((m: ThemeMode, c: ThemeColor, b: boolean, t: number, s?: ThemeStyle, event?: ThemeTransitionEvent) => {
+    executeCircularTransition(event, () => {
+      applyTheme(m, c);
+      applyBlurTheme(b, m, t);
+      if (s) applyThemeStyle(s);
+    });
   }, []);
 
   const revertTheme = useCallback(() => {

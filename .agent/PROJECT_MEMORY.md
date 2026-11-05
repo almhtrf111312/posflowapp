@@ -289,6 +289,13 @@
 
 ---
 
+* **2026-11-06:** Circular Theme Reveal Transition (Front-End 100%):
+  * Implemented pure front-end circular reveal transition using native `document.startViewTransition` with circle `clip-path` expanding from touch/cursor coordinates to screen corners (400ms `cubic-bezier(0.4, 0, 0.2, 1)`).
+  * Added View Transition CSS rules to `src/index.css` (disabling default cross-fade animation, elevating new transition root to z-index 9999, and respecting `prefers-reduced-motion`).
+  * Created central transition helper in `src/lib/theme-transition.ts` with automatic coordinates calculation from mouse/touch events and silent safe fallback.
+  * Extended `useTheme` context in `src/hooks/use-theme.tsx` to support optional event parameter across `setMode`, `setColor`, `setThemeStyle`, `setTheme`, `setFullTheme`, and `previewTheme`.
+  * Connected UI callers in `ThemeSection.tsx`, `Appearance.tsx`, `SetupWizard.tsx`, and `PrivacyPolicyScreen.tsx`.
+
 ## ⚠️ Known Technical Debt & Edge Cases
 1. **Large Bundle Size:** Main chunk exceeds 800KB gzipped. Dynamic code-splitting on heavy reports (`Reports.tsx`, `BossPanel.tsx`) is advised for future performance optimization.
 2. **Offline Refund Currency Conversion:** Historical invoices refunded offline must resolve historical exchange rates from invoice snapshots to prevent currency drift.

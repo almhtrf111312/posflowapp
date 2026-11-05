@@ -1587,7 +1587,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => setThemeMode('light')}
+                    onClick={(e) => setThemeMode('light', e)}
                     className={cn(
                       "flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 transition-colors cursor-pointer",
                       themeMode === 'light'
@@ -1607,7 +1607,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
 
                   <button
                     type="button"
-                    onClick={() => setThemeMode('dark')}
+                    onClick={(e) => setThemeMode('dark', e)}
                     className={cn(
                       "flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 transition-colors cursor-pointer",
                       themeMode === 'dark'

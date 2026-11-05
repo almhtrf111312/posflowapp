@@ -386,7 +386,7 @@ export function PrivacyPolicyScreen({ onAccept }: { onAccept: () => void }) {
             {/* Theme Mode Toggle */}
             <button
               type="button"
-              onClick={() => setTheme(mode === 'dark' ? 'light' : 'dark', color)}
+              onClick={(e) => setTheme(mode === 'dark' ? 'light' : 'dark', color, e)}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-card border border-border/60 hover:bg-muted text-foreground font-bold active:scale-95 transition-all cursor-pointer shadow-2xs"
               title={mode === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي'}
             >

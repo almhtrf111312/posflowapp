@@ -17,7 +17,7 @@ export interface PendingTheme {
 }
 
 interface ThemeSectionProps {
-  onPendingChange?: (pending: PendingTheme) => void;
+  onPendingChange?: (pending: PendingTheme, event?: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => void;
   resetSignal?: number; // increment to trigger reset
   currentDraft?: PendingTheme | null;
 }
@@ -57,23 +57,32 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
     }
   }, [resetSignal, mode, color, blurEnabled, transparencyLevel, themeStyle]);
 
-  const notifyChange = (m: ThemeMode, c: ThemeColor, b: boolean, tr: number, s: ThemeStyle) => {
-    onPendingChange?.({ mode: m, color: c, blur: b, transparency: tr, style: s });
+  const notifyChange = (m: ThemeMode, c: ThemeColor, b: boolean, tr: number, s: ThemeStyle, e?: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
+    onPendingChange?.({ mode: m, color: c, blur: b, transparency: tr, style: s }, e);
   };
 
-  const handleModeChange = (newMode: ThemeMode) => {
+  const handleModeChange = (newMode: ThemeMode, e?: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
     setPendingMode(newMode);
-    notifyChange(newMode, pendingColor, pendingBlur, pendingTransparency, pendingStyle);
+    notifyChange(newMode, pendingColor, pendingBlur, pendingTransparency, pendingStyle, e);
+    if (!onPendingChange) {
+      setMode(newMode, e);
+    }
   };
 
-  const handleColorChange = (newColor: ThemeColor) => {
+  const handleColorChange = (newColor: ThemeColor, e?: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
     setPendingColor(newColor);
-    notifyChange(pendingMode, newColor, pendingBlur, pendingTransparency, pendingStyle);
+    notifyChange(pendingMode, newColor, pendingBlur, pendingTransparency, pendingStyle, e);
+    if (!onPendingChange) {
+      setColor(newColor, e);
+    }
   };
 
-  const handleStyleChange = (newStyle: ThemeStyle) => {
+  const handleStyleChange = (newStyle: ThemeStyle, e?: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
     setPendingStyle(newStyle);
-    notifyChange(pendingMode, pendingColor, pendingBlur, pendingTransparency, newStyle);
+    notifyChange(pendingMode, pendingColor, pendingBlur, pendingTransparency, newStyle, e);
+    if (!onPendingChange) {
+      setThemeStyle(newStyle, e);
+    }
   };
 
   const handleBlurChange = (enabled: boolean) => {
@@ -100,7 +109,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
         <div className="grid grid-cols-2 gap-2.5 mb-4">
           <button
             type="button"
-            onClick={() => handleModeChange('light')}
+            onClick={(e) => handleModeChange('light', e)}
             className={cn(
               "flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 transition-all relative active:scale-95",
               pendingMode === 'light'
@@ -122,7 +131,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
 
           <button
             type="button"
-            onClick={() => handleModeChange('dark')}
+            onClick={(e) => handleModeChange('dark', e)}
             className={cn(
               "flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 transition-all relative active:scale-95",
               pendingMode === 'dark'
@@ -153,7 +162,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => handleStyleChange('standard')}
+            onClick={(e) => handleStyleChange('standard', e)}
             className={cn(
               "p-3.5 sm:p-4 rounded-xl border-2 text-start transition-all relative active:scale-98",
               pendingStyle === 'standard'
@@ -178,7 +187,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
 
           <button
             type="button"
-            onClick={() => handleStyleChange('xiaomi')}
+            onClick={(e) => handleStyleChange('xiaomi', e)}
             className={cn(
               "p-3.5 sm:p-4 rounded-xl border-2 text-start transition-all relative active:scale-98",
               pendingStyle === 'xiaomi'
@@ -218,7 +227,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
           {colorOptions.map(([key, value]) => (
             <button
               key={key}
-              onClick={() => handleColorChange(key)}
+              onClick={(e) => handleColorChange(key, e)}
               className={cn(
                 "relative flex flex-col items-center gap-2 p-2.5 sm:p-3 rounded-xl border-2 transition-all",
                 pendingColor === key

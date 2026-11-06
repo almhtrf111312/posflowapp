@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
-**Last Updated:** 2026-11-05
-**Current Version:** `v1.5.50 (Build 450)`
+**Last Updated:** 2026-11-06
+**Current Version:** `v1.5.50 (Build 451)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -301,6 +301,13 @@
   * **Activity Log & Auditing:** Added capital deposit/withdrawal tracking for partners in `Partners.tsx`; expanded `activityTypeLabels` to support AR, EN, TR, and FR; added "الشركاء ورأس المال" and "المصاريف" filter pills and `PartnerFinancialDetailsBox` in `ActivityLogSection.tsx`.
   * **Archive & Notifications Overhaul:** Expanded general archive in `ArchiveSection.tsx` into 6 subtabs (`invoices`, `debts`, `products`, `expenses`, `purchases`, `deleted`) with Supabase cloud audit log synchronization; added persistent notification archiving with 72-hour auto-archive in `Notifications.tsx` and `use-notifications.tsx`; resolved text clipping with responsive wrapping.
   * **Complete i18n & RTL/LTR Stabilization:** Achieved 100% key completeness across all 4 supported foreign languages (en, tr, fa, ku) in `src/lib/i18n.ts` (0 missing keys); replaced hardcoded Arabic table headers with dynamic `t()` keys and logical `text-start` across the 4 major report tables (`PurchaseInvoicesReport`, `SalesDetailedReport`, `DebtsReport`, `MaintenanceReport`); eliminated search bar clipping by replacing hardcoded `right-3`/`pr-9` with logical CSS `start-3`/`ps-9 pe-3` across all pages; resolved MobileMenuTrigger burger overlap in `Reports.tsx` with responsive padding; rotated back button `ArrowRight` with `rtl:rotate-0 ltr:rotate-180`; added `formatAppDate` in `src/lib/utils.ts` and dynamic date locale across reports, debts, invoices, and native sharing.
+
+* **2026-11-06 (Activity Log & Settings Tab Error Boundary Hardening):**
+  * **ActivityLogSection Crash Fix:** Fixed `Uncaught ReferenceError: language is not defined` inside `ActivityCard` in `src/components/settings/ActivityLogSection.tsx` by introducing dual protection (`propLanguage` with `useLanguage()` hook fallback and Arabic/English fallback).
+  * **Settings Tab Isolation:** Wrapped `{renderTabContent()}` in `src/pages/Settings.tsx` with `<FeatureErrorBoundary featureName={`تبويب الإعدادات: ${activeTab || 'العام'}`} compact>` to ensure any runtime error in an individual tab (e.g., Activity Log, Users) never crashes the entire Settings screen or halts other tabs.
+  * **Relocated Tabs Handling:** Added explicit redirects and fallbacks in `renderTabContent()`:
+    * `case 'theme': <Navigate to="/appearance" replace />` for bookmarks or external links.
+    * `case 'currencies':` rendering `<FinanceSettingsSection ... />` to seamlessly support direct links to currency configuration.
 
 * **2026-11-06 (Store Phone Verification & Atomic Transfer Engine):**
   * **Stage 3 & 4 (Verification Modal & Settings Integration):** Created `StorePhoneVerificationDialog.tsx` supporting dual verification workflows:

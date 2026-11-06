@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import {
-  Activity, User, Filter, Trash2, ShoppingCart, CreditCard,
-  Tag, Search, ChevronDown, ChevronUp, FileText,
-  Clock, Undo2, ArrowRight
+import { 
+  Activity, 
+  Trash2, 
+  Filter, 
+  Search, 
+  ChevronDown, 
+  User, 
+  AlertTriangle 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,37 +30,47 @@ export function ActivityLogSection() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [customFilterOpen, setCustomFilterOpen] = useState(false);
 
+  // 1. تحميل السجلات المحلية أولاً للعرض الفوري
   useEffect(() => {
-    setLogs(loadActivityLogs());
+    try {
+      const localLogs = loadActivityLogs();
+      setLogs(localLogs || []);
+    } catch (e) {
+      console.warn('[ActivityLogSection] Error loading local logs:', e);
+      setLogs([]);
+    }
 
-    // جلب الأرشيف المحفوظ على Supabase لعرضه ومزامنته عبر كل الأجهزة
+    // 2. مزامنة السجلات السحابية بهدوء في الخلفية
     const fetchCloudLogs = async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: cloudRows, error } = await (supabase as any)
-          .from('activity_log')
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: cloudLogs, error } = await supabase
+          .from('activity_logs')
           .select('*')
-          .order('created_at', { ascending: false })
-          .limit(100);
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false })
+          .limit(150);
 
-        if (!error && Array.isArray(cloudRows) && cloudRows.length > 0) {
-          const cloudLogs: ActivityLog[] = cloudRows.map(row => ({
-            id: row.id,
-            type: row.action_type as ActivityType,
-            userId: row.actor_id || row.user_id,
-            userName: row.actor_name || 'مستخدم',
-            description: row.description || '',
-            details: (row.metadata as Record<string, unknown>) || {},
-            timestamp: row.created_at,
-          }));
-
+        if (!error && cloudLogs && cloudLogs.length > 0) {
           setLogs(prev => {
             const existingIds = new Set(prev.map(l => l.id));
-            const existingKeys = new Set(prev.map(l => `${l.type}_${l.description}_${l.timestamp.slice(0, 16)}`));
-            const newFromCloud = cloudLogs.filter(cl => 
-              !existingIds.has(cl.id) && !existingKeys.has(`${cl.type}_${cl.description}_${cl.timestamp.slice(0, 16)}`)
-            );
-            return [...prev, ...newFromCloud].sort(
+            const merged = [...prev];
+            cloudLogs.forEach((item: any) => {
+              if (!existingIds.has(item.id)) {
+                merged.push({
+                  id: item.id,
+                  type: item.type as ActivityType,
+                  description: item.description,
+                  details: typeof item.details === 'string' ? JSON.parse(item.details) : (item.details || {}),
+                  timestamp: item.timestamp,
+                  userId: item.user_id,
+                  userName: item.user_name || 'System'
+                });
+              }
+            });
+            return merged.sort(
               (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
             );
           });
@@ -70,21 +84,27 @@ export function ActivityLogSection() {
   }, []);
 
   const handleClearLogs = () => {
-    clearActivityLogs();
-    setLogs([]);
-    setClearDialogOpen(false);
+    try {
+      clearActivityLogs();
+      setLogs([]);
+      setClearDialogOpen(false);
+    } catch (e) {
+      console.error('[ActivityLogSection] Failed to clear logs:', e);
+    }
   };
 
-  // التصنيف حسب الفئات المطلوبة في التصميم
+  // دوال التحقق من الفئات
   const isPricingLog = (log: ActivityLog) => {
-    if (log.type === 'product_updated') return true;
-    const details = log.details || {};
-    const changes = details.changes as Record<string, unknown> | undefined;
-    return !!(changes && (changes.salePrice || changes.costPrice || changes.price));
+    if (log.type === 'product_updated') {
+      const details = (log.details as Record<string, unknown>) || {};
+      const changes = (details.changes as Record<string, unknown>) || {};
+      return !!(changes.salePrice || changes.costPrice || changes.price);
+    }
+    return false;
   };
 
   const isSalesLog = (log: ActivityLog) => {
-    return ['sale', 'invoice_created', 'invoice_refunded', 'invoice_updated', 'refund'].includes(log.type);
+    return ['sale', 'invoice_created', 'invoice_refunded', 'invoice_refund', 'partial_refund', 'refund'].includes(log.type);
   };
 
   const isDebtsLog = (log: ActivityLog) => {
@@ -106,10 +126,10 @@ export function ActivityLogSection() {
     return ['login', 'logout', 'shift_opened', 'shift_closed', 'password_changed', 'user_added', 'user_deleted'].includes(log.type);
   };
 
-  // فلترة السجلات
+  // تصفية السجلات
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
-      // 1. فلتر الفئة الرئيسية
+      // 1. فلتر الفئات السريعة
       if (selectedCategory === 'pricing' && !isPricingLog(log)) return false;
       if (selectedCategory === 'sales' && !isSalesLog(log)) return false;
       if (selectedCategory === 'debts' && !isDebtsLog(log)) return false;
@@ -120,7 +140,7 @@ export function ActivityLogSection() {
       // 2. فلتر مخصص للنوع
       if (specificFilter && log.type !== specificFilter) return false;
 
-      // 3. فلتر البحث
+      // 3. فلتر البحث النصي
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const descMatch = (log.description || '').toLowerCase().includes(query);
@@ -134,12 +154,12 @@ export function ActivityLogSection() {
     });
   }, [logs, selectedCategory, specificFilter, searchQuery]);
 
-  // وقت نسبي باللغتين
+  // صياغة الوقت النسبي الذكي
   const formatRelativeTime = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
     const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
 
     if (isAr) {
       if (minutes < 1) return 'الآن';
@@ -163,83 +183,99 @@ export function ActivityLogSection() {
   };
 
   return (
-    <div className="w-full max-w-[31rem] mx-auto space-y-3 text-foreground" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* 1. Header Row (Sticky Header matching mockup) */}
-      <header className="bg-card border border-zinc-200/90 dark:border-border/80 rounded-2xl px-3.5 py-3 space-y-2.5 shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="space-y-4 max-w-4xl mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* 1. Header & Actions Bar */}
+      <header className="bg-white dark:bg-card p-4 rounded-2xl border border-zinc-200/80 dark:border-border/80 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 flex items-center justify-center shrink-0">
+              <Activity className="w-5 h-5" />
+            </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <h1 className="text-sm font-bold text-zinc-900 dark:text-foreground leading-tight">
-                  {isAr ? 'سجل النشاطات والعمليات' : 'Activity & Operations Log'}
-                </h1>
-              </div>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
-                {isAr ? 'تدقيق حركات المتجر والمستخدمين' : 'Audit store events and user actions'}
-              </span>
+              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-foreground">
+                {isAr ? 'سجل العمليات والنشاطات' : language === 'tr' ? 'Etkinlik ve İşlem Günlüğü' : 'Audit Activity Log'}
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-muted-foreground">
+                {isAr ? 'تدقيق كامل لحركات البيع وتعديل الأسعار والديون والمصاريف' : 'Live audit log of sales, pricing, debts and partner transactions'}
+              </p>
             </div>
           </div>
 
-          <button
-            onClick={() => setClearDialogOpen(true)}
-            disabled={logs.length === 0}
-            className="h-8 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
-            title={isAr ? 'مسح سجل النشاط' : 'Clear Log'}
-          >
-            <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-            <span>{isAr ? 'مسح السجل' : 'Clear Log'}</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {logs.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setClearDialogOpen(true)}
+                className="gap-1.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isAr ? 'مسح السجل' : 'Clear Log'}</span>
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* 2. Category Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5 text-xs font-semibold">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className={cn("w-4 h-4 text-zinc-400 absolute top-1/2 -translate-y-1/2 pointer-events-none", isRTL ? "right-3" : "left-3")} />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={isAr ? 'بحث في الفواتير، المنتجات، المبالغ، أو أسماء الكاشيرات...' : 'Search logs by invoice, product, amounts or cashier...'}
+            className={cn("text-xs h-9 bg-zinc-50/70 dark:bg-muted/40 border-zinc-200 dark:border-border", isRTL ? "pr-9" : "pl-9")}
+          />
+        </div>
+
+        {/* 2. Fast Filter Capsules (Pills) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar scroll-smooth">
           {/* All */}
           <button
             onClick={() => { setSelectedCategory('all'); setSpecificFilter(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition shadow-xs",
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
               selectedCategory === 'all' && !specificFilter
-                ? "bg-zinc-900 text-white dark:bg-primary dark:text-primary-foreground font-bold"
+                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold"
                 : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
             )}
           >
-            {isAr ? `الكل (${logs.length})` : `All (${logs.length})`}
+            <span>{isAr ? 'الكل' : 'All'}</span>
+            <span className="text-[10px] opacity-70 bg-black/10 dark:bg-white/20 px-1.5 py-0.2 rounded-full">{logs.length}</span>
           </button>
 
-          {/* Pricing */}
+          {/* Pricing Adjustments Pill */}
           <button
             onClick={() => { setSelectedCategory('pricing'); setSpecificFilter(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs",
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
               selectedCategory === 'pricing'
                 ? "bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 font-bold"
                 : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
             )}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <span>{isAr ? 'تعديل الأسعار' : 'Price Updates'}</span>
+            <span>{isAr ? 'تعديل الأسعار' : language === 'tr' ? 'Fiyat Güncellemeleri' : 'Price Adjustments'}</span>
           </button>
 
-          {/* Sales */}
+          {/* Sales & Refunds Pill */}
           <button
             onClick={() => { setSelectedCategory('sales'); setSpecificFilter(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs",
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
               selectedCategory === 'sales'
                 ? "bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 font-bold"
                 : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
             )}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>{isAr ? 'المبيعات والفواتير' : 'Sales & Invoices'}</span>
+            <span>{isAr ? 'المبيعات والمرتجعات' : language === 'tr' ? 'Satış ve İadeler' : 'Sales & Refunds'}</span>
           </button>
 
-          {/* Debts */}
+          {/* Debts Pill */}
           <button
             onClick={() => { setSelectedCategory('debts'); setSpecificFilter(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs",
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
               selectedCategory === 'debts'
                 ? "bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-200 font-bold"
                 : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
@@ -281,24 +317,24 @@ export function ActivityLogSection() {
           <button
             onClick={() => { setSelectedCategory('auth'); setSpecificFilter(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs",
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
               selectedCategory === 'auth'
                 ? "bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950/60 dark:text-purple-200 font-bold"
                 : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
             )}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-            <span>{isAr ? 'دخول وخروج' : 'Sessions & Shifts'}</span>
+            <span>{isAr ? 'الأمان والجلسات' : 'Auth & Sessions'}</span>
           </button>
 
-          {/* Custom Filter */}
+          {/* Custom Filter Selector */}
           <button
             onClick={() => setCustomFilterOpen(true)}
             className={cn(
-              "px-2.5 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 text-[11px]",
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1.5 border text-xs font-semibold",
               specificFilter
-                ? "bg-primary/20 text-primary border border-primary/40 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted text-zinc-600 dark:text-muted-foreground"
+                ? "bg-primary/10 text-primary border-primary font-bold"
+                : "bg-white dark:bg-card border-zinc-200 dark:border-border text-zinc-700 dark:text-foreground"
             )}
             title={isAr ? 'تصفية مخصصة' : 'Custom Filter'}
           >
@@ -308,39 +344,15 @@ export function ActivityLogSection() {
         </div>
       </header>
 
-      {/* 3. Search Bar + Quick Indicators */}
-      <div className="px-3 py-2 bg-slate-50 dark:bg-muted/30 border border-zinc-200 dark:border-border/80 rounded-xl flex items-center justify-between text-xs">
-        <div className="relative flex-1 max-w-xs">
-          <span className={cn("absolute inset-y-0 flex items-center pointer-events-none text-zinc-400", isRTL ? "right-2.5" : "left-2.5")}>
-            <Search className="w-3.5 h-3.5" />
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isAr ? 'بحث بالمنتج، العميل، المستخدم...' : 'Search product, customer, user...'}
-            className={cn(
-              "w-full bg-white dark:bg-card border border-zinc-200 dark:border-border/70 rounded-lg py-1 text-xs text-zinc-800 dark:text-foreground placeholder-zinc-400 focus:outline-none focus:border-blue-600",
-              isRTL ? "pr-8 pl-2" : "pl-8 pr-2"
-            )}
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-          <span>{isAr ? `عرض ${filteredLogs.length} عمليات` : `Showing ${filteredLogs.length} items`}</span>
-        </div>
-      </div>
-
-      {/* 4. Logs Container */}
-      <div className="space-y-2.5 max-h-[46rem] overflow-y-auto no-scrollbar pb-6">
+      {/* 3. Activity Cards Feed */}
+      <div className="space-y-2.5">
         {filteredLogs.length === 0 ? (
-          <div className="py-16 text-center space-y-2 border border-dashed border-zinc-200 dark:border-border/80 rounded-2xl bg-white dark:bg-card">
-            <div className="text-3xl">🔍</div>
-            <p className="text-xs font-bold text-zinc-700 dark:text-foreground">
-              {isAr ? 'لا توجد نشاطات مطابقة للبحث أو التصفية' : 'No matching activities found'}
+          <div className="p-8 text-center bg-white dark:bg-card rounded-2xl border border-zinc-200/80 dark:border-border/80">
+            <Activity className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-2 opacity-50" />
+            <p className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+              {isAr ? 'لا توجد عمليات تطابق هذا الفلتر' : 'No activity logs matching this filter'}
             </p>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-zinc-400 mt-0.5">
               {isAr ? 'جرّب تغيير التصنيف أو كلمات البحث' : 'Try changing category or search query'}
             </p>
           </div>
@@ -351,6 +363,7 @@ export function ActivityLogSection() {
               log={log}
               isAr={isAr}
               isRTL={isRTL}
+              language={language}
               timeText={formatRelativeTime(log.timestamp)}
               isExpanded={expandedLogId === log.id}
               onToggle={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
@@ -359,61 +372,64 @@ export function ActivityLogSection() {
         )}
       </div>
 
-      {/* 5. Clear Confirmation Modal */}
+      {/* 4. Clear Confirmation Modal */}
       <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
         <DialogContent className="max-w-sm rounded-2xl" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-lg mt-2">
-            🗑️
+            <AlertTriangle className="w-5 h-5" />
           </div>
-          <DialogHeader className="text-center space-y-1.5">
-            <DialogTitle className="text-sm font-bold text-zinc-900 dark:text-foreground text-center">
-              {isAr ? 'مسح سجل الحركات المؤقت؟' : 'Clear Activity Log?'}
+          <DialogHeader className="text-center pt-1">
+            <DialogTitle className="text-base font-bold text-zinc-900 dark:text-foreground">
+              {isAr ? 'تأكيد مسح سجل النشاطات' : 'Clear Activity Log?'}
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-500 text-center leading-relaxed">
-              {isAr 
-                ? 'سيتم مسح سجل النشاط المؤقت المخزن محلياً على هذا الجهاز فقط دون التأثير على الفواتير أو القيود المالية أو التدقيق السحابي.'
-                : 'This will clear temporary local activity logs on this device only, without affecting invoices, financial records, or cloud audit logs.'}
+            <DialogDescription className="text-xs text-zinc-500 dark:text-muted-foreground mt-1">
+              {isAr
+                ? 'هل أنت متأكد من مسح جميع السجلات المحلية والتدقيقات الحالية؟ لا يمكن التراجع عن هذا الإجراء.'
+                : 'Are you sure you want to clear all local activity logs? This action cannot be undone.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 pt-2 text-xs font-semibold">
-            <Button variant="outline" onClick={() => setClearDialogOpen(false)} className="rounded-xl border border-zinc-200 bg-zinc-50 dark:bg-muted text-zinc-700 dark:text-muted-foreground hover:bg-zinc-100">
+          <DialogFooter className="grid grid-cols-2 gap-2 mt-4 sm:space-x-0">
+            <Button variant="outline" size="sm" onClick={() => setClearDialogOpen(false)} className="w-full text-xs">
               {isAr ? 'إلغاء' : 'Cancel'}
             </Button>
-            <Button variant="destructive" onClick={handleClearLogs} className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold">
+            <Button variant="destructive" size="sm" onClick={handleClearLogs} className="w-full text-xs">
               {isAr ? 'نعم، مسح السجل' : 'Yes, Clear'}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 6. Custom Filter Modal */}
+      {/* 5. Custom Filter Selection Modal */}
       <Dialog open={customFilterOpen} onOpenChange={setCustomFilterOpen}>
-        <DialogContent className="max-w-xs rounded-2xl" dir={isRTL ? 'rtl' : 'ltr'}>
+        <DialogContent className="max-w-md rounded-2xl max-h-[85vh] overflow-y-auto" dir={isRTL ? 'rtl' : 'ltr'}>
           <DialogHeader>
-            <DialogTitle className="text-xs font-bold text-zinc-900 dark:text-foreground flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-primary" />
-              <span>{isAr ? 'تصفية دقيقة للحركات' : 'Filter by Operation'}</span>
+            <DialogTitle className="text-sm font-bold">
+              {isAr ? 'اختر نوع العملية للتصفية الدقيقة' : 'Select Exact Activity Type'}
             </DialogTitle>
+            <DialogDescription className="text-xs text-zinc-500">
+              {isAr ? 'عرض الحركات المرتبطة بنوع محدد فقط' : 'Filter feed by a single exact operation type'}
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-1.5 max-h-72 overflow-y-auto py-1">
+
+          <div className="grid grid-cols-2 gap-1.5 py-2">
             <button
               onClick={() => { setSpecificFilter(null); setCustomFilterOpen(false); }}
               className={cn(
-                "p-2 rounded-lg border text-[11px] text-start transition font-medium",
-                !specificFilter ? "border-primary bg-primary/10 text-primary font-bold" : "border-zinc-200 dark:border-border hover:bg-zinc-50 dark:hover:bg-muted/40"
+                "p-2 rounded-xl text-xs font-medium text-start border transition",
+                specificFilter === null ? "border-primary bg-primary/10 text-primary font-bold" : "border-zinc-200 dark:border-border hover:bg-zinc-50 dark:hover:bg-muted/40"
               )}
             >
-              {isAr ? 'جميع العمليات' : 'All Operations'}
+              {isAr ? 'عرض الكل (إلغاء الفلتر)' : 'All Types (Reset)'}
             </button>
-            {Object.keys(activityTypeLabels).map(typeKey => {
-              const type = typeKey as ActivityType;
+            {Object.keys(activityTypeLabels).map((key) => {
+              const type = key as ActivityType;
               const isSelected = specificFilter === type;
               return (
                 <button
                   key={type}
                   onClick={() => { setSpecificFilter(type); setCustomFilterOpen(false); }}
                   className={cn(
-                    "p-2 rounded-lg border text-[11px] text-start transition font-medium truncate",
+                    "p-2 rounded-xl text-xs font-medium text-start border transition truncate",
                     isSelected ? "border-primary bg-primary/10 text-primary font-bold" : "border-zinc-200 dark:border-border hover:bg-zinc-50 dark:hover:bg-muted/40"
                   )}
                 >
@@ -435,12 +451,17 @@ interface ActivityCardProps {
   log: ActivityLog;
   isAr: boolean;
   isRTL: boolean;
+  language?: string;
   timeText: string;
   isExpanded: boolean;
   onToggle: () => void;
 }
 
-function ActivityCard({ log, isAr, isRTL, timeText, isExpanded, onToggle }: ActivityCardProps) {
+function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isExpanded, onToggle }: ActivityCardProps) {
+  // حماية مزدوجة: أخذ اللغة من الـ Props مع fallback من useLanguage
+  const { language: hookLanguage } = useLanguage();
+  const language = propLanguage || hookLanguage || (isAr ? 'ar' : 'en');
+
   const details = (log.details as Record<string, unknown>) || {};
   const changes = (details.changes as Record<string, unknown>) || {};
 
@@ -456,7 +477,7 @@ function ActivityCard({ log, isAr, isRTL, timeText, isExpanded, onToggle }: Acti
     'capital_withdrawn', 'partner_added', 'partner_updated', 'partner_deleted'
   ].includes(log.type) || !!(details.partnerId || details.partnerName);
 
-  // إعدادات المظهر المالي والأيقونات المطابقة للـ Mockup
+  // إعدادات المظهر المالي والأيقونات
   let iconEmoji = '📄';
   let iconClass = 'bg-zinc-50 border-zinc-200 text-zinc-700 dark:bg-muted dark:border-border';
   let badgeLabel = getActivityTypeLabel(log.type, language);
@@ -536,7 +557,6 @@ function ActivityCard({ log, isAr, isRTL, timeText, isExpanded, onToggle }: Acti
       {/* 1. Header of the Card */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-2.5">
-          {/* Activity Emoji / Icon Container */}
           <div className={cn("w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 text-sm font-bold", iconClass)}>
             {iconEmoji}
           </div>
@@ -617,9 +637,7 @@ function ActivityCard({ log, isAr, isRTL, timeText, isExpanded, onToggle }: Acti
 // 📊 1. Price Comparison Table
 // ==========================================
 function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unknown>; isAr: boolean }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const saleChange = (changes.salePrice || changes.price) as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const costChange = changes.costPrice as any;
 
   const oldCost = costChange?.from !== undefined ? Number(costChange.from) : null;
@@ -639,7 +657,6 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
 
   return (
     <div className="space-y-2">
-      {/* Modification source banner */}
       <div className="flex items-center justify-between bg-zinc-50 dark:bg-muted/40 px-2.5 py-1.5 rounded-lg border border-zinc-200/60 dark:border-border/60 text-[11px]">
         <span className="text-zinc-500 font-medium">{isAr ? 'مصدر التعديل:' : 'Source:'}</span>
         <span className="font-bold text-zinc-800 dark:text-foreground">
@@ -647,7 +664,6 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
         </span>
       </div>
 
-      {/* Comparison Table */}
       <div className="rounded-xl border border-zinc-200 dark:border-border overflow-hidden">
         <div className="bg-zinc-100 dark:bg-muted px-3 py-1.5 grid grid-cols-3 text-[11px] font-bold text-zinc-500 dark:text-muted-foreground text-center">
           <div className="text-start">{isAr ? 'نوع السعر' : 'Price Type'}</div>
@@ -655,7 +671,6 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
           <div>{isAr ? 'المعتمد (الجديد)' : 'New (Confirmed)'}</div>
         </div>
 
-        {/* Row 1: Cost Price */}
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-zinc-100 dark:border-border/40 bg-white dark:bg-card">
           <div className="text-start font-medium text-zinc-700 dark:text-foreground flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
@@ -674,7 +689,6 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
           </div>
         </div>
 
-        {/* Row 2: Sale Price */}
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-zinc-100 dark:border-border/40 bg-blue-50/30 dark:bg-blue-950/20">
           <div className="text-start font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
@@ -693,7 +707,6 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
           </div>
         </div>
 
-        {/* Row 3: Expected Margin */}
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-zinc-100 dark:border-border/40 bg-emerald-50/30 dark:bg-emerald-950/20">
           <div className="text-start font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
@@ -712,7 +725,7 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
 }
 
 // ==========================================
-// 📝 2. Debt Sale Grid (2x2)
+// 📝 2. Debt Sale Grid
 // ==========================================
 function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, unknown>; userName?: string; isAr: boolean }) {
   const total = Number(details.total || details.amount || 0);
@@ -723,13 +736,11 @@ function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        {/* Total Invoice */}
         <div className="p-2 rounded-xl bg-zinc-50 dark:bg-muted/40 border border-zinc-200/80 dark:border-border/80">
           <span className="text-[10px] text-zinc-500 block">{isAr ? 'إجمالي الفاتورة:' : 'Invoice Total:'}</span>
           <span className="font-bold text-zinc-900 dark:text-foreground font-mono numeric-tabular text-xs">${total.toFixed(2)}</span>
         </div>
 
-        {/* Items Sold */}
         <div className="p-2 rounded-xl bg-zinc-50 dark:bg-muted/40 border border-zinc-200/80 dark:border-border/80">
           <span className="text-[10px] text-zinc-500 block">{isAr ? 'عدد المنتجات المباعة:' : 'Sold Items Count:'}</span>
           <span className="font-bold text-zinc-900 dark:text-foreground font-mono numeric-tabular text-xs">
@@ -737,7 +748,6 @@ function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, 
           </span>
         </div>
 
-        {/* Down Payment */}
         <div className="p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60">
           <span className="text-[10px] text-emerald-700 dark:text-emerald-400 block font-medium">
             {isAr ? 'الدفعة المستلمة نقداً:' : 'Cash Received:'}
@@ -745,7 +755,6 @@ function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, 
           <span className="font-bold text-emerald-800 dark:text-emerald-300 font-mono numeric-tabular text-xs">${downPayment.toFixed(2)}</span>
         </div>
 
-        {/* Remaining Debt */}
         <div className="p-2 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-800/60">
           <span className="text-[10px] text-rose-700 dark:text-rose-400 block font-medium">
             {isAr ? 'المتبقي كدين على العميل:' : 'Remaining Customer Debt:'}
@@ -821,7 +830,7 @@ function DebtPaymentDetailsBox({ details, isAr }: { details: Record<string, unkn
 }
 
 // ==========================================
-// ↩️ 5. Invoice Refund / Partial Refund Box
+// ↩️ 5. Invoice Refund Box
 // ==========================================
 function RefundDetailsBox({ details, isAr }: { details: Record<string, unknown>; isAr: boolean }) {
   const invoiceNumber = String(details.invoice_number || details.invoiceNumber || details.invoiceId || '');
@@ -918,57 +927,33 @@ function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Reco
 }
 
 // ==========================================
-// 📦 7. Generic Details Box (No raw UUIDs or technical keys)
+// 📦 7. Generic Details Box
 // ==========================================
 function GenericDetailsBox({ details, isAr }: { details: Record<string, unknown>; isAr: boolean }) {
   const HIDDEN_KEYS = new Set([
-    'operation_id', 'operationId', 'id', 'userId', 'user_id', 'actor_id',
-    'txKind', 'entityType', 'entityId', 'warehouseId', 'wholesaleMode',
-    'snapshot', 'changes', 'items', 'full', 'source', 'cogs'
+    'id', 'userId', 'user_id', 'timestamp', 'created_at', 'updated_at', 
+    'device_id', 'deviceId', 'session_id', 'token'
   ]);
 
-  const entries = Object.entries(details).filter(([k, v]) => {
-    if (HIDDEN_KEYS.has(k)) return false;
-    return v !== null && v !== undefined && typeof v !== 'object';
-  });
+  const entries = Object.entries(details).filter(
+    ([key, val]) => !HIDDEN_KEYS.has(key) && val !== undefined && val !== null && val !== ''
+  );
 
-  if (entries.length === 0) {
-    return (
-      <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-muted/30 border border-zinc-200/60 dark:border-border/60 text-xs text-zinc-400 text-center">
-        {isAr ? 'لا توجد تفاصيل إضافية مسجلة' : 'No additional details'}
-      </div>
-    );
-  }
-
-  const labelMap: Record<string, { ar: string; en: string }> = {
-    name: { ar: 'الاسم', en: 'Name' },
-    barcode: { ar: 'الباركود', en: 'Barcode' },
-    category: { ar: 'التصنيف', en: 'Category' },
-    quantity: { ar: 'الكمية', en: 'Quantity' },
-    price: { ar: 'السعر', en: 'Price' },
-    amount: { ar: 'المبلغ', en: 'Amount' },
-    total: { ar: 'الإجمالي', en: 'Total' },
-    customerName: { ar: 'العميل', en: 'Customer' },
-    phone: { ar: 'الهاتف', en: 'Phone' },
-    type: { ar: 'النوع', en: 'Type' },
-  };
+  if (entries.length === 0) return null;
 
   return (
-    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-muted/30 border border-zinc-200/80 dark:border-border/80 space-y-1.5 text-xs">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5">
-        {entries.map(([key, val]) => (
-          <div key={key} className="flex justify-between items-center gap-2 border-b border-zinc-200/40 dark:border-border/40 pb-1">
-            <span className="text-zinc-500 font-medium">
-              {labelMap[key]?.[isAr ? 'ar' : 'en'] || key}:
-            </span>
-            <span className="font-bold text-zinc-800 dark:text-foreground break-all">
-              {typeof val === 'number' && (key.toLowerCase().includes('price') || key.toLowerCase().includes('total') || key.toLowerCase().includes('amount'))
-                ? formatMoney(val)
-                : String(val)}
-            </span>
+    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-muted/30 border border-zinc-200/60 dark:border-border/60 space-y-1 text-xs">
+      {entries.map(([key, val]) => {
+        let displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+        return (
+          <div key={key} className="flex justify-between items-center">
+            <span className="text-zinc-500 capitalize">{key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}:</span>
+            <span className="font-medium text-zinc-800 dark:text-foreground font-mono truncate max-w-[200px]">{displayVal}</span>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
+
+export default ActivityLogSection;

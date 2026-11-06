@@ -126,7 +126,8 @@ import {
   pullStoreSettingsWithGuard,
   StoreSettingsSaveStatus,
 } from '@/lib/store-settings-sync';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
+import { FeatureErrorBoundary } from '@/components/debug/FeatureErrorBoundary';
 import type { LucideIcon } from 'lucide-react';
 import type { TranslationKey } from '@/lib/i18n';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -1917,7 +1918,48 @@ export default function Settings() {
         );
       case 'language':
         return <LanguageSection />;
-      // تم نقل theme إلى صفحة /appearance
+      case 'theme':
+        return <Navigate to="/appearance" replace />;
+      case 'currencies':
+        return (
+          <div className="space-y-4">
+            <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>}>
+              <FinanceSettingsSection
+                primaryCurrency={primaryCurrency}
+                setPrimaryCurrency={setPrimaryCurrency}
+                enabledCurrencies={enabledCurrencies}
+                setEnabledCurrencies={setEnabledCurrencies}
+                exchangeRates={exchangeRates as any}
+                setExchangeRates={setExchangeRates}
+                currencyNames={currencyNames}
+                setCurrencyNames={setCurrencyNames}
+                currencySymbols={currencySymbols}
+                setCurrencySymbols={setCurrencySymbols}
+                currencyDisplayMode={currencyDisplayMode}
+                setCurrencyDisplayMode={setCurrencyDisplayMode}
+                taxEnabled={taxEnabled}
+                setTaxEnabled={setTaxEnabled}
+                taxRate={taxRate}
+                setTaxRate={setTaxRate}
+                discountPercentEnabled={discountPercentEnabled}
+                setDiscountPercentEnabled={setDiscountPercentEnabled}
+                discountFixedEnabled={discountFixedEnabled}
+                setDiscountFixedEnabled={setDiscountFixedEnabled}
+                trackCapital={trackCapital}
+                setTrackCapital={setTrackCapital}
+                initialCapital={initialCapital}
+                setInitialCapital={setInitialCapital}
+                slot1Code={slot1Code}
+                setSlot1Code={setSlot1Code}
+                slot2Code={slot2Code}
+                setSlot2Code={setSlot2Code}
+                toggleCurrency={toggleCurrency}
+                renderCurrencyDisplayOptions={renderCurrencyDisplayOptions}
+                sanitizeNumberText={sanitizeNumberText}
+              />
+            </Suspense>
+          </div>
+        );
       case 'activity':
         return <ActivityLogSection />;
       case 'store':
@@ -2737,14 +2779,19 @@ export default function Settings() {
 
           {/* Content */}
           <div className="bg-card/70 sm:bg-card rounded-2xl border border-border/70 sm:border-border p-3.5 sm:p-6 overflow-hidden max-w-full pb-28">
-            {/* ✅ إلغاء حظر التحميل: عرض الإعدادات فوراً وتحديث البيانات في الخلفية بهدوء واستيراد مرجأ */}
-            <Suspense fallback={
-              <div className="flex items-center justify-center p-8 text-muted-foreground">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            }>
-              {renderTabContent()}
-            </Suspense>
+            {/* ✅ حماية كل تبويب داخل إطار معالجة الأخطاء FeatureErrorBoundary لعزل أي خطأ دون إسقاط الشاشة */}
+            <FeatureErrorBoundary
+              featureName={`تبويب الإعدادات: ${activeTab || 'العام'}`}
+              compact
+            >
+              <Suspense fallback={
+                <div className="flex items-center justify-center p-8 text-muted-foreground">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              }>
+                {renderTabContent()}
+              </Suspense>
+            </FeatureErrorBoundary>
           </div>
         </>
       )}

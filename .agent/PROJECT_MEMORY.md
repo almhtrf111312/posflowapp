@@ -302,6 +302,12 @@
   * **Archive & Notifications Overhaul:** Expanded general archive in `ArchiveSection.tsx` into 6 subtabs (`invoices`, `debts`, `products`, `expenses`, `purchases`, `deleted`) with Supabase cloud audit log synchronization; added persistent notification archiving with 72-hour auto-archive in `Notifications.tsx` and `use-notifications.tsx`; resolved text clipping with responsive wrapping.
   * **Complete i18n & RTL/LTR Stabilization:** Achieved 100% key completeness across all 4 supported foreign languages (en, tr, fa, ku) in `src/lib/i18n.ts` (0 missing keys); replaced hardcoded Arabic table headers with dynamic `t()` keys and logical `text-start` across the 4 major report tables (`PurchaseInvoicesReport`, `SalesDetailedReport`, `DebtsReport`, `MaintenanceReport`); eliminated search bar clipping by replacing hardcoded `right-3`/`pr-9` with logical CSS `start-3`/`ps-9 pe-3` across all pages; resolved MobileMenuTrigger burger overlap in `Reports.tsx` with responsive padding; rotated back button `ArrowRight` with `rtl:rotate-0 ltr:rotate-180`; added `formatAppDate` in `src/lib/utils.ts` and dynamic date locale across reports, debts, invoices, and native sharing.
 
+* **2026-11-06 (Store Phone Verification & Atomic Transfer Engine):**
+  * **Stage 3 & 4 (Verification Modal & Settings Integration):** Created `StorePhoneVerificationDialog.tsx` supporting dual verification workflows:
+    1. Direct password re-authentication for available phone numbers via `assign_store_and_profile_phone`.
+    2. 6-digit Telegram OTP verification and atomic ownership transfer via Edge Function `telegram-auth` (`request_phone_transfer_otp`) and RPC `complete_phone_transfer` for numbers registered to other accounts.
+    * Linked pre-save check directly into `Settings.tsx` (`handleSaveSettings` and `check_store_phone_status`), triggering verification modals before persisting store settings.
+
 ## ⚠️ Known Technical Debt & Edge Cases
 1. **Large Bundle Size:** Main chunk exceeds 800KB gzipped. Dynamic code-splitting on heavy reports (`Reports.tsx`, `BossPanel.tsx`) is advised for future performance optimization.
 2. **Offline Refund Currency Conversion:** Historical invoices refunded offline must resolve historical exchange rates from invoice snapshots to prevent currency drift.

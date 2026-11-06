@@ -108,6 +108,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
+import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVerificationDialog';
+import { showToast } from '@/lib/toast-config';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
 
@@ -262,6 +264,8 @@ interface BackupData {
 
 export default function Settings() {
   const { toast } = useToast();
+  const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
+  const [phoneVerificationStatus, setPhoneVerificationStatus] = useState<'available' | 'requires_telegram_verification'>('available');
   const { t, isRTL } = useLanguage();
   const { user: currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1275,7 +1279,7 @@ export default function Settings() {
   };
 
   // Handlers
-  const handleSaveSettings = async () => {
+  const executeSave = async () => {
     // 1. تحقق أسعار الصرف ديناميكياً للخانات المستخدمة
     if (activeTab === 'store' || !activeTab) {
       for (const slot of [slot1Code, slot2Code]) {
@@ -1474,6 +1478,39 @@ export default function Settings() {
     } finally {
       setIsSavingSettings(false);
     }
+  };
+
+  const handleSaveSettings = async () => {
+    // 1. فحص حالة رقم هاتف المتجر قبل الحفظ
+    if (storeSettings.phone && storeSettings.phone.trim()) {
+      try {
+        const { data: phoneCheck } = await (supabase.rpc as any)('check_store_phone_status', {
+          _phone: storeSettings.phone,
+        });
+
+        if (phoneCheck && !phoneCheck.ok && phoneCheck.status === 'conflict_no_telegram') {
+          showToast.error(phoneCheck.error || 'الرقم مرتبط بحساب آخر غير مفعل لديه تيليجرام');
+          return;
+        }
+
+        if (phoneCheck?.status === 'available') {
+          setPhoneVerificationStatus('available');
+          setPhoneVerificationOpen(true);
+          return; // يتوقف ليطلب كلمة المرور في النافذة أولاً ثم يكمل الحفظ
+        }
+
+        if (phoneCheck?.status === 'requires_telegram_verification') {
+          setPhoneVerificationStatus('requires_telegram_verification');
+          setPhoneVerificationOpen(true);
+          return; // يتوقف ليطلب رمز التيليجرام أولاً
+        }
+      } catch (err) {
+        console.warn('Phone pre-check warning:', err);
+      }
+    }
+
+    // استكمال الحفظ الفعلي كما هو...
+    await executeSave();
   };
 
   const handleSync = () => {
@@ -2902,6 +2939,18 @@ export default function Settings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* نافذة التحقق من ملكية رقم هاتف المتجر ونقله */}
+      <StorePhoneVerificationDialog
+        open={phoneVerificationOpen}
+        onOpenChange={setPhoneVerificationOpen}
+        phone={storeSettings.phone}
+        status={phoneVerificationStatus}
+        onSuccess={() => {
+          // استكمال حفظ باقي الإعدادات فور نجاح التحقق
+          executeSave();
+        }}
+      />
 
     </div>
   );

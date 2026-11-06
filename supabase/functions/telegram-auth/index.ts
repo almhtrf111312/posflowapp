@@ -233,6 +233,7 @@ serve(async (req) => {
 
         return new Response("OK", { status: 200 });
       }
+
       // Case B: User shared contact
       if (message.contact) {
         const contact = message.contact;
@@ -338,6 +339,7 @@ serve(async (req) => {
     // --- Action: request_otp ---
     if (action === "request_otp") {
       const identifier = typeof body.identifier === "string" ? body.identifier.trim() : "";
+
       if (!identifier) {
         return new Response(JSON.stringify({ error: "يرجى إدخال البريد الإلكتروني أو رقم الهاتف المسجل" }), {
           status: 400,
@@ -638,19 +640,6 @@ serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ error: "إجراء غير معروف" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error("[TelegramAuth] Unhandled error:", errorMsg);
-    return new Response(JSON.stringify({ error: `حدث خطأ في معالجة الطلب: ${errorMsg}` }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
     // --- Action: request_phone_transfer_otp ---
     if (action === "request_phone_transfer_otp") {
       const authHeader = req.headers.get("Authorization") || "";
@@ -700,10 +689,13 @@ serve(async (req) => {
       const matchedProfile = (profiles || []).find((p: any) => isPhoneMatch(p.phone, rawPhone));
 
       if (!matchedProfile) {
-        return new Response(JSON.stringify({ error: "لم يتم العثور على حساب آخر مرتبط بهذا الرقم، يمكنك ربطه بكلمة المرور مباشرة" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "لم يتم العثور على حساب آخر مرتبط بهذا الرقم، يمكنك ربطه بكلمة المرور مباشرة" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       const sourceUserId = matchedProfile.user_id;
@@ -718,14 +710,16 @@ serve(async (req) => {
       }
 
       if (!sourceChatId) {
-        return new Response(JSON.stringify({ 
-          error: "الحساب المالك لهذا الرقم
-غير مربوط ببوت تيليجرام. يتعذر نقل الملكية تلقائياً.",
-          requires_support: true 
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "الحساب المالك لهذا الرقم غير مربوط ببوت تيليجرام. يتعذر نقل الملكية تلقائياً.",
+            requires_support: true,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       // توليد رمز OTP من 6 أرقام
@@ -763,7 +757,8 @@ serve(async (req) => {
       }
 
       // إرسال رسالة التنبيه والرمز عبر تيليجرام للمالك الأصلي
-      const alertMessage = `⚠️ *تنبيه أمني: طلب نقل رقم الهاتف*\n\n` +
+      const alertMessage =
+        `⚠️ *تنبيه أمني: طلب نقل رقم الهاتف*\n\n` +
         `تلقينا طلباً لنقل رقم هاتفك (\`${matchedProfile.phone}\`) لربطه بمتجر وحساب آخر على *Flow POS Pro*.\n\n` +
         `رمز التأكيد الخاص بك هو:\n` +
         `\`${otpCode}\`\n\n` +
@@ -779,6 +774,20 @@ serve(async (req) => {
           request_id: insData.id,
           message: "تم إرسال رمز التحقق إلى حساب تيليجرام المالك لهذا الرقم",
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    return new Response(JSON.stringify({ error: "إجراء غير معروف" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("[TelegramAuth] Unhandled error:", errorMsg);
+    return new Response(JSON.stringify({ error: `حدث خطأ في معالجة الطلب: ${errorMsg}` }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

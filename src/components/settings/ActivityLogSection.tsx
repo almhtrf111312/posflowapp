@@ -7,12 +7,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { loadActivityLogs, clearActivityLogs, ActivityLog, ActivityType, activityTypeLabels } from '@/lib/activity-log';
+import { loadActivityLogs, clearActivityLogs, ActivityLog, ActivityType, activityTypeLabels, getActivityTypeLabel } from '@/lib/activity-log';
 import { cn, formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
 import { supabase } from '@/integrations/supabase/client';
 
-type FilterCategory = 'all' | 'pricing' | 'sales' | 'debts' | 'auth';
+type FilterCategory = 'all' | 'pricing' | 'sales' | 'debts' | 'partners' | 'expenses' | 'auth';
 
 export function ActivityLogSection() {
   const { isRTL, language } = useLanguage();
@@ -91,6 +91,17 @@ export function ActivityLogSection() {
     return ['debt_created', 'debt_paid', 'debt_payment', 'debt_writeoff', 'debt_deleted'].includes(log.type);
   };
 
+  const isPartnerLog = (log: ActivityLog) => {
+    return [
+      'partner_investment', 'partner_withdrawal', 'capital_added',
+      'capital_withdrawn', 'partner_added', 'partner_updated', 'partner_deleted'
+    ].includes(log.type);
+  };
+
+  const isExpenseLog = (log: ActivityLog) => {
+    return ['expense_added', 'expense_deleted', 'expense_refund', 'expense'].includes(log.type);
+  };
+
   const isAuthLog = (log: ActivityLog) => {
     return ['login', 'logout', 'shift_opened', 'shift_closed', 'password_changed', 'user_added', 'user_deleted'].includes(log.type);
   };
@@ -102,6 +113,8 @@ export function ActivityLogSection() {
       if (selectedCategory === 'pricing' && !isPricingLog(log)) return false;
       if (selectedCategory === 'sales' && !isSalesLog(log)) return false;
       if (selectedCategory === 'debts' && !isDebtsLog(log)) return false;
+      if (selectedCategory === 'partners' && !isPartnerLog(log)) return false;
+      if (selectedCategory === 'expenses' && !isExpenseLog(log)) return false;
       if (selectedCategory === 'auth' && !isAuthLog(log)) return false;
 
       // 2. فلتر مخصص للنوع
@@ -134,6 +147,12 @@ export function ActivityLogSection() {
       if (hours < 24) return `منذ ${hours} ساعات`;
       if (days < 7) return `منذ ${days} أيام`;
       return new Date(timestamp).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+    } else if (language === 'tr') {
+      if (minutes < 1) return 'Az önce';
+      if (minutes < 60) return `${minutes} dk önce`;
+      if (hours < 24) return `${hours} sa önce`;
+      if (days < 7) return `${days} gün önce`;
+      return new Date(timestamp).toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' });
     } else {
       if (minutes < 1) return 'Just now';
       if (minutes < 60) return `${minutes}m ago`;
@@ -227,7 +246,35 @@ export function ActivityLogSection() {
             )}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            <span>{isAr ? 'الديون والتحصيل' : 'Debts & Collections'}</span>
+            <span>{isAr ? 'الديون والتحصيل' : language === 'tr' ? 'Borç ve Tahsilat' : 'Debts & Collections'}</span>
+          </button>
+
+          {/* Partners Pill */}
+          <button
+            onClick={() => { setSelectedCategory('partners'); setSpecificFilter(null); }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
+              selectedCategory === 'partners'
+                ? "bg-indigo-100 text-indigo-900 border border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-200 font-bold"
+                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
+            )}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+            <span>{isAr ? 'الشركاء ورأس المال' : language === 'tr' ? 'Ortaklar ve Sermaye' : 'Partners & Capital'}</span>
+          </button>
+
+          {/* Expenses Pill */}
+          <button
+            onClick={() => { setSelectedCategory('expenses'); setSpecificFilter(null); }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
+              selectedCategory === 'expenses'
+                ? "bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-200 font-bold"
+                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
+            )}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <span>{isAr ? 'المصاريف' : language === 'tr' ? 'Giderler' : 'Expenses'}</span>
           </button>
 
           {/* Auth */}
@@ -256,7 +303,7 @@ export function ActivityLogSection() {
             title={isAr ? 'تصفية مخصصة' : 'Custom Filter'}
           >
             <Filter className="w-3.5 h-3.5" />
-            <span>{specificFilter ? (activityTypeLabels[specificFilter]?.[isAr ? 'ar' : 'en'] || specificFilter) : (isAr ? 'تصفية مخصصة' : 'Custom')}</span>
+            <span>{specificFilter ? getActivityTypeLabel(specificFilter, language) : (isAr ? 'تصفية مخصصة' : language === 'tr' ? 'Özel Filtre' : 'Custom')}</span>
           </button>
         </div>
       </header>
@@ -370,7 +417,7 @@ export function ActivityLogSection() {
                     isSelected ? "border-primary bg-primary/10 text-primary font-bold" : "border-zinc-200 dark:border-border hover:bg-zinc-50 dark:hover:bg-muted/40"
                   )}
                 >
-                  {activityTypeLabels[type]?.[isAr ? 'ar' : 'en'] || type}
+                  {getActivityTypeLabel(type, language)}
                 </button>
               );
             })}
@@ -404,11 +451,15 @@ function ActivityCard({ log, isAr, isRTL, timeText, isExpanded, onToggle }: Acti
   const isDebtPay = log.type === 'debt_paid' || log.type === 'debt_payment';
   const isRefund = ['invoice_refunded', 'invoice_refund', 'refund', 'partial_refund'].includes(log.type) ||
                    (details.refund_amount !== undefined || details.restored_units !== undefined);
+  const isPartner = [
+    'partner_investment', 'partner_withdrawal', 'capital_added',
+    'capital_withdrawn', 'partner_added', 'partner_updated', 'partner_deleted'
+  ].includes(log.type) || !!(details.partnerId || details.partnerName);
 
   // إعدادات المظهر المالي والأيقونات المطابقة للـ Mockup
   let iconEmoji = '📄';
   let iconClass = 'bg-zinc-50 border-zinc-200 text-zinc-700 dark:bg-muted dark:border-border';
-  let badgeLabel = activityTypeLabels[log.type]?.[isAr ? 'ar' : 'en'] || log.type;
+  let badgeLabel = getActivityTypeLabel(log.type, language);
   let badgeClass = 'bg-zinc-50 text-zinc-800 border-zinc-200 dark:bg-muted dark:text-foreground dark:border-border';
   
   let leftAmount: string | null = null;
@@ -455,8 +506,22 @@ function ActivityCard({ log, isAr, isRTL, timeText, isExpanded, onToggle }: Acti
     const refundVal = Number(details.refund_amount || details.refundAmount || details.amount || details.total || 0);
     if (refundVal > 0) {
       leftAmount = formatMoney(refundVal);
-      leftStatus = isAr ? 'مسترد من الصندوق' : 'Refunded';
+      leftStatus = isAr ? 'مسترد من الصندوق' : language === 'tr' ? 'Kasadan İade' : 'Refunded';
       leftClass = 'text-rose-600 dark:text-rose-400';
+    }
+  } else if (isPartner) {
+    iconEmoji = '💼';
+    iconClass = 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800/60 dark:text-indigo-300';
+    badgeLabel = getActivityTypeLabel(log.type, language);
+    badgeClass = 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-200 dark:border-indigo-800/60';
+    const amountVal = Number(details.amount || details.originalAmount || 0);
+    if (amountVal > 0) {
+      leftAmount = `${amountVal.toFixed(2)}`;
+      const isDeposit = log.type === 'partner_investment' || log.type === 'capital_added';
+      leftStatus = isDeposit 
+        ? (isAr ? 'إيداع رصيد/رأس مال' : language === 'tr' ? 'Giriş' : 'Deposit')
+        : (isAr ? 'سحب رصيد/أرباح' : language === 'tr' ? 'Çekim' : 'Withdrawal');
+      leftClass = isDeposit ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-600 dark:text-amber-400';
     }
   }
 
@@ -537,6 +602,8 @@ function ActivityCard({ log, isAr, isRTL, timeText, isExpanded, onToggle }: Acti
             <DebtPaymentDetailsBox details={details} isAr={isAr} />
           ) : isRefund ? (
             <RefundDetailsBox details={details} isAr={isAr} />
+          ) : isPartner ? (
+            <PartnerFinancialDetailsBox details={details} isAr={isAr} language={language} />
           ) : (
             <GenericDetailsBox details={details} isAr={isAr} />
           )}
@@ -808,7 +875,50 @@ function RefundDetailsBox({ details, isAr }: { details: Record<string, unknown>;
 }
 
 // ==========================================
-// 📦 6. Generic Details Box (No raw UUIDs or technical keys)
+// 💼 6. Partner Financial Details Box
+// ==========================================
+function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Record<string, unknown>; isAr: boolean; language: string }) {
+  const partnerName = String(details.partnerName || (isAr ? 'شريك' : language === 'tr' ? 'Ortak' : 'Partner'));
+  const amountUsd = Number(details.amount || 0);
+  const origAmount = Number(details.originalAmount || amountUsd);
+  const currency = String(details.currency || 'USD');
+  const notes = details.notes ? String(details.notes) : null;
+
+  return (
+    <div className="p-2.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 space-y-1.5 text-xs">
+      <div className="flex justify-between items-center">
+        <span className="text-zinc-500">{isAr ? 'اسم الشريك المعني:' : language === 'tr' ? 'İlgili Ortak:' : 'Partner:'}</span>
+        <span className="font-bold text-zinc-900 dark:text-foreground">{partnerName}</span>
+      </div>
+
+      <div className="flex justify-between items-center">
+        <span className="text-zinc-500">{isAr ? 'المبلغ بالدولار (الأساس):' : language === 'tr' ? 'Dolar Tutarı (Baz):' : 'Amount (USD):'}</span>
+        <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">${amountUsd.toFixed(2)}</span>
+      </div>
+
+      {currency !== 'USD' && (
+        <div className="flex justify-between items-center">
+          <span className="text-zinc-500">{isAr ? 'المعادل بالعملة المحصلة:' : language === 'tr' ? 'Tahsil Edilen Para Birimi:' : 'Local Currency:'}</span>
+          <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+            {origAmount.toLocaleString()} {currency}
+          </span>
+        </div>
+      )}
+
+      {notes && (
+        <div className="pt-1 border-t border-indigo-200/50 dark:border-indigo-800/40 text-[11px]">
+          <span className="text-zinc-500 block mb-0.5">{isAr ? 'البيان / الملاحظة:' : language === 'tr' ? 'Açıklama / Not:' : 'Notes:'}</span>
+          <p className="text-zinc-700 dark:text-zinc-300 italic bg-white/60 dark:bg-black/20 p-1.5 rounded-md">
+            "{notes}"
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// 📦 7. Generic Details Box (No raw UUIDs or technical keys)
 // ==========================================
 function GenericDetailsBox({ details, isAr }: { details: Record<string, unknown>; isAr: boolean }) {
   const HIDDEN_KEYS = new Set([

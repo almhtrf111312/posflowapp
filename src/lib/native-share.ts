@@ -1,3 +1,4 @@
+import { getCurrentLanguage } from '@/lib/i18n';
 /**
  * Native Share Utility for Capacitor/Android
  * ============================================
@@ -430,7 +431,7 @@ export async function shareDebt(data: DebtShareData): Promise<boolean> {
     const statementData: DebtStatementCanvasData = {
       customerName: data.customerName,
       customerPhone: data.customerPhone,
-      date: new Date().toLocaleDateString('ar-SA'),
+      date: new Date().toLocaleDateString(getCurrentLanguage() === 'ar' ? 'ar-SA' : getCurrentLanguage() === 'tr' ? 'tr-TR' : getCurrentLanguage() === 'fa' ? 'fa-IR' : getCurrentLanguage() === 'ku' ? 'ckb-IQ' : 'en-US'),
       totalPurchases: data.totalDebt,
       totalPaid: Math.max(0, data.totalDebt - data.remainingDebt),
       totalDebt: data.remainingDebt,
@@ -440,7 +441,7 @@ export async function shareDebt(data: DebtShareData): Promise<boolean> {
       dueDate: data.dueDate,
       transactions: data.invoiceId ? [{
         id: data.invoiceId,
-        date: data.dueDate || new Date().toLocaleDateString('ar-SA'),
+        date: data.dueDate || new Date().toLocaleDateString(getCurrentLanguage() === 'ar' ? 'ar-SA' : getCurrentLanguage() === 'tr' ? 'tr-TR' : getCurrentLanguage() === 'fa' ? 'fa-IR' : getCurrentLanguage() === 'ku' ? 'ckb-IQ' : 'en-US'),
         type: 'فاتورة آجل',
         total: data.totalDebt,
         paid: Math.max(0, data.totalDebt - data.remainingDebt),

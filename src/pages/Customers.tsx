@@ -82,7 +82,7 @@ import { EVENTS } from '@/lib/events';
 import Debts from '@/pages/Debts';
 
 export default function Customers() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'debts' ? 'debts' : 'customers';
 
@@ -351,13 +351,14 @@ export default function Customers() {
       customerDebts.filter(d => d.isCashDebt).reduce((s, d) => s + d.remainingDebt, 0);
     const totalPaid = Math.max(0, totalPurchases - totalDebt);
 
+    const dateLocale = language === 'ar' ? 'ar-SA' : language === 'tr' ? 'tr-TR' : language === 'fa' ? 'fa-IR' : language === 'ku' ? 'ckb-IQ' : 'en-US';
     const statementRows = [
       ...customerInvoices.map(inv => {
         const remaining = remainingDebtOf(inv);
         const paid = Math.max(0, inv.total - remaining);
         return {
           id: inv.id,
-          date: new Date(inv.createdAt).toLocaleDateString('ar-SA'),
+          date: new Date(inv.createdAt).toLocaleDateString(dateLocale),
           type: inv.paymentType === 'cash' ? 'بيع نقدي' : 'بيع آجل',
           total: inv.total,
           paid,
@@ -367,7 +368,7 @@ export default function Customers() {
       }),
       ...customerDebts.filter(d => d.isCashDebt).map(d => ({
         id: d.invoiceId,
-        date: new Date(d.createdAt).toLocaleDateString('ar-SA'),
+        date: new Date(d.createdAt).toLocaleDateString(dateLocale),
         type: 'دين نقدي (سلفة)',
         total: d.totalDebt,
         paid: d.totalPaid,
@@ -379,7 +380,7 @@ export default function Customers() {
     const statementData: DebtStatementCanvasData = {
       customerName: selectedCustomer.name,
       customerPhone: selectedCustomer.phone,
-      date: new Date().toLocaleDateString('ar-SA'),
+      date: new Date().toLocaleDateString(dateLocale),
       totalPurchases,
       totalPaid,
       totalDebt,
@@ -448,13 +449,13 @@ export default function Customers() {
           {/* Search & Counter */}
           <div className="space-y-1.5">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={t('customers.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 pr-9 text-xs bg-card border-border rounded-xl font-medium shadow-xs focus-visible:ring-1 focus-visible:ring-primary"
+                className="h-9 ps-9 pe-3 text-xs bg-card border-border rounded-xl font-medium shadow-xs focus-visible:ring-1 focus-visible:ring-primary"
               />
             </div>
             <div className="flex items-center justify-between text-muted-foreground text-[10.5px] px-1 font-semibold">
@@ -608,7 +609,7 @@ export default function Customers() {
                 onClick={() => setShowAddDialog(false)}
                 className="rounded-full h-8 w-8 sm:hidden"
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 rtl:rotate-0 ltr:rotate-180" />
               </Button>
               <DialogTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
                 <Plus className="w-4 h-4 text-primary" />
@@ -688,7 +689,7 @@ export default function Customers() {
                 onClick={() => setShowEditDialog(false)}
                 className="rounded-full h-8 w-8 sm:hidden"
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 rtl:rotate-0 ltr:rotate-180" />
               </Button>
               <DialogTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
                 <Edit className="w-4 h-4 text-primary" />

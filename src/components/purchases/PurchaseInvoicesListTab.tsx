@@ -170,12 +170,12 @@ export function PurchaseInvoicesListTab() {
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="flex flex-1 flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="بحث برقم الفاتورة، اسم المورد، أو اسم الشركة..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pr-10"
+              className="ps-10 pe-3"
             />
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 sm:w-48">

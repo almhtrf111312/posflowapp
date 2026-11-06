@@ -66,13 +66,13 @@ export function EntityPicker({ label, placeholder = 'بحث...', items, value, o
       {open && !selected && (
         <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
           <div className="relative p-2 border-b border-border/50">
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               autoFocus
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="ابحث بالاسم أو الباركود..."
-              className="h-8 text-xs pr-8"
+              className="h-8 text-xs ps-8 pe-3"
             />
           </div>
           <div className="max-h-64 overflow-y-auto">

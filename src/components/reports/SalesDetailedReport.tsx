@@ -230,23 +230,23 @@ export function SalesDetailedReport({
           <table className="min-w-[620px] w-full text-xs">
               <thead className="bg-muted/40">
                 <tr>
-                  <th className="p-2 text-right">الفاتورة</th>
-                  <th className="p-2 text-right">التاريخ</th>
-                  <th className="p-2 text-right">العميل</th>
-                  <th className="p-2 text-right">الكاشير</th>
-                  <th className="p-2 text-center">الدفع</th>
-                  <th className="p-2 text-center">الأصناف</th>
-                  <th className="p-2 text-center">الربح</th>
-                  <th className="p-2 text-center">الإجمالي</th>
+                  <th className="p-2 text-start font-semibold">{t('pos.invoiceTitle') || 'الفاتورة'}</th>
+                  <th className="p-2 text-start font-semibold">{t('invoices.date') || 'التاريخ'}</th>
+                  <th className="p-2 text-start font-semibold">{t('pos.customerLabel') || 'العميل'}</th>
+                  <th className="p-2 text-start font-semibold">{t('cashShifts.cashier') || 'الكاشير'}</th>
+                  <th className="p-2 text-center font-semibold">{t('pos.paymentMethodLabel') || 'الدفع'}</th>
+                  <th className="p-2 text-center font-semibold">{t('reports.itemsInAudit') || 'الأصناف'}</th>
+                  <th className="p-2 text-center font-semibold">{t('pos.profit') || 'الربح'}</th>
+                  <th className="p-2 text-center font-semibold">{t('pos.totalLabel') || 'الإجمالي'}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.slice(0, 200).map((r, i) => (
                   <tr key={i} className="border-t border-border/40 hover:bg-muted/30">
-                    <td className="p-2 font-mono">#{r.number}</td>
-                    <td className="p-2 text-muted-foreground">{r.date}</td>
-                    <td className="p-2">{r.customer}</td>
-                    <td className="p-2 text-muted-foreground">{r.cashier}</td>
+                    <td className="p-2 text-start font-mono">#{r.number}</td>
+                    <td className="p-2 text-start text-muted-foreground">{r.date}</td>
+                    <td className="p-2 text-start">{r.customer}</td>
+                    <td className="p-2 text-start text-muted-foreground">{r.cashier}</td>
                     <td className="p-2 text-center">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] ${r.payment === 'نقدي' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'}`}>{r.payment}</span>
                     </td>

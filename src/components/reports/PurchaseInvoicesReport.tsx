@@ -151,20 +151,20 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
           <table className="min-w-[620px] w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="p-3 text-right">رقم الفاتورة</th>
-                  <th className="p-3 text-right">المورد</th>
-                  <th className="p-3 text-center">التاريخ</th>
-                  <th className="p-3 text-center">الأصناف</th>
-                  <th className="p-3 text-center">الكمية</th>
-                  <th className="p-3 text-center">الإجمالي</th>
-                  <th className="p-3 text-center">الحالة</th>
+                  <th className="p-3 text-start font-semibold">{t('invoices.invoiceNumber') || 'رقم الفاتورة'}</th>
+                  <th className="p-3 text-start font-semibold">{t('purchaseInvoice.supplierName') || 'المورد'}</th>
+                  <th className="p-3 text-center font-semibold">{t('invoices.date') || 'التاريخ'}</th>
+                  <th className="p-3 text-center font-semibold">{t('reports.itemsInAudit') || 'الأصناف'}</th>
+                  <th className="p-3 text-center font-semibold">{t('pos.qtyCol') || 'الكمية'}</th>
+                  <th className="p-3 text-center font-semibold">{t('pos.totalLabel') || 'الإجمالي'}</th>
+                  <th className="p-3 text-center font-semibold">{t('invoices.status') || 'الحالة'}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(inv => (
                   <tr key={inv.id} className="border-t hover:bg-muted/30">
-                    <td className="p-3 font-mono text-xs">{inv.invoice_number}</td>
-                    <td className="p-3 font-medium">{inv.supplier_name}</td>
+                    <td className="p-3 text-start font-mono text-xs">{inv.invoice_number}</td>
+                    <td className="p-3 text-start font-medium">{inv.supplier_name}</td>
                     <td className="p-3 text-center">{inv.invoice_date}</td>
                     <td className="p-3 text-center">{inv.actual_items_count}</td>
                     <td className="p-3 text-center">{inv.actual_total_quantity}</td>

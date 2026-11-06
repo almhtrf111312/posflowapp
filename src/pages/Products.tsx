@@ -2397,19 +2397,19 @@ export default function Products() {
         <div className="flex flex-col gap-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={mainTab === 'archive' ? t('products.searchArchivePlaceholder') : t('products.searchPlaceholder')}
                 value={mainTab === 'archive' ? archiveSearchQuery : searchQuery}
                 onChange={(e) => mainTab === 'archive' ? setArchiveSearchQuery(e.target.value) : setSearchQuery(e.target.value)}
-                className="pr-9 md:pr-10 bg-muted border-0"
+                className="ps-9 md:ps-10 pe-8 bg-muted border-0"
               />
               {mainTab === 'archive' && archiveSearchQuery && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                  className="absolute end-2 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
                   onClick={() => setArchiveSearchQuery('')}
                 >
                   <X className="w-3.5 h-3.5" />

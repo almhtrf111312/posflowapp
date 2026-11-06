@@ -152,3 +152,13 @@ export function formatTime(dateString: string | Date): string {
     minute: '2-digit'
   });
 }
+
+export function formatAppDate(date: Date | string, language: string = 'ar'): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const locale = language === 'ar' ? 'ar-SA' 
+               : language === 'tr' ? 'tr-TR' 
+               : language === 'fa' ? 'fa-IR' 
+               : language === 'ku' ? 'ckb-IQ' 
+               : 'en-US';
+  return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
+}

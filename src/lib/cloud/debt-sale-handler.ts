@@ -172,12 +172,27 @@ export async function processDebtSaleWithOfflineSupport(
       }
     }
     
-    // Step 6: Record profit
+    // Step 6: Record profit - إثبات الربح بنسبة الدفعة الأولى المسددة فقط (الدستور المالي: عدم إثبات ربح الدين غير المحصل)
     if (!sale.alreadyProcessed) {
-      // ✅ أرقام الخادم هي المعتمدة (التكلفة من جدول المنتجات، الضريبة خارج الربح)
-      const revenue = Math.round((sale.total - sale.taxAmount) * 100) / 100;
-      addGrossProfit(sale.invoiceNumber, sale.profit, sale.cogs, revenue, localId);
-      addGrossProfitCloud({ invoiceId: sale.invoiceNumber, grossProfit: sale.profit, cogs: sale.cogs, revenue, currency: 'USD' }).catch(() => {});
+      const downPayment = Number(bundle.downPayment || 0);
+      const totalSale = Number(sale.total || 0);
+      
+      // إذا وُجدت دفعة أولى، نثبت الربح بنسبتها فقط، وإذا كان الدين 100% يظل الربح معلقاً حتى التحصيل
+      if (downPayment > 0 && totalSale > 0) {
+        const paymentRatio = Math.min(1.0, downPayment / totalSale);
+        const realizedProfit = Math.round(sale.profit * paymentRatio * 100) / 100;
+        const realizedCogs = Math.round(sale.cogs * paymentRatio * 100) / 100;
+        const realizedRevenue = Math.round((downPayment - (sale.taxAmount * paymentRatio)) * 100) / 100;
+
+        addGrossProfit(sale.invoiceNumber, realizedProfit, realizedCogs, realizedRevenue, localId);
+        addGrossProfitCloud({ 
+          invoiceId: sale.invoiceNumber, 
+          grossProfit: realizedProfit, 
+          cogs: realizedCogs, 
+          revenue: realizedRevenue, 
+          currency: 'USD' 
+        }).catch(() => {});
+      }
     }
     
     // Step 7: Distribute to partners - ✅ استخدام Cloud API

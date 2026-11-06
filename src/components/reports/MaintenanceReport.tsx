@@ -150,22 +150,22 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
           <table className="min-w-[620px] w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="p-3 text-right">#</th>
-                  <th className="p-3 text-right">العميل</th>
-                  <th className="p-3 text-right">الوصف</th>
-                  <th className="p-3 text-center">الإيراد</th>
-                  <th className="p-3 text-center">التكلفة</th>
-                  <th className="p-3 text-center">الربح</th>
-                  <th className="p-3 text-center">الدفع</th>
-                  <th className="p-3 text-center">التاريخ</th>
+                  <th className="p-3 text-start font-semibold">#</th>
+                  <th className="p-3 text-start font-semibold">{t('pos.customerLabel') || 'العميل'}</th>
+                  <th className="p-3 text-start font-semibold">{t('maintenance.description') || 'الوصف'}</th>
+                  <th className="p-3 text-center font-semibold">{t('reports.revenueLabel') || 'الإيراد'}</th>
+                  <th className="p-3 text-center font-semibold">{t('pos.cost') || 'التكلفة'}</th>
+                  <th className="p-3 text-center font-semibold">{t('pos.profit') || 'الربح'}</th>
+                  <th className="p-3 text-center font-semibold">{t('pos.paymentMethodLabel') || 'الدفع'}</th>
+                  <th className="p-3 text-center font-semibold">{t('invoices.date') || 'التاريخ'}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.map((inv, i) => (
                   <tr key={inv.id} className="border-t hover:bg-muted/30">
                     <td className="p-3 text-muted-foreground">{i + 1}</td>
-                    <td className="p-3 font-medium">{inv.customerName}</td>
-                    <td className="p-3 text-muted-foreground max-w-[14.3rem] truncate">{inv.serviceDescription || '-'}</td>
+                    <td className="p-3 text-start font-medium">{inv.customerName}</td>
+                    <td className="p-3 text-start text-muted-foreground max-w-[14.3rem] truncate">{inv.serviceDescription || '-'}</td>
                     <td className="p-3 text-center">{formatReportAmount(inv.total)}</td>
                     <td className="p-3 text-center text-red-500">{formatReportAmount(inv.partsCost || 0)}</td>
                     <td className="p-3 text-center text-green-600 font-medium">{formatReportAmount(inv.profit || 0)}</td>

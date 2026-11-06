@@ -2248,7 +2248,7 @@ export default function Reports() {
       <div className="p-3 md:p-6 space-y-3.5 md:space-y-4 w-full max-w-4xl min-w-0 mx-auto overflow-x-hidden">
         {/* Sticky Header: العنوان وبجانبه مباشرة زر الواجهة الذكية / الاحترافية */}
         <div className="sticky top-0 z-30 bg-background/95 -mx-3 px-3 md:-mx-6 md:px-6 py-2.5 border-b border-border/50 shadow-sm backdrop-blur-md">
-          <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
             {/* حاوية العنوان المدمج مع زر التبديل بجانبه مباشرة */}
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
               <h1 className="text-lg sm:text-xl font-black text-foreground tracking-tight whitespace-nowrap">
@@ -2383,13 +2383,13 @@ export default function Reports() {
           {/* Search & Export Actions */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
                 value={filters.search}
                 onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
                 placeholder={t('reports.searchPlaceholder') || (isRTL ? 'بحث بالمنتج أو الرقم...' : 'Search product or number...')}
-                className="w-full h-10 pr-9 pl-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground/70 transition-colors"
+                className="w-full h-10 ps-9 pe-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground/70 transition-colors"
               />
             </div>
 

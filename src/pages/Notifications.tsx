@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import { Bell, Download, Megaphone, Wrench, AlertTriangle, RefreshCw, Eye, EyeOff, CheckCheck } from 'lucide-react';
+import { Bell, Download, Megaphone, Wrench, AlertTriangle, RefreshCw, Eye, EyeOff, CheckCheck, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNotifications } from '@/hooks/use-notifications';
+import { toast } from '@/lib/sonner-bridge';
 import { Badge } from '@/components/ui/badge';
 import {
   fetchActiveBroadcasts, getCachedReleaseConfig, getSeenBroadcasts, openExternal,
@@ -13,6 +15,7 @@ const ICONS = { info: Megaphone, warning: AlertTriangle, update: Download, maint
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; // 72 ساعة
 
 export default function Notifications() {
+  const { addArchivedNotification } = useNotifications();
   const [rawItems, setRawItems] = useState<Broadcast[]>([]);
   const [seenIds, setSeenIds] = useState<string[]>(getSeenBroadcasts);
   const [loading, setLoading] = useState(true);
@@ -66,10 +69,23 @@ export default function Notifications() {
         return true;
       }
 
-      // الإشعارات العادية الأخرى: تختفي بعد 3 أيام (72 ساعة) من تاريخ الإنشاء
+      // الإشعارات العادية الأخرى: ترحل تلقائياً إلى الأرشيف الدائم بعد 3 أيام (72 ساعة) من تاريخ الإنشاء بدلاً من فقدانها
       const createdAt = new Date(b.created_at).getTime();
       const isOlderThan3Days = (now - createdAt) > THREE_DAYS_MS;
       if (isOlderThan3Days) {
+        addArchivedNotification({
+          id: b.id,
+          type: 'system',
+          category: 'system',
+          title: b.title,
+          message: b.body || '',
+          timestamp: new Date(b.created_at),
+          read: true,
+          data: {
+            category: b.kind,
+            version: b.target_version_code,
+          } as any
+        });
         return false;
       }
 
@@ -231,7 +247,11 @@ export default function Notifications() {
                   </Badge>
                 </div>
 
-                {b.body && <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">{b.body}</p>}
+                {b.body && (
+                  <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap leading-relaxed select-text">
+                    {b.body}
+                  </p>
+                )}
 
                 <p className="text-[11px] text-muted-foreground/80 font-mono" dir="ltr">
                   {new Date(b.created_at).toLocaleString('en-GB')}
@@ -268,6 +288,16 @@ export default function Notifications() {
                         تحديد كمقروء
                       </>
                     )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => handleArchiveBroadcast(b)}
+                    title="نقل إلى الأرشيف"
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    أرشفة
                   </Button>
                 </div>
               </div>

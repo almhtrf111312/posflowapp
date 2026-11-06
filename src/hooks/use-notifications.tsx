@@ -47,6 +47,7 @@ interface NotificationsContextType {
   clearNotification: (id: string) => void;
   clearAllNotifications: () => void;
   archiveNotification: (id: string) => void;
+  addArchivedNotification: (notification: Notification) => void;
   restoreNotification: (id: string) => void;
   deleteArchivedNotification: (id: string) => void;
   clearAllArchived: () => void;
@@ -180,6 +181,15 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const deleteArchivedNotification = useCallback((id: string) => {
     setArchivedNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const addArchivedNotification = useCallback((notification: Notification) => {
+    setArchivedNotifications(prev => {
+      if (prev.some(n => n.id === notification.id)) return prev;
+      const updated = [notification, ...prev].slice(0, 300);
+      saveArchivedToStorage(updated);
+      return updated;
+    });
   }, []);
 
   const clearAllArchived = useCallback(() => {
@@ -344,6 +354,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       clearNotification,
       clearAllNotifications,
       archiveNotification,
+      addArchivedNotification,
       restoreNotification,
       deleteArchivedNotification,
       clearAllArchived,
@@ -365,6 +376,7 @@ const defaultNotificationsContext: NotificationsContextType = {
   clearNotification: () => {},
   clearAllNotifications: () => {},
   archiveNotification: () => {},
+  addArchivedNotification: () => {},
   restoreNotification: () => {},
   deleteArchivedNotification: () => {},
   clearAllArchived: () => {},

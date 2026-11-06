@@ -17,6 +17,7 @@ import { ProductImage } from '@/components/products/ProductImage';
 import { loadAllWarehouseStocksLocalFirst } from '@/lib/cloud/warehouses-cloud';
 import { cn, formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
+import { useUserRole } from '@/hooks/use-user-role';
 import { getLocalizedUnit } from '@/lib/product-units';
 
 export interface Product {
@@ -296,21 +297,23 @@ export function ProductDetailsDialog({
                 </span>
               </div>
 
-              {/* بطاقة سعر الجملة مع أيقونة الصندوق */}
-              <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                    <Box className="w-4 h-4" />
+              {/* بطاقة سعر الجملة مع أيقونة الصندوق (محجوبة عن الكاشير) */}
+              {!isCashier && (
+                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                      <Box className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-foreground block">{language === 'en' ? 'Wholesale Price' : 'سعر الجملة'}</span>
+                      <span className="text-[11px] text-muted-foreground">{language === 'en' ? 'Applied for bulk quantities' : 'يطبق تلقائياً عند طلب الكميات'}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-xs font-bold text-foreground block">{language === 'en' ? 'Wholesale Price' : 'سعر الجملة'}</span>
-                    <span className="text-[11px] text-muted-foreground">{language === 'en' ? 'Applied for bulk quantities' : 'يطبق تلقائياً عند طلب الكميات'}</span>
-                  </div>
+                  <span className="text-sm md:text-base font-bold text-foreground font-mono">
+                    {hasWholesale ? formatMoney(wholesalePrice!) : (language === 'en' ? 'None' : 'لا يوجد')}
+                  </span>
                 </div>
-                <span className="text-sm md:text-base font-bold text-foreground font-mono">
-                  {hasWholesale ? formatMoney(wholesalePrice!) : (language === 'en' ? 'None' : 'لا يوجد')}
-                </span>
-              </div>
+              )}
             </div>
           )}
 

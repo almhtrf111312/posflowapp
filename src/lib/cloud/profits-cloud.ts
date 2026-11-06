@@ -9,19 +9,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseSupabase = SupabaseClient<any, 'public', any>;
 const sb = supabase as unknown as LooseSupabase;
-import { getCurrentUserId, setCurrentUserId } from '../supabase-store';
+import { getOwnerIdForInsert } from '../supabase-store';
 import { addToQueue } from '../sync-queue';
 import { roundCurrency } from '../utils';
-
-const ensureUserId = async (): Promise<string | null> => {
-  let userId = getCurrentUserId();
-  if (!userId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    userId = user?.id || null;
-    if (userId) setCurrentUserId(userId);
-  }
-  return userId;
-};
 
 export interface CloudProfitInput {
   invoiceId: string;
@@ -33,11 +23,11 @@ export interface CloudProfitInput {
 
 /** تسجيل ربح إجمالي في السحابة. يفشل بصمت ويُضاف إلى الطابور إذا offline. */
 export const addGrossProfitCloud = async (input: CloudProfitInput): Promise<boolean> => {
-  const userId = await ensureUserId();
-  if (!userId) return false;
+  const ownerId = await getOwnerIdForInsert();
+  if (!ownerId) return false;
 
   const payload = {
-    user_id: userId,
+    user_id: ownerId, // ✅ ضمان ارتباط السجل بمتجر المالك الرئيسي
     invoice_id: input.invoiceId,
     gross_profit: roundCurrency(input.grossProfit),
     cogs: roundCurrency(input.cogs),
@@ -58,21 +48,21 @@ export const addGrossProfitCloud = async (input: CloudProfitInput): Promise<bool
 
 /** عكس ربح الفاتورة (للمرتجع/الحذف) - يضع is_reversed=true */
 export const reverseProfitCloud = async (invoiceId: string): Promise<boolean> => {
-  const userId = await ensureUserId();
-  if (!userId) return false;
+  const ownerId = await getOwnerIdForInsert();
+  if (!ownerId) return false;
 
   try {
     const { error } = await sb
       .from('profit_records')
       .update({ is_reversed: true, reversed_at: new Date().toISOString() })
-      .eq('user_id', userId)
+      .eq('user_id', ownerId) // ✅ ضمان فك ربحية سجل المالك
       .eq('invoice_id', invoiceId)
       .eq('is_reversed', false);
     if (error) throw error;
     return true;
   } catch (e) {
     console.warn('[profits-cloud] reverse failed, queued:', e);
-    try { addToQueue('profit_reverse', { invoiceId, userId }); } catch { /* noop */ }
+    try { addToQueue('profit_reverse', { invoiceId, userId: ownerId }); } catch { /* noop */ }
     return false;
   }
 };

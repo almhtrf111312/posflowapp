@@ -781,13 +781,13 @@ export default function Services() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="text"
           placeholder={t('services.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-10 pr-9 pl-4 text-xs rounded-xl bg-card border border-border shadow-2xs"
+          className="h-10 ps-9 pe-4 text-xs rounded-xl bg-card border border-border shadow-2xs"
         />
       </div>
 

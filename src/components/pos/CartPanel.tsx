@@ -1955,7 +1955,7 @@ export function CartPanel({
           {/* Customer Name with Autocomplete */}
           <div className="mt-2 flex gap-1.5">
             <div className="flex-1 relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
               <Input
                 type="text"
                 placeholder={t('pos.customerName')}
@@ -1972,7 +1972,7 @@ export function CartPanel({
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                className="pr-9 bg-slate-100 dark:bg-zinc-800 border-none h-9 md:h-10 rounded-xl text-xs md:text-sm shadow-inner focus-visible:ring-2 focus-visible:ring-primary/20"
+                className="ps-9 pe-3 bg-slate-100 dark:bg-zinc-800 border-none h-9 md:h-10 rounded-xl text-xs md:text-sm shadow-inner focus-visible:ring-2 focus-visible:ring-primary/20"
               />
               {/* Customer Suggestions Dropdown */}
               {showSuggestions && customerSuggestions.length > 0 && (

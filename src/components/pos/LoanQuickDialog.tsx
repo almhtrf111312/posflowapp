@@ -133,12 +133,12 @@ export function LoanQuickDialog({
             ) : (
               <>
                 <div className="relative mb-2">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder={language === 'en' ? 'Search by name or phone...' : 'بحث بالاسم أو الهاتف...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pr-10 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm"
+                    className="ps-10 pe-3 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm"
                   />
                 </div>
                 <div className="max-h-40 overflow-y-auto space-y-1">

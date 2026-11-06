@@ -442,6 +442,27 @@ export default function Partners() {
     }
 
     if (success) {
+      if (selectedPartner) {
+        const partnerSnapshot = selectedPartner;
+        import('@/lib/activity-log').then(({ logActivity }) => {
+          const isProfit = withdrawType === 'profit' || (withdrawType === 'auto' && withdrawUsdAmount <= profitAvailableUsd);
+          const actionType = isProfit ? 'partner_withdrawal' : 'capital_withdrawn';
+          const desc = isProfit
+            ? `سحب أرباح للشريك (${partnerSnapshot.name}): ${withdrawUsdAmount}`
+            : `سحب رأس مال للشريك (${partnerSnapshot.name}): ${withdrawUsdAmount}`;
+
+          logActivity(actionType, desc, {
+            partnerId: partnerSnapshot.id,
+            partnerName: partnerSnapshot.name,
+            amount: withdrawUsdAmount,
+            originalAmount: withdrawAmount,
+            currency: withdrawCurrency,
+            withdrawType,
+            notes: withdrawNotes || undefined,
+          });
+        }).catch(() => {});
+      }
+
       await refreshPartners();
       setShowWithdrawDialog(false);
       setSelectedPartner(null);
@@ -476,6 +497,27 @@ export default function Partners() {
     );
 
     if (success) {
+      if (selectedPartner) {
+        const partnerSnapshot = selectedPartner;
+        import('@/lib/activity-log').then(({ logActivity }) => {
+          const isCapital = depositTarget === 'capital';
+          const actionType = isCapital ? 'partner_investment' : 'capital_added';
+          const desc = isCapital
+            ? `إيداع رأس مال للشريك (${partnerSnapshot.name}): ${depositUsdAmount}`
+            : `إيداع رصيد أرباح للشريك (${partnerSnapshot.name}): ${depositUsdAmount}`;
+
+          logActivity(actionType, desc, {
+            partnerId: partnerSnapshot.id,
+            partnerName: partnerSnapshot.name,
+            amount: depositUsdAmount,
+            originalAmount: capitalAmount,
+            currency: depositCurrency,
+            target: depositTarget,
+            notes: capitalNotes || undefined,
+          });
+        }).catch(() => {});
+      }
+
       await refreshPartners();
       setShowAddCapitalDialog(false);
       setSelectedPartner(null);
@@ -659,13 +701,13 @@ export default function Partners() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
         <Input
           type="text"
           placeholder={t('partners.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pr-9 md:pr-10 bg-muted border-0"
+          className="ps-9 md:ps-10 pe-3 bg-muted border-0"
         />
       </div>
 

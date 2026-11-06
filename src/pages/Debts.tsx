@@ -82,7 +82,7 @@ interface DebtsProps {
 
 export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsProps) {
   const { user, profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const m = useMoney();
   const [searchParams, setSearchParams] = useSearchParams();
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -345,7 +345,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       currency: currencyCode,
       exchangeRate: exchangeRate,
       invoiceId: debt.invoiceId,
-      dueDate: debt.dueDate ? new Date(debt.dueDate).toLocaleDateString('ar-SA') : undefined,
+      dueDate: debt.dueDate ? new Date(debt.dueDate).toLocaleDateString(language === 'ar' ? 'ar-SA' : language === 'tr' ? 'tr-TR' : language === 'fa' ? 'fa-IR' : language === 'ku' ? 'ckb-IQ' : 'en-US') : undefined,
     };
 
     await shareDebt(shareData);
@@ -591,13 +591,13 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       {/* Filters */}
       <div className="space-y-1.5">
         <div className="relative">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
             type="text"
             placeholder={t('debts.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 pr-9 text-xs bg-card border-border rounded-xl font-medium shadow-xs focus-visible:ring-1 focus-visible:ring-primary"
+            className="h-9 ps-9 pe-3 text-xs bg-card border-border rounded-xl font-medium shadow-xs focus-visible:ring-1 focus-visible:ring-primary"
           />
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-[11px]">

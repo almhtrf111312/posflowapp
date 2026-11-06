@@ -576,13 +576,13 @@ export default function Expenses() {
       {/* Top Search with Smart Mobile Clearance */}
       <div className="flex items-center justify-between gap-2 rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder={t('expenses.searchExpenses')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-9 h-10 text-xs md:text-sm bg-card border-border rounded-xl shadow-2xs"
+            className="ps-9 pe-3 h-10 text-xs md:text-sm bg-card border-border rounded-xl shadow-2xs"
           />
         </div>
       </div>

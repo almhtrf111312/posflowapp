@@ -191,20 +191,20 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
           <table className="min-w-[620px] w-full text-xs">
               <thead className="bg-muted/50">
                 <tr>
-                  <th className="p-3 text-right">العميل</th>
-                  <th className="p-3 text-right">الهاتف</th>
-                  <th className="p-3 text-center">إجمالي الدين</th>
-                  <th className="p-3 text-center">المدفوع</th>
-                  <th className="p-3 text-center">المتبقي</th>
-                  <th className="p-3 text-center">الحالة</th>
-                  <th className="p-3 text-center">التاريخ</th>
+                  <th className="p-3 text-start font-semibold">{t('pos.customerLabel') || 'العميل'}</th>
+                  <th className="p-3 text-start font-semibold">{t('customers.phone') || 'الهاتف'}</th>
+                  <th className="p-3 text-center font-semibold">{t('reports.totalRecordedDebts') || 'إجمالي الدين'}</th>
+                  <th className="p-3 text-center font-semibold">{t('pos.cashPaid') || 'المدفوع'}</th>
+                  <th className="p-3 text-center font-semibold">{t('pos.remainingAsDebt') || 'المتبقي'}</th>
+                  <th className="p-3 text-center font-semibold">{t('invoices.status') || 'الحالة'}</th>
+                  <th className="p-3 text-center font-semibold">{t('invoices.date') || 'التاريخ'}</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(d => (
                   <tr key={d.id} className="border-t hover:bg-muted/30">
-                    <td className="p-3 font-medium">{d.customerName}</td>
-                    <td className="p-3 text-muted-foreground">{d.customerPhone || '-'}</td>
+                    <td className="p-3 text-start font-medium">{d.customerName}</td>
+                    <td className="p-3 text-start text-muted-foreground">{d.customerPhone || '-'}</td>
                     <td className="p-3 text-center">
                       <div>{formatInCurrency(d.totalDebt, currencyCode, exchangeRate).formatted}</div>
                       {isNonUsd && <div className="text-[10px] text-muted-foreground font-mono">{formatInCurrency(d.totalDebt, currencyCode, exchangeRate).usdEquivalent}</div>}

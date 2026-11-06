@@ -1533,8 +1533,9 @@ export default function Invoices() {
 
     const { storeName, storeAddress, storePhone, storeLogo, footer } = storeConfig;
 
-    const date = new Date(invoice.createdAt).toLocaleDateString('ar-SA');
-    const time = new Date(invoice.createdAt).toLocaleTimeString('ar-SA');
+    const printLocaleMap: Record<string, string> = { en: 'en-US', tr: 'tr-TR', fa: 'fa-IR', ku: 'ckb-IQ', ar: 'ar-SA' };
+    const date = new Date(invoice.createdAt).toLocaleDateString(printLocaleMap[language] || 'ar-SA');
+    const time = new Date(invoice.createdAt).toLocaleTimeString(printLocaleMap[language] || 'ar-SA');
 
     const printFinancials = getInvoiceFinancials(invoice, true);
 
@@ -2078,18 +2079,18 @@ export default function Invoices() {
           {/* 2. Unified Search + «التصفية» Button Bar */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder={tx('invoices.searchPlaceholder', 'بحث برقم الفاتورة، العميل، الهاتف...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 pr-9 pl-8 text-xs bg-card border-border rounded-2xl font-medium shadow-2xs focus-visible:ring-1 focus-visible:ring-primary"
+                className="h-10 ps-9 pe-8 text-xs bg-card border-border rounded-2xl font-medium shadow-2xs focus-visible:ring-1 focus-visible:ring-primary"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer"
+                  className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

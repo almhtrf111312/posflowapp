@@ -184,52 +184,62 @@ export function getActivityLogsByDateRange(startDate: Date, endDate: Date): Acti
 }
 
 export function clearActivityLogs() {
-  secureRemove(ACTIVITY_LOG_KEY, { namespace: STORAGE_NAMESPACE });
-  // Clean up legacy unencrypted logs
-  localStorage.removeItem('hyperpos_activity_log_v1');
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(ACTIVITY_LOG_KEY);
 }
 
-// Activity type labels
-export const activityTypeLabels: Record<ActivityType, { ar: string; en: string; fr: string }> = {
-  expense_refund: { ar: 'استرداد مصروف', en: 'Expense Refund', fr: 'Remboursement de dépense' },
-  login: { ar: 'تسجيل دخول', en: 'Login', fr: 'Connexion' },
-  logout: { ar: 'تسجيل خروج', en: 'Logout', fr: 'Déconnexion' },
-  sale: { ar: 'عملية بيع', en: 'Sale', fr: 'Vente' },
-  maintenance: { ar: 'خدمة صيانة', en: 'Maintenance', fr: 'Maintenance' },
-  debt_created: { ar: 'إنشاء دين', en: 'Debt Created', fr: 'Dette Créée' },
-  debt_paid: { ar: 'تسديد دين', en: 'Debt Paid', fr: 'Dette Payée' },
-  product_added: { ar: 'إضافة منتج', en: 'Product Added', fr: 'Produit Ajouté' },
-  product_updated: { ar: 'تعديل منتج', en: 'Product Updated', fr: 'Produit Modifié' },
-  product_deleted: { ar: 'حذف منتج', en: 'Product Deleted', fr: 'Produit Supprimé' },
-  customer_added: { ar: 'إضافة زبون', en: 'Customer Added', fr: 'Client Ajouté' },
-  customer_updated: { ar: 'تعديل زبون', en: 'Customer Updated', fr: 'Client Modifié' },
-  settings_changed: { ar: 'تغيير إعدادات', en: 'Settings Changed', fr: 'Paramètres Modifiés' },
-  user_added: { ar: 'إضافة مستخدم', en: 'User Added', fr: 'Utilisateur Ajouté' },
-  user_deleted: { ar: 'حذف مستخدم', en: 'User Deleted', fr: 'Utilisateur Supprimé' },
-  password_changed: { ar: 'تغيير كلمة مرور', en: 'Password Changed', fr: 'Mot de passe Changé' },
-  backup_created: { ar: 'إنشاء نسخة احتياطية', en: 'Backup Created', fr: 'Sauvegarde Créée' },
-  invoice_created: { ar: 'إنشاء فاتورة', en: 'Invoice Created', fr: 'Facture Créée' },
-  invoice_deleted: { ar: 'حذف فاتورة', en: 'Invoice Deleted', fr: 'Facture Supprimée' },
-  shift_opened: { ar: 'فتح وردية', en: 'Shift Opened', fr: 'Quart Ouvert' },
-  shift_closed: { ar: 'إغلاق وردية', en: 'Shift Closed', fr: 'Quart Fermé' },
-  capital_added: { ar: 'إضافة رأس مال', en: 'Capital Added', fr: 'Capital Ajouté' },
-  capital_withdrawn: { ar: 'سحب رأس مال', en: 'Capital Withdrawn', fr: 'Capital Retiré' },
-  expense_added: { ar: 'إضافة مصروف', en: 'Expense Added', fr: 'Dépense Ajoutée' },
-  partner_investment: { ar: 'استثمار شريك', en: 'Partner Investment', fr: 'Investissement Partenaire' },
-  partner_added: { ar: 'إضافة شريك', en: 'Partner Added', fr: 'Partenaire Ajouté' },
-  partner_updated: { ar: 'تعديل شريك', en: 'Partner Updated', fr: 'Partenaire Modifié' },
-  partner_deleted: { ar: 'حذف شريك', en: 'Partner Deleted', fr: 'Partenaire Supprimé' },
-  partner_withdrawal: { ar: 'سحب شريك', en: 'Partner Withdrawal', fr: 'Retrait Partenaire' },
-  customer_deleted: { ar: 'حذف زبون', en: 'Customer Deleted', fr: 'Client Supprimé' },
-  invoice_updated: { ar: 'تعديل فاتورة', en: 'Invoice Updated', fr: 'Facture Modifiée' },
-  invoice_refunded: { ar: 'استرداد فاتورة', en: 'Invoice Refunded', fr: 'Facture Remboursée' },
-  expense_deleted: { ar: 'حذف مصروف', en: 'Expense Deleted', fr: 'Dépense Supprimée' },
-  debt_writeoff: { ar: 'إتلاف دين', en: 'Debt Write-off', fr: 'Annulation Dette' },
-  debt_deleted: { ar: 'حذف دين', en: 'Debt Deleted', fr: 'Dette Supprimée' },
-  debt_payment: { ar: 'تسديد دفعة', en: 'Debt Payment', fr: 'Paiement Dette' },
-  expense: { ar: 'مصروف', en: 'Expense', fr: 'Dépense' },
-  partial_refund: { ar: 'استرداد جزئي', en: 'Partial refund', fr: 'Remboursement partiel' },
-  refund: { ar: 'مرتجع', en: 'Refund', fr: 'Remboursement' },
+export const activityTypeLabels: Record<ActivityType, { ar: string; en: string; tr: string; fr?: string }> = {
+  expense_refund: { ar: 'استرداد وتراجع عن مصروف', en: 'Expense Refunded', tr: 'Gider İadesi', fr: 'Remboursement de dépense' },
+  login: { ar: 'تسجيل دخول', en: 'Login', tr: 'Giriş Yapıldı', fr: 'Connexion' },
+  logout: { ar: 'تسجيل خروج', en: 'Logout', tr: 'Çıkış Yapıldı', fr: 'Déconnexion' },
+  sale: { ar: 'عملية بيع', en: 'Sale', tr: 'Satış İşlemi', fr: 'Vente' },
+  maintenance: { ar: 'خدمة صيانة', en: 'Maintenance', tr: 'Bakım Hizmeti', fr: 'Maintenance' },
+  debt_created: { ar: 'إنشاء دين', en: 'Debt Created', tr: 'Borç Oluşturuldu', fr: 'Dette Créée' },
+  debt_paid: { ar: 'تسديد دين', en: 'Debt Paid', tr: 'Borç Ödendi', fr: 'Dette Payée' },
+  debt_payment: { ar: 'تسديد دفعة', en: 'Debt Payment', tr: 'Taksit Ödemesi', fr: 'Paiement Dette' },
+  debt_writeoff: { ar: 'إتلاف دين', en: 'Debt Write-off', tr: 'Borç Silindi', fr: 'Annulation Dette' },
+  debt_deleted: { ar: 'حذف دين', en: 'Debt Deleted', tr: 'Borç Kaydı Silindi', fr: 'Dette Supprimée' },
+  product_added: { ar: 'إضافة منتج', en: 'Product Added', tr: 'Ürün Eklendi', fr: 'Produit Ajouté' },
+  product_updated: { ar: 'تعديل منتج', en: 'Product Updated', tr: 'Ürün Güncellendi', fr: 'Produit Modifié' },
+  product_deleted: { ar: 'حذف منتج', en: 'Product Deleted', tr: 'Ürün Silindi', fr: 'Produit Supprimé' },
+  customer_added: { ar: 'إضافة زبون', en: 'Customer Added', tr: 'Müşteri Eklendi', fr: 'Client Ajouté' },
+  customer_updated: { ar: 'تعديل زبون', en: 'Customer Updated', tr: 'Müşteri Güncellendi', fr: 'Client Modifié' },
+  customer_deleted: { ar: 'حذف زبون', en: 'Customer Deleted', tr: 'Müşteri Silindi', fr: 'Client Supprimé' },
+  settings_changed: { ar: 'تغيير إعدادات', en: 'Settings Changed', tr: 'Ayarlar Değiştirildi', fr: 'Paramètres Modifiés' },
+  user_added: { ar: 'إضافة مستخدم', en: 'User Added', tr: 'Kullanıcı Eklendi', fr: 'Utilisateur Ajouté' },
+  user_deleted: { ar: 'حذف مستخدم', en: 'User Deleted', tr: 'Kullanıcı Silindi', fr: 'Utilisateur Supprimé' },
+  password_changed: { ar: 'تغيير كلمة مرور', en: 'Password Changed', tr: 'Şifre Değiştirildi', fr: 'Mot de passe Changé' },
+  backup_created: { ar: 'إنشاء نسخة احتياطية', en: 'Backup Created', tr: 'Yedekleme Oluşturuldu', fr: 'Sauvegarde Créée' },
+  invoice_created: { ar: 'إنشاء فاتورة', en: 'Invoice Created', tr: 'Fatura Oluşturuldu', fr: 'Facture Créée' },
+  invoice_updated: { ar: 'تعديل فاتورة', en: 'Invoice Updated', tr: 'Fatura Güncellendi', fr: 'Facture Modifiée' },
+  invoice_deleted: { ar: 'حذف فاتورة', en: 'Invoice Deleted', tr: 'Fatura Silindi', fr: 'Facture Supprimée' },
+  invoice_refunded: { ar: 'استرداد فاتورة', en: 'Invoice Refunded', tr: 'Fatura İade Edildi', fr: 'Facture Remboursée' },
+  shift_opened: { ar: 'فتح وردية', en: 'Shift Opened', tr: 'Vardiya Açıldı', fr: 'Quart Ouvert' },
+  shift_closed: { ar: 'إغلاق وردية', en: 'Shift Closed', tr: 'Vardiya Kapatıldı', fr: 'Quart Fermé' },
+  capital_added: { ar: 'إيداع رصيد / رأس مال', en: 'Capital/Balance Deposit', tr: 'Sermaye/Bakiye Ekleme', fr: 'Capital Ajouté' },
+  capital_withdrawn: { ar: 'سحب رأس مال', en: 'Capital Withdrawal', tr: 'Sermaye Çekimi', fr: 'Capital Retiré' },
+  expense_added: { ar: 'تسجيل مصروف', en: 'Expense Added', tr: 'Gider Eklendi', fr: 'Dépense Ajoutée' },
+  expense_deleted: { ar: 'حذف مصروف', en: 'Expense Deleted', tr: 'Gider Silindi', fr: 'Dépense Supprimée' },
+  expense: { ar: 'مصروف', en: 'Expense', tr: 'Gider', fr: 'Dépense' },
+  refund: { ar: 'مرتجع', en: 'Refund', tr: 'İade', fr: 'Remboursement' },
+  partial_refund: { ar: 'استرداد جزئي', en: 'Partial refund', tr: 'Kısmi İade', fr: 'Remboursement partiel' },
+  partner_added: { ar: 'إضافة شريك جديد', en: 'Partner Added', tr: 'Yeni Ortak Eklendi', fr: 'Partenaire Ajouté' },
+  partner_updated: { ar: 'تعديل بيانات شريك', en: 'Partner Updated', tr: 'Ortak Güncellendi', fr: 'Partenaire Modifié' },
+  partner_deleted: { ar: 'حذف شريك', en: 'Partner Deleted', tr: 'Ortak Silindi', fr: 'Partenaire Supprimé' },
+  partner_investment: { ar: 'إيداع رأس مال شريك', en: 'Partner Capital Deposit', tr: 'Ortak Sermaye Girişi', fr: 'Investissement Partenaire' },
+  partner_withdrawal: { ar: 'سحب أرباح شريك', en: 'Partner Profit Withdrawal', tr: 'Ortak Kâr Çekimi', fr: 'Retrait Partenaire' },
+};
+
+/**
+ * دالة مساعدة موحدة لترجمة نوع النشاط حسب لغة التطبيق الحالية
+ */
+export const getActivityTypeLabel = (type: ActivityType, lang: string = 'ar'): string => {
+  const item = activityTypeLabels[type];
+  if (!item) return type;
+  if (lang === 'ar') return item.ar;
+  if (lang === 'tr') return item.tr || item.en;
+  if (lang === 'fr' && (item as any).fr) return (item as any).fr;
+  return item.en;
 };
 
 /**

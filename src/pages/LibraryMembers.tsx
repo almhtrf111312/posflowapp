@@ -222,12 +222,12 @@ export default function LibraryMembers() {
         {/* Search + Add */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="بحث بالاسم أو الهاتف..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 pr-9 pl-4 text-xs rounded-xl bg-card border-border shadow-2xs"
+              className="h-10 ps-9 pe-4 text-xs rounded-xl bg-card border-border shadow-2xs"
             />
           </div>
           <Button

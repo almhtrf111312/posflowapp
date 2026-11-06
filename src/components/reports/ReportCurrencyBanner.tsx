@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMoney } from '@/hooks/use-money';
-import { refreshMoneyState, getCurrencyDef } from '@/lib/money-engine';
-import { getReportCurrency, REPORT_CURRENCY_KEY } from '@/lib/currencies';
+import { refreshMoneyState } from '@/lib/money-engine';
+import { getReportCurrency, resolveCurrencyMeta, REPORT_CURRENCY_KEY } from '@/lib/currencies';
 import { EVENTS } from '@/lib/events';
 import { Banknote } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,7 +27,7 @@ export function ReportCurrencyBanner() {
   let active = getReportCurrency();
   // ✅ إذا كانت العملة المحفوظة مسبقاً معطلة حالياً، نعود فوراً للدولار لمنع عرض سعر وهمي لعملة معطلة
   if (!enabledList.some(c => c.code === active.code)) {
-    active = getCurrencyDef('USD');
+    active = resolveCurrencyMeta('USD');
   }
 
   const choose = (code: string) => {

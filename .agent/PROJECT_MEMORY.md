@@ -307,7 +307,7 @@
   * **Cashier Product Details (`ProductDetailsDialog.tsx`):** Destructured `isCashier` from `useUserRole()` to resolve `ReferenceError: isCashier is not defined`.
   * **Notifications Archiving (`Notifications.tsx`):** Defined `handleArchiveBroadcast` utilizing `addArchivedNotification` and `toast.success`.
   * **Theme Customization (`ThemeSection.tsx`):** Destructured `setMode`, `setColor`, and `setThemeStyle` from `useTheme()` for standalone fallback execution.
-  * **Report Currency Banner (`ReportCurrencyBanner.tsx`):** Fixed currency filtering from non-existent `!c.isUsd` to `c.code !== 'USD'`.
+  * **Report Currency Banner (`ReportCurrencyBanner.tsx`):** Fixed currency filtering from non-existent `!c.isUsd` to `c.code !== 'USD'` and resolved `ResolvedCurrencyMeta` type compatibility via `resolveCurrencyMeta('USD')`.
 
 * **2026-11-06 (Activity Log & Settings Tab Error Boundary Hardening):**
   * **ActivityLogSection Crash Fix:** Fixed `Uncaught ReferenceError: language is not defined` inside `ActivityCard` in `src/components/settings/ActivityLogSection.tsx` by introducing dual protection (`propLanguage` with `useLanguage()` hook fallback and Arabic/English fallback).

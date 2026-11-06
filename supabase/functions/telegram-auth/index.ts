@@ -651,3 +651,134 @@ serve(async (req) => {
     });
   }
 });
+    // --- Action: request_phone_transfer_otp ---
+    if (action === "request_phone_transfer_otp") {
+      const authHeader = req.headers.get("Authorization") || "";
+      const token = authHeader.replace("Bearer ", "").trim();
+      if (!token) {
+        return new Response(JSON.stringify({ error: "غير مصرح: يجب تسجيل الدخول" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // التحقق من هوية المستخدم الطالب
+      const { data: callerData, error: authErr } = await serviceClient.auth.getUser(token);
+      if (authErr || !callerData?.user) {
+        return new Response(JSON.stringify({ error: "جلسة الدخول غير صالحة" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const targetUserId = callerData.user.id;
+      const rawPhone = typeof body.phone === "string" ? body.phone.trim() : "";
+      if (!rawPhone) {
+        return new Response(JSON.stringify({ error: "رقم الهاتف مطلوب" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!botToken) {
+        return new Response(JSON.stringify({ error: "خدمة بوت تيليجرام غير مهيأة في الخادم" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // البحث عن الحساب المرتبط بالرقم حالياً
+      const { data: profiles, error: pErr } = await serviceClient
+        .from("profiles")
+        .select("user_id, phone, full_name, telegram_chat_id")
+        .neq("user_id", targetUserId);
+
+      if (pErr) {
+        console.error("[TelegramAuth] profiles query error:", pErr);
+      }
+
+      const matchedProfile = (profiles || []).find((p: any) => isPhoneMatch(p.phone, rawPhone));
+
+      if (!matchedProfile) {
+        return new Response(JSON.stringify({ error: "لم يتم العثور على حساب آخر مرتبط بهذا الرقم، يمكنك ربطه بكلمة المرور مباشرة" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const sourceUserId = matchedProfile.user_id;
+      let sourceChatId = matchedProfile.telegram_chat_id;
+
+      // فحص احتياطي في بيانات المستخدم
+      if (!sourceChatId) {
+        try {
+          const { data: uData } = await serviceClient.auth.admin.getUserById(sourceUserId);
+          sourceChatId = uData?.user?.user_metadata?.telegram_chat_id || null;
+        } catch {}
+      }
+
+      if (!sourceChatId) {
+        return new Response(JSON.stringify({ 
+          error: "الحساب المالك لهذا الرقم
+غير مربوط ببوت تيليجرام. يتعذر نقل الملكية تلقائياً.",
+          requires_support: true 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // توليد رمز OTP من 6 أرقام
+      const otpCode = (100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)).toString();
+      const codeHash = await sha256(otpCode);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+      // حذف أي طلبات معلقة سابقة لنفس المستخدم والرقم
+      await serviceClient
+        .from("phone_transfer_requests")
+        .delete()
+        .eq("target_user_id", targetUserId)
+        .eq("phone", matchedProfile.phone);
+
+      // حفظ الطلب الجديد في جدول phone_transfer_requests
+      const { data: insData, error: insErr } = await serviceClient
+        .from("phone_transfer_requests")
+        .insert({
+          target_user_id: targetUserId,
+          source_user_id: sourceUserId,
+          phone: matchedProfile.phone,
+          code_hash: codeHash,
+          attempts: 0,
+          expires_at: expiresAt,
+        })
+        .select("id")
+        .single();
+
+      if (insErr || !insData) {
+        console.error("[TelegramAuth] Error creating transfer request:", insErr);
+        return new Response(JSON.stringify({ error: "فشل إنشاء طلب التحقق، يرجى المحاولة لاحقاً" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // إرسال رسالة التنبيه والرمز عبر تيليجرام للمالك الأصلي
+      const alertMessage = `⚠️ *تنبيه أمني: طلب نقل رقم الهاتف*\n\n` +
+        `تلقينا طلباً لنقل رقم هاتفك (\`${matchedProfile.phone}\`) لربطه بمتجر وحساب آخر على *Flow POS Pro*.\n\n` +
+        `رمز التأكيد الخاص بك هو:\n` +
+        `\`${otpCode}\`\n\n` +
+        `⏳ الرمز صالح لمدة *10 دقائق* فقط.\n` +
+        `🚨 *تنبيه هام*: إذا لم تكن أنت صاحب هذا الطلب، لا تشارك الرمز مع أي شخص وسيبقى الرقم في حسابك بأمان.`;
+
+      const tgResult = await sendTelegramMessage(botToken, sourceChatId, alertMessage);
+      console.log(`[TelegramAuth] Transfer OTP sent to chat ${sourceChatId}, result:`, tgResult?.ok);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          request_id: insData.id,
+          message: "تم إرسال رمز التحقق إلى حساب تيليجرام المالك لهذا الرقم",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }

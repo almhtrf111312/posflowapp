@@ -304,6 +304,7 @@
 
 * **2026-11-06 (Activity Log & Settings Tab Error Boundary Hardening):**
   * **ActivityLogSection Crash Fix:** Fixed `Uncaught ReferenceError: language is not defined` inside `ActivityCard` in `src/components/settings/ActivityLogSection.tsx` by introducing dual protection (`propLanguage` with `useLanguage()` hook fallback and Arabic/English fallback).
+  * **Cloud Activity Log Sync Alignment:** Corrected cloud table query in `ActivityLogSection.tsx` from plural `activity_logs` to singular `activity_log`, aligned database columns (`created_at`, `actor_name`, `action_type`, `metadata`), and supported store owner resolution via `getOwnerIdForInsert()`.
   * **Settings Tab Isolation:** Wrapped `{renderTabContent()}` in `src/pages/Settings.tsx` with `<FeatureErrorBoundary featureName={`تبويب الإعدادات: ${activeTab || 'العام'}`} compact>` to ensure any runtime error in an individual tab (e.g., Activity Log, Users) never crashes the entire Settings screen or halts other tabs.
   * **Relocated Tabs Handling:** Added explicit redirects and fallbacks in `renderTabContent()`:
     * `case 'theme': <Navigate to="/appearance" replace />` for bookmarks or external links.

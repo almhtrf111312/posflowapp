@@ -40,33 +40,43 @@ export function ActivityLogSection() {
       setLogs([]);
     }
 
-    // 2. مزامنة السجلات السحابية بهدوء في الخلفية
+    // 2. مزامنة السجلات السحابية بهدوء في الخلفية ومطابقة الحقول الحقيقية لقاعدة البيانات
     const fetchCloudLogs = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        const { getOwnerIdForInsert } = await import('@/lib/supabase-store');
+        let ownerId = await getOwnerIdForInsert();
+        if (!ownerId) {
+          const { data: { user } } = await supabase.auth.getUser();
+          ownerId = user?.id || null;
+        }
+        if (!ownerId) return;
 
-        const { data: cloudLogs, error } = await supabase
-          .from('activity_logs')
+        // جلب الأرشيف المحفوظ على السحابة ومطابقة الحقول الحقيقية
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: cloudLogs, error } = await (supabase as any)
+          .from('activity_log')
           .select('*')
-          .eq('user_id', user.id)
-          .order('timestamp', { ascending: false })
+          .eq('user_id', ownerId)
+          .order('created_at', { ascending: false })
           .limit(150);
 
         if (!error && cloudLogs && cloudLogs.length > 0) {
           setLogs(prev => {
             const existingIds = new Set(prev.map(l => l.id));
             const merged = [...prev];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cloudLogs.forEach((item: any) => {
               if (!existingIds.has(item.id)) {
                 merged.push({
                   id: item.id,
-                  type: item.type as ActivityType,
-                  description: item.description,
-                  details: typeof item.details === 'string' ? JSON.parse(item.details) : (item.details || {}),
-                  timestamp: item.timestamp,
-                  userId: item.user_id,
-                  userName: item.user_name || 'System'
+                  type: item.action_type as ActivityType,
+                  description: item.description || '',
+                  details: typeof item.metadata === 'string'
+                    ? JSON.parse(item.metadata)
+                    : (item.metadata || {}),
+                  timestamp: item.created_at,
+                  userId: item.actor_id || item.user_id,
+                  userName: item.actor_name || 'System'
                 });
               }
             });

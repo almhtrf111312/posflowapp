@@ -24,7 +24,9 @@ import {
   Shield,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  Phone,
+  KeyRound
 } from 'lucide-react';
 
 export function ProfileManagement() {

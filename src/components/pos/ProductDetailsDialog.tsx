@@ -59,6 +59,7 @@ export function ProductDetailsDialog({
   onAddToCart,
 }: ProductDetailsDialogProps) {
   const { language } = useLanguage();
+  const { isCashier } = useUserRole();
   // تبويبان فقط: الأسعار والمخزون
   const [activeTab, setActiveTab] = useState<'pricing' | 'inventory'>('pricing');
   const [qty, setQty] = useState(1);

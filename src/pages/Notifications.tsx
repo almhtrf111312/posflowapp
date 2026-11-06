@@ -118,6 +118,25 @@ export default function Notifications() {
     window.dispatchEvent(new Event('hp-broadcasts-updated'));
   };
 
+  // أرشفة الإشعار إلى السجل الدائم
+  const handleArchiveBroadcast = (b: Broadcast) => {
+    addArchivedNotification({
+      id: b.id,
+      type: 'system',
+      category: 'system',
+      title: b.title,
+      message: b.body || '',
+      timestamp: new Date(b.created_at || Date.now()),
+      read: true,
+      data: {
+        category: b.kind,
+        version: b.target_version_code,
+      } as any,
+    });
+    setRawItems((prev) => prev.filter((x) => x.id !== b.id));
+    toast.success('تم نقل الإشعار إلى الأرشيف الدائم');
+  };
+
   // تصفية العرض حسب التبويب المختار
   const displayedItems = useMemo(() => {
     return filteredBroadcasts.filter((b) => {

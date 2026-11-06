@@ -23,7 +23,16 @@ interface ThemeSectionProps {
 }
 
 export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: ThemeSectionProps) {
-  const { mode, color, blurEnabled, transparencyLevel, themeStyle } = useTheme();
+  const { 
+    mode, 
+    color, 
+    blurEnabled, 
+    transparencyLevel, 
+    themeStyle,
+    setMode,
+    setColor,
+    setThemeStyle
+  } = useTheme();
   const { t, isRTL } = useLanguage();
   const { pref: perfPref, effective: effectivePerf, setPref: setPerfPref } = usePerformanceMode();
   

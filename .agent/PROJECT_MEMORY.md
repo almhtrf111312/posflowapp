@@ -302,6 +302,13 @@
   * **Archive & Notifications Overhaul:** Expanded general archive in `ArchiveSection.tsx` into 6 subtabs (`invoices`, `debts`, `products`, `expenses`, `purchases`, `deleted`) with Supabase cloud audit log synchronization; added persistent notification archiving with 72-hour auto-archive in `Notifications.tsx` and `use-notifications.tsx`; resolved text clipping with responsive wrapping.
   * **Complete i18n & RTL/LTR Stabilization:** Achieved 100% key completeness across all 4 supported foreign languages (en, tr, fa, ku) in `src/lib/i18n.ts` (0 missing keys); replaced hardcoded Arabic table headers with dynamic `t()` keys and logical `text-start` across the 4 major report tables (`PurchaseInvoicesReport`, `SalesDetailedReport`, `DebtsReport`, `MaintenanceReport`); eliminated search bar clipping by replacing hardcoded `right-3`/`pr-9` with logical CSS `start-3`/`ps-9 pe-3` across all pages; resolved MobileMenuTrigger burger overlap in `Reports.tsx` with responsive padding; rotated back button `ArrowRight` with `rtl:rotate-0 ltr:rotate-180`; added `formatAppDate` in `src/lib/utils.ts` and dynamic date locale across reports, debts, invoices, and native sharing.
 
+* **2026-11-06 (System-Wide Runtime Reference Hardening):**
+  * **Profile Management (`ProfileManagement.tsx`):** Added missing `Phone` and `KeyRound` icon imports from `lucide-react` to resolve `ReferenceError: Phone is not defined`.
+  * **Cashier Product Details (`ProductDetailsDialog.tsx`):** Destructured `isCashier` from `useUserRole()` to resolve `ReferenceError: isCashier is not defined`.
+  * **Notifications Archiving (`Notifications.tsx`):** Defined `handleArchiveBroadcast` utilizing `addArchivedNotification` and `toast.success`.
+  * **Theme Customization (`ThemeSection.tsx`):** Destructured `setMode`, `setColor`, and `setThemeStyle` from `useTheme()` for standalone fallback execution.
+  * **Report Currency Banner (`ReportCurrencyBanner.tsx`):** Fixed currency filtering from non-existent `!c.isUsd` to `c.code !== 'USD'`.
+
 * **2026-11-06 (Activity Log & Settings Tab Error Boundary Hardening):**
   * **ActivityLogSection Crash Fix:** Fixed `Uncaught ReferenceError: language is not defined` inside `ActivityCard` in `src/components/settings/ActivityLogSection.tsx` by introducing dual protection (`propLanguage` with `useLanguage()` hook fallback and Arabic/English fallback).
   * **Cloud Activity Log Sync Alignment:** Corrected cloud table query in `ActivityLogSection.tsx` from plural `activity_logs` to singular `activity_log`, aligned database columns (`created_at`, `actor_name`, `action_type`, `metadata`), and supported store owner resolution via `getOwnerIdForInsert()`.

@@ -17,7 +17,7 @@ export function ReportCurrencyBanner() {
   }, []);
 
   const enabledList = (m.enabledCurrencies || []).filter(c => c.enabled !== false);
-  const nonUsdCurrencies = enabledList.filter(c => !c.isUsd && c.code !== 'USD');
+  const nonUsdCurrencies = enabledList.filter(c => c.code !== 'USD');
 
   // ✅ إذا تم تعطيل العملات الإضافية (لا يوجد سوى الدولار)، يختفي الشريط بالكامل
   if (nonUsdCurrencies.length === 0) {

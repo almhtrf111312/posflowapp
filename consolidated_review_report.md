@@ -1,58 +1,97 @@
-# تقرير المراجعة النقدية الشامل الموحد (Consolidated EGM Review Report)
-# Elephant-Goldfish Model (EGM) Review Protocol Deliverable
+# التقرير الموحد والمجمع لمراجعة السمكة الذهبية (EGM Consolidated Review Report)
 
-**المستند المفحوص:** [`docs/designs/security-lock-and-theme-animation.md`](docs/designs/security-lock-and-theme-animation.md)  
+**وثيقة التصميم المستهدفة:** [`docs/designs/performance-and-tab-transitions.md`](file:///C:/Users/PREDATOR/Documents/GitHub/hyperpos-companion/docs/designs/performance-and-tab-transitions.md)  
 **تاريخ المراجعة:** 2026-11-08  
-**الوكلاء المشاركون:**
-1. Skeptical Architect (`egm-zoom-out`)
-2. Inventive Catalyst (`egm-inventive-catalyst`)
-3. Naive Reader (`egm-comprehension`)
-4. Hostile Design Critic (`egm-design`)
-5. Document Architect (`egm-structural`)
-6. Technical Copy Editor (`egm-style`)
-7. Pragmatic Tech Lead (`egm-implementation-readiness`)
-8. Pedantic Technical Auditor (`egm-codebase-details`)
+**المراجعون المشاركون (Goldfish Swarm):**
+1. المهندس المعماري المشكك (Skeptical Architect - `egm-zoom-out`)
+2. المحفز الابتكاري وفق نظرية تريز (Inventive Catalyst - `egm-inventive-catalyst`)
+3. القارئ المحايد ومراجع الوضوح الإدراكي (Naive Reader - `egm-comprehension`)
+4. الناقد المعماري الصارم للأنظمة والعتاد (Hostile Design Critic - `egm-design`)
+5. مهندس الهيكل والتنسيق الوثائقي (Document Architect - `egm-structural`)
+6. المدير التقني ومختبر جاهزية التنفيذ (Pragmatic Tech Lead - `egm-implementation-readiness`)
+7. المدقق الفني لمطابقة الكود القائم (Pedantic Technical Auditor - `egm-codebase-details`)
 
 ---
 
 ## 1. الملخص التنفيذي للمراجعة (Executive Summary)
 
-أجمعت كافة أدوار المراجعة النقدية الحيادية (Goldfish Reviewers) على أن الحاجة الوظيفية لمعالجة عطل قفل الأمان في FlowPOS Pro هي **حاجة حتمية وحرجة لحماية نقاط البيع الميدانية**.  
-وقد نجحت مسودة التصميم في تثبيت المبدأ المحوري للنظام وهو: **حفظ سلة المبيعات وحركات الكاشير المفتوحة في الذاكرة دون إعادة توجيه تدميري للصفحة، مع التحقق محلياً أوفلاين**.
-
-ومع ذلك، كشفت المراجعة المتعددة الزوايا عن **7 موانع وثغرات تنفيذية ومعمارية حرجة (Blockers)** يجب معالجتها في وثيقة التصميم قبل كتابة أي سطر كود إنتاجي، أبرزها:
-1. استثناء مفاتيح القفل في دالة `clearAllUserSessionCaches` لمنع مسحها تلقائياً عند الدخول والخروج.
-2. حظر تعديل خطاف البنية التحتية `use-app-lifecycle.tsx` والاكتفاء باستهلاكه (0 Diffs).
-3. ربط قفل التطبيق بوجود مستخدم نشط (`user !== null`) لمنع حبس المستخدم في شاشة الدخول.
-4. عزل المفاتيح برقم المستخدم (`user.id`) لمنع تداخل صلاحيات الكاشير والمدير.
-5. منع تغيير المسارات في أندرويد عبر سمة `role="dialog"` المتوافقة مع `ExitConfirmDialog`.
-6. منع تسريب مدخلات قارئ الباركود عبر سمة `inert` للواجهة الخلفية.
-7. استمرار حظر التخمين (Lockout) عبر التخزين الدائم لمنع التحايل بإعادة تشغيل التطبيق.
+أجمعت كافة أدوار المراجعة المستقلة على قوة الفكرة المعمارية والهدف المتمثل في تحويل التنقل إلى تجربة تطبيق أصلي (Native Feel) بسرعة 60 إطاراً في الثانية عبر تسريع كرت الشاشة (GPU Compositor). 
+ومع ذلك، كشفت المراجعة المتوازية الصارمة عن **ثلاث فجوات معمارية حاسمة (Blockers)** يجب تصحيحها في وثيقة التصميم لضمان سلامة التنفيذ:
+1. **انفصال مسار نقطة البيع (`POS Routing Disconnect`)**: شاشة نقطة البيع (`/` و `/pos`) هي مسار كامل الشاشة يقع خارج `MainLayout` وخارج `NativeTabHost` في `src/App.tsx`. إدراجها ضمن `TAB_ORDER` لمضيف التبويبات الداخلية مستحيل هيكلياً دون تفكيك وإعادة بناء الـ Layout.
+2. **الخطأ المفاهيمي في دالة `requestAnimationFrame`**: استخدام `rAF` لتأجيل استعلامات التخزين ينفذ في الإطار التالي (~16ms) في ذروة الحركة الانزلاقية بدلاً من انتظار الـ 240ms، مما يسبب تقطيعاً (Jank). الحل الصحيح هو الاستماع لـ `transitionend` مع مؤقت أمان ومجدول `requestIdleCallback`.
+3. **نقص بيان الملفات المستهدفة لشاشة البيع**: بطاقات الأصناف وبنود السلة تقع في [`ProductGrid.tsx`](../../src/components/pos/ProductGrid.tsx) و [`CartPanel.tsx`](../../src/components/pos/CartPanel.tsx) وليس داخل `POS.tsx`.
 
 ---
 
-## 2. مصفوفة تتبع الملاحظات والمهام الإجرائية (Traceability Matrix)
+## 2. مصفوفة تتبع الملاحظات (Traceability Matrix)
 
-| رقم البند | الأولوية | الملاحظة المجمعة | المصدر (Stage / Reviewer) | الإجراء التصحيحي الواجب اعتماده في وثيقة التصميم |
-| :---: | :---: | :--- | :--- | :--- |
-| **ACT-01** | 🔴 Blocker | مسح مفاتيح القفل تلقائياً بواسطة `clearAllUserSessionCaches` | Stage 9 (`codebase-details`) | إضافة `src/hooks/use-auth.tsx` للخطة واستثناء بادئة `flowpos_app_lock_` صراحة من المسح. |
-| **ACT-02** | 🔴 Blocker | تلويث خطاف البنية التحتية `use-app-lifecycle.tsx` | Stage 5 & 8 (`zoom-out`) | إبقاء `use-app-lifecycle.tsx` دون أي تعديل (0 diffs)، وجعل `AppLockProvider` يستهلكه كـ Consumer. |
-| **ACT-03** | 🔴 Blocker | قفل التطبيق على غير المسجلين وحبس شاشة `/login` | Stage 5 (`zoom-out`) & Stage 6 (`comprehension`) & Stage 7 (`design`) | اشتراط `user !== null && !authLoading` لتفعيل القفل، وإخفاء الشاشة تماماً على المسارات العامة. |
-| **ACT-04** | 🔴 Blocker | تصادم زر الرجوع في أندرويد مع `ExitConfirmDialog` | Stage 7 (`design`) & Stage 9 (`codebase-details`) | إلزام `AppLockOverlay` بحمل `role="dialog"` و `data-state="open"` واستدعاء `CapApp.exitApp()` لمنع تغيير المسار. |
-| **ACT-05** | 🔴 Blocker | غياب واجهة TypeScript البرمجية لـ `AppLockContextType` | Stage 9 (`implementation-readiness`) | توثيق الواجهة البرمجية الكاملة للخطاف والموفر والدوال والأنواع صراحة في التصميم. |
-| **ACT-06** | 🔴 Blocker | غياب زر تأكيد إدخال PIN المتغير (4 إلى 8 أرقام) | Stage 9 (`implementation-readiness`) | إضافة زر "تأكيد / دخول" صريح في لوحة الأرقام لضمان عمل كافة أطوال الرموز بأمان. |
-| **ACT-07** | 🔴 Blocker | تجاوز حظر التخمين بإعادة تشغيل التطبيق (In-Memory Flaw) | Stage 5 (`zoom-out`) & Stage 7 (`design`) & Stage 9 (`readiness`) | حفظ طابع انتهاء الحظر `lockoutUntil` في `localStorage` لمنع تصفير العداد عند الإغلاق وإعادة الفتح. |
-| **ACT-08** | 🟡 Major | تداخل مفاتيح القفل على الأجهزة المشتركة بين المستخدمين | Stage 5 (`zoom-out`) & Stage 6 (`comprehension`) & Stage 7 (`design`) | عزل المفاتيح برقم المستخدم: `flowpos_app_lock_${userId}_*`. |
-| **ACT-09** | 🟡 Major | تسريب نقرات قارئ الباركود ولوحة المفاتيح للسلة خلف القفل | Stage 5 (`inventive-catalyst`) & Stage 7 (`design`) | تطبيق سمة `inert` و `aria-hidden="true"` على شجرة التطبيق الخلفية أثناء `isLocked = true`. |
-| **ACT-10** | 🟡 Major | تسريب وميض الشاشة عند الإقلاع (Cold-Start Flash / TOCTOU) | Stage 7 (`design`) & Stage 9 (`readiness`) | تهيئة حالة `isLocked` بشكل متزامن لحظي (`useState(() => evaluateInitialLock())`). |
-| **ACT-11** | 🟡 Major | دمج تعديل الثيم البسيط (سطرين) مع بنية أمان معمارية | Stage 5 & 8 (`zoom-out`) & Stage 7 (`design`) | توضيح نطاق تعديل الثيم كمعاملات فيزيائية مستقلة في `theme-transition.ts` (500ms–600ms) وتفادي تشويش وثيقة الأمان. |
-| **ACT-12** | 🟡 Major | غياب قسم المخاطر والمعالجات وازدواجية H1 بالوثيقة | Stage 7 (`structural`) | تصحيح الهيكلية، دمج عنوان H1، وإضافة قسم `المخاطر والمعالجات (Risks & Mitigations)`. |
-| **ACT-13** | 🟡 Major | عبارات غير معيرة وأوصاف إنشائية عاطفية وتسويقية | Stage 7 (`style`) | استبدال "0 ملي ثانية" بـ "معالجة محلية دون انتظار شبكة"، وحذف "كارثة وتدمير" و"مرفوض من المؤلف". |
-| **ACT-14** | 🟢 Nit | حدث زائد في ناقل الأحداث `events.ts` (YAGNI) | Stage 5 & 8 (`zoom-out`) | حذف البند 7 الخاص بـ `events.ts` والاعتماد التام على React Context. |
+| المعرف | مجال الملاحظة | المصدر (الوكيل) | الدرجة | الإجراء التصحيحي المعتمد |
+| :--- | :--- | :--- | :---: | :--- |
+| **TRC-01** | انفصال مسار نقطة البيع عن `NativeTabHost` | `egm-design`, `egm-zoom-out`, `egm-comprehension`, `egm-codebase-details`, `egm-implementation-readiness` | 🔴 **حاسم (Blocker)** | حصر `TAB_ORDER` في التبويبات الداخلية التسعة لـ `NativeTabHost`، واستثناء مسار `/` الكامل. |
+| **TRC-02** | خطأ توقيت `requestAnimationFrame` لتأجيل التخزين | `egm-inventive-catalyst`, `egm-design`, `egm-comprehension` | 🔴 **حاسم (Blocker)** | استبدال `rAF` بحدث `transitionend` ومؤقت أمان (260ms) متبوعاً بـ `requestIdleCallback`. |
+| **TRC-03** | غياب ملفات `ProductGrid.tsx` و `CartPanel.tsx` من قائمة الملفات | `egm-codebase-details`, `egm-implementation-readiness`, `egm-comprehension` | 🔴 **حاسم (Blocker)** | تحديث قائمة الملفات المستهدفة لتشمل المكونين مع التحذير الصارم من المساس بحسابات السلة. |
+| **TRC-04** | غياب قسم مصفوفة المخاطر والمعالجات (Risks & Mitigations) | `egm-structural` | 🔴 **حاسم (Blocker)** | إدراج قسم جدول المخاطر والمعالجات والحدود وفق قالب EGM القياسي. |
+| **TRC-05** | غياب آلة حالات الانتقال لمعالجة النقر السريع المتتالي | `egm-design`, `egm-inventive-catalyst`, `egm-comprehension`, `egm-implementation-readiness` | 🟡 **رئيسي (Major)** | بناء آلة حالات منضبطة (`idle` -> `preparing` -> `animating` -> `settled`) مع إلغاء وتوجيه فوري للنقر السريع. |
+| **TRC-06** | ثنائية الاتجاه (RTL مقابل LTR) والإحداثيات الديكارتية | `egm-design`, `egm-codebase-details` | 🟡 **رئيسي (Major)** | استخدام معامل الاتجاه الديناميكي `directionMultiplier = isRTL ? -1 : 1` مع استيراد `useLanguage`. |
+| **TRC-07** | تذبذب التموضع التبادلي (`relative` إلى `absolute`) وموضع التمرير | `egm-zoom-out`, `egm-design` | 🟡 **رئيسي (Major)** | تثبيت ارتفاع حاوية العرض وتطبيق عزل `contain: layout paint` لمنع قفز التمرير (CLS). |
+| **TRC-08** | خطأ نحوي في كتلة التوازي لمخطط Mermaid (`par` بدون `and`) | `egm-structural` | 🟡 **رئيسي (Major)** | تصحيح صياغة كود Mermaid بإضافة الكلمة المفتاحية `and` بين المسارين المتوازيين. |
+| **TRC-09** | غياب جداول المقارنة المعمارية ومصفوفة التوافق | `egm-structural` | 🟡 **رئيسي (Major)** | تحويل البدائل إلى جدول مقارنة معماري وإضافة جدول مصفوفة توافق الأجهزة والسمات. |
+| **TRC-10** | اضطراب تسلسل العناوين داخل القسم 7 وازدواجية H1 | `egm-structural` | 🟢 **طفيف (Nit)** | توحيد العنوان الرئيسي في H1 مفرد، وإعادة ترقيم المخطط كبند فرعي تحت `أولاً`. |
+| **TRC-11** | وضوح تفاصيل `React.memo` في `Invoices.tsx` و `Products.tsx` | `egm-codebase-details`, `egm-implementation-readiness` | 🟢 **طفيف (Nit)** | توجيه التعديل لاستخراج مكونات الصفوف والبطاقات المضمنة وتثبيت دوال الأحداث بـ `useCallback`. |
 
 ---
 
-## 3. القرار والتوصية النهائية (Next Steps)
+## 3. تفصيل المهام التصحيحية الواجب تطبيقها على وثيقة التصميم
 
-توصي مراجعة السمكة الذهبية بالانتقال إلى خطوة **اعتماد المعالجات (Resolution Phase - `/egm:egm-resolve`)** لتحديث وثيقة التصميم المعماري [`docs/designs/security-lock-and-theme-animation.md`](docs/designs/security-lock-and-theme-animation.md) وفق بنود مصفوفة التتبع أعلاه.
-وبمجرد اعتماد التحديثات، تصبح المواصفة جاهزة بنسبة 100% لبدء مرحلة التنفيذ البرمجي الجراحي.
+### أ. التعديلات الحاسمة (Blockers Resolution):
+1. **تصحيح مصفوفة `TAB_ORDER` ونطاق التبويبات**:
+   * تعديل مصفوفة الترتيب لتقتصر على التبويبات التسعة المدارة حصرياً داخل `NativeTabHost`:
+     ```typescript
+     const TAB_ORDER = [
+       '/products',   // 0
+       '/invoices',   // 1
+       '/customers',  // 2
+       '/services',   // 3
+       '/expenses',   // 4
+       '/purchases',  // 5
+       '/reports',    // 6
+       '/appearance', // 7
+       '/settings',   // 8
+     ];
+     ```
+   * توضيح أن شاشة نقطة البيع (`/` و `/pos`) هي شاشة مستقلة كاملة لا تخضع للانزلاق الجانبي لغياب شريط التنقل عنها، وتركيز تحسيناتها على خفة التصيير وسرعة الاستجابة.
+2. **تصحيح آلية تأجيل قراءات التخزين المحلي**:
+   * شطب الاعتماد على `requestAnimationFrame` كأداة تأجيل زمني.
+   * اعتماد صيغة هندسية حقيقية:
+     ```typescript
+     // انتظار استقرار الحركة تماماً (240ms) ثم استغلال دورات الخمول
+     const onSettled = () => {
+       if ('requestIdleCallback' in window) {
+         window.requestIdleCallback(() => fetchBackgroundData(), { timeout: 1500 });
+       } else {
+         setTimeout(fetchBackgroundData, 50);
+       }
+     };
+     ```
+3. **تحديث قائمة الملفات المستهدفة (Target Files Manifest)**:
+   * إضافة [`src/components/pos/ProductGrid.tsx`](../../src/components/pos/ProductGrid.tsx) (استخراج وتغليف بطاقات المنتجات بـ `React.memo`).
+   * إضافة [`src/components/pos/CartPanel.tsx`](../../src/components/pos/CartPanel.tsx) (استخراج وتغليف بنود السلة مع الحظر التام للمساس بالمعادلات المالية).
+4. **إضافة قسم مصفوفة المخاطر والمعالجات (Risks & Mitigations)** كجدول متكامل.
+
+### ب. التعديلات الهيكلية والرئيسية (Major & Structural):
+1. **تصحيح كود Mermaid**: استخدام `and` داخل كتلة `par`.
+2. **إضافة جدول مقارنة البدائل وجدول توافق المنصات**.
+3. **معادلة اتجاه الحركة الديناميكية**:
+   ```typescript
+   const isForward = nextIndex > prevIndex;
+   const txEntering = isForward ? (isRTL ? '-100%' : '100%') : (isRTL ? '100%' : '-100%');
+   const txExiting = isForward ? (isRTL ? '100%' : '-100%') : (isRTL ? '-100%' : '100%');
+   ```
+4. **تحديد واجهة الخصائص الجديدة في `NativeTabKeepAlive.tsx`**:
+   `KeepAliveTabProps` مع حالات `transitionState` ومؤشر `direction`.
+
+---
+
+## 4. الخلاصة والتوصية المعمارية النهائية
+
+الوثيقة أصبحت ناضجة ومستوفية لكافة التدقيقات. تطبيق هذه التعديلات المحددة على [`docs/designs/performance-and-tab-transitions.md`](file:///C:/Users/PREDATOR/Documents/GitHub/hyperpos-companion/docs/designs/performance-and-tab-transitions.md) يجعل الوثيقة جاهزة 100% للاعتماد والانتقال لمرحلة التنفيذ البرمجي دون أي غموض أو مخاطر.

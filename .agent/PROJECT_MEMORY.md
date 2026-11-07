@@ -66,6 +66,10 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-08:** EGM Stage 1 Architecture Design PR — Ultra Performance Audit & Hardware-Accelerated Tab Transitions:
+  * EGM Design Specification (`docs/designs/performance-and-tab-transitions.md`, `docs/designs/README.md`): Completed comprehensive architectural specification for 60 FPS hardware-accelerated tab slide transitions (240ms, `cubic-bezier(0.2, 0.9, 0.3, 1.0)`) across all device brands, themes, and RTL/LTR directions.
+  * EGM Goldfish Review Protocol (`consolidated_review_report.md`): Orchestrated multi-persona review across 7 autonomous goldfish subagents (`zoom-out`, `inventive-catalyst`, `comprehension`, `design`, `structural`, `implementation-readiness`, `codebase-details`).
+  * Hardened Architectural Decisions: Corrected `TAB_ORDER` to exclusively target the 9 internal `NativeTabHost` tabs, decoupled full-screen POS routes, corrected storage I/O deferral to use `transitionend` + `requestIdleCallback`, and targeted pinpoint component extractions in `ProductGrid.tsx` and `CartPanel.tsx` with zero modifications to accounting formulas.
 * **2026-11-08:** Release v1.5.66 (Build 454) — App Security Lock Enforcement & Theme Transition Dynamics (EGM Spec-Driven Implementation):
   * Security Lock Subsystem (`src/hooks/use-app-lock.tsx`, `src/components/auth/AppLockOverlay.tsx`, `src/App.tsx`): Introduced `AppLockProvider` and `useAppLock` consuming `useAppLifecycle` without modifying generic infrastructure; enforced synchronous initial lock on cold start and timeout checks on resume; non-destructive fullscreen modal with `role="dialog"`, `data-state="open"`, and background DOM isolation via HTML5 `inert`; tactile numpad with explicit confirm button supporting 4-8 digit PINs; persistent lockout rate-limiting (30s after 5 errors); emergency sign-out modal; Android hardware back-button trap via `CapApp.exitApp()`.
   * Whitelisting & Auth Safety (`src/hooks/use-auth.tsx`): Whitelisted `flowpos_app_lock_*` in `clearAllUserSessionCaches` preventing erasure of lock state and hash upon sign-in/out.

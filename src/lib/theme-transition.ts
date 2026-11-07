@@ -67,8 +67,8 @@ export function executeCircularTransition(
         clipPath: clipPath
       },
       {
-        duration: 400,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)', // حركة طبيعية وانسيابية
+        duration: 550,
+        easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.0)', // فيزياء انسيابية متزنة مستوحاة من HyperOS
         pseudoElement: '::view-transition-new(root)'
       } as any
     );

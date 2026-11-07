@@ -8,6 +8,8 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { NativeTabHost } from "./components/layout/NativeTabKeepAlive";
 import { NotificationsProvider } from "./hooks/use-notifications";
 import { AuthProvider } from "./hooks/use-auth";
+import { AppLockProvider, useAppLock } from "./hooks/use-app-lock";
+import { AppLockOverlay } from "./components/auth/AppLockOverlay";
 import { LanguageProvider } from "./hooks/use-language";
 import { ThemeProvider } from "./hooks/use-theme";
 import { LicenseProvider } from "./hooks/use-license";
@@ -97,6 +99,7 @@ const MainLayoutWithKeepAlive = () => {
 };
 
 const AppContent = () => {
+  const { isLocked } = useAppLock();
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
@@ -447,7 +450,9 @@ const PageFallback = () => (
 
   return (
     <>
-      {isDebugClick && <ClickProbe />}
+      <AppLockOverlay />
+      <div id="app-main-layout" inert={isLocked ? '' : undefined} className="contents">
+        {isDebugClick && <ClickProbe />}
       <ExitConfirmDialog />
       <Suspense fallback={<PageFallback />}>
         <Routes>
@@ -497,6 +502,7 @@ const PageFallback = () => (
         <Route path="*" element={<FeatureErrorBoundary featureName="الصفحة غير موجودة"><NotFound /></FeatureErrorBoundary>} />
       </Routes>
       </Suspense>
+      </div>
     </>
   );
 };
@@ -508,7 +514,8 @@ const App = () => (
         <LanguageProvider>
           <ThemeProvider>
             <AuthProvider>
-              <CloudSyncProvider>
+              <AppLockProvider>
+                <CloudSyncProvider>
                 <LicenseProvider>
                   <UserRoleProvider>
                     <WarehouseProvider>
@@ -527,6 +534,7 @@ const App = () => (
                   </UserRoleProvider>
                 </LicenseProvider>
               </CloudSyncProvider>
+              </AppLockProvider>
             </AuthProvider>
           </ThemeProvider>
         </LanguageProvider>

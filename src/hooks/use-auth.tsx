@@ -235,7 +235,8 @@ const clearAllUserSessionCaches = async () => {
           key !== 'hyperpos_privacy_version' &&
           key !== 'hyperpos_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند الخروج
           key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
-          key !== 'flowpos_persistent_hardware_id' // 👈 حماية البصمة الاحتياطية الدائمة
+          key !== 'flowpos_persistent_hardware_id' && // 👈 حماية البصمة الاحتياطية الدائمة
+          !key.startsWith('flowpos_app_lock_') // 👈 حماية إعدادات وهاش قفل الأمان من المسح عند الخروج
         ) {
           keysToRemove.push(key);
         }

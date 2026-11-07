@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
-**Last Updated:** 2026-11-06
-**Current Version:** `v1.5.50 (Build 451)`
+**Last Updated:** 2026-11-08
+**Current Version:** `v1.5.65 (Build 453)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -66,6 +66,12 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-08:** Release v1.5.65 (Build 453) — App Security Lock Enforcement & Theme Transition Dynamics (EGM Spec-Driven Implementation):
+  * Security Lock Subsystem (`src/hooks/use-app-lock.tsx`, `src/components/auth/AppLockOverlay.tsx`, `src/App.tsx`): Introduced `AppLockProvider` and `useAppLock` consuming `useAppLifecycle` without modifying generic infrastructure; enforced synchronous initial lock on cold start and timeout checks on resume; non-destructive fullscreen modal with `role="dialog"`, `data-state="open"`, and background DOM isolation via HTML5 `inert`; tactile numpad with explicit confirm button supporting 4-8 digit PINs; persistent lockout rate-limiting (30s after 5 errors); emergency sign-out modal; Android hardware back-button trap via `CapApp.exitApp()`.
+  * Whitelisting & Auth Safety (`src/hooks/use-auth.tsx`): Whitelisted `flowpos_app_lock_*` in `clearAllUserSessionCaches` preventing erasure of lock state and hash upon sign-in/out.
+  * Security Settings (`src/components/settings/ProfileManagement.tsx`): Added security lock toggle, timeout selector (immediate, 1m, 5m), and local client-side salted SHA-256 derivation coupled with cloud `set_user_pin`.
+  * Theme Dynamics Calibration (`src/lib/theme-transition.ts`): Calibrated view-transition circular expansion to 550ms with Xiaomi HyperOS physics curve `cubic-bezier(0.2, 0.9, 0.3, 1.0)`.
+  * EGM Spec & Review Deliverables (`docs/designs/security-lock-and-theme-animation.md`, `consolidated_review_report.md`): Checked-in fully approved EGM technical design specification and comprehensive goldfish review report.
 * **2026-11-05:** Release v1.5.48 — Password/PIN Hashing, Phone Normalization, Unique Guard & Pre-Check:
   * Backend SQL Migration (`supabase/migrations/20261105210000_password_pin_hashing_and_phone_normalization.sql`): Added `pgcrypto` bcrypt cost 10 support, `pin_hash` column to profiles, atomic `set_user_pin` and timing-safe `verify_user_pin`, `normalize_phone_number` with Syria/Turkey/international formats, automatic normalization trigger, partial unique index `idx_profiles_phone_unique`, and proactive `check_phone_email_availability` RPC.
   * Edge Function Protection (`supabase/functions/create-user/index.ts`): Added pre-check validation for phone and email uniqueness preventing silent takeover or duplicate registrations, with informative Arabic errors.

@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { useAppLock } from '@/hooks/use-app-lock';
 import { toast } from '@/lib/sonner-bridge';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { normalizePhoneNumber } from '@/lib/phone-utils';
@@ -26,13 +28,15 @@ import {
   EyeOff,
   Loader2,
   Phone,
-  KeyRound
+  KeyRound,
+  ShieldCheck
 } from 'lucide-react';
 
 export function ProfileManagement() {
   const { user, profile, refreshProfile } = useAuth();
   const { isBoss, isAdmin } = useUserRole();
   const { t } = useLanguage();
+  const { isLockEnabled, lockTimeout, setLockConfig, updatePin } = useAppLock();
   
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
@@ -251,6 +255,7 @@ export function ProfileManagement() {
         return;
       }
 
+      await updatePin(cleanPin);
       await refreshProfile();
       toast.success('تم تعيين وتشفير رمز الدخول السريع (PIN) بنجاح');
       setShowPinDialog(false);
@@ -539,6 +544,53 @@ export function ProfileManagement() {
                 {profile?.pin_hash ? 'تغيير الـ PIN' : 'تعيين PIN'}
               </Button>
             </div>
+          </div>
+
+          <Separator className="my-2" />
+
+          {/* App Security Lock Toggle */}
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between gap-3 p-3 bg-muted/60 rounded-xl min-w-0 border border-border/40">
+              <div className="flex flex-col gap-0.5">
+                <Label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground cursor-pointer">
+                  <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                  <span>قفل أمان التطبيق (PIN Lock)</span>
+                </Label>
+                <span className="text-[11px] text-muted-foreground">
+                  مطالبة بإدخال رمز PIN عند إقلاع التطبيق أو استئنافه من الخلفية لحماية سلة البيع
+                </span>
+              </div>
+              <Switch
+                checked={isLockEnabled}
+                onCheckedChange={async (checked) => {
+                  if (checked && !profile?.pin_hash && !localStorage.getItem(`flowpos_app_lock_${user?.id}_hash`)) {
+                    toast.info('يرجى تعيين رمز PIN أولاً لتفعيل قفل الأمان');
+                    setShowPinDialog(true);
+                    return;
+                  }
+                  await setLockConfig({ enabled: checked, timeoutSeconds: lockTimeout });
+                  toast.success(checked ? 'تم تفعيل قفل أمان التطبيق' : 'تم تعطيل قفل أمان التطبيق');
+                }}
+              />
+            </div>
+
+            {isLockEnabled && (
+              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
+                <span className="text-muted-foreground font-medium">مهلة القفل التلقائي عند الخروج للخلفية</span>
+                <select
+                  value={lockTimeout}
+                  onChange={(e) => {
+                    const sec = parseInt(e.target.value, 10);
+                    void setLockConfig({ enabled: true, timeoutSeconds: sec });
+                  }}
+                  className="bg-background border border-border/60 rounded-lg px-2.5 py-1 text-xs text-foreground font-medium outline-none cursor-pointer"
+                >
+                  <option value={0}>فوري عند الخروج</option>
+                  <option value={60}>بعد دقيقة واحدة</option>
+                  <option value={300}>بعد 5 دقائق</option>
+                </select>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

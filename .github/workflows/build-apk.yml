@@ -94,8 +94,8 @@ jobs:
             if [ -n "$KEYSTORE_PASS" ] && keytool -list -keystore android/app/flowpos-release.keystore -storepass "$KEYSTORE_PASS" >/dev/null 2>&1; then
               echo "Using configured production keystore credentials."
             else
-              KEYSTORE_PASS="flowpos123"
-              KEY_PASS="flowpos123"
+              echo "::error::Production keystore password (ANDROID_KEYSTORE_PASSWORD) is missing or invalid. Aborting build."
+              exit 1
             fi
           else
             echo "::error::Release keystore file is missing. Aborting."

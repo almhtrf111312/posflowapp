@@ -52,7 +52,7 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # سحب فوري لأحدث APK جاهز من النسخ الـ 30 المحفوظة خلال 5 ثوانٍ
+      # سحب فوري لأحدث APK جاهز من الـ Artifacts المحفوظة
       - name: Grab Ready APK Instantly (Skip Build - 5 Seconds)
         shell: bash
         env:
@@ -74,7 +74,6 @@ jobs:
             if (!listRes.ok) throw new Error("Failed to list artifacts: " + listRes.statusText);
             const list = await listRes.json();
             
-            // العثور على أحدث حزمة FlowPOS APK
             const apkArtifact = list.artifacts.find(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name));
             if (!apkArtifact) {
               throw new Error("لم يتم العثور على ملف APK جاهز مسبقاً! يرجى تشغيل بناء APK مرة واحدة أولاً.");
@@ -90,8 +89,7 @@ jobs:
             if (!zipRes.ok) throw new Error("Failed to download artifact zip: " + zipRes.statusText);
             
             const arrayBuffer = await zipRes.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            fs.writeFileSync("/tmp/ready-apk/artifact.zip", buffer);
+            fs.writeFileSync("/tmp/ready-apk/artifact.zip", Buffer.from(arrayBuffer));
             
             execSync("unzip -q -o /tmp/ready-apk/artifact.zip -d /tmp/ready-apk");
             
@@ -108,23 +106,70 @@ jobs:
           });
           '
 
-      # إرسال الملف فوراً لقناة تيليجرام
-      - name: Dispatch APK to Telegram Channel
+      # التحقق الذكي من معرّف القناة ومعالجة الصيغ المختلفة تلقائياً
+      - name: Resolve and Verify Telegram Channel
         shell: bash
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CUSTOM_NOTES: ${{ inputs.custom_notes }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::error::TELEGRAM_BOT_TOKEN is missing in secrets"
             exit 1
           fi
 
+          # تنظيف المعرف من أي مسافات أو أسطر أو علامات تنصيص
+          CLEAN_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]"' | tr -d "'")
+          CANDIDATES=""
+
+          if [ -n "$CLEAN_CHAT" ]; then
+            CANDIDATES="$CLEAN_CHAT"
+            # إذا كان أرقاماً فقط، جرب إضافة بادئة -100 الخاصة بالقنوات والمجموعات
+            if echo "$CLEAN_CHAT" | grep -qE '^[0-9]+$'; then
+              CANDIDATES="$CANDIDATES -100$CLEAN_CHAT"
+            fi
+            # إذا كان اسم قناة بدون @، جرب إضافة @
+            if echo "$CLEAN_CHAT" | grep -qE '^[A-Za-z][A-Za-z0-9_]+$'; then
+              CANDIDATES="$CANDIDATES @$CLEAN_CHAT"
+            fi
+          fi
+
+          FOUND_CHANNEL=""
+          for C in $CANDIDATES; do
+            echo "🔍 Testing chat target: $C"
+            RES=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getChat" --data-urlencode "chat_id=$C" || true)
+            if echo "$RES" | grep -q '"ok":true'; then
+              echo "✅ Verified Telegram channel: $C"
+              FOUND_CHANNEL="$C"
+              break
+            else
+              echo "   Telegram response for $C: $RES"
+            fi
+          done
+
+          if [ -z "$FOUND_CHANNEL" ]; then
+            echo "::error::تعذر العثور على القناة أو البوت ليس مشرفاً (Admin) فيها. تأكد من إضافة البوت كـ Admin في القناة وتفعيل صلاحية النشر، وتأكد من TELEGRAM_CHAT_ID."
+            exit 1
+          fi
+
+          echo "TARGET_CHANNEL=$FOUND_CHANNEL" >> "$GITHUB_ENV"
+
+      # إرسال الملف فوراً لقناة تيليجرام
+      - name: Dispatch APK to Telegram Channel
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHANNEL: ${{ env.TARGET_CHANNEL }}
+          CUSTOM_NOTES: ${{ inputs.custom_notes }}
+        run: |
           APK_PATH=$(cat /tmp/ready-apk/exact_path.txt)
           node scripts/telegram-release-notes.cjs > /tmp/release_caption.txt 2>/dev/null || echo "تحديث جديد FlowPOS Pro" > /tmp/release_caption.txt
 
-          curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"             -F "chat_id=${RAW_CHAT}"             -F "document=@${APK_PATH}"             -F "caption=$(cat /tmp/release_caption.txt)"             -F "parse_mode=HTML" > /tmp/tg_result.json
+          curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
+            -F "chat_id=${CHANNEL}" \
+            -F "document=@${APK_PATH}" \
+            -F "caption=$(cat /tmp/release_caption.txt)" \
+            -F "parse_mode=HTML" > /tmp/tg_result.json
 
           if grep -q '"ok":true' /tmp/tg_result.json; then
             echo "🚀 Sent successfully to Telegram!"

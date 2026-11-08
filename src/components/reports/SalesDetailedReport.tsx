@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ShoppingCart, Receipt, TrendingUp, Users } from 'lucide-react';
 import { ReportShell } from './ReportShell';
 import { EntityPicker, PickableEntity } from './EntityPicker';
-import { Invoice } from '@/lib/cloud/invoices-cloud';
+import { Invoice, isValidActiveInvoice } from '@/lib/cloud/invoices-cloud';
 import { formatNumber, formatReportAmount } from '@/lib/utils';
 import { ReportCurrencyBanner } from './ReportCurrencyBanner';
 import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
@@ -40,7 +40,7 @@ export function SalesDetailedReport({
       const d = toLocalDateString(inv.createdAt);
       if (!isDateInRange(d, dateRange.from, dateRange.to)) return false;
       if (inv.type !== 'sale') return false;
-      if (inv.status === 'refunded') return false;
+      if (!isValidActiveInvoice(inv)) return false;
       if (statusFilter !== 'all' && inv.status !== statusFilter) return false;
       if (cashierFilter !== 'all' && (inv.cashierName || 'غير محدد') !== cashierFilter) return false;
       if (paymentFilter !== 'all' && inv.paymentType !== paymentFilter) return false;

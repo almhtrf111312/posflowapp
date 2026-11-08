@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
 **Last Updated:** 2026-11-08
-**Current Version:** `v1.5.66 (Build 454)`
+**Current Version:** `v1.5.69 (Build 457)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -66,6 +66,14 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-08:** Release v1.5.69 (Build 457) — POS Mobile 3-Column Grid Fix & Comprehensive Reports Audit (EGM Implementation):
+  * EGM Design Specification & Review Swarm (`docs/designs/pos-grid-and-reports-audit.md`, `docs/designs/consolidated_review_report.md`): Formulated comprehensive specification and conducted 7-persona Goldfish review swarm (`design`, `codebase-details`, `implementation-readiness`, `inventive-catalyst`, `zoom-out`, `structural`, `comprehension`) resolving layout real estate math and calendar date boundaries.
+  * POS Mobile 3-Column Grid Optimization (`src/components/pos/ProductGrid.tsx`): Dropped `xs: 380px` constraint, enabling 3 items side-by-side (`grid-cols-3 sm:grid-cols-4...`) directly on all mobile devices (320px–375px); applied TRIZ extraction pattern by floating the quantity badge (`absolute top-1 end-1 z-10`) over the 4:3 product image, freeing 100% of the card base exclusively for full price rendering (`text-[11px] sm:text-xs font-black`) without truncation, and providing 2 lines for titles (`line-clamp-2 min-h-[1.75rem]`).
+  * Unified Local Date Engine (`src/lib/date-utils.ts`): Enforced regex guard `/^\d{4}-\d{2}-\d{2}$/` against ECMAScript UTC midnight parsing shifts in negative timezones; eliminated fixed 86,400,000ms subtraction with calendar-based `d.setDate(d.getDate() - n)` preventing DST anomalies; centralized UI date presets via `getDatePresetRange(preset)`; introduced `getLocalDayUtcRange(dateStr)` bridging browser local day boundaries (`00:00:00.000` to `23:59:59.999`) to UTC ISO for database queries; and implemented lexical range checks in `isDateInRange`.
+  * Central Financial Invoice Status Validation (`src/lib/cloud/invoices-cloud.ts`): Exported canonical domain predicate `isValidActiveInvoice(inv)` strictly excluding cancelled, refunded, and written off records.
+  * Comprehensive Reports Status & Timezone Isolation: Applied `isValidActiveInvoice` and local date normalization across `src/pages/Reports.tsx`, `ReportFiltersBar.tsx`, `SalesDetailedReport.tsx`, `CashierPerformanceReport.tsx`, `MaintenanceReport.tsx`, `DailyClosingReport.tsx`, `PartnerProfitDetailedReport.tsx`, `LibraryReport.tsx`, and `DebtsReport.tsx`.
+  * Cloud & Offline Debt Payments Resilience (`src/lib/cloud/debts-cloud.ts`): Bridged Supabase queries with `getLocalDayUtcRange(dateStr)` and fortified offline activity log filtering with `toLocalDateString(l.timestamp) === dateStr`.
+  * Invariants Guard: 100% frozen modules (`Warehouses.tsx`, `StockTransfer.tsx`, `warehouses-cloud.ts`) untouched, USD base preserved, zero hard deletes, touch targets >= 44px, and verified build gate (`npm run build = 0` in 20.73s).
 * **2026-11-08:** Release v1.5.68 (Build 456) — Comprehensive Mobile Responsive UI/UX, Typography Scaling & Touch Targets Hardening (EGM Audit):
   * EGM Design Specification & Review Swarm (`docs/designs/mobile-responsive-ui-ux-audit.md`, `docs/designs/consolidated_review_report.md`): Formulated comprehensive 11-section mobile responsive specification and executed 7-persona Goldfish review swarm auditing viewports, typography scaling, touch ergonomics, and WCAG AA contrast.
   * Zero Financial Truncation Enforced (`src/components/pos/ProductGrid.tsx`): Completely removed `truncate` and `min-w-0` on financial price spans, enforcing full amount visibility with non-truncating tabular numbers across all catalog views.

@@ -114,6 +114,14 @@ export interface Invoice {
   exchangeRate?: number;
 }
 
+/**
+ * Single source of truth for active financial invoices.
+ * Excludes cancelled, refunded, and written off invoices.
+ */
+export function isValidActiveInvoice(inv: { status?: string }): boolean {
+  return inv.status !== 'cancelled' && inv.status !== 'refunded' && inv.status !== 'written_off';
+}
+
 // Normalize customer name based on payment type
 function normalizeCustomerName(name: string | null | undefined, paymentType: PaymentType): string {
   if (name && name.trim() && name.trim() !== 'عميل') return name.trim();

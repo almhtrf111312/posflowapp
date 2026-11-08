@@ -1,464 +1,468 @@
-import { useState, useRef, useEffect, useMemo, memo } from 'react';
-import { Search, Barcode, Package, LayoutGrid, Grid3x3, List, AlignJustify } from 'lucide-react';
-import { ProductImage } from '@/components/products/ProductImage';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { cn, formatNumber } from '@/lib/utils';
-import { fromUsd, roundForCurrency as roundForCurr } from '@/lib/money-engine';
-import { BarcodeScanner } from '@/components/BarcodeScanner';
-import { DualUnitDisplayCompact } from '@/components/products/DualUnitDisplay';
-import { ProductDetailsDialog } from '@/components/pos/ProductDetailsDialog';
-import { toast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
-import { getCurrentStoreType, isNoInventoryMode } from '@/lib/store-type-config';
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  category?: string;
-  image?: string;
-  imageUrl?: string;
-  description?: string;
-  barcode?: string;
-  barcode2?: string;
-  barcode3?: string;
-  conversionFactor?: number;
-  bulkUnit?: string;
-  smallUnit?: string;
-  costPrice?: number;
-  bulkCostPrice?: number;
-  bulkSalePrice?: number;
-  wholesalePrice?: number;
-  location?: string;
-  supplier?: string;
-  warranty?: string;
-  minStockLevel?: number;
-  archived?: boolean;
-}
-
-interface ProductGridProps {
-  products: Product[];
-  categories: string[];
-  searchQuery: string;
-  selectedCategory: string;
-  onSearchChange: (query: string) => void;
-  onCategoryChange: (category: string) => void;
-  onProductClick: (product: Product, quantity?: number) => void;
-  onAddToCart?: (product: Product, quantity: number) => void;
-  onBarcodeScan?: (barcode: string) => void;
-  selectedCurrency?: { code: string; symbol: string; rate: number };
-}
-
-type ViewMode = 'grid' | 'dense' | 'list' | 'compact';
-
-export const ProductGrid = memo(function ProductGrid({
-  products,
-  categories,
-  searchQuery,
-  selectedCategory,
-  onSearchChange,
-  onCategoryChange,
-  onProductClick,
-  onAddToCart,
-  onBarcodeScan,
-  selectedCurrency,
-}: ProductGridProps) {
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { t, tDynamic } = useLanguage();
-  const isRestaurant = getCurrentStoreType() === 'restaurant';
-
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    return (localStorage.getItem('pos_view_mode') as ViewMode) || 'grid';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('pos_view_mode', viewMode);
-  }, [viewMode]);
-
-  // تنسيق السعر بالعملة المختارة ومعدل الصرف
-  const formatDisplayPrice = (usdPrice: number) => {
-    const code = selectedCurrency?.code || 'USD';
-    const rate = selectedCurrency?.rate || 1;
-    const symbol = selectedCurrency?.symbol || '$';
-    const converted = roundForCurr(fromUsd(usdPrice, code, rate), code);
-    const decimals = (rate >= 100) ? 0 : 2;
-
-    return { symbol, amount: formatNumber(converted, decimals) };
-  };
-
-  const renderDisplayPrice = (usdPrice: number, sizeClassName: string) => {
-    const { symbol, amount } = formatDisplayPrice(usdPrice);
-
-    return (
-      <span
-        className={cn('inline-flex max-w-full min-w-0 items-center gap-1 whitespace-nowrap text-start tabular-nums', sizeClassName)}
-        dir="ltr"
-        title={`${symbol} ${amount}`}
-      >
-        <span className="shrink-0 text-[0.75em] font-semibold text-muted-foreground">{symbol}</span>
-        <span aria-hidden="true" className="h-3 w-px shrink-0 bg-muted-foreground/50" />
-        <span className="shrink-0 whitespace-nowrap font-black text-primary">{amount}</span>
-      </span>
-    );
-  };
-
-  const cycleViewMode = () => {
-    setViewMode((prev) => {
-      if (prev === 'grid') return 'dense';
-      if (prev === 'dense') return 'list';
-      if (prev === 'list') return 'compact';
-      return 'grid';
-    });
-  };
-
-  // ✅ استعادة الباركود المعلق — يتم التعامل معها في POS.tsx الآن
-  // ProductGrid لم يعد يعالج PENDING_BARCODE_KEY مباشرة لتجنب التكرار
-
-  const noInventory = isNoInventoryMode();
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      if (product.archived) return false;
-      if (!noInventory && product.quantity <= 0) return false;
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.barcode && product.barcode.includes(searchQuery));
-      const matchesCategory = selectedCategory === t('common.all') || product.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, noInventory, searchQuery, selectedCategory, t]);
-
-  const INITIAL_BATCH_SIZE = 48;
-  const BATCH_INCREMENT = 48;
-  const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH_SIZE);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setVisibleCount(INITIAL_BATCH_SIZE);
-  }, [searchQuery, selectedCategory, products.length]);
-
-  const visibleProducts = useMemo(() => {
-    return filteredProducts.slice(0, visibleCount);
-  }, [filteredProducts, visibleCount]);
-
-  useEffect(() => {
-    if (visibleCount >= filteredProducts.length) return;
-    const target = loadMoreRef.current;
-    if (!target) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisibleCount((prev) => Math.min(prev + BATCH_INCREMENT, filteredProducts.length));
-        }
-      },
-      { rootMargin: '250px' }
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [visibleCount, filteredProducts.length]);
-
-  const handleBarcodeScan = (barcode: string) => {
-    // ✅ Don't call setScannerOpen(false) here — onClose callback handles it
-    onSearchChange(barcode);
-    onBarcodeScan?.(barcode);
-    try { localStorage.removeItem('hyperpos_pending_scan'); } catch {}
-  };
-
-  const touchMovedRef = useRef(false);
-  const longPressTriggeredRef = useRef(false);
-
-  const handleLongPressStart = (product: Product) => {
-    touchMovedRef.current = false;
-    longPressTriggeredRef.current = false;
-    longPressTimerRef.current = setTimeout(() => {
-      if (!touchMovedRef.current) {
-        longPressTriggeredRef.current = true;
-        setSelectedProduct(product);
-        setDetailsDialogOpen(true);
-        if (navigator.vibrate) navigator.vibrate(50);
-      }
-    }, 500);
-  };
-
-  const handleLongPressEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
-  const handleTouchMove = () => {
-    touchMovedRef.current = true;
-    handleLongPressEnd();
-  };
-
-  const handleProductClick = (product: Product) => {
-    handleLongPressEnd();
-    if (longPressTriggeredRef.current) {
-      longPressTriggeredRef.current = false;
-      return;
-    }
-    onProductClick(product);
-  };
-
-  const pressHandlers = (product: Product) => ({
-    onClick: () => handleProductClick(product),
-    onTouchStart: () => handleLongPressStart(product),
-    onTouchEnd: handleLongPressEnd,
-    onTouchCancel: handleLongPressEnd,
-    onTouchMove: handleTouchMove,
-    onMouseDown: () => handleLongPressStart(product),
-    onMouseUp: handleLongPressEnd,
-    onMouseLeave: handleLongPressEnd,
-  });
-
-  return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-muted/20">
-      {/* Modern Apple-like Header Area */}
-      <div data-tour="search-bar" className="px-3 py-3 md:px-5 md:py-5 flex flex-col gap-3 md:gap-4 bg-transparent shrink-0">
-        <div className="flex gap-2.5 items-center">
-          <div className="flex-1 relative flex items-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] rounded-full">
-            <Search className="absolute rtl:right-4 ltr:left-4 w-5 h-5 text-muted-foreground/50 pointer-events-none" />
-            <Input
-              type="text"
-              placeholder={tDynamic('productSearch')}
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const trimmed = searchQuery.trim();
-                  if (trimmed) {
-                    const match = products.find(p => p.barcode === trimmed || p.barcode2 === trimmed || p.barcode3 === trimmed);
-                    if (match) onProductClick(match);
-                  }
-                }
-              }}
-              className="rtl:pr-12 ltr:pl-12 h-12 md:h-14 rounded-full bg-card border border-border/50 text-sm md:text-base shadow-none w-full focus-visible:ring-2 focus-visible:ring-primary/30 transition-[box-shadow,border-color] font-medium"
-            />
-          </div>
-
-          {!isRestaurant && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-primary hover:bg-primary/5 active:scale-95 transition-[transform,colors]"
-              onClick={() => setScannerOpen(true)}
-            >
-              <Barcode className="w-5 h-5 md:w-6 md:h-6" />
-            </Button>
-          )}
-
-          {/* Mobile View Toggle */}
-          <button
-            type="button"
-            onClick={cycleViewMode}
-            className="flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-foreground hover:bg-accent/10 active:scale-95 transition-[transform,colors]"
-          >
-            {viewMode === 'grid' && <LayoutGrid className="w-5 h-5" />}
-            {viewMode === 'dense' && <Grid3x3 className="w-5 h-5" />}
-            {viewMode === 'list' && <List className="w-5 h-5" />}
-            {viewMode === 'compact' && <AlignJustify className="w-5 h-5" />}
-          </button>
-        </div>
-
-        {/* Categories Horizontal Scroll */}
-        <div data-tour="categories" className="flex gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [touch-action:pan-x] pb-1">
-          {categories.map((category, index) => (
-            <button
-              key={category + index}
-              onClick={() => onCategoryChange(category)}
-              className={cn(
-                "category-pill px-4 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-[transform,colors,box-shadow] duration-200 flex-shrink-0 active:scale-95",
-                selectedCategory === category
-                  ? "active bg-primary text-primary-foreground shadow-md scale-105 ring-2 ring-primary/20"
-                  : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted/80 shadow-sm border border-border/60"
-              )}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Grid Content */}
-      <div className="flex-1 p-3 pt-0 md:p-5 overflow-y-auto pb-32">
-        {viewMode === 'grid' && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3">
-            {visibleProducts.map((product, index) => (
-              <button
-                key={product.id}
-                {...pressHandlers(product)}
-                className="pos-item text-start fade-in group bg-card hover:bg-card/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,background-color] duration-200 border border-border/60 flex flex-col"
-                style={{ animationDelay: `${index * 20}ms` }}
-              >
-                <div className="w-full aspect-square bg-muted/20 relative overflow-hidden shrink-0 flex items-center justify-center">
-                  <ProductImage
-                    imageUrl={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
-                    iconClassName="w-7 h-7 text-muted-foreground/30"
-                  />
-                </div>
-
-                {/* جسم البطاقة المستغل للمساحة بالكامل لاسم المنتج والسعر */}
-                <div className="p-2 flex flex-col justify-between flex-1 gap-2 w-full">
-                  <h3 className="font-bold text-foreground text-sm leading-snug w-full text-start break-words line-clamp-2 min-h-[2.5rem]" title={product.name}>
-                    {product.name}
-                  </h3>
-
-                  <div className="w-full pt-1.5 border-t border-border/30 mt-auto flex items-center justify-between gap-1.5">
-                    {renderDisplayPrice(product.price, 'text-sm')}
-                    <span className="inline-flex h-7 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-primary bg-primary px-1.5 text-[0.875rem] font-black leading-none tabular-nums text-primary-foreground shadow-sm">
-                      {product.quantity} <span className="hidden sm:inline ms-0.5">{t('pos.piece') || 'قطعة'}</span>
-                    </span>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Dense View - 3 items side-by-side on mobile, 4-7 on desktop */}
-        {viewMode === 'dense' && (
-          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 sm:gap-2">
-            {visibleProducts.map((product, index) => (
-              <button
-                key={product.id}
-                {...pressHandlers(product)}
-                className="pos-item text-start fade-in group bg-card rounded-xl p-1.5 sm:p-2 shadow-xs hover:shadow-sm border border-border/50 flex flex-col justify-between transition-[box-shadow,border-color] duration-200"
-                style={{ animationDelay: `${index * 15}ms` }}
-              >
-                <div className="w-full aspect-square bg-muted/20 rounded-lg overflow-hidden mb-1.5 sm:mb-2 relative flex items-center justify-center">
-                  <ProductImage
-                    imageUrl={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
-                    iconClassName="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/30"
-                  />
-                </div>
-                <div className="space-y-1 w-full">
-                  <h4 className="font-bold text-[11px] text-foreground leading-tight line-clamp-1 w-full text-start" title={product.name}>
-                    {product.name}
-                  </h4>
-                  <div className="w-full pt-1 border-t border-border/30 flex items-center justify-between gap-0.5">
-                    {renderDisplayPrice(product.price, 'text-[11px]')}
-                    <span className="inline-flex h-5 min-w-[1.5rem] shrink-0 items-center justify-center rounded-md border border-primary bg-primary px-1 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm">
-                      {product.quantity}
-                    </span>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* List View */}
-        {viewMode === 'list' && (
-          <div className="flex flex-col gap-3">
-            {visibleProducts.map((product, index) => (
-              <button
-                key={product.id}
-                {...pressHandlers(product)}
-                className="pos-item text-start fade-in group flex items-center bg-card rounded-[20px] p-2 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200 border border-border/50"
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-muted/40 flex-shrink-0 overflow-hidden relative">
-                  <ProductImage
-                    imageUrl={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                  />
-                </div>
-                <div className="flex-1 min-w-0 px-4">
-                  <h3 className="font-bold text-sm md:text-base text-foreground line-clamp-1 mb-1 truncate" title={product.name}>{product.name}</h3>
-                  <div className="text-muted-foreground text-xs font-medium mb-1">
-                    <DualUnitDisplayCompact
-                      totalPieces={product.quantity}
-                      conversionFactor={product.conversionFactor || 1}
-                      bulkUnit={product.bulkUnit}
-                      smallUnit={product.smallUnit}
-                    />
-                  </div>
-                  {renderDisplayPrice(product.price, 'text-sm md:text-base')}
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Compact View */}
-        {viewMode === 'compact' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            {visibleProducts.map((product, index) => (
-              <button
-                key={product.id}
-                {...pressHandlers(product)}
-                className="pos-item text-start fade-in group flex items-center justify-between bg-card rounded-xl p-3 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 border border-border/50"
-                style={{ animationDelay: `${index * 30}ms` }}
-              >
-                <div className="flex-1 min-w-0 pe-2 overflow-hidden text-start">
-                  <h3 className="font-bold text-xs text-foreground truncate" title={product.name}>{product.name}</h3>
-                  {renderDisplayPrice(product.price, 'text-xs mt-0.5')}
-                </div>
-                <div className="text-[10px] bg-muted/50 rounded-lg px-2 py-1 shrink-0 font-medium">
-                  <DualUnitDisplayCompact
-                    totalPieces={product.quantity}
-                    conversionFactor={product.conversionFactor || 1}
-                    bulkUnit={product.bulkUnit}
-                    smallUnit={product.smallUnit}
-                  />
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {visibleCount < filteredProducts.length && (
-          <div ref={loadMoreRef} className="h-8 w-full flex items-center justify-center py-2 text-muted-foreground/40 text-xs font-mono">
-            ...
-          </div>
-        )}
-
-        {filteredProducts.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground fade-in">
-            <Package className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-medium text-sm">{t('common.all')}</p>
-          </div>
-        )}
-      </div>
-
-      
-      {scannerOpen && (
-        <BarcodeScanner
-          isOpen={scannerOpen}
-          onScan={handleBarcodeScan}
-          onClose={() => setScannerOpen(false)}
-        />
-      )}
-      
-      {selectedProduct && (
-        <ProductDetailsDialog
-          product={selectedProduct}
-          isOpen={detailsDialogOpen}
-          onClose={() => {
-            setDetailsDialogOpen(false);
-            setSelectedProduct(null);
-          }}
-          onAddToCart={(product, qty) => {
-            if (onAddToCart) {
-              onAddToCart(product, qty);
-            } else {
-              onProductClick(product, qty);
-            }
-          }}
-        />
-      )}
-    </div>
-  );
+import { useState, useRef, useEffect, useMemo, memo } from 'react';
+import { Search, Barcode, Package, LayoutGrid, Grid3x3, List, AlignJustify } from 'lucide-react';
+import { ProductImage } from '@/components/products/ProductImage';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { cn, formatNumber } from '@/lib/utils';
+import { fromUsd, roundForCurrency as roundForCurr } from '@/lib/money-engine';
+import { BarcodeScanner } from '@/components/BarcodeScanner';
+import { DualUnitDisplayCompact } from '@/components/products/DualUnitDisplay';
+import { ProductDetailsDialog } from '@/components/pos/ProductDetailsDialog';
+import { toast } from '@/lib/sonner-bridge';
+import { useLanguage } from '@/hooks/use-language';
+import { getCurrentStoreType, isNoInventoryMode } from '@/lib/store-type-config';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  category?: string;
+  image?: string;
+  imageUrl?: string;
+  description?: string;
+  barcode?: string;
+  barcode2?: string;
+  barcode3?: string;
+  conversionFactor?: number;
+  bulkUnit?: string;
+  smallUnit?: string;
+  costPrice?: number;
+  bulkCostPrice?: number;
+  bulkSalePrice?: number;
+  wholesalePrice?: number;
+  location?: string;
+  supplier?: string;
+  warranty?: string;
+  minStockLevel?: number;
+  archived?: boolean;
+}
+
+interface ProductGridProps {
+  products: Product[];
+  categories: string[];
+  searchQuery: string;
+  selectedCategory: string;
+  onSearchChange: (query: string) => void;
+  onCategoryChange: (category: string) => void;
+  onProductClick: (product: Product, quantity?: number) => void;
+  onAddToCart?: (product: Product, quantity: number) => void;
+  onBarcodeScan?: (barcode: string) => void;
+  selectedCurrency?: { code: string; symbol: string; rate: number };
+}
+
+type ViewMode = 'grid' | 'dense' | 'list' | 'compact';
+
+export const ProductGrid = memo(function ProductGrid({
+  products,
+  categories,
+  searchQuery,
+  selectedCategory,
+  onSearchChange,
+  onCategoryChange,
+  onProductClick,
+  onAddToCart,
+  onBarcodeScan,
+  selectedCurrency,
+}: ProductGridProps) {
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { t, tDynamic } = useLanguage();
+  const isRestaurant = getCurrentStoreType() === 'restaurant';
+
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    return (localStorage.getItem('pos_view_mode') as ViewMode) || 'grid';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pos_view_mode', viewMode);
+  }, [viewMode]);
+
+  // تنسيق السعر بالعملة المختارة ومعدل الصرف
+  const formatDisplayPrice = (usdPrice: number) => {
+    const code = selectedCurrency?.code || 'USD';
+    const rate = selectedCurrency?.rate || 1;
+    const symbol = selectedCurrency?.symbol || '$';
+    const converted = roundForCurr(fromUsd(usdPrice, code, rate), code);
+    const decimals = (rate >= 100) ? 0 : 2;
+
+    return { symbol, amount: formatNumber(converted, decimals) };
+  };
+
+  const renderDisplayPrice = (usdPrice: number, sizeClassName: string) => {
+    const { symbol, amount } = formatDisplayPrice(usdPrice);
+
+    return (
+      <span
+        className={cn('inline-flex max-w-full min-w-0 items-center gap-1 whitespace-nowrap text-start tabular-nums', sizeClassName)}
+        dir="ltr"
+        title={`${symbol} ${amount}`}
+      >
+        <span className="shrink-0 text-[0.75em] font-semibold text-muted-foreground">{symbol}</span>
+        <span aria-hidden="true" className="h-3 w-px shrink-0 bg-muted-foreground/50" />
+        <span className="shrink-0 whitespace-nowrap font-black text-primary">{amount}</span>
+      </span>
+    );
+  };
+
+  const cycleViewMode = () => {
+    setViewMode((prev) => {
+      if (prev === 'grid') return 'dense';
+      if (prev === 'dense') return 'list';
+      if (prev === 'list') return 'compact';
+      return 'grid';
+    });
+  };
+
+  // ✅ استعادة الباركود المعلق — يتم التعامل معها في POS.tsx الآن
+  // ProductGrid لم يعد يعالج PENDING_BARCODE_KEY مباشرة لتجنب التكرار
+
+  const noInventory = isNoInventoryMode();
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      if (product.archived) return false;
+      if (!noInventory && product.quantity <= 0) return false;
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.barcode && product.barcode.includes(searchQuery));
+      const matchesCategory = selectedCategory === t('common.all') || product.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, noInventory, searchQuery, selectedCategory, t]);
+
+  const INITIAL_BATCH_SIZE = 48;
+  const BATCH_INCREMENT = 48;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH_SIZE);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_BATCH_SIZE);
+  }, [searchQuery, selectedCategory, products.length]);
+
+  const visibleProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
+
+  useEffect(() => {
+    if (visibleCount >= filteredProducts.length) return;
+    const target = loadMoreRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + BATCH_INCREMENT, filteredProducts.length));
+        }
+      },
+      { rootMargin: '250px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [visibleCount, filteredProducts.length]);
+
+  const handleBarcodeScan = (barcode: string) => {
+    // ✅ Don't call setScannerOpen(false) here — onClose callback handles it
+    onSearchChange(barcode);
+    onBarcodeScan?.(barcode);
+    try { localStorage.removeItem('hyperpos_pending_scan'); } catch {}
+  };
+
+  const touchMovedRef = useRef(false);
+  const longPressTriggeredRef = useRef(false);
+
+  const handleLongPressStart = (product: Product) => {
+    touchMovedRef.current = false;
+    longPressTriggeredRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      if (!touchMovedRef.current) {
+        longPressTriggeredRef.current = true;
+        setSelectedProduct(product);
+        setDetailsDialogOpen(true);
+        if (navigator.vibrate) navigator.vibrate(50);
+      }
+    }, 500);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    touchMovedRef.current = true;
+    handleLongPressEnd();
+  };
+
+  const handleProductClick = (product: Product) => {
+    handleLongPressEnd();
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+    onProductClick(product);
+  };
+
+  const pressHandlers = (product: Product) => ({
+    onClick: () => handleProductClick(product),
+    onTouchStart: () => handleLongPressStart(product),
+    onTouchEnd: handleLongPressEnd,
+    onTouchCancel: handleLongPressEnd,
+    onTouchMove: handleTouchMove,
+    onMouseDown: () => handleLongPressStart(product),
+    onMouseUp: handleLongPressEnd,
+    onMouseLeave: handleLongPressEnd,
+  });
+
+  return (
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-muted/20">
+      {/* Modern Apple-like Header Area */}
+      <div data-tour="search-bar" className="px-3 py-3 md:px-5 md:py-5 flex flex-col gap-3 md:gap-4 bg-transparent shrink-0">
+        <div className="flex gap-2.5 items-center">
+          <div className="flex-1 relative flex items-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] rounded-full">
+            <Search className="absolute rtl:right-4 ltr:left-4 w-5 h-5 text-muted-foreground/50 pointer-events-none" />
+            <Input
+              type="text"
+              placeholder={tDynamic('productSearch')}
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const trimmed = searchQuery.trim();
+                  if (trimmed) {
+                    const match = products.find(p => p.barcode === trimmed || p.barcode2 === trimmed || p.barcode3 === trimmed);
+                    if (match) onProductClick(match);
+                  }
+                }
+              }}
+              className="rtl:pr-12 ltr:pl-12 h-12 md:h-14 rounded-full bg-card border border-border/50 text-sm md:text-base shadow-none w-full focus-visible:ring-2 focus-visible:ring-primary/30 transition-[box-shadow,border-color] font-medium"
+            />
+          </div>
+
+          {!isRestaurant && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-primary hover:bg-primary/5 active:scale-95 transition-[transform,colors]"
+              onClick={() => setScannerOpen(true)}
+            >
+              <Barcode className="w-5 h-5 md:w-6 md:h-6" />
+            </Button>
+          )}
+
+          {/* Mobile View Toggle */}
+          <button
+            type="button"
+            onClick={cycleViewMode}
+            className="flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-foreground hover:bg-accent/10 active:scale-95 transition-[transform,colors]"
+          >
+            {viewMode === 'grid' && <LayoutGrid className="w-5 h-5" />}
+            {viewMode === 'dense' && <Grid3x3 className="w-5 h-5" />}
+            {viewMode === 'list' && <List className="w-5 h-5" />}
+            {viewMode === 'compact' && <AlignJustify className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Categories Horizontal Scroll */}
+        <div data-tour="categories" className="flex gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [touch-action:pan-x] pb-1">
+          {categories.map((category, index) => (
+            <button
+              key={category + index}
+              onClick={() => onCategoryChange(category)}
+              className={cn(
+                "category-pill px-4 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-[transform,colors,box-shadow] duration-200 flex-shrink-0 active:scale-95",
+                selectedCategory === category
+                  ? "active bg-primary text-primary-foreground shadow-md scale-105 ring-2 ring-primary/20"
+                  : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted/80 shadow-sm border border-border/60"
+              )}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid Content */}
+      <div className="flex-1 p-3 pt-0 md:p-5 overflow-y-auto pb-32">
+        {viewMode === 'grid' && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3">
+            {visibleProducts.map((product, index) => (
+              <button
+                key={product.id}
+                {...pressHandlers(product)}
+                className="pos-item text-start fade-in group bg-card hover:bg-card/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,background-color] duration-200 border border-border/60 flex flex-col"
+                style={{ animationDelay: `${index * 20}ms` }}
+              >
+                <div className="w-full aspect-square bg-muted/20 relative overflow-hidden shrink-0 flex items-center justify-center">
+                  <ProductImage
+                    imageUrl={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
+                    iconClassName="w-7 h-7 text-muted-foreground/30"
+                  />
+                </div>
+
+                {/* جسم البطاقة المستغل للمساحة بالكامل لاسم المنتج والسعر */}
+                <div className="p-2 flex flex-col justify-between flex-1 gap-2 w-full">
+                  <h3 className="font-bold text-foreground text-sm leading-snug w-full text-start break-words line-clamp-2 min-h-[2.5rem]" title={product.name}>
+                    {product.name}
+                  </h3>
+
+                  <div className="w-full pt-1.5 border-t border-border/30 mt-auto flex items-center justify-between gap-1.5">
+                    {renderDisplayPrice(product.price, 'text-sm')}
+                    <span className="inline-flex h-7 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-primary bg-primary px-1.5 text-[0.875rem] font-black leading-none tabular-nums text-primary-foreground shadow-sm">
+                      {product.quantity} <span className="hidden sm:inline ms-0.5">{t('pos.piece') || 'قطعة'}</span>
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Dense View - 3 items side-by-side on mobile, 4-7 on desktop */}
+        {viewMode === 'dense' && (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 sm:gap-2">
+            {visibleProducts.map((product, index) => (
+              <button
+                key={product.id}
+                {...pressHandlers(product)}
+                className="pos-item text-start fade-in group bg-card rounded-xl p-1.5 sm:p-2 shadow-xs hover:shadow-sm border border-border/50 flex flex-col justify-between transition-[box-shadow,border-color] duration-200 active:scale-95 transition-transform"
+                style={{ animationDelay: `${index * 15}ms` }}
+              >
+                {/* صورة المنتج بنسبة 4:3 مع شارة كمية عائمة في الزاوية العلوية */}
+                <div className="w-full aspect-[4/3] bg-muted/20 rounded-lg overflow-hidden mb-1 sm:mb-1.5 relative flex items-center justify-center shrink-0">
+                  <ProductImage
+                    imageUrl={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                    iconClassName="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/30"
+                  />
+                  {/* شارة الكمية العائمة - تحرر 100% من عرض السعر السفلي */}
+                  <span className="absolute top-1 end-1 z-10 inline-flex h-4 min-w-[1.25rem] px-1 items-center justify-center rounded-md bg-background/90 dark:bg-card/90 backdrop-blur-xs border border-border/60 text-[9px] font-black leading-none tabular-nums text-foreground shadow-xs">
+                    {product.quantity}
+                  </span>
+                </div>
+
+                {/* جسم البطاقة: سطرين للاسم وقاعدة مخصصة بالكامل للسعر */}
+                <div className="flex flex-col justify-between flex-1 w-full gap-1">
+                  <h4 className="font-bold text-[10px] sm:text-[11px] text-foreground leading-tight line-clamp-2 min-h-[1.75rem] w-full text-start break-words" title={product.name}>
+                    {product.name}
+                  </h4>
+                  <div className="w-full pt-1 border-t border-border/30 mt-auto flex items-center justify-start">
+                    {renderDisplayPrice(product.price, 'text-[11px] sm:text-xs font-black')}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* List View */}
+        {viewMode === 'list' && (
+          <div className="flex flex-col gap-3">
+            {visibleProducts.map((product, index) => (
+              <button
+                key={product.id}
+                {...pressHandlers(product)}
+                className="pos-item text-start fade-in group flex items-center bg-card rounded-[20px] p-2 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200 border border-border/50"
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-muted/40 flex-shrink-0 overflow-hidden relative">
+                  <ProductImage
+                    imageUrl={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                  />
+                </div>
+                <div className="flex-1 min-w-0 px-4">
+                  <h3 className="font-bold text-sm md:text-base text-foreground line-clamp-1 mb-1 truncate" title={product.name}>{product.name}</h3>
+                  <div className="text-muted-foreground text-xs font-medium mb-1">
+                    <DualUnitDisplayCompact
+                      totalPieces={product.quantity}
+                      conversionFactor={product.conversionFactor || 1}
+                      bulkUnit={product.bulkUnit}
+                      smallUnit={product.smallUnit}
+                    />
+                  </div>
+                  {renderDisplayPrice(product.price, 'text-sm md:text-base')}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Compact View */}
+        {viewMode === 'compact' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            {visibleProducts.map((product, index) => (
+              <button
+                key={product.id}
+                {...pressHandlers(product)}
+                className="pos-item text-start fade-in group flex items-center justify-between bg-card rounded-xl p-3 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 border border-border/50"
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                <div className="flex-1 min-w-0 pe-2 overflow-hidden text-start">
+                  <h3 className="font-bold text-xs text-foreground truncate" title={product.name}>{product.name}</h3>
+                  {renderDisplayPrice(product.price, 'text-xs mt-0.5')}
+                </div>
+                <div className="text-[10px] bg-muted/50 rounded-lg px-2 py-1 shrink-0 font-medium">
+                  <DualUnitDisplayCompact
+                    totalPieces={product.quantity}
+                    conversionFactor={product.conversionFactor || 1}
+                    bulkUnit={product.bulkUnit}
+                    smallUnit={product.smallUnit}
+                  />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {visibleCount < filteredProducts.length && (
+          <div ref={loadMoreRef} className="h-8 w-full flex items-center justify-center py-2 text-muted-foreground/40 text-xs font-mono">
+            ...
+          </div>
+        )}
+
+        {filteredProducts.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground fade-in">
+            <Package className="w-12 h-12 mb-3 opacity-20" />
+            <p className="font-medium text-sm">{t('common.all')}</p>
+          </div>
+        )}
+      </div>
+
+      
+      {scannerOpen && (
+        <BarcodeScanner
+          isOpen={scannerOpen}
+          onScan={handleBarcodeScan}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
+      
+      {selectedProduct && (
+        <ProductDetailsDialog
+          product={selectedProduct}
+          isOpen={detailsDialogOpen}
+          onClose={() => {
+            setDetailsDialogOpen(false);
+            setSelectedProduct(null);
+          }}
+          onAddToCart={(product, qty) => {
+            if (onAddToCart) {
+              onAddToCart(product, qty);
+            } else {
+              onProductClick(product, qty);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
 });

@@ -17,6 +17,7 @@ import { updateInvoiceCloud } from './invoices-cloud';
 import { supabase } from '@/integrations/supabase/client';
 import { addToQueue } from '../sync-queue';
 import { round8 } from '../utils';
+import { toLocalDateString, getLocalDayUtcRange } from '../date-utils';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -728,11 +729,11 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
   let total = 0;
   let foundInCloud = false;
 
+  const { startIso, endIso } = getLocalDayUtcRange(dateStr);
+
   // 1. Try Supabase debt_payments table
   if (navigator.onLine) {
     try {
-      const startIso = `${dateStr}T00:00:00.000Z`;
-      const endIso = `${dateStr}T23:59:59.999Z`;
       const { data, error } = await sb
         .from('debt_payments')
         .select('amount, created_at')
@@ -751,8 +752,6 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
   // 2. Fallback: shift_transactions with type === 'debt_payment'
   if (!foundInCloud && navigator.onLine) {
     try {
-      const startIso = `${dateStr}T00:00:00.000Z`;
-      const endIso = `${dateStr}T23:59:59.999Z`;
       const { data: shiftTx, error } = await sb
         .from('shift_transactions')
         .select('amount, created_at')
@@ -772,7 +771,7 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
     const logs = getActivityLogs();
     const dayLogs = logs.filter(l => 
       (l.type === 'debt_payment' || l.type === 'debt_paid') &&
-      (l.timestamp?.startsWith(dateStr) || l.timestamp?.split('T')[0] === dateStr)
+      toLocalDateString(l.timestamp) === dateStr
     );
     if (dayLogs.length > 0) {
       const localTotal = dayLogs.reduce((s, l) => s + Number((l.details as any)?.amount || 0), 0);

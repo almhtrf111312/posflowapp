@@ -83,15 +83,18 @@ jobs:
 
       - name: Setup release signing key
         shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+          if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Decoding release keystore from secrets.ANDROID_KEYSTORE_BASE64..."
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/flowpos-release.keystore
+            # تنظيف الترويسات ومسافات وفواصل أسطر ويندوز
+            CLEAN_B64=$(echo "$KEYSTORE_BASE64" | sed '/^-----/d' | tr -d '\r\n[:space:]')
+            echo "$CLEAN_B64" | base64 -d > android/app/flowpos-release.keystore 2>/dev/null || echo "$CLEAN_B64" | base64 -di > android/app/flowpos-release.keystore
           fi
-
-          KEYSTORE_PASS="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
-          KEY_PASS="${{ secrets.ANDROID_KEY_PASSWORD }}"
-          KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}"
 
           if [ -f "android/app/flowpos-release.keystore" ]; then
             if [ -n "$KEYSTORE_PASS" ] && keytool -list -keystore android/app/flowpos-release.keystore -storepass "$KEYSTORE_PASS" >/dev/null 2>&1; then
@@ -101,7 +104,7 @@ jobs:
               exit 1
             fi
           else
-            echo "::error::Release keystore file is missing. Aborting."
+            echo "::error::Release keystore file is missing or failed to decode. Aborting."
             exit 1
           fi
 

@@ -31,29 +31,28 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
-      # تسريع السحب: جلب أحدث Commit فقط لتقليل وقت التنزيل
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
           clean: true
 
       - name: Setup Java (Temurin JDK 21)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
           cache: 'npm'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: false
 
@@ -67,9 +66,8 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "Building FlowPOS Pro: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # استخدام npm install مع الكاش لتفادي تحميل الحزم من الصفر
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --prefer-offline --no-audit
+        run: npm ci --prefer-offline --no-audit
 
       - name: Build embedded web application
         env:
@@ -156,15 +154,16 @@ jobs:
           echo "FINAL_APK_PATH=$RELEASE_DIR/$FINAL_APK" >> "$GITHUB_ENV"
           ls -lh "$RELEASE_DIR/$FINAL_APK"
 
-      # رفع الـ APK مع حفظه لـ 90 يوماً وتجاوز فخ الـ 5 أيام
+      # رفع الحزمة وحفظها لمدة 90 يوماً
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FlowPOS-v${{ env.VERSION_NAME }}
           path: ${{ env.FINAL_APK_PATH }}
           retention-days: 90
+          compression-level: 0
 
-      # الاحتفاظ بآخر 30 نسخة تلقائياً ومسح ما زاد عنها فقط
+      # حماية الـ 30 نسخة تلقائياً ومسح ما زاد عنها فقط
       - name: Keep Latest 30 Artifacts (Prune Older)
         shell: bash
         env:
@@ -207,13 +206,13 @@ jobs:
                 } catch (e) {}
               }
             } else {
-              console.log(`✅ Artifacts count (${artifacts.length}) is within the safe limit (${KEEP_LIMIT}). Nothing pruned.`);
+              console.log(`✅ Artifacts count (${artifacts.length}) is within safe limit (${KEEP_LIMIT}). Nothing pruned.`);
             }
           }
           pruneArtifacts().catch(console.error);
           '
 
-      # مزامنة رقم الإصدار الجديد مع السحابة مباشرة ليعرف التطبيق الترقية فوراً
+      # مزامنة رقم الإصدار الجديد مع السحابة فوراً
       - name: Sync release metadata to cloud
         shell: bash
         env:
@@ -240,7 +239,7 @@ jobs:
               --data @sync-payload.json || true
           fi
 
-      # نشر اختياري للتيليجرام إذا طُلب أثناء تشغيل البناء
+      # نشر اختياري للتيليجرام إذا حُدد أثناء تشغيل البناء يدوياً
       - name: Publish exact APK to Telegram (If Requested)
         if: ${{ inputs.publish_telegram == true }}
         shell: bash

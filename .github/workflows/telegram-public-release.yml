@@ -30,18 +30,18 @@ permissions:
 jobs:
   release:
     if: github.event_name == 'workflow_dispatch' && (inputs.confirm_publish == 'true' || inputs.confirm_publish == true)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
           ref: ${{ inputs.source_branch }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
 
       - name: Read application version
         shell: bash
@@ -52,7 +52,7 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # سحب أحدث APK من النسخ الـ 30 المحفوظة فوراً خلال 5 ثوانٍ
+      # سحب فوري لأحدث APK جاهز من النسخ الـ 30 المحفوظة (خلال 5 ثوانٍ فقط بدون إعادة بناء)
       - name: Grab Ready APK Instantly (Skip Build - 5 Seconds)
         shell: bash
         env:
@@ -74,7 +74,6 @@ jobs:
             if (!listRes.ok) throw new Error("Failed to list artifacts: " + listRes.statusText);
             const list = await listRes.json();
             
-            // العثور على أحدث حزمة FlowPOS APK
             const apkArtifact = list.artifacts.find(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name));
             if (!apkArtifact) {
               throw new Error("لم يتم العثور على ملف APK جاهز مسبقاً! يرجى تشغيل بناء APK مرة واحدة أولاً.");
@@ -108,7 +107,7 @@ jobs:
           });
           '
 
-      # إرسال الملف فوراً إلى تيليجرام
+      # إرسال الملف فوراً لقناة تيليجرام
       - name: Dispatch APK to Telegram Channel
         shell: bash
         env:

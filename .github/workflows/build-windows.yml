@@ -21,25 +21,25 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.confirm_build == true
     runs-on: windows-latest
     env:
-      ELECTRON_VER: '32.2.5'
-      BUILDER_VER: '25.1.8'
+      ELECTRON_VER: '45.2.3'
+      BUILDER_VER: '26.18.0'
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
           clean: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
           cache: 'npm'
 
       - name: Cache Electron binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/AppData/Local/electron/Cache
@@ -61,7 +61,7 @@ jobs:
           echo "Unified Version: v$VERSION_NAME (SemVer: $SEMVER_VERSION, Build $VERSION_CODE)"
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund --prefer-offline
+        run: npm ci --prefer-offline --no-audit
 
       - name: Install Electron dependencies
         run: npm install --save-dev electron@${{ env.ELECTRON_VER }} electron-builder@${{ env.BUILDER_VER }} --legacy-peer-deps --no-audit --no-fund
@@ -136,8 +136,9 @@ jobs:
           npx electron-builder --win --config electron-builder.json --publish never
 
       - name: Upload Windows Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: FlowPOS-Pro-Windows-v${{ env.VERSION_NAME }}
           path: electron-dist/*.exe
           retention-days: 90
+          compression-level: 0

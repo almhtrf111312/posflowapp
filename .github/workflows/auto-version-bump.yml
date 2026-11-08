@@ -1,0 +1,68 @@
+name: Auto Version Bump
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/build-windows.yml'
+      - '.github/workflows/sync-version-to-cloud.yml'
+
+concurrency:
+  group: auto-version-bump-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    # حماية من الحلقات اللانهائية: لا يُشغل إذا كان الـ commit صادراً عن البوت
+    if: "!contains(github.event.head_commit.author.name, 'github-actions') && !contains(github.event.head_commit.message, 'chore(release)')"
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 2
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js 26
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      - name: Check if version.json was already modified manually
+        id: check_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --name-only HEAD~1 HEAD | grep -qx 'version.json'; then
+            echo "already_bumped=true" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ version.json already modified in this commit. Skipping auto-bump."
+          else
+            echo "already_bumped=false" >> "$GITHUB_OUTPUT"
+            echo "🚀 App changes detected. Proceeding with auto-bump..."
+          fi
+
+      - name: Run version bump script (Patch + Build)
+        if: steps.check_version.outputs.already_bumped == 'false'
+        shell: bash
+        run: |
+          node scripts/bump-version.js --desc "Auto-bump on push (${GITHUB_SHA:0:7})"
+
+      - name: Commit and push bumped version
+        if: steps.check_version.outputs.already_bumped == 'false'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json public/version.json package.json package-lock.json
+          if ! git diff --cached --quiet; then
+            NEW_VER=$(node -p "require('./version.json').versionName")
+            NEW_CODE=$(node -p "require('./version.json').versionCode")
+            git commit -m "chore(release): bump version to v${NEW_VER} (Build ${NEW_CODE})"
+            git push origin HEAD:main
+          fi

@@ -261,15 +261,23 @@ jobs:
           generate_release_notes: true
 
       # نشر اختياري للتيليجرام عند تشغيل البناء يدوياً مع publish_telegram=true
-      # يستخدم نفس السكربت المشترك مع telegram-public-release.yml، ويرسل الـ APK الذي بُني للتو بالضبط.
-      # continue-on-error: فشل تيليجرام لا يُسقط البناء ولا يمنع مزامنة النسخة مع السحابة، لكن الخطأ يظهر بوضوح في السجل.
+      # يشغّل ورك فلو telegram-public-release.yml (مصدر واحد للمنطق). الـ APK الذي رُفع للتو باسم
+      # FlowPOS-v<الإصدار> هو الذي سيُختار لأن الورك فلو يفضّل artifact بنفس رقم الإصدار.
+      # continue-on-error: فشل التشغيل لا يُسقط البناء ولا يمنع مزامنة السحابة.
       - name: Publish exact APK to Telegram (If Requested)
         if: ${{ inputs.publish_telegram == true }}
         continue-on-error: true
         shell: bash
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          APK_PATH: ${{ env.FINAL_APK_PATH }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
           CUSTOM_NOTES: ${{ inputs.custom_notes }}
-        run: node scripts/telegram-send-apk.cjs
+        run: |
+          gh workflow run telegram-public-release.yml \
+            --repo "$REPO" \
+            --ref "$REF_NAME" \
+            -f source_branch="$REF_NAME" \
+            -f confirm_publish=true \
+            -f custom_notes="$CUSTOM_NOTES"
+          echo "✅ تم تشغيل «Telegram public release» — تابع نتيجته في تبويب Actions."

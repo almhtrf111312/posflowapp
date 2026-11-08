@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
 **Last Updated:** 2026-11-08
-**Current Version:** `v1.5.73 (Build 461)`
+**Current Version:** `v1.5.74 (Build 462)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -388,6 +388,13 @@
   * **Two-Step Sign-Out Double Confirmation (`AppLockOverlay.tsx`):** Replaced the single emergency sign-out modal with a strict 2-step confirmation sequence (Step 1: Intent confirmation -> Step 2: Critical in-memory cart purge warning) before calling `signOut()`, eliminating accidental cashier shift cancellations.
   * **Keypad Button Dimension Invariance (`AppLockOverlay.tsx`):** Preserved exact keypad button dimensions (h-14, rounded-2xl) for the biometric and utility triggers, preventing touch layout distortion.
   * **Capacitor & Android Synchronization:** Built production assets (`npm run build`) and executed `npx cap sync android` with 10 native plugins verified.
+
+* **2026-11-08 (Build 462 - Touch Responsiveness, Inline Modal & Mandatory PIN Re-setup on Recovery):**
+  * **Touch Responsiveness Fixed (`AppLockOverlay.tsx`):** Replaced `touch-none` with `select-none touch-manipulation` to restore full touch gesture and click compatibility on Android WebView / APK.
+  * **Radix Portal Violation Eliminated (`AppLockOverlay.tsx`):** Removed `<AlertDialog>` (Radix Portal rendering at z-50 under the z-[9999] overlay) and replaced it with a dedicated high-priority Inline Div Modal (`z-[10000]`), guaranteeing immediate touch responsiveness and zero z-index conflicts.
+  * **Emergency Recovery Tagging (`AppLockOverlay.tsx` & `use-auth.tsx`):** When "نسيت الرمز" double-confirmation confirms sign out, marks `flowpos_pin_reset_required_${userId} = true`, whitelisted in `clearAllUserSessionCaches` to survive logout.
+  * **Automated PIN Invalidation & Cloud RPC (`use-app-lock.tsx` & Supabase Migration):** On master credentials login with the reset flag, automatically purges local credentials, invokes `clear_user_pin` RPC, and sets `requiresPinSetup = true`.
+  * **Mandatory Post-Login PIN Setup (`MandatoryPinSetupModal.tsx` & `App.tsx`):** Created `MandatoryPinSetupModal` locking down the app layout via `inert` until the user defines and confirms a new 4-8 digit PIN, automatically restoring terminal security.
 
 ## ⚠️ Known Technical Debt & Edge Cases
 1. **Large Bundle Size:** Main chunk exceeds 800KB gzipped. Dynamic code-splitting on heavy reports (`Reports.tsx`, `BossPanel.tsx`) is advised for future performance optimization.

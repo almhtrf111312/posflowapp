@@ -236,7 +236,8 @@ const clearAllUserSessionCaches = async () => {
           key !== 'hyperpos_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند الخروج
           key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
           key !== 'flowpos_persistent_hardware_id' && // 👈 حماية البصمة الاحتياطية الدائمة
-          !key.startsWith('flowpos_app_lock_') // 👈 حماية إعدادات وهاش قفل الأمان من المسح عند الخروج
+          !key.startsWith('flowpos_app_lock_') && // 👈 حماية إعدادات وهاش قفل الأمان من المسح عند الخروج
+          !key.startsWith('flowpos_pin_reset_required_') // 👈 حماية راية إلزام تعيين الـ PIN بعد نسيانه
         ) {
           keysToRemove.push(key);
         }

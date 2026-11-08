@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { useAuth } from './use-auth';
 import { useAppLifecycle } from './use-app-lifecycle';
 import { isBiometricSupported, registerBiometricCredential, authenticateBiometric } from '@/lib/biometric-auth';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface AppLockConfig {
   enabled: boolean;
@@ -18,6 +19,8 @@ export interface AppLockContextType {
   isLockedOut: boolean;
   isBiometricAvailable: boolean;
   isBiometricEnabled: boolean;
+  requiresPinSetup: boolean;
+  completePinSetup: (newPin: string) => Promise<boolean>;
   lockApp: () => void;
   unlockApp: (pin: string) => Promise<boolean>;
   unlockWithBiometrics: () => Promise<boolean>;
@@ -88,6 +91,12 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     return val ? parseInt(val, 10) : 4;
   });
 
+  // راية إلزام تعيين PIN جديد بعد نسيانه وتسجيل الدخول بكلمة المرور الماستر
+  const [requiresPinSetup, setRequiresPinSetup] = useState<boolean>(() => {
+    if (!userId) return false;
+    return localStorage.getItem(`flowpos_pin_reset_required_${userId}`) === 'true';
+  });
+
   // دعم وأجهزة البصمة المتاحة
   const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean>(false);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState<boolean>(() => {
@@ -130,8 +139,40 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       setIsLocked(false);
       setIsLockEnabled(false);
       setIsBiometricEnabled(false);
+      setRequiresPinSetup(false);
       return;
     }
+
+    const resetRequired = localStorage.getItem(`flowpos_pin_reset_required_${userId}`) === 'true';
+    if (resetRequired) {
+      // 🔒 مسح الرمز المنسي محلياً فوراً لمنع فتح التطبيق مكشوفاً
+      localStorage.removeItem(`flowpos_app_lock_${userId}_enabled`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_hash`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_salt`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_length`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_enabled`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
+      sessionStorage.removeItem(`flowpos_app_lock_${userId}_session_unlocked`);
+
+      setIsLockEnabled(false);
+      setIsLocked(false);
+      setIsBiometricEnabled(false);
+      setRequiresPinSetup(true);
+
+      // تصفير الهاش السحابي عبر RPC
+      void (supabase.rpc as any)('clear_user_pin', { _target_user_id: userId })
+        .then(() => {
+          console.log('[AppLock] Cloud PIN cleared successfully via RPC.');
+        })
+        .catch((err: any) => {
+          console.warn('[AppLock] clear_user_pin RPC call notice:', err?.message || err);
+        });
+
+      return;
+    }
+
+    setRequiresPinSetup(false);
 
     const enabled = localStorage.getItem(`flowpos_app_lock_${userId}_enabled`) === 'true';
     const hasHash = !!localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
@@ -351,6 +392,43 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     setPinLength(cleanPin.length);
   }, [userId]);
 
+  // إكمال تعيين الرمز الإجباري وتأمين نقطة البيع
+  const completePinSetup = useCallback(
+    async (newPin: string): Promise<boolean> => {
+      if (!userId) return false;
+
+      const cleanPin = newPin.trim();
+      if (cleanPin.length < 4 || cleanPin.length > 8) {
+        return false;
+      }
+
+      try {
+        // 1. تحديث الرمز محلياً وتفعيل القفل فوراً
+        await updatePin(cleanPin);
+
+        // 2. تحديث الرمز سحابياً لملف المستخدم
+        try {
+          await (supabase.rpc as any)('set_user_pin', {
+            _target_user_id: userId,
+            _raw_pin: cleanPin,
+          });
+        } catch (err: any) {
+          console.warn('[AppLock] Cloud set_user_pin notice:', err?.message || err);
+        }
+
+        // 3. مسح راية طلب إعادة التعيين وتفعيل الجلسة
+        localStorage.removeItem(`flowpos_pin_reset_required_${userId}`);
+        sessionStorage.setItem(`flowpos_app_lock_${userId}_session_unlocked`, 'true');
+        setRequiresPinSetup(false);
+        return true;
+      } catch (err) {
+        console.error('[AppLock] Error completing PIN setup:', err);
+        return false;
+      }
+    },
+    [userId, updatePin]
+  );
+
   const isLockedOut = lockoutRemainingSeconds > 0;
 
   return (
@@ -365,6 +443,8 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
         isLockedOut,
         isBiometricAvailable,
         isBiometricEnabled,
+        requiresPinSetup,
+        completePinSetup,
         lockApp,
         unlockApp,
         unlockWithBiometrics,

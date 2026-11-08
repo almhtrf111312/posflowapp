@@ -16,16 +16,7 @@ import {
   Fingerprint,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+
 
 export function AppLockOverlay() {
   const {
@@ -206,7 +197,7 @@ export function AppLockOverlay() {
       aria-labelledby="app-lock-title"
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-between p-6 bg-background/95 backdrop-blur-md select-none touch-none animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-between p-6 bg-background/95 backdrop-blur-md select-none touch-manipulation animate-in fade-in duration-200"
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
       <style>{`
@@ -379,68 +370,60 @@ export function AppLockOverlay() {
         </Button>
       </div>
 
-      {/* حوار تأكيد الخروج الثنائي (Double Confirmation) لحماية الفواتير المفتوحة */}
-      <AlertDialog open={exitConfirmStep > 0} onOpenChange={(open) => { if (!open) setExitConfirmStep(0); }}>
-        <AlertDialogContent className="rounded-2xl max-w-sm" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
-          {exitConfirmStep === 1 ? (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2 text-amber-500">
-                  <AlertTriangle className="w-5 h-5 shrink-0" />
-                  <span>{isRTL ? 'تأكيد تسجيل الخروج (خطوة 1 من 2)' : 'Confirm Sign Out (Step 1 of 2)'}</span>
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed mt-2">
-                  {isRTL
-                    ? 'هل ترغب حقاً في تسجيل الخروج والتبديل إلى حساب آخر؟ لن تتمكن من الدخول مجدداً إلا باستخدام البريد الإلكتروني وكلمة المرور الرئيسية.'
-                    : 'Do you really want to sign out and switch accounts? You will need your master email and password to log back in.'}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
-                <AlertDialogCancel onClick={() => setExitConfirmStep(0)} className="rounded-xl text-xs">
-                  {isRTL ? 'إلغاء والعودة للقفل' : 'Cancel'}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={(e) => {
-                    e.preventDefault();
+      {/* حوار تأكيد الخروج الداخلي (Inline Div Overlay - بدون Portals لضمان الاستجابة اللمسية في WebView) */}
+      {exitConfirmStep > 0 && (
+        <div className="fixed inset-0 z-[10000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card border border-border/60 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+            <div className="flex items-center gap-2.5 text-amber-500 font-bold text-sm">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <span>
+                {exitConfirmStep === 1
+                  ? (isRTL ? 'تأكيد تسجيل الخروج (خطوة 1 من 2)' : 'Confirm Sign Out (Step 1 of 2)')
+                  : (isRTL ? 'تحذير نهائي وتأكيد جازم' : 'Final Warning')}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {exitConfirmStep === 1 
+                ? (isRTL
+                    ? 'هل نسيت الرمز وتريد تسجيل الخروج؟ ستحتاج إلى البريد الإلكتروني وكلمة المرور الرئيسية لإعادة الدخول.'
+                    : 'Forgot PIN? You will need your master password to sign back in.')
+                : (isRTL
+                    ? 'سيتم مسح الرمز المنسي ونقلك لتسجيل الدخول بكلمة المرور الماستر، ثم مطالبتك بتعيين رمز جديد.'
+                    : 'The forgotten PIN will be cleared and you will set a new one after master login.')}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setExitConfirmStep(0)}
+                className="rounded-xl text-xs"
+              >
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className={exitConfirmStep === 1 ? "bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs" : "bg-destructive hover:bg-destructive/90 text-white rounded-xl text-xs font-bold"}
+                onClick={async () => {
+                  if (exitConfirmStep === 1) {
                     setExitConfirmStep(2);
-                  }}
-                  className="rounded-xl text-xs bg-amber-600 text-white hover:bg-amber-700"
-                >
-                  {isRTL ? 'نعم، متابعة للخطوة التالية' : 'Proceed to Step 2'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          ) : (
-            <>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                  <LogOut className="w-5 h-5 shrink-0" />
-                  <span>{isRTL ? 'تحذير نهائي وتأكيد جازم (خطوة 2 من 2)' : 'Final Warning (Step 2 of 2)'}</span>
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed mt-2 font-medium">
-                  {isRTL
-                    ? '⚠️ تنبيه حاسم: سيتم تفريغ أي سلة مبيعات مفتوحة في الذاكرة بالكامل، وإلغاء جلسة الكاشير الحالية، والرجوع لشاشة الدخول الرئيسية. هل أنت متأكد تماماً من الخروج الآن؟'
-                    : '⚠️ Critical Warning: Any open in-memory cart will be permanently discarded, current cashier session terminated, and you will return to login. Are you completely sure?'}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
-                <AlertDialogCancel onClick={() => setExitConfirmStep(0)} className="rounded-xl text-xs">
-                  {isRTL ? 'تراجع وإلغاء الخروج' : 'Back to Lock'}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
+                  } else {
                     setExitConfirmStep(0);
-                    void signOut();
-                  }}
-                  className="rounded-xl text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
-                >
-                  {isRTL ? 'تأكيد تسجيل الخروج والتبديل الآن' : 'Confirm Sign Out Now'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
+                    // تعليم الجلسة بأن الدخول القادم يتطلب إعادة تعيين الـ PIN
+                    if (user?.id) {
+                      localStorage.setItem(`flowpos_pin_reset_required_${user.id}`, 'true');
+                    }
+                    await signOut();
+                  }
+                }}
+              >
+                {exitConfirmStep === 1 ? (isRTL ? 'متابعة' : 'Next') : (isRTL ? 'تأكيد الخروج الآن' : 'Sign Out Now')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

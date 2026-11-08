@@ -10,6 +10,7 @@ import { NotificationsProvider } from "./hooks/use-notifications";
 import { AuthProvider } from "./hooks/use-auth";
 import { AppLockProvider, useAppLock } from "./hooks/use-app-lock";
 import { AppLockOverlay } from "./components/auth/AppLockOverlay";
+import { MandatoryPinSetupModal } from "./components/auth/MandatoryPinSetupModal";
 import { LanguageProvider } from "./hooks/use-language";
 import { ThemeProvider } from "./hooks/use-theme";
 import { LicenseProvider } from "./hooks/use-license";
@@ -99,7 +100,7 @@ const MainLayoutWithKeepAlive = () => {
 };
 
 const AppContent = () => {
-  const { isLocked } = useAppLock();
+  const { isLocked, requiresPinSetup } = useAppLock();
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
@@ -451,7 +452,8 @@ const PageFallback = () => (
   return (
     <>
       <AppLockOverlay />
-      <div id="app-main-layout" inert={isLocked ? '' : undefined} className="contents">
+      <MandatoryPinSetupModal />
+      <div id="app-main-layout" inert={isLocked || requiresPinSetup ? '' : undefined} className="contents">
         {isDebugClick && <ClickProbe />}
       <ExitConfirmDialog />
       <Suspense fallback={<PageFallback />}>

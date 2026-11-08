@@ -373,3 +373,35 @@ sequenceDiagram
 | حدوث خطأ غير متوقع أثناء التعديل | منخفض | التعديل محصور جراحياً في 5 ملفات مع إمكانية التراجع الفوري عبر Git (`git checkout .`). |
 
 --------------------------------------------------------------------------------
+
+
+## 12. تقرير مطابقة البيئة الحية وحزمة الإصلاحات الجذرية المعتمدة (Live Environment Reconciliation & Root-Cause Remediation)
+
+بناءً على التدقيق الاستقصائي الشامل لقاعدة البيانات الحية وسجلات الأخطاء، تم رصد الأسباب الجذرية الدقيقة لتعثر بعض الإصلاحات السابقة واعتماد الحزمة التصحيحية الشاملة التالية:
+
+### أ. تحليل أسباب فشل تطبيق حزم الهجرة السابقة (Root Cause of Migration Failure)
+*   **خطأ تضارب تواقيع الدوال (`ERROR 42P13: cannot change return type of existing function`)**:
+    *   رفض خادم PostgreSQL تطبيق ملفات الهجرة لتغير نوع الإرجاع (Return Type) للدوال الموجودة دون إسقاطها أولاً.
+    *   **الحل الجذري**: إضافة أوامر صريحة لجميع الدوال المعنية بصيغة:
+        `DROP FUNCTION IF EXISTS public.<fn_name>(<signature>);` بكافة التواقيع التاريخية لضمان قبول وتطبيق الهجرة فوراً وبدون أي أخطاء.
+
+### ب. الإصلاحات الجذرية المنفذة في المراحل الست:
+1.  **المرحلة 1: إيقاف العكس المزدوج لأرباح الشركاء (P0-4 Remediation)**:
+    *   **الملف**: [`src/lib/cloud/invoices-cloud.ts`](file:///src/lib/cloud/invoices-cloud.ts)
+    *   **الإجراء**: إزالة الاستدعاءات المكررة لـ `revertProfitDistributionCloud` داخل دالتي `refundInvoiceCloud` و `refundInvoicePartialCloud`؛ نظراً لأن دوال الخادم الذرية (`refund_invoice_atomic` و `refund_invoice_partial_atomic`) تقوم بالفعل بعكس أرباح الشركاء ذرياً بنسبة 100% داخل المعاملة. استدعاؤها من العميل كان يؤدي لخصم الأرباح مرتين متتاليتين من رصيد الشريك.
+2.  **المرحلة 2: تصحيح استرداد الكرتونة والمخزون في `refund_invoice_atomic` (P1-5 Remediation)**:
+    *   **الملف**: [`supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql`](file:///supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql)
+    *   **الإجراء**: تصحيح استرداد صنف الكرتونة بضرب الكمية المستردة في معامل التحويل `conversion_factor` عندما تكون `unit = 'bulk'`. في السابق كانت تعيد فقط الكمية الاسمية مما يتسبب في فقدان 23 قطعة لكل كرتونة مستردة ذات معامل 24. كما تم تأكيد تنفيذ عكس أرباح الشركاء بنسبة 100% بالسيرفر.
+3.  **المرحلة 3: ضبط نسبة سداد الديون ومنع نزيف الأرباح في `record_debt_payment_atomic` (P0-5 Remediation)**:
+    *   **الملف**: [`supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql`](file:///supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql)
+    *   **الإجراء**: حساب نسبة السداد الفعلي من المتبقي `v_installment_ratio = LEAST(1.0, round(v_amount / v_prev_remaining, 6))`، وحظر قلب `isDebt: false` لكامل سجل الأرباح إلا في حالة السداد التام 100% (`v_new_remaining <= 0`). وفي الدفعات الجزئية يتم تسجيل قيد منفصل لتحرير دفعة الربح (`تحرير دفعة دين`) دون العبث بسجل أصل الفاتورة، مما منع تحول أرصدة الشركاء إلى السالب عند الاسترداد.
+4.  **المرحلة 4: تصحيح استعلام تكلفة البضاعة المباعة في `close_accounting_period_atomic` (P1-25 Remediation)**:
+    *   **الملف**: [`supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql`](file:///supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql)
+    *   **الإجراء**: احتساب تكلفة البضاعة المباعة (COGS) مباشرة بالربط مع `invoice_items` (`SUM(cost_price * quantity)`) بدلاً من محاولة قراءة عمود `total_cost` غير الموجود في جدول `invoices`، مما يمنع انهيار الدالة ويضمن دقة ميزان الإقفال المالي.
+5.  **المرحلة 5: دالة خادم ذرية لحذف/عكس المصروف `delete_expense_atomic` (P1-23 Remediation)**:
+    *   **الملفات**: [`supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql`](file:///supabase/migrations/20261108160000_comprehensive_financial_and_security_remediation.sql) و [`src/lib/cloud/expenses-cloud.ts`](file:///src/lib/cloud/expenses-cloud.ts)
+    *   **الإجراء**: استبدال التعديلات الذاكرية غير الآمنة من المتصفح بدالة خادم مؤمنة بقفل `FOR UPDATE` تقوم بإعادة المبالغ المستقطعة لأرصدة الشركاء وتوسم المصروف بـ `is_reversed = true` دون حذفه تدميرياً مع توفير Fallback آمن وحماية وضع عدم الاتصال (Offline-first).
+6.  **المرحلة 6: تنظيف الديون الوهمية وإعادة احتساب أرصدة العملاء (Data Backfill)**:
+    *   **الإجراء**: إطلاق استعلام تصحيحي يحذف الديون الوهمية الناتجة عن فواتير نقدية (`payment_type = 'cash'`) ويعيد احتساب `customers.total_debt` بناءً على الديون الفعلية غير المسددة فقط.
+
+--------------------------------------------------------------------------------

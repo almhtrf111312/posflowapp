@@ -356,6 +356,18 @@
     2. 6-digit Telegram OTP verification and atomic ownership transfer via Edge Function `telegram-auth` (`request_phone_transfer_otp`) and RPC `complete_phone_transfer` for numbers registered to other accounts.
     * Linked pre-save check directly into `Settings.tsx` (`handleSaveSettings` and `check_store_phone_status`), triggering verification modals before persisting store settings.
 
+* **2026-11-08 (Build 458 - Comprehensive Security & Financial Logic Remediation via EGM):**
+  * **P0-4 Double Profit Reversal Eliminated (`invoices-cloud.ts`):** Removed redundant client-side calls to `revertProfitDistributionCloud` in `refundInvoiceCloud` and `refundInvoicePartialCloud`, since server-side RPCs already execute atomic partner profit reversals.
+  * **P1-23 Atomic Expense Reversal (`expenses-cloud.ts`):** Rewired `deleteExpenseCloud` to execute server-side `delete_expense_atomic` RPC with `FOR UPDATE` locking on partners and soft-delete audit trail (`is_reversed = true`), with full offline-first queue support and fallback.
+  * **PostgreSQL Remediation Bundle (`20261108160000_comprehensive_financial_and_security_remediation.sql`):**
+    * Added comprehensive `DROP FUNCTION IF EXISTS` clauses across all signatures to permanently prevent PostgreSQL `ERROR 42P13`.
+    * **P1-5 Bulk Carton Restoring:** Updated `refund_invoice_atomic` to multiply quantity by `conversion_factor` for `unit = 'bulk'` items.
+    * **P0-5 Proportional Debt Profit Release:** Updated `record_debt_payment_atomic` to prevent flipping `isDebt: false` on partial debt payments and calculate proportional installment release (`installment_ratio`), preventing negative partner balances.
+    * **P1-25 COGS Derivation:** Updated `close_accounting_period_atomic` to derive cost of goods sold directly from `invoice_items` (`cost_price * quantity`) instead of the non-existent `invoices.total_cost` column.
+    * **P1-23 Atomic Expense Deletion:** Created `delete_expense_atomic` to restore partner balances and record soft-reversals atomically.
+    * **Phase 6 Data Backfill:** Automated query to purge 35 phantom debts linked to cash invoices (`payment_type = 'cash'`) and recalculate `customers.total_debt`.
+  * **EGM Architecture Documentation:** Updated `docs/designs/security-and-financial-audit.md` with Section 12 detailing the root-cause reconciliation.
+
 ## ⚠️ Known Technical Debt & Edge Cases
 1. **Large Bundle Size:** Main chunk exceeds 800KB gzipped. Dynamic code-splitting on heavy reports (`Reports.tsx`, `BossPanel.tsx`) is advised for future performance optimization.
 2. **Offline Refund Currency Conversion:** Historical invoices refunded offline must resolve historical exchange rates from invoice snapshots to prevent currency drift.

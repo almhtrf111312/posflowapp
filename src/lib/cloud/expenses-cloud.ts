@@ -415,42 +415,56 @@ export const deleteExpenseCloud = async (id: string, reason: string = 'تراج�
     return true;
   }
 
-  const expenses = await loadExpensesCloud();
-  const expense = expenses.find(e => e.id === id);
-  
-  if (!expense) return false;
-  
-  // Refund partners
-  if (expense.distributions && expense.distributions.length > 0) {
-    const partners = await loadPartnersCloud();
+  let success = false;
+
+  // 🛡️ التنفيذ الذري بالسيرفر عبر دالة delete_expense_atomic (P1-23)
+  try {
+    const { data, error } = await sb.rpc('delete_expense_atomic', {
+      _expense_id: id,
+      _reason: reason,
+    });
+    if (!error && (data as any)?.success) {
+      success = true;
+    } else if (error) {
+      console.warn('[deleteExpenseCloud] RPC failed, falling back:', error.message);
+    }
+  } catch (err) {
+    console.error('[deleteExpenseCloud] RPC exception:', err);
+  }
+
+  // آلية احتياطية (Fallback) في حال عدم توفر الدالة بعد على قاعدة البيانات
+  if (!success) {
+    const expenses = await loadExpensesCloud();
+    const expense = expenses.find(e => e.id === id);
     
-    for (const dist of expense.distributions) {
-      const partner = partners.find(p => p.id === dist.partnerId);
-      if (partner) {
-        await updatePartnerCloud(partner.id, {
-          currentBalance: partner.currentBalance + dist.amount,
-          expenseHistory: partner.expenseHistory.filter(e => e.expenseId !== id),
-        });
+    if (expense && expense.distributions && expense.distributions.length > 0) {
+      const partners = await loadPartnersCloud();
+      for (const dist of expense.distributions) {
+        const partner = partners.find(p => p.id === dist.partnerId);
+        if (partner) {
+          await updatePartnerCloud(partner.id, {
+            currentBalance: partner.currentBalance + dist.amount,
+            expenseHistory: partner.expenseHistory.filter(e => e.expenseId !== id),
+          });
+        }
       }
     }
-  }
-  
-  let success = false;
-  try {
-    // 🛡️ التراجع المالي الآمن (Financial Reversal) عبر التعليم كـ is_reversed للحفاظ على سجل التدقيق
-    const { error: updateErr } = await sb.from('expenses').update({
-      is_reversed: true,
-      reversed_at: new Date().toISOString(),
-      reversed_reason: reason,
-    } as any).eq('id', id);
 
-    if (!updateErr) {
-      success = true;
-    } else {
+    try {
+      const { error: updateErr } = await sb.from('expenses').update({
+        is_reversed: true,
+        reversed_at: new Date().toISOString(),
+        reversed_reason: reason,
+      } as any).eq('id', id);
+
+      if (!updateErr) {
+        success = true;
+      } else {
+        success = await deleteFromSupabase('expenses', id);
+      }
+    } catch {
       success = await deleteFromSupabase('expenses', id);
     }
-  } catch {
-    success = await deleteFromSupabase('expenses', id);
   }
   
   if (success) {
@@ -460,11 +474,13 @@ export const deleteExpenseCloud = async (id: string, reason: string = 'تراج�
     } catch { /* noop */ }
 
     invalidateExpensesCache();
+    invalidatePartnersCache();
     const existing = expensesCache || loadExpensesLocally() || [];
     const list = existing.filter(e => e.id !== id);
     expensesCache = list;
     saveExpensesLocally(list);
     emitEvent(EVENTS.EXPENSES_UPDATED, null);
+    emitEvent(EVENTS.PARTNERS_UPDATED, null);
   }
   
   return success;

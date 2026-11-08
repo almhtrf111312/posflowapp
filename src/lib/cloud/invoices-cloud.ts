@@ -1080,9 +1080,11 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
 
   // Secondary accounting cleanup is idempotent and only runs for the caller that
   // won the atomic refund transaction. It cannot restore stock again.
+  // 🛡️ ملاحظة أمنية ومحاسبية (EGM Remediation P0-4):
+  // تم إيقاف استدعاء revertProfitDistributionCloud من الواجهة لأن دالة السيرفر
+  // refund_invoice_atomic تقوم بعكس أرباح الشركاء ذرياً بنسبة 100% داخل المعاملة.
+  // استدعاؤه هنا كان يسبب خصماً مزدوجاً لرصيد الشريك.
   try {
-    const { revertProfitDistributionCloud } = await import('./partners-cloud');
-    await revertProfitDistributionCloud(id);
     // Reverse central profit_records
     try {
       const { reverseProfitCloud } = await import('./profits-cloud');
@@ -1094,7 +1096,7 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
       revertProfitDistribution(id);
     } catch { /* local may not exist */ }
   } catch (err) {
-    console.error('[refundInvoiceCloud] Error reverting profit:', err);
+    console.error('[refundInvoiceCloud] Error in secondary cleanup:', err);
   }
 
   invalidateInvoicesCache();
@@ -1263,10 +1265,11 @@ export const refundInvoicePartialCloud = async (
     }
   } catch { /* silent */ }
 
+  // 🛡️ ملاحظة أمنية ومحاسبية (EGM Remediation P0-4):
+  // تم إيقاف استدعاء revertProfitDistributionCloud هنا لأن السيرفر يعكس أرباح الفاتورة المستردة ذرياً
+  // وتكرار الاستدعاء يؤدي للعكس المزدوج.
   if (isFullyRefunded) {
     try {
-      const { revertProfitDistributionCloud } = await import('./partners-cloud');
-      await revertProfitDistributionCloud(invoiceNumber);
       const { reverseProfitCloud } = await import('./profits-cloud');
       await reverseProfitCloud(invoiceNumber);
     } catch { /* silent */ }

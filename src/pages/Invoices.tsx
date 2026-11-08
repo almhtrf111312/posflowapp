@@ -2244,11 +2244,11 @@ export default function Invoices() {
                         : "border-border/80 bg-card text-card-foreground hover:border-primary/40"
                     )}
                   >
-                    {/* زر الخيارات ثلاثي النقاط - أعلى اليسار */}
-                    <div className="absolute left-2.5 top-2.5 z-10" onClick={(e) => e.stopPropagation()}>
+                    {/* زر الخيارات ثلاثي النقاط - أعلى اليسار بمعيار لمس 44px */}
+                    <div className="absolute left-1.5 top-1.5 z-10" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted active:scale-90 transition-transform">
+                          <button className="w-10 h-10 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 flex items-center justify-center active:scale-90 transition-transform cursor-pointer">
                             <MoreVertical className="w-4 h-4" />
                           </button>
                         </DropdownMenuTrigger>
@@ -2288,7 +2288,7 @@ export default function Invoices() {
                     </div>
 
                     {/* السطر الأول: اسم العميل والشارات الأساسية */}
-                    <div className="flex items-center flex-wrap gap-1.5 pr-0 pl-8 leading-tight min-w-0">
+                    <div className="flex items-center flex-wrap gap-1.5 pr-0 pl-12 leading-tight min-w-0">
                       <span className="font-bold text-foreground text-xs truncate max-w-full" title={invoice.customerName}>{invoice.customerName}</span>
                       
                       {/* طريقة الدفع */}

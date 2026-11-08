@@ -102,7 +102,7 @@ export const ProductGrid = memo(function ProductGrid({
       >
         <span className="shrink-0 text-[0.75em] font-semibold text-muted-foreground">{symbol}</span>
         <span aria-hidden="true" className="h-3 w-px shrink-0 bg-muted-foreground/50" />
-        <span className="min-w-0 truncate font-black text-primary">{amount}</span>
+        <span className="shrink-0 whitespace-nowrap font-black text-primary">{amount}</span>
       </span>
     );
   };
@@ -219,7 +219,7 @@ export const ProductGrid = memo(function ProductGrid({
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-zinc-950/50">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-muted/20">
       {/* Modern Apple-like Header Area */}
       <div data-tour="search-bar" className="px-3 py-3 md:px-5 md:py-5 flex flex-col gap-3 md:gap-4 bg-transparent shrink-0">
         <div className="flex gap-2.5 items-center">
@@ -239,7 +239,7 @@ export const ProductGrid = memo(function ProductGrid({
                   }
                 }
               }}
-              className="rtl:pr-12 ltr:pl-12 h-12 md:h-14 rounded-full bg-white dark:bg-zinc-900 border-none text-sm md:text-base shadow-none w-full focus-visible:ring-2 focus-visible:ring-primary/30 transition-[box-shadow,border-color] font-medium"
+              className="rtl:pr-12 ltr:pl-12 h-12 md:h-14 rounded-full bg-card border border-border/50 text-sm md:text-base shadow-none w-full focus-visible:ring-2 focus-visible:ring-primary/30 transition-[box-shadow,border-color] font-medium"
             />
           </div>
 
@@ -247,7 +247,7 @@ export const ProductGrid = memo(function ProductGrid({
             <Button
               variant="outline"
               size="icon"
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-white dark:bg-zinc-900 border-none shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-primary hover:bg-primary/5 active:scale-95 transition-[transform,colors]"
+              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-primary hover:bg-primary/5 active:scale-95 transition-[transform,colors]"
               onClick={() => setScannerOpen(true)}
             >
               <Barcode className="w-5 h-5 md:w-6 md:h-6" />
@@ -258,7 +258,7 @@ export const ProductGrid = memo(function ProductGrid({
           <button
             type="button"
             onClick={cycleViewMode}
-            className="flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full bg-white dark:bg-zinc-900 border-none shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-foreground hover:bg-black/5 active:scale-95 transition-[transform,colors]"
+            className="flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-foreground hover:bg-accent/10 active:scale-95 transition-[transform,colors]"
           >
             {viewMode === 'grid' && <LayoutGrid className="w-5 h-5" />}
             {viewMode === 'dense' && <Grid3x3 className="w-5 h-5" />}
@@ -268,7 +268,7 @@ export const ProductGrid = memo(function ProductGrid({
         </div>
 
         {/* Categories Horizontal Scroll */}
-        <div data-tour="categories" className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-3 px-3 md:mx-0 md:px-0">
+        <div data-tour="categories" className="flex gap-2 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [touch-action:pan-x] pb-1">
           {categories.map((category, index) => (
             <button
               key={category + index}
@@ -308,14 +308,14 @@ export const ProductGrid = memo(function ProductGrid({
 
                 {/* جسم البطاقة المستغل للمساحة بالكامل لاسم المنتج والسعر */}
                 <div className="p-2 flex flex-col justify-between flex-1 gap-2 w-full">
-                  <h3 className="font-bold text-foreground text-sm leading-snug w-full text-start break-words" title={product.name}>
+                  <h3 className="font-bold text-foreground text-sm leading-snug w-full text-start break-words line-clamp-2 min-h-[2.5rem]" title={product.name}>
                     {product.name}
                   </h3>
 
                   <div className="w-full pt-1.5 border-t border-border/30 mt-auto flex items-center justify-between gap-1.5">
                     {renderDisplayPrice(product.price, 'text-sm')}
                     <span className="inline-flex h-7 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-primary bg-primary px-1.5 text-[0.875rem] font-black leading-none tabular-nums text-primary-foreground shadow-sm">
-                      {product.quantity} {t('pos.piece') || 'قطعة'}
+                      {product.quantity} <span className="hidden sm:inline ms-0.5">{t('pos.piece') || 'قطعة'}</span>
                     </span>
                   </div>
                 </div>
@@ -326,7 +326,7 @@ export const ProductGrid = memo(function ProductGrid({
 
         {/* Dense View - 3 items side-by-side on mobile, 4-7 on desktop */}
         {viewMode === 'dense' && (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 sm:gap-2">
             {visibleProducts.map((product, index) => (
               <button
                 key={product.id}
@@ -348,7 +348,7 @@ export const ProductGrid = memo(function ProductGrid({
                   </h4>
                   <div className="w-full pt-1 border-t border-border/30 flex items-center justify-between gap-0.5">
                     {renderDisplayPrice(product.price, 'text-[11px]')}
-                    <span className="inline-flex h-7 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-primary bg-primary px-1.5 text-[0.875rem] font-black leading-none tabular-nums text-primary-foreground shadow-sm">
+                    <span className="inline-flex h-5 min-w-[1.5rem] shrink-0 items-center justify-center rounded-md border border-primary bg-primary px-1 text-[10px] font-bold leading-none tabular-nums text-primary-foreground shadow-sm">
                       {product.quantity}
                     </span>
                   </div>
@@ -365,10 +365,10 @@ export const ProductGrid = memo(function ProductGrid({
               <button
                 key={product.id}
                 {...pressHandlers(product)}
-                className="pos-item text-start fade-in group flex items-center bg-white dark:bg-zinc-900 rounded-[20px] p-2 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-[transform,box-shadow] duration-200 border border-black/5 dark:border-white/5"
+                className="pos-item text-start fade-in group flex items-center bg-card rounded-[20px] p-2 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200 border border-border/50"
                 style={{ animationDelay: `${index * 30}ms` }}
               >
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-slate-100 dark:bg-zinc-800 flex-shrink-0 overflow-hidden relative">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-muted/40 flex-shrink-0 overflow-hidden relative">
                   <ProductImage
                     imageUrl={product.image}
                     alt={product.name}
@@ -399,7 +399,7 @@ export const ProductGrid = memo(function ProductGrid({
               <button
                 key={product.id}
                 {...pressHandlers(product)}
-                className="pos-item text-start fade-in group flex items-center justify-between bg-white dark:bg-zinc-900 rounded-xl p-3 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 border border-black/5 dark:border-white/5"
+                className="pos-item text-start fade-in group flex items-center justify-between bg-card rounded-xl p-3 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 border border-border/50"
                 style={{ animationDelay: `${index * 30}ms` }}
               >
                 <div className="flex-1 min-w-0 pe-2 overflow-hidden text-start">

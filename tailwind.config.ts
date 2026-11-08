@@ -14,6 +14,7 @@ export default {
     },
     extend: {
       screens: {
+        xs: "380px",
         mobile: { max: "767px" },
         ipad: { min: "768px", max: "1023px" },
         pc: { min: "1024px" },

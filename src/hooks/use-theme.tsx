@@ -331,14 +331,17 @@ export function applyTheme(mode: ThemeMode, color: ThemeColor) {
   root.style.setProperty('--pos-item-hover', colors.posItemHover);
   root.style.setProperty('--pos-cart', colors.posCart);
 
-  // Apply color theme
+  // Apply color theme with WCAG AA adaptive contrast
+  const highLuminanceThemes: ThemeColor[] = ['lime', 'coffee', 'orange'];
+  const primaryFg = highLuminanceThemes.includes(color) && mode === 'light' ? '222 47% 11%' : '0 0% 100%';
+
   root.style.setProperty('--primary', colorTheme.primary);
-  root.style.setProperty('--primary-foreground', '0 0% 100%');
+  root.style.setProperty('--primary-foreground', primaryFg);
   root.style.setProperty('--accent', colorTheme.accent);
   root.style.setProperty('--accent-foreground', '0 0% 100%');
   root.style.setProperty('--ring', colorTheme.primary);
   root.style.setProperty('--sidebar-primary', colorTheme.primary);
-  root.style.setProperty('--sidebar-primary-foreground', '0 0% 100%');
+  root.style.setProperty('--sidebar-primary-foreground', primaryFg);
   root.style.setProperty('--sidebar-ring', colorTheme.primary);
   root.style.setProperty('--pos-total', colorTheme.primary);
 

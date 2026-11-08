@@ -2392,7 +2392,7 @@ export default function POS() {
 
         <Sheet open={cartOpen} onOpenChange={handleSetCartOpen}>
 
-          <SheetContent side="bottom" className="h-[85vh] p-0 [&>button]:hidden bg-transparent border-none">
+          <SheetContent side="bottom" className="h-[90dvh] max-h-[calc(100dvh-env(safe-area-inset-top,0px))] p-0 [&>button]:hidden bg-transparent border-none">
 
             <CartPanel
 

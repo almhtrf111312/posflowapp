@@ -303,7 +303,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                     <button
                       type="button"
                       onClick={onToggle}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
                       aria-label={t('common.close') || 'إغلاق القائمة'}
                     >
                       <X className="h-5 w-5" aria-hidden="true" />
@@ -435,7 +435,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
 
         {/* User section */}
         <div className={cn(
-          "flex-shrink-0 border-t border-sidebar-border p-2",
+          "flex-shrink-0 border-t border-sidebar-border p-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]",
           effectiveCollapsed && !isMobile && "flex flex-col items-center"
         )}>
           {effectiveCollapsed && !isMobile ? (
@@ -487,7 +487,7 @@ export function MobileMenuTrigger({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className={cn(
         "fixed top-[calc(0.75rem+env(safe-area-inset-top))] z-40 md:hidden",
-        "w-10 h-11 bg-background",
+        "w-11 h-11 bg-background",
         "text-foreground flex items-center justify-center shadow-sm",
         "hover:bg-muted active:scale-95 transition-[transform,colors] duration-150",
         isRTL 

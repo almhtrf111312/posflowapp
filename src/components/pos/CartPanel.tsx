@@ -1873,7 +1873,7 @@ export function CartPanel({
                 </button>
               )}
               {isMobile && onClose && (
-                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full bg-muted/60 hover:bg-destructive/10 shrink-0">
+                <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/60 hover:bg-destructive/10 shrink-0">
                   <X className="w-4 h-4" />
                 </Button>
               )}
@@ -2048,7 +2048,7 @@ export function CartPanel({
         ) : (
           <>
           {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-1 bg-slate-50/50 dark:bg-zinc-950/50">
+        <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-1 bg-muted/20">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
               <ShoppingCart className="w-12 h-12 mb-3 opacity-30" />
@@ -2067,7 +2067,7 @@ export function CartPanel({
                 <button
                   type="button"
                   onClick={() => onRemoveItem(item.id, item.unit)}
-                  className="size-8 rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center shrink-0 transition-[transform,colors] active:scale-90"
+                  className="size-9 rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center shrink-0 transition-[transform,colors] active:scale-90 relative after:absolute after:-inset-1.5 after:content-['']"
                   title={t('pos.removeFromCart') || 'حذف من السلة'}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -2095,10 +2095,10 @@ export function CartPanel({
                           <button
                             type="button"
                             onClick={() => onToggleUnit(item.id, item.unit)}
-                            className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                            className="p-1 text-muted-foreground hover:text-primary transition-colors relative after:absolute after:-inset-2 after:content-['']"
                             title={t('pos.switchUnit') || 'تبديل الوحدة'}
                           >
-                            <Repeat className="w-2.5 h-2.5" />
+                            <Repeat className="w-3 h-3" />
                           </button>
                         )}
                       </div>
@@ -2111,7 +2111,7 @@ export function CartPanel({
                           ? selectedCurrency.rate
                           : 1;
                         const linePrice = roundForCurr(fromUsd(getItemPrice(item), selectedCurrency.code, safeCartRate), selectedCurrency.code);
-                        return <span className="text-orange-400 font-medium">{formatNumber(linePrice)} {selectedCurrency.symbol} × {item.quantity}</span>;
+                        return <span className="text-warning font-medium">{formatNumber(linePrice)} {selectedCurrency.symbol} × {item.quantity}</span>;
                       })()}
                       {!isCashier && isRepairStoreType() && item.costPrice != null && (
                         <>
@@ -2123,32 +2123,32 @@ export function CartPanel({
                   )}
                 </div>
 
-                {/* أزرار التحكم بالكمية الأنيقة */}
-                <div className="flex items-center gap-0.5 bg-muted/40 rounded-lg p-0.5 border border-border/30 shrink-0">
+                {/* أزرار التحكم بالكمية المريحة والمعززة للمس */}
+                <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-0.5 border border-border/30 shrink-0">
                   <button
                     type="button"
                     onClick={() => onUpdateQuantity(item.id, -1, item.unit)}
-                    className="w-6 h-6 rounded-md bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-95 transition-[transform,colors] shadow-xs"
+                    className="size-8 rounded-lg bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-90 transition-all shadow-xs relative after:absolute after:-inset-1.5 after:content-['']"
                     title={t('pos.decreaseQty') || 'تقليل الكمية'}
                   >
-                    <Minus className="w-3 h-3" />
+                    <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <span className="w-6 text-center font-bold text-xs text-foreground tabular-nums select-none">
+                  <span className="min-w-[1.5rem] px-1 w-auto text-center font-bold text-xs text-foreground tabular-nums select-none">
                     {item.quantity}
                   </span>
                   <button
                     type="button"
                     onClick={() => onUpdateQuantity(item.id, 1, item.unit)}
-                    className="w-6 h-6 rounded-md bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-95 transition-[transform,colors] shadow-xs"
+                    className="size-8 rounded-lg bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-90 transition-all shadow-xs relative after:absolute after:-inset-1.5 after:content-['']"
                     title={t('pos.increaseQty') || 'زيادة الكمية'}
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 {/* إجمالي السطر بعملة السلة العامة */}
-                <div className="flex items-center shrink-0 text-left">
-                  <span className={cn("font-bold text-xs md:text-sm tabular-nums min-w-[3.4rem] text-left", wholesaleMode ? "text-warning" : "text-primary")}>
+                <div className="flex items-center shrink-0 text-end">
+                  <span className={cn("font-bold text-xs md:text-sm tabular-nums min-w-[3.4rem] text-end", wholesaleMode ? "text-warning" : "text-primary")}>
                     {formatCurrency(roundForCurr(fromUsd(getItemPrice(item) * item.quantity, selectedCurrency.code, selectedCurrency.rate), selectedCurrency.code), selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
                   </span>
                 </div>
@@ -2157,8 +2157,8 @@ export function CartPanel({
           )}
         </div>
 
-        {/* Cart Footer - Modern & Compact */}
-        <div className="border-t border-border/60 bg-card p-2.5 space-y-2">
+        {/* Cart Footer - Modern & Compact with Safe Area */}
+        <div className="border-t border-border/60 bg-card p-2.5 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] space-y-2">
           {/* Tax Toggle Switch - only show when tax is enabled */}
           {storeTaxEnabled && storeTaxRate > 0 && (
             <div className="flex items-center justify-between px-2 py-1 bg-muted/40 rounded-lg text-xs">
@@ -2332,7 +2332,7 @@ export function CartPanel({
                 <span className="text-xs font-bold text-foreground">{t('pos.total')}</span>
                 <button
                   onClick={() => setShowCalculator(true)}
-                  className="w-6 h-6 rounded-md bg-primary/20 text-primary hover:bg-primary/30 flex items-center justify-center transition-colors text-xs font-semibold"
+                  className="w-8 h-8 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 flex items-center justify-center transition-colors text-sm font-bold relative after:absolute after:-inset-1.5 after:content-['']"
                   title={t('pos.calculator') || 'آلة حاسبة'}
                 >
                   ⊞

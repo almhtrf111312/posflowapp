@@ -47,3 +47,10 @@ supabase/.temp/
 /reports/
 /test_runner/
 test_plan_extracted.md
+
+# Environment variables & secrets
+.env
+.env.production
+.env.local
+.env.*.local
+!.env.example

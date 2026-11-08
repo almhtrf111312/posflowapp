@@ -73,6 +73,9 @@ jobs:
           VITE_APP_VERSION: ${{ env.VERSION_NAME }}
           VITE_VERSION_NAME: ${{ env.VERSION_NAME }}
           VITE_VERSION_CODE: ${{ env.VERSION_CODE }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
         run: npm run build
 
       - name: Sync embedded files to Android

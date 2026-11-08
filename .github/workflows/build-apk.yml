@@ -8,6 +8,7 @@ on:
       - '**.md'
       - '.github/workflows/build-windows.yml'
       - '.github/workflows/telegram-public-release.yml'
+      - '.github/workflows/sync-version-to-cloud.yml'
   workflow_dispatch:
     inputs:
       publish_telegram:
@@ -175,7 +176,7 @@ jobs:
           retention-days: 90
           compression-level: 0
 
-      # حماية الـ 30 نسخة: حذف النسخ القديمة الزائدة فقط عند تجاوز العدد 30
+      # حماية الـ 30 نسخة: حذف نسخ APK القديمة الزائدة فقط (ملفات Windows لا تُحتسب ولا تُحذف)
       - name: Keep Latest 30 Artifacts (Prune Older)
         shell: bash
         env:
@@ -199,7 +200,7 @@ jobs:
 
             const data = await res.json();
             const artifacts = (data.artifacts || [])
-              .filter(a => !a.expired && a.name.toLowerCase().includes("flowpos"))
+              .filter(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name))
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             console.log(`📊 Found ${artifacts.length} active FlowPOS artifacts.`);
@@ -245,20 +246,30 @@ jobs:
               };
               fs.writeFileSync('sync-payload.json', JSON.stringify(payload, null, 2));
             "
-            curl -s -o /dev/null -w "%{http_code}" -X POST "${SUPABASE_URL}/functions/v1/sync-release-metadata"               -H "Content-Type: application/json"               -H "Authorization: Bearer ${SERVICE_KEY}"               --data @sync-payload.json || true
+            curl -s -o /dev/null -w "%{http_code}\n" -X POST "${SUPABASE_URL}/functions/v1/sync-release-metadata" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${SERVICE_KEY}" \
+              --data @sync-payload.json || true
           fi
 
-      # نشر اختياري للتيليجرام في حال طُلب عند تشغيل البناء يدوياً
+      # أرشفة الـ APK في صفحة Releases عند الدفع بـ tag من نوع v* (كانت موجودة في النسخة القديمة وحُذفت)
+      - name: Create tagged release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ${{ env.FINAL_APK_PATH }}
+          generate_release_notes: true
+
+      # نشر اختياري للتيليجرام عند تشغيل البناء يدوياً مع publish_telegram=true
+      # يستخدم نفس السكربت المشترك مع telegram-public-release.yml، ويرسل الـ APK الذي بُني للتو بالضبط.
+      # continue-on-error: فشل تيليجرام لا يُسقط البناء ولا يمنع مزامنة النسخة مع السحابة، لكن الخطأ يظهر بوضوح في السجل.
       - name: Publish exact APK to Telegram (If Requested)
         if: ${{ inputs.publish_telegram == true }}
+        continue-on-error: true
         shell: bash
         env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           APK_PATH: ${{ env.FINAL_APK_PATH }}
           CUSTOM_NOTES: ${{ inputs.custom_notes }}
-        run: |
-          if [ -n "$TOKEN" ] && [ -n "$RAW_CHAT" ]; then
-            node scripts/telegram-release-notes.cjs > /tmp/release_caption.txt 2>/dev/null || echo "تحديث جديد FlowPOS Pro" > /tmp/release_caption.txt
-            curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"               -F "chat_id=${RAW_CHAT}"               -F "document=@${APK_PATH}"               -F "caption=$(cat /tmp/release_caption.txt)" >/dev/null || true
-          fi
+        run: node scripts/telegram-send-apk.cjs

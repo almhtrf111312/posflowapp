@@ -139,12 +139,359 @@ jobs:
           run().catch((e) => { console.log('::error::' + e.message); process.exit(1); });
           NODE
 
-      # كل منطق تيليجرام (تحديد القناة، فحص صلاحيات البوت، الوصف، الحد 1024، إعادة المحاولة)
-      # موجود في scripts/telegram-send-apk.cjs
+      # السكربت مضمَّن داخل هذا الملف عمداً: لا حاجة لرفع أي ملف إضافي إلى المستودع
+      - name: Create Telegram sender script
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/tg"
+          cat > "$RUNNER_TEMP/tg/telegram-send-apk.cjs" <<'TGSCRIPT'
+          #!/usr/bin/env node
+          /**
+           * FlowPOS Pro — إرسال ملف APK إلى قناة تيليجرام
+           * ------------------------------------------------
+           * يستخدمه كل من:
+           *   - .github/workflows/telegram-public-release.yml
+           *   - .github/workflows/build-apk.yml  (خطوة النشر الاختياري)
+           *
+           * المتغيرات (Environment):
+           *   TELEGRAM_BOT_TOKEN   توكن البوت (إلزامي)
+           *   TELEGRAM_CHAT_ID     معرّف القناة: -100xxxxxxxxxx أو @username أو رقم بدون -100 (إلزامي تقريباً)
+           *   APK_PATH             مسار ملف الـ APK (إلزامي)
+           *   VERSION_NAME         مثل 1.5.69
+           *   VERSION_CODE         مثل 457
+           *   CUSTOM_NOTES         ملاحظات يدوية (اختياري) — تتقدّم على ملاحظات السجل
+           *   TELEGRAM_API_BASE    للاختبار المحلي فقط (الافتراضي https://api.telegram.org)
+           *
+           * يعمل على Node 20+ (مُختبر على Node 22/26) بدون أي حزم خارجية.
+           */
+          'use strict';
+
+          const fs = require('fs');
+          const path = require('path');
+          const { execFileSync } = require('child_process');
+
+          const API_BASE = (process.env.TELEGRAM_API_BASE || 'https://api.telegram.org').replace(/\/+$/, '');
+          const TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+          const RAW_CHAT = (process.env.TELEGRAM_CHAT_ID || '').replace(/[\s"'\u200e\u200f\u202a-\u202e]/g, '');
+          const APK_PATH = process.env.APK_PATH || '';
+          const VERSION_NAME = (process.env.VERSION_NAME || '').trim();
+          const VERSION_CODE = (process.env.VERSION_CODE || '').trim();
+          const CUSTOM_NOTES = (process.env.CUSTOM_NOTES || '').trim();
+
+          const OFFICIAL_CHANNEL = '@flowpospro'; // نفس الاحتياطي الموجود في النسخة القديمة
+          const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // حد Bot API لرفع الملفات
+          const CAPTION_SAFE_LIMIT = 1000; // الحد الرسمي 1024 — نترك هامش أمان
+          const MESSAGE_CHUNK = 3800; // الحد الرسمي 4096
+
+          // ───────────────────────── أدوات مساعدة ─────────────────────────
+          const mask = (s) => (TOKEN ? String(s).split(TOKEN).join('***') : String(s));
+          const log = (...a) => console.log(mask(a.join(' ')));
+          const warn = (m) => console.log('::warning::' + mask(m).replace(/\r?\n/g, ' '));
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+          function die(msg) {
+            console.log('::error::' + mask(msg).replace(/\r?\n/g, ' '));
+            summary(`### ❌ فشل النشر على تليجرام\n\n${msg}\n`);
+            process.exit(1);
+          }
+
+          function summary(md) {
+            try {
+              if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + '\n');
+            } catch {
+              /* غير مهم */
+            }
+          }
+
+          async function call(method, params = {}, form = null) {
+            const url = `${API_BASE}/bot${TOKEN}/${method}`;
+            const init = form
+              ? { method: 'POST', body: form }
+              : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) };
+            init.signal = AbortSignal.timeout(form ? 10 * 60 * 1000 : 30 * 1000);
+            let res;
+            try {
+              res = await fetch(url, init);
+            } catch (e) {
+              return { ok: false, error_code: 0, description: 'network error: ' + (e && (e.cause?.code || e.message)) };
+            }
+            try {
+              return await res.json();
+            } catch {
+              return { ok: false, error_code: res.status, description: 'invalid response (HTTP ' + res.status + ')' };
+            }
+          }
+
+          // إعادة المحاولة عند أخطاء الشبكة/429/5xx فقط
+          async function callWithRetry(method, makeArgs, attempts = 3) {
+            let last;
+            for (let i = 1; i <= attempts; i++) {
+              const { params, form } = await makeArgs();
+              last = await call(method, params, form);
+              if (last.ok) return last;
+              const code = last.error_code || 0;
+              const retryable = code === 0 || code === 429 || code >= 500;
+              if (!retryable || i === attempts) break;
+              const wait = Math.min((last.parameters && last.parameters.retry_after) || 3 * i, 60);
+              warn(`المحاولة ${i} فشلت (${last.description}) — إعادة بعد ${wait} ثانية`);
+              await sleep(wait * 1000);
+            }
+            return last;
+          }
+
+          function explain(description) {
+            const d = String(description || '');
+            if (/chat not found/i.test(d))
+              return 'المعرّف غير صحيح أو البوت لا يرى القناة. استخدم -100xxxxxxxxxx أو @اسم_القناة في TELEGRAM_CHAT_ID.';
+            if (/not a member|was kicked|bot is not a member|chat_write_forbidden|not enough rights|need administrator rights|have no rights to send/i.test(d))
+              return 'البوت ليس مشرفاً في القناة أو لا يملك صلاحية «Post messages». افتح القناة > المشرفون > البوت > فعّل «نشر الرسائل».';
+            if (/request entity too large|file is too big/i.test(d))
+              return 'حجم الـ APK أكبر من 50MB (حد Bot API). قلّل الحجم أو استخدم Local Bot API Server.';
+            if (/unauthorized|invalid token/i.test(d)) return 'توكن البوت TELEGRAM_BOT_TOKEN غير صحيح أو أُلغي من BotFather.';
+            if (/too many requests/i.test(d)) return 'تليجرام طلب التمهل (Rate limit). أعد المحاولة بعد دقيقة.';
+            return '';
+          }
+
+          // ───────────────────────── 1) التحقق من البوت ─────────────────────────
+          async function getBot() {
+            if (!TOKEN) die('TELEGRAM_BOT_TOKEN غير موجود في GitHub Secrets.');
+            const me = await call('getMe');
+            if (!me.ok) die(`فشل التحقق من التوكن (getMe): ${me.description}. ${explain(me.description)}`);
+            log(`🤖 البوت: @${me.result.username} (id=${me.result.id})`);
+            return me.result;
+          }
+
+          // ───────────────────────── 2) تحديد القناة ─────────────────────────
+          async function discoverChats() {
+            // يفشل بـ 409 إذا كان للبوت webhook (مثل بوت telegram-auth) — وهذا طبيعي ولا نحذف الـ webhook أبداً
+            const r = await call('getUpdates', { limit: 100, timeout: 0 });
+            if (!r.ok) {
+              log(`ℹ️ getUpdates غير متاح (${r.description}) — طبيعي إذا كان البوت يعمل بـ webhook.`);
+              return [];
+            }
+            const ids = [];
+            for (const u of (r.result || []).slice().reverse()) {
+              const c = (u.channel_post && u.channel_post.chat) || (u.my_chat_member && u.my_chat_member.chat) || null;
+              if (c && c.type !== 'private') ids.push(String(c.id));
+            }
+            return ids;
+          }
+
+          function buildCandidates() {
+            const list = [];
+            const add = (x) => x && !list.includes(x) && list.push(x);
+            let raw = RAW_CHAT;
+            const link = raw.match(/^(?:https?:\/\/)?t\.me\/([A-Za-z][A-Za-z0-9_]{3,})\/?$/i);
+            if (link) raw = '@' + link[1];
+
+            if (/^\d+$/.test(raw)) {
+              add('-100' + raw); // الأرجح: رقم قناة بدون البادئة
+              add(raw);
+            } else if (/^-\d+$/.test(raw)) {
+              add(raw);
+              if (!raw.startsWith('-100')) add('-100' + raw.slice(1));
+            } else if (/^@[A-Za-z][A-Za-z0-9_]{3,}$/.test(raw)) {
+              add(raw);
+            } else if (/^[A-Za-z][A-Za-z0-9_]{3,}$/.test(raw)) {
+              add('@' + raw);
+            } else if (raw) {
+              add(raw);
+            }
+            return list;
+          }
+
+          async function resolveChat() {
+            const primary = buildCandidates();
+            const candidates = primary.slice();
+            const discovered = await discoverChats();
+            discovered.forEach((c) => !candidates.includes(c) && candidates.push(c));
+            if (!candidates.includes(OFFICIAL_CHANNEL)) candidates.push(OFFICIAL_CHANNEL);
+
+            const failures = [];
+            for (const c of candidates) {
+              const r = await call('getChat', { chat_id: c });
+              if (r.ok) {
+                const chat = r.result;
+                log(`✅ تم تحديد الوجهة: ${chat.title || chat.username || chat.id} [${chat.type}] (${c} → id=${chat.id})`);
+                if (RAW_CHAT && !primary.includes(c)) {
+                  warn(`TELEGRAM_CHAT_ID (${RAW_CHAT}) غير صالح؛ استُخدمت الوجهة البديلة ${c}. صحّح السر في GitHub Secrets.`);
+                }
+                return chat;
+              }
+              failures.push(`${c} ← ${r.description}`);
+            }
+            die(
+              'تعذّر الوصول لأي قناة. نتائج المحاولات:\n' +
+                failures.map((f) => '  • ' + f).join('\n') +
+                '\nتحقق من: (1) صيغة TELEGRAM_CHAT_ID، (2) أن البوت مشرف في القناة بصلاحية «Post messages».'
+            );
+          }
+
+          async function assertBotCanPost(chat, bot) {
+            if (chat.type === 'private') {
+              warn('الوجهة المحددة محادثة خاصة وليست قناة — سيصل الإرسال لشخص واحد فقط. تأكد من TELEGRAM_CHAT_ID.');
+              return;
+            }
+            const m = await call('getChatMember', { chat_id: chat.id, user_id: bot.id });
+            if (!m.ok) {
+              warn(`تعذّر فحص صلاحيات البوت (${m.description}) — سأحاول الإرسال مباشرة.`);
+              return;
+            }
+            const { status, can_post_messages: canPost } = m.result;
+            log(`🔐 حالة البوت في القناة: ${status}${canPost === false ? ' (بدون صلاحية النشر)' : ''}`);
+            if (['left', 'kicked'].includes(status)) die(`البوت ليس عضواً في القناة (status=${status}). أضفه كمشرف.`);
+            if (chat.type === 'channel') {
+              if (!['administrator', 'creator'].includes(status))
+                die(`البوت موجود لكنه ليس مشرفاً (status=${status}). اجعله مشرفاً مع تفعيل «Post messages».`);
+              if (status === 'administrator' && canPost === false)
+                die('البوت مشرف لكن صلاحية «Post messages» مغلقة. افتح صلاحياته في القناة وفعّلها.');
+            }
+          }
+
+          // ───────────────────────── 3) بناء الرسالة ─────────────────────────
+          const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const plain = (h) =>
+            h.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+          function readNotes() {
+            if (CUSTOM_NOTES) return CUSTOM_NOTES;
+            const script = path.join(process.env.GITHUB_WORKSPACE || process.cwd(), 'scripts', 'telegram-release-notes.cjs');
+            let out = '';
+            if (!fs.existsSync(script)) warn('scripts/telegram-release-notes.cjs غير موجود — سأستخدم نصاً عاماً.');
+            else try {
+              out = execFileSync(process.execPath, [script], { encoding: 'utf8', timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+            } catch (e) {
+              warn('تعذّر تشغيل scripts/telegram-release-notes.cjs — سأستخدم نصاً عاماً.');
+            }
+            // السكربت يبدأ بسطرين (عنوان + إصدار) والرسالة أدناه تضعهما أصلاً — نحذفهما لمنع التكرار
+            if (out.startsWith('🚀')) {
+              const i = out.search(/\r?\n\s*\r?\n/);
+              out = i >= 0 ? out.slice(i).trim() : '';
+            }
+            return out || 'تحسينات وإصلاحات عامة لرفع الاستقرار والأداء.';
+          }
+
+          function damascusStamp() {
+            const s = new Intl.DateTimeFormat('sv-SE', {
+              timeZone: 'Asia/Damascus', year: 'numeric', month: '2-digit', day: '2-digit',
+              hour: '2-digit', minute: '2-digit', hour12: false,
+            }).format(new Date());
+            return `${s.slice(0, 10)} (${s.slice(11, 16)})`;
+          }
+
+          function buildMessages(sizeBytes) {
+            const notes = readNotes();
+            const sep = '━━━━━━━━━━━━━━';
+            const ver = `v${VERSION_NAME}` + (VERSION_CODE ? ` (Build ${VERSION_CODE})` : '');
+            const sizeTxt = (sizeBytes / 1024 / 1024).toFixed(1) + ' MB';
+
+            const head =
+              `🚀 <b>تحديث جديد | Flow POS Pro</b>\n${sep}\n` +
+              `📌 <b>الإصدار:</b> <code>${esc(ver)}</code>\n` +
+              `📦 <b>حجم الملف:</b> <code>${sizeTxt}</code>\n` +
+              `📅 <b>تاريخ النشر:</b> <code>${damascusStamp()}</code>\n\n` +
+              `✨ <b>أبرز التحديثات والإصلاحات:</b>\n`;
+            const foot = `\n${sep}\n💡 <i>يمكنك تثبيت هذا التحديث مباشرة فوق النسخة الحالية دون حذف بياناتك.</i>`;
+
+            const fits = plain(head + foot).length + notes.length <= CAPTION_SAFE_LIMIT;
+            const captionHtml = fits
+              ? head + `<blockquote>${esc(notes)}</blockquote>` + foot
+              : head + `<blockquote>${esc('📝 التفاصيل الكاملة في الرسالة التالية ⬇️')}</blockquote>` + foot;
+            const captionPlain = plain(captionHtml).slice(0, 1024);
+
+            const extra = [];
+            if (!fits) {
+              // نقسم الملاحظات الطويلة على حدود الأسطر
+              let buf = '';
+              for (const line of notes.split('\n')) {
+                if ((buf + '\n' + line).length > MESSAGE_CHUNK && buf) {
+                  extra.push(buf);
+                  buf = line;
+                } else {
+                  buf = buf ? buf + '\n' + line : line;
+                }
+              }
+              if (buf) extra.push(buf);
+            }
+            return { captionHtml, captionPlain, extra, ver };
+          }
+
+          // ───────────────────────── 4) الإرسال ─────────────────────────
+          async function buildForm(chatId, caption, useHtml) {
+            const form = new FormData();
+            form.append('chat_id', String(chatId));
+            let blob;
+            try {
+              blob = await fs.openAsBlob(APK_PATH);
+            } catch {
+              blob = new Blob([fs.readFileSync(APK_PATH)]);
+            }
+            form.append('document', blob, path.basename(APK_PATH));
+            form.append('caption', caption);
+            if (useHtml) form.append('parse_mode', 'HTML');
+            form.append(
+              'reply_markup',
+              JSON.stringify({ inline_keyboard: [[{ text: '📢 قناة التحديثات الرسمية', url: 'https://t.me/flowpospro' }]] })
+            );
+            return { form };
+          }
+
+          async function sendApk(chat, msgs) {
+            let r = await callWithRetry('sendDocument', () => buildForm(chat.id, msgs.captionHtml, true));
+            if (!r.ok && /can't parse entities|can.t find end/i.test(r.description || '')) {
+              warn('تنسيق HTML في الوصف مرفوض — إعادة الإرسال بنص عادي.');
+              r = await callWithRetry('sendDocument', () => buildForm(chat.id, msgs.captionPlain, false));
+            }
+            if (!r.ok && /caption is too long/i.test(r.description || '')) {
+              warn('الوصف أطول من المسموح — إعادة الإرسال بوصف مختصر.');
+              r = await callWithRetry('sendDocument', () =>
+                buildForm(chat.id, `🚀 تحديث جديد | Flow POS Pro — ${msgs.ver}`, false)
+              );
+            }
+            if (!r.ok) {
+              const hint = explain(r.description);
+              die(`فشل sendDocument: [${r.error_code}] ${r.description}${hint ? ' — ' + hint : ''}`);
+            }
+            return r.result;
+          }
+
+          async function sendExtra(chat, parts) {
+            for (const part of parts) {
+              const r = await callWithRetry('sendMessage', async () => ({
+                params: { chat_id: chat.id, text: `<blockquote>${esc(part)}</blockquote>`, parse_mode: 'HTML', disable_web_page_preview: true },
+              }));
+              if (!r.ok) warn(`تعذّر إرسال تتمة الملاحظات: ${r.description}`);
+            }
+          }
+
+          // ───────────────────────── التشغيل ─────────────────────────
+          (async () => {
+            if (!APK_PATH || !fs.existsSync(APK_PATH)) die(`ملف الـ APK غير موجود: ${APK_PATH || '(APK_PATH فارغ)'}`);
+            const size = fs.statSync(APK_PATH).size;
+            log(`📦 ${path.basename(APK_PATH)} — ${(size / 1024 / 1024).toFixed(2)} MB`);
+            if (size > MAX_UPLOAD_BYTES)
+              die(`حجم الملف ${(size / 1024 / 1024).toFixed(1)}MB يتجاوز حد تليجرام (50MB) للبوتات.`);
+
+            const bot = await getBot();
+            const chat = await resolveChat();
+            await assertBotCanPost(chat, bot);
+
+            const msgs = buildMessages(size);
+            log('🚀 جارٍ رفع الـ APK إلى تليجرام ...');
+            const sent = await sendApk(chat, msgs);
+            if (msgs.extra.length) await sendExtra(chat, msgs.extra);
+
+            log(`🎉 تم النشر بنجاح (message_id=${sent.message_id}) في ${chat.title || chat.username || chat.id}`);
+            summary(`### ✅ تم النشر على تليجرام\n\n- القناة: **${chat.title || chat.username || chat.id}**\n- الإصدار: \`${msgs.ver}\`\n- الملف: \`${path.basename(APK_PATH)}\`\n`);
+          })().catch((e) => die('خطأ غير متوقع: ' + (e && e.stack ? e.stack : e)));
+          TGSCRIPT
+          node --check "$RUNNER_TEMP/tg/telegram-send-apk.cjs"
+
+      # كل منطق تيليجرام (تحديد القناة، فحص صلاحيات البوت، الوصف، الحد 1024، إعادة المحاولة) في السكربت أعلاه
       - name: Send APK to Telegram
         shell: bash
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           CUSTOM_NOTES: ${{ inputs.custom_notes }}
-        run: node scripts/telegram-send-apk.cjs
+        run: node "$RUNNER_TEMP/tg/telegram-send-apk.cjs"

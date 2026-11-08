@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
 **Last Updated:** 2026-11-08
-**Current Version:** `v1.5.69 (Build 457)`
+**Current Version:** `v1.5.73 (Build 461)`
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -380,6 +380,14 @@
   * **Android Manifest Permissions:** Added `<uses-permission android:name="android.permission.USE_BIOMETRIC" />` and `<uses-permission android:name="android.permission.USE_FINGERPRINT" />` to `android/app/src/main/AndroidManifest.xml`.
   * **Unified Mobile & Web Architecture (`biometric-auth.ts`):** Directly linked `BiometricAuth.checkBiometry()` and `BiometricAuth.authenticate()` for Android APK / Capacitor native runtime, ensuring biometrics appear and function on APK, while retaining WebAuthn platform authentication on web/desktop.
   * **Capacitor Sync:** Executed `npx cap sync android` to sync web assets and register the native `BiometricAuthNative` plugin in Android Gradle project.
+
+* **2026-11-08 (Build 461 - Strict PIN Purge, Biometric Coupling & Two-Step Sign Out via EGM):**
+  * **Strict PIN & Biometric Purge on Disable (`use-app-lock.tsx`):** Enforced complete erasure of stored salted SHA-256 hash, salt, length, biometric credentials, and lockout state from `localStorage` whenever App Lock is toggled off (`enabled: false`). Re-enabling the lock strictly requires creating a new PIN.
+  * **Strict Biometric Coupling (`use-app-lock.tsx` & `ProfileManagement.tsx`):** Locked biometric authentication strictly behind an active App Lock and existing PIN; disabling the lock automatically revokes and removes biometric settings.
+  * **Quick PIN Change Button (`ProfileManagement.tsx`):** Added a dedicated "تغيير رمز الـ PIN" trigger allowing active users to update their PIN without turning off security.
+  * **Two-Step Sign-Out Double Confirmation (`AppLockOverlay.tsx`):** Replaced the single emergency sign-out modal with a strict 2-step confirmation sequence (Step 1: Intent confirmation -> Step 2: Critical in-memory cart purge warning) before calling `signOut()`, eliminating accidental cashier shift cancellations.
+  * **Keypad Button Dimension Invariance (`AppLockOverlay.tsx`):** Preserved exact keypad button dimensions (h-14, rounded-2xl) for the biometric and utility triggers, preventing touch layout distortion.
+  * **Capacitor & Android Synchronization:** Built production assets (`npm run build`) and executed `npx cap sync android` with 10 native plugins verified.
 
 ## ⚠️ Known Technical Debt & Edge Cases
 1. **Large Bundle Size:** Main chunk exceeds 800KB gzipped. Dynamic code-splitting on heavy reports (`Reports.tsx`, `BossPanel.tsx`) is advised for future performance optimization.

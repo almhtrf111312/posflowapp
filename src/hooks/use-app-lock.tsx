@@ -272,16 +272,23 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       if (!userId) return false;
 
       if (!enabled) {
-        localStorage.setItem(`flowpos_app_lock_${userId}_biometric_enabled`, 'false');
+        localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_enabled`);
+        localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
         setIsBiometricEnabled(false);
         return true;
+      }
+
+      // لا يمكن تفعيل البصمة إذا كان قفل التطبيق معطلاً أو لا يوجد رمز PIN مخزن
+      const storedHash = localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
+      if (!isLockEnabled || !storedHash) {
+        console.warn('[AppLock] Cannot enable biometrics without an active PIN and App Lock.');
+        return false;
       }
 
       // إذا تم تمرير PIN للتأكيد، نتحقق منه أولاً
       if (pin) {
         const salt = localStorage.getItem(`flowpos_app_lock_${userId}_salt`);
-        const storedHash = localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
-        if (!salt || !storedHash) return false;
+        if (!salt) return false;
         const calc = await computePinHash(salt, pin);
         if (calc !== storedHash) return false;
       }
@@ -295,21 +302,36 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       setIsBiometricEnabled(true);
       return true;
     },
-    [userId, user?.email]
+    [userId, user?.email, isLockEnabled]
   );
 
   const setLockConfig = useCallback(async (config: AppLockConfig) => {
     if (!userId) return;
 
-    localStorage.setItem(`flowpos_app_lock_${userId}_enabled`, String(config.enabled));
-    localStorage.setItem(`flowpos_app_lock_${userId}_timeout`, String(config.timeoutSeconds));
-
-    setIsLockEnabled(config.enabled);
-    setLockTimeout(config.timeoutSeconds);
-
     if (!config.enabled) {
-      setIsLocked(false);
+      // 🔒 سياسة أمان صارمة: عند تعطيل القفل، يتم مسح الرمز المشفر والتمليح والبصمة بالكامل
+      // بحيث يستحيل إعادة تفعيله إلا بإنشاء رمز PIN جديد تماماً
+      localStorage.removeItem(`flowpos_app_lock_${userId}_enabled`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_hash`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_salt`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_length`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_enabled`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
+      localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
       sessionStorage.removeItem(`flowpos_app_lock_${userId}_session_unlocked`);
+
+      setIsLockEnabled(false);
+      setIsLocked(false);
+      setIsBiometricEnabled(false);
+      setPinLength(4);
+      setFailedAttempts(0);
+      setLockoutRemainingSeconds(0);
+    } else {
+      localStorage.setItem(`flowpos_app_lock_${userId}_enabled`, 'true');
+      localStorage.setItem(`flowpos_app_lock_${userId}_timeout`, String(config.timeoutSeconds));
+
+      setIsLockEnabled(true);
+      setLockTimeout(config.timeoutSeconds);
     }
   }, [userId]);
 

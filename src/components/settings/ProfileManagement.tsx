@@ -564,33 +564,58 @@ export function ProfileManagement() {
               <Switch
                 checked={isLockEnabled}
                 onCheckedChange={async (checked) => {
-                  if (checked && !profile?.pin_hash && !localStorage.getItem(`flowpos_app_lock_${user?.id}_hash`)) {
-                    toast.info('يرجى تعيين رمز PIN أولاً لتفعيل قفل الأمان');
-                    setShowPinDialog(true);
-                    return;
+                  if (checked) {
+                    const hasPin = !!localStorage.getItem(`flowpos_app_lock_${user?.id}_hash`);
+                    if (!hasPin) {
+                      toast.info('يرجى تعيين رمز PIN جديد لتفعيل قفل الأمان');
+                      setShowPinDialog(true);
+                      return;
+                    }
+                    await setLockConfig({ enabled: true, timeoutSeconds: lockTimeout });
+                    toast.success('تم تفعيل قفل أمان التطبيق');
+                  } else {
+                    await setLockConfig({ enabled: false, timeoutSeconds: lockTimeout });
+                    toast.success('تم تعطيل قفل أمان التطبيق وحذف الرمز المخزن');
                   }
-                  await setLockConfig({ enabled: checked, timeoutSeconds: lockTimeout });
-                  toast.success(checked ? 'تم تفعيل قفل أمان التطبيق' : 'تم تعطيل قفل أمان التطبيق');
                 }}
               />
             </div>
 
             {isLockEnabled && (
-              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
-                <span className="text-muted-foreground font-medium">مهلة القفل التلقائي عند الخروج للخلفية</span>
-                <select
-                  value={lockTimeout}
-                  onChange={(e) => {
-                    const sec = parseInt(e.target.value, 10);
-                    void setLockConfig({ enabled: true, timeoutSeconds: sec });
-                  }}
-                  className="bg-background border border-border/60 rounded-lg px-2.5 py-1 text-xs text-foreground font-medium outline-none cursor-pointer"
-                >
-                  <option value={0}>فوري عند الخروج</option>
-                  <option value={60}>بعد دقيقة واحدة</option>
-                  <option value={300}>بعد 5 دقائق</option>
-                </select>
-              </div>
+              <>
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
+                  <span className="text-muted-foreground font-medium">مهلة القفل التلقائي عند الخروج للخلفية</span>
+                  <select
+                    value={lockTimeout}
+                    onChange={(e) => {
+                      const sec = parseInt(e.target.value, 10);
+                      void setLockConfig({ enabled: true, timeoutSeconds: sec });
+                    }}
+                    className="bg-background border border-border/60 rounded-lg px-2.5 py-1 text-xs text-foreground font-medium outline-none cursor-pointer"
+                  >
+                    <option value={0}>فوري عند الخروج</option>
+                    <option value={60}>بعد دقيقة واحدة</option>
+                    <option value={300}>بعد 5 دقائق</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
+                  <span className="text-muted-foreground font-medium">رمز الدخول السريع الحالي</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setNewPin('');
+                      setConfirmPin('');
+                      setShowPinDialog(true);
+                    }}
+                    className="h-7 text-xs px-2.5 rounded-lg"
+                  >
+                    تغيير رمز الـ PIN
+                  </Button>
+                </div>
+              </>
             )}
 
             {isLockEnabled && isBiometricAvailable && (

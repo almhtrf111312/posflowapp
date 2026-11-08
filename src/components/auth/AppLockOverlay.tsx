@@ -46,7 +46,7 @@ export function AppLockOverlay() {
   const [isBiometricPrompting, setIsBiometricPrompting] = useState<boolean>(false);
   const [isShaking, setIsShaking] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [exitConfirmStep, setExitConfirmStep] = useState<0 | 1 | 2>(0);
   const [hasAutoPromptedBiometrics, setHasAutoPromptedBiometrics] = useState<boolean>(false);
 
   // إعادة ضبط المدخلات عند فتح القفل أو تغييره
@@ -57,6 +57,7 @@ export function AppLockOverlay() {
       setIsVerifying(false);
       setIsBiometricPrompting(false);
       setHasAutoPromptedBiometrics(false);
+      setExitConfirmStep(0);
     }
   }, [isLocked]);
 
@@ -370,7 +371,7 @@ export function AppLockOverlay() {
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => setShowExitConfirm(true)}
+          onClick={() => setExitConfirmStep(1)}
           className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg flex items-center gap-1.5"
         >
           <LogOut className="w-3.5 h-3.5" />
@@ -378,34 +379,66 @@ export function AppLockOverlay() {
         </Button>
       </div>
 
-      {/* حوار تأكيد الخروج الطارئ لحماية الفواتير المفتوحة */}
-      <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
+      {/* حوار تأكيد الخروج الثنائي (Double Confirmation) لحماية الفواتير المفتوحة */}
+      <AlertDialog open={exitConfirmStep > 0} onOpenChange={(open) => { if (!open) setExitConfirmStep(0); }}>
         <AlertDialogContent className="rounded-2xl max-w-sm" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-5 h-5" />
-              <span>{isRTL ? 'تأكيد تسجيل الخروج' : 'Confirm Sign Out'}</span>
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed mt-2">
-              {isRTL
-                ? 'سيؤدي تسجيل الخروج إلى تفريغ سلة المبيعات الجارية المفتوحة في الذاكرة ونقلك لشاشة تسجيل الدخول بالبريد وكلمة المرور. هل ترغب في المتابعة؟'
-                : 'Signing out will clear any unsaved in-memory cart items and return you to the email/password login screen. Continue?'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
-            <AlertDialogCancel className="rounded-xl text-xs">
-              {isRTL ? 'إلغاء والعودة' : 'Cancel'}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowExitConfirm(false);
-                void signOut();
-              }}
-              className="rounded-xl text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isRTL ? 'نعم، تسجيل الخروج' : 'Yes, Sign Out'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          {exitConfirmStep === 1 ? (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-amber-500">
+                  <AlertTriangle className="w-5 h-5 shrink-0" />
+                  <span>{isRTL ? 'تأكيد تسجيل الخروج (خطوة 1 من 2)' : 'Confirm Sign Out (Step 1 of 2)'}</span>
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed mt-2">
+                  {isRTL
+                    ? 'هل ترغب حقاً في تسجيل الخروج والتبديل إلى حساب آخر؟ لن تتمكن من الدخول مجدداً إلا باستخدام البريد الإلكتروني وكلمة المرور الرئيسية.'
+                    : 'Do you really want to sign out and switch accounts? You will need your master email and password to log back in.'}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+                <AlertDialogCancel onClick={() => setExitConfirmStep(0)} className="rounded-xl text-xs">
+                  {isRTL ? 'إلغاء والعودة للقفل' : 'Cancel'}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setExitConfirmStep(2);
+                  }}
+                  className="rounded-xl text-xs bg-amber-600 text-white hover:bg-amber-700"
+                >
+                  {isRTL ? 'نعم، متابعة للخطوة التالية' : 'Proceed to Step 2'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          ) : (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                  <LogOut className="w-5 h-5 shrink-0" />
+                  <span>{isRTL ? 'تحذير نهائي وتأكيد جازم (خطوة 2 من 2)' : 'Final Warning (Step 2 of 2)'}</span>
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed mt-2 font-medium">
+                  {isRTL
+                    ? '⚠️ تنبيه حاسم: سيتم تفريغ أي سلة مبيعات مفتوحة في الذاكرة بالكامل، وإلغاء جلسة الكاشير الحالية، والرجوع لشاشة الدخول الرئيسية. هل أنت متأكد تماماً من الخروج الآن؟'
+                    : '⚠️ Critical Warning: Any open in-memory cart will be permanently discarded, current cashier session terminated, and you will return to login. Are you completely sure?'}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+                <AlertDialogCancel onClick={() => setExitConfirmStep(0)} className="rounded-xl text-xs">
+                  {isRTL ? 'تراجع وإلغاء الخروج' : 'Back to Lock'}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setExitConfirmStep(0);
+                    void signOut();
+                  }}
+                  className="rounded-xl text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold"
+                >
+                  {isRTL ? 'تأكيد تسجيل الخروج والتبديل الآن' : 'Confirm Sign Out Now'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
         </AlertDialogContent>
       </AlertDialog>
     </div>

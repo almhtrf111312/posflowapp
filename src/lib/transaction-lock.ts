@@ -105,6 +105,64 @@ export const acquireLock = async (
 };
 
 /**
+ * محاولة فورية غير انتظارية للحصول على قفل (تمنع الاصطفاف والنقر المزدوج المتزامن)
+ */
+export const tryAcquireLock = (
+  resource: string,
+  timeout: number = DEFAULT_TIMEOUT
+): LockResult => {
+  if (isLocked(resource)) {
+    return {
+      acquired: false,
+      error: `المورد "${resource}" مشغول بعملية أخرى حالياً`,
+    };
+  }
+
+  const lockId = `lock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const lock: Lock = {
+    id: lockId,
+    acquiredAt: Date.now(),
+    timeout,
+    resource,
+  };
+
+  activeLocks.set(resource, lock);
+  console.log(`[Lock] Immediate Lock Acquired: ${lockId} for ${resource}`);
+  return { acquired: true, lockId };
+};
+
+/**
+ * تنفيذ عملية مع قفل فوري غير انتظاري
+ */
+export const withImmediateLock = async <T>(
+  resource: string,
+  operation: () => Promise<T>,
+  timeout: number = DEFAULT_TIMEOUT
+): Promise<{ success: boolean; result?: T; error?: string }> => {
+  const lockResult = tryAcquireLock(resource, timeout);
+  if (!lockResult.acquired) {
+    return {
+      success: false,
+      error: lockResult.error || 'Failed to acquire immediate lock',
+    };
+  }
+
+  try {
+    const result = await operation();
+    return { success: true, result };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  } finally {
+    if (lockResult.lockId) {
+      releaseLock(lockResult.lockId);
+    }
+  }
+};
+
+/**
  * تحرير قفل
  */
 export const releaseLock = (lockId: string): boolean => {

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
 import { addExpenseCloud } from '@/lib/cloud/expenses-cloud';
 import {
   Wrench,
@@ -617,12 +618,16 @@ export function CartPanel({
   const confirmCashSale = async () => {
     // 🛡️ تفعيل القفل فوراً وبشكل متزامن قبل أي استدعاء غير متزامن (await)
     if (isSaving || savingRef.current) return;
+    const globalLock = tryAcquireLock(LOCK_RESOURCES.SALE_PROCESSING);
+    if (!globalLock.acquired) return;
+
     savingRef.current = true;
     setIsSaving(true);
 
     // 🎫 بوابة تذكرة الأوفلاين
     const leaseGate = canSellOffline();
     if (!leaseGate.allowed) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
       showToast.error(leaseGate.message, { persistent: false });
@@ -632,6 +637,7 @@ export function CartPanel({
     // 🛡️ فحص سلامة أصناف السلة
     const validation = await validateCartProducts(cart);
     if (!validation.isValid) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
       showToast.error(
@@ -648,6 +654,7 @@ export function CartPanel({
     const shortageExpenseUSD = shortageAsExpenseRef.current ? round8(total - receivedUSD) : 0;
     shortageAsExpenseRef.current = false;
     if (receivedUSD > 0 && receivedUSD < total - 0.001 && shortageExpenseUSD <= 0) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
       setShowCashDialog(false);
@@ -1034,6 +1041,9 @@ export function CartPanel({
       failSync('حدث خطأ - الفاتورة محفوظة محلياً');
       showToast.warning('تم حفظ الفاتورة أوفلاين - سيتم رفعها تلقائياً');
     } finally {
+      if (globalLock.lockId) {
+        releaseLock(globalLock.lockId);
+      }
       savingRef.current = false;
       setIsSaving(false);
     }
@@ -1042,12 +1052,16 @@ export function CartPanel({
   const confirmDebtSale = async (isSplitSale: boolean = false) => {
     // 🛡️ تفعيل القفل فوراً وبشكل متزامن قبل أي استدعاء غير متزامن (await)
     if (isSaving || savingRef.current) return;
+    const globalLock = tryAcquireLock(LOCK_RESOURCES.SALE_PROCESSING);
+    if (!globalLock.acquired) return;
+
     savingRef.current = true;
     setIsSaving(true);
 
     // 🎫 بوابة تذكرة الأوفلاين
     const leaseGate = canSellOffline();
     if (!leaseGate.allowed) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
       showToast.error(leaseGate.message, { persistent: false });
@@ -1055,6 +1069,7 @@ export function CartPanel({
     }
 
     if (!isRealCustomerSelected(customerName)) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
       showToast.error('لا يمكن اعتماد الفاتورة كدين أو بيع مركب بدون تحديد عميل مسجل.');
@@ -1068,6 +1083,7 @@ export function CartPanel({
     const resolvedCustomerId = selectedCustomerId || selectedCustomer?.id;
 
     if (!resolvedCustomerId) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
       showToast.error('العميل المحدد غير مسجل في النظام. يرجى اختيار عميل من القائمة أو إضافة عميل جديد لحفظ الفاتورة مع معرف العميل.');
@@ -1077,6 +1093,7 @@ export function CartPanel({
     // 🛡️ فحص استباقي حاسم قبل تفريغ السلة وتوليد الفاتورة
     const validation = await validateCartProducts(cart);
     if (!validation.isValid) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
       showToast.error(
@@ -1492,6 +1509,9 @@ export function CartPanel({
         showToast.warning(t('pos.offlineSaleWarning') || 'تم حفظ فاتورة البيع المؤجل أوفلاين - سيتم رفعها تلقائياً');
       }
     } finally {
+      if (globalLock.lockId) {
+        releaseLock(globalLock.lockId);
+      }
       savingRef.current = false;
       setIsSaving(false);
     }

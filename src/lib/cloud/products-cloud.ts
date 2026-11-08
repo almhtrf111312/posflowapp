@@ -154,6 +154,19 @@ function toProduct(cloud: CloudProduct): Product {
   };
 }
 
+/**
+ * تطهير بيانات المنتج لعرض الكاشير في الذاكرة دون كتابة أصفار في التخزين الدائم
+ * يمنع كشف أسعار التكلفة في واجهة المستخدم وأدوات فحص المتصفح
+ */
+export const sanitizeProductForCashier = (product: Product): Product => {
+  const { costPrice, bulkCostPrice, ...sanitized } = product;
+  return sanitized as Product;
+};
+
+export const sanitizeProductsForCashier = (products: Product[]): Product[] => {
+  return products.map(sanitizeProductForCashier);
+};
+
 // Transform legacy product to cloud format
 function toCloudProduct(product: Omit<Product, 'id' | 'status'>): Record<string, unknown> {
   // Merge static fields into custom_fields

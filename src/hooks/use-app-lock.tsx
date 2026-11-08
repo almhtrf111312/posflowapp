@@ -55,14 +55,8 @@ async function computePinHash(salt: string, rawPin: string): Promise<string> {
     return bufferToHex(hashBuffer);
   }
   
-  // Fallback بسيط للبيئات الاستثنائية التي تعطل Web Crypto
-  let hash = 0;
-  for (let i = 0; i < combined.length; i++) {
-    const char = combined.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(16).padStart(32, '0');
+  // حماية مشددة: منع الرجوع لأي خوارزمية تجزئة ضعيفة
+  throw new Error('[AppLock] Web Crypto API is required for secure PIN hashing');
 }
 
 export function AppLockProvider({ children }: { children: ReactNode }) {
@@ -194,9 +188,10 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     const storedHash = localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
 
     if (!salt || !storedHash) {
-      // إذا لم يكن هناك هاش محلي متاح، نسمح بفتح القفل كإجراء آمن
-      setIsLocked(false);
-      return true;
+      // إغلاق أمني صارم (Fail-Closed): غياب أو مسح بيانات التجزئة يمنع فتح القفل تماماً
+      console.warn('[AppLock] Security parameters missing or cleared. Enforcing strict Fail-Closed.');
+      setIsLocked(true);
+      return false;
     }
 
     const calculatedHash = await computePinHash(salt, pin);

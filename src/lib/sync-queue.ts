@@ -63,6 +63,7 @@ export interface QueuedOperation {
   errorClass?: 'retryable' | 'terminal';
   createdAt: string;
   lastAttempt?: string;
+  dependsOn?: string;
 }
 
 /**
@@ -243,6 +244,7 @@ export const addToQueue = (
     maxRetries,
     status: 'pending',
     createdAt: new Date().toISOString(),
+    dependsOn: (data?.dependsOn as string) || undefined,
   };
   
   localStorage.setItem('hyperpos_sync_pending_' + operation.id, JSON.stringify(operation));
@@ -450,6 +452,18 @@ export const processQueue = async (
     console.log(`[SyncQueue] Processing ${pending.length} operations...`);
     
     for (const operation of pending) {
+      // إذا كانت العملية تعتمد على عملية أب ما زالت معلقة في الطابور، نؤجل معالجتها لمنع حدوث خطأ نهائي
+      if (operation.dependsOn) {
+        const parentPending = pending.some(
+          op => (op.id === operation.dependsOn || op.data?.operationId === operation.dependsOn || op.data?.uniqueKey === operation.dependsOn) && op.id !== operation.id
+        );
+        if (parentPending) {
+          console.warn(`[SyncQueue] Skipping dependent operation ${operation.id} until parent ${operation.dependsOn} completes`);
+          updateOperationStatus(operation.id, 'pending');
+          continue;
+        }
+      }
+
       const opKey = String(operation.data.uniqueKey || operation.data.operationId || operation.data.localId || operation.id);
       const bInv = (operation.data?.bundle as any)?.invoiceNumber || operation.data?.invoiceNumber;
       if (isOperationCancelled(opKey) || (bInv && isOperationCancelled(String(bInv)))) {

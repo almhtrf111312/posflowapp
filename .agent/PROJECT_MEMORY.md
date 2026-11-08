@@ -66,6 +66,13 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-08:** Release v1.5.67 (Build 455) — Comprehensive Security & Financial Logic Hardening (EGM Audit Remediation):
+  * EGM Design Specification & Review Swarm (docs/designs/security-and-financial-audit.md, docs/designs/consolidated_review_report.md): Completed exhaustive 11-section specification and conducted 7-persona Goldfish review swarm verifying zero-compromise security and accounting integrity.
+  * Fail-Closed Security Lock Guard (src/hooks/use-app-lock.tsx): Eliminated critical Fail-Open bypass vulnerability where missing or cleared local salt/hash allowed instant unlock; enforced strict Fail-Closed lock retention, Web Crypto SHA-256 with 16-byte random salt, and removed insecure 32-bit string hash fallback.
+  * Mutex Double-Click Rejection (src/lib/transaction-lock.ts & src/components/pos/CartPanel.tsx): Added non-blocking 	ryAcquireLock and integrated it into confirmCashSale and confirmDebtSale with guaranteed inally release, actively rejecting fast double-tap duplicate invoice submissions instead of queuing.
+  * In-Memory Cashier Cost Price Sanitization (src/lib/cloud/products-cloud.ts): Implemented sanitizeProductForCashier and sanitizeProductsForCashier in-memory scrubbers to protect profit margin confidentiality without writing zero costs to IndexedDB or corrupting cloud sync.
+  * Sync Queue Parent-Child Dependency Tracking (src/lib/sync-queue.ts): Added dependsOn tracking and skip logic in processQueue to prevent child operations (e.g., debt settlement) from failing with terminal errors before parent bundle completion.
+  * Zero Accounting Invariant Regressions: 100% tax exclusion preserved, USD base maintained, zero hard deletes, and frozen warehouse modules left untouched.
 * **2026-11-08:** EGM Stage 1 Architecture Design PR — Ultra Performance Audit & Hardware-Accelerated Tab Transitions:
   * EGM Design Specification (`docs/designs/performance-and-tab-transitions.md`, `docs/designs/README.md`): Completed comprehensive architectural specification for 60 FPS hardware-accelerated tab slide transitions (240ms, `cubic-bezier(0.2, 0.9, 0.3, 1.0)`) across all device brands, themes, and RTL/LTR directions.
   * EGM Goldfish Review Protocol (`consolidated_review_report.md`): Orchestrated multi-persona review across 7 autonomous goldfish subagents (`zoom-out`, `inventive-catalyst`, `comprehension`, `design`, `structural`, `implementation-readiness`, `codebase-details`).

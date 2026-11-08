@@ -9,6 +9,8 @@ on:
       - '.github/workflows/build-windows.yml'
       - '.github/workflows/telegram-public-release.yml'
       - '.github/workflows/sync-version-to-cloud.yml'
+      - '.github/workflows/build-apk.yml'
+      - '.github/workflows/auto-version-bump.yml'
   workflow_dispatch:
     inputs:
       publish_telegram:
@@ -34,7 +36,6 @@ jobs:
   build:
     runs-on: ubuntu-26.04
     steps:
-      # سحب أحدث Commit فقط لتقليل وقت التنزيل واستهلاك الذاكرة
       - name: Checkout source
         uses: actions/checkout@v7
         with:
@@ -67,7 +68,6 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "Building FlowPOS Pro: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # استخدام npm ci السريع مع الكاش يوفر دقيقة كاملة مقارنة بـ npm install
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
 
@@ -85,7 +85,6 @@ jobs:
       - name: Sync embedded files to Android
         run: npx cap sync android
 
-      # ترقية تلقائية لـ Android Gradle Plugin إلى 8.13.0 لحل مشكلة checkReleaseAarMetadata مع compileSdk 36
       - name: Ensure compatible Android Gradle Plugin & Gradle syntax
         shell: bash
         run: |
@@ -167,7 +166,6 @@ jobs:
           echo "FINAL_APK_PATH=$RELEASE_DIR/$FINAL_APK" >> "$GITHUB_ENV"
           ls -lh "$RELEASE_DIR/$FINAL_APK"
 
-      # رفع الـ APK بدون ضغط إضافي (يوفر 30 ثانية) ولمدة 90 يوماً
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
@@ -176,7 +174,6 @@ jobs:
           retention-days: 90
           compression-level: 0
 
-      # حماية الـ 30 نسخة: حذف نسخ APK القديمة الزائدة فقط (ملفات Windows لا تُحتسب ولا تُحذف)
       - name: Keep Latest 30 Artifacts (Prune Older)
         shell: bash
         env:
@@ -225,7 +222,6 @@ jobs:
           pruneArtifacts().catch(console.error);
           '
 
-      # مزامنة رقم الإصدار الجديد مع السحابة مباشرة ليعرف التطبيق الترقية فوراً
       - name: Sync release metadata to cloud
         shell: bash
         env:
@@ -252,7 +248,6 @@ jobs:
               --data @sync-payload.json || true
           fi
 
-      # أرشفة الـ APK في صفحة Releases عند الدفع بـ tag من نوع v* (كانت موجودة في النسخة القديمة وحُذفت)
       - name: Create tagged release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
@@ -260,10 +255,6 @@ jobs:
           files: ${{ env.FINAL_APK_PATH }}
           generate_release_notes: true
 
-      # نشر اختياري للتيليجرام عند تشغيل البناء يدوياً مع publish_telegram=true
-      # يشغّل ورك فلو telegram-public-release.yml (مصدر واحد للمنطق). الـ APK الذي رُفع للتو باسم
-      # FlowPOS-v<الإصدار> هو الذي سيُختار لأن الورك فلو يفضّل artifact بنفس رقم الإصدار.
-      # continue-on-error: فشل التشغيل لا يُسقط البناء ولا يمنع مزامنة السحابة.
       - name: Publish exact APK to Telegram (If Requested)
         if: ${{ inputs.publish_telegram == true }}
         continue-on-error: true

@@ -52,7 +52,7 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # سحب فوري لأحدث APK جاهز من النسخ الـ 30 المحفوظة (خلال 5 ثوانٍ فقط بدون إعادة بناء)
+      # سحب فوري لأحدث APK جاهز من النسخ الـ 30 المحفوظة خلال 5 ثوانٍ
       - name: Grab Ready APK Instantly (Skip Build - 5 Seconds)
         shell: bash
         env:
@@ -74,6 +74,7 @@ jobs:
             if (!listRes.ok) throw new Error("Failed to list artifacts: " + listRes.statusText);
             const list = await listRes.json();
             
+            // العثور على أحدث حزمة FlowPOS APK
             const apkArtifact = list.artifacts.find(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name));
             if (!apkArtifact) {
               throw new Error("لم يتم العثور على ملف APK جاهز مسبقاً! يرجى تشغيل بناء APK مرة واحدة أولاً.");
@@ -123,11 +124,7 @@ jobs:
           APK_PATH=$(cat /tmp/ready-apk/exact_path.txt)
           node scripts/telegram-release-notes.cjs > /tmp/release_caption.txt 2>/dev/null || echo "تحديث جديد FlowPOS Pro" > /tmp/release_caption.txt
 
-          curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-            -F "chat_id=${RAW_CHAT}" \
-            -F "document=@${APK_PATH}" \
-            -F "caption=$(cat /tmp/release_caption.txt)" \
-            -F "parse_mode=HTML" > /tmp/tg_result.json
+          curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument"             -F "chat_id=${RAW_CHAT}"             -F "document=@${APK_PATH}"             -F "caption=$(cat /tmp/release_caption.txt)"             -F "parse_mode=HTML" > /tmp/tg_result.json
 
           if grep -q '"ok":true' /tmp/tg_result.json; then
             echo "🚀 Sent successfully to Telegram!"

@@ -140,4 +140,4 @@ jobs:
         with:
           name: FlowPOS-Pro-Windows-v${{ env.VERSION_NAME }}
           path: electron-dist/*.exe
-          retention-days: 30
+          retention-days: 5

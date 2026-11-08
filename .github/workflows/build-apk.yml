@@ -158,7 +158,7 @@ jobs:
         with:
           name: FlowPOS-v${{ env.VERSION_NAME }}
           path: ${{ env.FINAL_APK_PATH }}
-          retention-days: 30
+          retention-days: 5
 
       - name: Publish exact APK to Telegram (If Requested)
         if: ${{ inputs.publish_telegram == true }}

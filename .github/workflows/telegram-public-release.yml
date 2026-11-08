@@ -29,12 +29,13 @@ permissions:
 
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' && (inputs.confirm_publish == 'true' || inputs.confirm_publish == true)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           ref: ${{ inputs.source_branch }}
 
       - name: Setup Node.js
@@ -51,7 +52,7 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # خطوة التخطي المباشر: سحب الـ APK الجاهز فوراً من الـ Artifacts بدون أي بناء
+      # سحب أحدث APK من النسخ الـ 30 المحفوظة فوراً خلال 5 ثوانٍ
       - name: Grab Ready APK Instantly (Skip Build - 5 Seconds)
         shell: bash
         env:
@@ -67,7 +68,7 @@ jobs:
             const repo = process.env.REPO;
             
             console.log("⚡ Fetching pre-built APK from GitHub Artifacts (Instant - No Build)...");
-            const listRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts?per_page=20`, {
+            const listRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts?per_page=30`, {
               headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
             });
             if (!listRes.ok) throw new Error("Failed to list artifacts: " + listRes.statusText);
@@ -78,115 +79,60 @@ jobs:
             if (!apkArtifact) {
               throw new Error("لم يتم العثور على ملف APK جاهز مسبقاً! يرجى تشغيل بناء APK مرة واحدة أولاً.");
             }
-            console.log(`📦 Found pre-built artifact: ${apkArtifact.name} (ID: ${apkArtifact.id})`);
 
+            console.log(`📦 Found pre-built artifact: ${apkArtifact.name} (ID: ${apkArtifact.id})`);
+            
             fs.mkdirSync("/tmp/ready-apk", { recursive: true });
             
-            // تنزيل ملف الـ zip مع معالجة إعادة التوجيه لـ S3 تلقائياً عبر Node fetch
             const zipRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts/${apkArtifact.id}/zip`, {
               headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
             });
-            if (!zipRes.ok) throw new Error("فشل تنزيل ملف الـ APK: " + zipRes.statusText);
-            const buffer = Buffer.from(await zipRes.arrayBuffer());
+            if (!zipRes.ok) throw new Error("Failed to download artifact zip: " + zipRes.statusText);
+            
+            const arrayBuffer = await zipRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
             fs.writeFileSync("/tmp/ready-apk/artifact.zip", buffer);
-
+            
             execSync("unzip -q -o /tmp/ready-apk/artifact.zip -d /tmp/ready-apk");
-            const apkFile = execSync("find /tmp/ready-apk -name \"*.apk\" | head -n 1", { encoding: "utf8" }).trim();
-            if (!apkFile || !fs.existsSync(apkFile)) {
-              throw new Error("ملف الـ APK غير موجود داخل الحزمة.");
-            }
-
-            const targetName = `FlowPOS-v${process.env.VERSION_NAME}.apk`;
-            fs.copyFileSync(apkFile, targetName);
-            console.log(`🎉 APK ready for instant Telegram dispatch: ${targetName} (${(fs.statSync(targetName).size / 1024 / 1024).toFixed(2)} MB)`);
+            
+            const files = fs.readdirSync("/tmp/ready-apk");
+            const targetApk = files.find(f => f.endsWith(".apk"));
+            if (!targetApk) throw new Error("No APK inside the downloaded artifact zip!");
+            
+            console.log(`✅ Extracted APK: /tmp/ready-apk/${targetApk}`);
+            fs.writeFileSync("/tmp/ready-apk/exact_path.txt", `/tmp/ready-apk/${targetApk}`);
           }
-          run().catch(e => { console.error("::error::" + e.message); process.exit(1); });
+          run().catch(err => {
+            console.error("❌ " + err.message);
+            process.exit(1);
+          });
           '
-          echo "APK_PATH=$GITHUB_WORKSPACE/FlowPOS-v${{ env.VERSION_NAME }}.apk" >> "$GITHUB_ENV"
 
-      - name: Resolve Telegram Channel Target
+      # إرسال الملف فوراً إلى تيليجرام
+      - name: Dispatch APK to Telegram Channel
         shell: bash
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::TELEGRAM_BOT_TOKEN is missing in GitHub Secrets"
-            exit 1
-          fi
-
-          RAW_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]')
-          CANDIDATES=""
-
-          if [ -n "$RAW_CHAT" ]; then
-            CANDIDATES="$RAW_CHAT"
-            if echo "$RAW_CHAT" | grep -qE '^[0-9]+$'; then
-              CANDIDATES="$CANDIDATES -100$RAW_CHAT"
-            fi
-            if echo "$RAW_CHAT" | grep -qE '^[A-Za-z][A-Za-z0-9_]+$'; then
-              CANDIDATES="$CANDIDATES @$RAW_CHAT"
-            fi
-          fi
-
-          AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
-          CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
-
-          FOUND_CHANNEL=""
-          for C in $CANDIDATES; do
-            R=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getChat" --data-urlencode "chat_id=$C" || true)
-            if echo "$R" | grep -q '"ok":true'; then
-              echo "✅ Verified Telegram target channel: $C"
-              FOUND_CHANNEL="$C"
-              break
-            fi
-          done
-
-          if [ -z "$FOUND_CHANNEL" ]; then
-            echo "::error::البوت لا يملك صلاحية الإرسال للقناة. تأكد من إضافته كـ مشرف Admin."
-            exit 1
-          fi
-
-          echo "CHANNEL=$FOUND_CHANNEL" >> "$GITHUB_ENV"
-
-      - name: Send APK to Telegram (~5 seconds)
-        shell: bash
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHANNEL: ${{ env.CHANNEL }}
-          APK_PATH: ${{ env.APK_PATH }}
           CUSTOM_NOTES: ${{ inputs.custom_notes }}
         run: |
-          APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
-          BUILD_DATE=$(TZ='Asia/Damascus' date +'%Y-%m-%d (%H:%M)')
-
-          if [ -n "$CUSTOM_NOTES" ]; then
-            RAW_NOTES="$CUSTOM_NOTES"
-          elif [ -f "scripts/telegram-release-notes.cjs" ]; then
-            RAW_NOTES=$(node scripts/telegram-release-notes.cjs)
-          else
-            RAW_NOTES=$(git log -3 --pretty=format:"• %s")
+          if [ -z "$TOKEN" ]; then
+            echo "::error::TELEGRAM_BOT_TOKEN is missing in secrets"
+            exit 1
           fi
 
-          SAFE_NOTES=$(echo "$RAW_NOTES" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+          APK_PATH=$(cat /tmp/ready-apk/exact_path.txt)
+          node scripts/telegram-release-notes.cjs > /tmp/release_caption.txt 2>/dev/null || echo "تحديث جديد FlowPOS Pro" > /tmp/release_caption.txt
 
-          CAPTION="🚀 <b>تحديث جديد | Flow POS Pro</b>
-          ━━━━━━━━━━━━━━
-          📌 <b>الإصدار:</b> <code>v${{ env.VERSION_NAME }} (Build ${{ env.VERSION_CODE }})</code>
-          📦 <b>حجم الملف:</b> <code>${APK_SIZE}B</code>
-          📅 <b>تاريخ النشر:</b> <code>${BUILD_DATE}</code>
-
-          ✨ <b>أبرز التحديثات والإصلاحات:</b>
-          <blockquote>${SAFE_NOTES}</blockquote>
-          ━━━━━━━━━━━━━━
-          💡 <i>يمكنك تثبيت هذا التحديث مباشرة فوق النسخة الحالية دون حذف بياناتك.</i>"
-
-          REPLY_MARKUP='{"inline_keyboard":[[{"text":"📢 قناة التحديثات الرسمية","url":"https://t.me/flowpospro"}]]}'
-
-          curl -sS --fail-with-body "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-            --form-string "chat_id=${CHANNEL}" \
+          curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
+            -F "chat_id=${RAW_CHAT}" \
             -F "document=@${APK_PATH}" \
-            --form-string "parse_mode=HTML" \
-            --form-string "reply_markup=${REPLY_MARKUP}" \
-            --form-string "caption=${CAPTION}"
+            -F "caption=$(cat /tmp/release_caption.txt)" \
+            -F "parse_mode=HTML" > /tmp/tg_result.json
 
-          echo "🎉 تم إرسال ملف الـ APK للقناة بنجاح وبسرعة فائقة دون إعادة بناء!"
+          if grep -q '"ok":true' /tmp/tg_result.json; then
+            echo "🚀 Sent successfully to Telegram!"
+          else
+            cat /tmp/tg_result.json
+            exit 1
+          fi

@@ -4,7 +4,17 @@ import { useAuth } from '@/hooks/use-auth';
 import { useLanguage } from '@/hooks/use-language';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { Lock, ShieldCheck, Delete, RotateCcw, Check, LogOut, AlertTriangle, Loader2 } from 'lucide-react';
+import {
+  Lock,
+  ShieldCheck,
+  Delete,
+  RotateCcw,
+  Check,
+  LogOut,
+  AlertTriangle,
+  Loader2,
+  Fingerprint,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -18,15 +28,26 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export function AppLockOverlay() {
-  const { isLocked, unlockApp, isLockedOut, lockoutRemainingSeconds } = useAppLock();
+  const {
+    isLocked,
+    unlockApp,
+    unlockWithBiometrics,
+    isBiometricAvailable,
+    isBiometricEnabled,
+    pinLength,
+    isLockedOut,
+    lockoutRemainingSeconds,
+  } = useAppLock();
   const { user, signOut } = useAuth();
   const { isRTL } = useLanguage();
 
   const [enteredPin, setEnteredPin] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [isBiometricPrompting, setIsBiometricPrompting] = useState<boolean>(false);
   const [isShaking, setIsShaking] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const [hasAutoPromptedBiometrics, setHasAutoPromptedBiometrics] = useState<boolean>(false);
 
   // إعادة ضبط المدخلات عند فتح القفل أو تغييره
   useEffect(() => {
@@ -34,6 +55,8 @@ export function AppLockOverlay() {
       setEnteredPin('');
       setErrorMessage(null);
       setIsVerifying(false);
+      setIsBiometricPrompting(false);
+      setHasAutoPromptedBiometrics(false);
     }
   }, [isLocked]);
 
@@ -45,13 +68,14 @@ export function AppLockOverlay() {
 
     if (Capacitor.isNativePlatform()) {
       CapApp.addListener('backButton', () => {
-        // الخروج الآمن من التطبيق عند ضغط زر الرجوع أثناء القفل
         CapApp.exitApp();
-      }).then((handle) => {
-        cleanup = () => handle.remove();
-      }).catch((err) => {
-        console.warn('[AppLockOverlay] Failed to bind native backButton:', err);
-      });
+      })
+        .then((handle) => {
+          cleanup = () => handle.remove();
+        })
+        .catch((err) => {
+          console.warn('[AppLockOverlay] Failed to bind native backButton:', err);
+        });
     }
 
     return () => {
@@ -59,11 +83,48 @@ export function AppLockOverlay() {
     };
   }, [isLocked]);
 
+  // التحقق اللحظي وفك القفل (Instant Verify & Auto-Submit)
+  const verifyAndUnlock = useCallback(
+    async (pinToVerify: string) => {
+      if (isLockedOut || isVerifying) return;
+      setIsVerifying(true);
+      setErrorMessage(null);
+
+      try {
+        const success = await unlockApp(pinToVerify);
+        if (success) {
+          setEnteredPin('');
+          setErrorMessage(null);
+        } else {
+          setIsShaking(true);
+          setErrorMessage(isRTL ? 'كلمة المرور خاطئة' : 'Incorrect PIN');
+          setEnteredPin('');
+          setTimeout(() => setIsShaking(false), 500);
+        }
+      } catch (err) {
+        console.error('[AppLockOverlay] Verification error:', err);
+        setErrorMessage(isRTL ? 'حدث خطأ أثناء التحقق' : 'Verification error');
+        setEnteredPin('');
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [isLockedOut, isVerifying, unlockApp, isRTL]
+  );
+
+  // إدخال الأرقام مع فحص اكتمال الرمز التلقائي (Auto-Submit on Completion)
   const handleDigitPress = (digit: string) => {
     if (isLockedOut || isVerifying) return;
     if (enteredPin.length >= 8) return;
     setErrorMessage(null);
-    setEnteredPin((prev) => prev + digit);
+
+    const nextPin = enteredPin + digit;
+    setEnteredPin(nextPin);
+
+    // 🎯 استدعاء التحقق التلقائي اللحظي فور إكمال الخانات دون الحاجة لزر تأكيد
+    if (nextPin.length === pinLength) {
+      void verifyAndUnlock(nextPin);
+    }
   };
 
   const handleBackspace = () => {
@@ -78,30 +139,47 @@ export function AppLockOverlay() {
     setEnteredPin('');
   };
 
-  const handleSubmit = useCallback(async () => {
-    if (isLockedOut || isVerifying || enteredPin.length < 4) return;
-
-    setIsVerifying(true);
+  // التحقق الحيوي بالبصمة (Biometric / Fingerprint Prompt)
+  const handleBiometricAuth = useCallback(async () => {
+    if (isLockedOut || isBiometricPrompting || !isBiometricEnabled || !isBiometricAvailable) return;
+    setIsBiometricPrompting(true);
     setErrorMessage(null);
-
     try {
-      const success = await unlockApp(enteredPin);
+      const success = await unlockWithBiometrics();
       if (!success) {
-        setIsShaking(true);
-        setErrorMessage('رمز PIN غير صحيح');
-        setEnteredPin('');
-        setTimeout(() => setIsShaking(false), 500);
+        // يبقى خيار الـ PIN متاحاً كبديل دائم
       }
     } catch (err) {
-      console.error('[AppLockOverlay] Verification error:', err);
-      setErrorMessage('حدث خطأ أثناء التحقق');
-      setEnteredPin('');
+      console.warn('[AppLockOverlay] Biometric prompt error:', err);
     } finally {
-      setIsVerifying(false);
+      setIsBiometricPrompting(false);
     }
-  }, [enteredPin, isLockedOut, isVerifying, unlockApp]);
+  }, [isLockedOut, isBiometricPrompting, isBiometricEnabled, isBiometricAvailable, unlockWithBiometrics]);
 
-  // إرسال تلقائي عندما يصل الرمز إلى 4 أو أكثر ويضغط Enter
+  // الفتح التلقائي بالبصمة فور ظهور شاشة القفل عند الإقلاع أو العودة من الخلفية
+  useEffect(() => {
+    if (
+      isLocked &&
+      isBiometricEnabled &&
+      isBiometricAvailable &&
+      !isLockedOut &&
+      !hasAutoPromptedBiometrics
+    ) {
+      setHasAutoPromptedBiometrics(true);
+      const timer = setTimeout(() => {
+        void handleBiometricAuth();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    isLocked,
+    isBiometricEnabled,
+    isBiometricAvailable,
+    isLockedOut,
+    hasAutoPromptedBiometrics,
+    handleBiometricAuth,
+  ]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isLockedOut) return;
     if (e.key >= '0' && e.key <= '9') {
@@ -109,7 +187,9 @@ export function AppLockOverlay() {
     } else if (e.key === 'Backspace') {
       handleBackspace();
     } else if (e.key === 'Enter') {
-      void handleSubmit();
+      if (enteredPin.length >= 4) {
+        void verifyAndUnlock(enteredPin);
+      }
     }
   };
 
@@ -128,65 +208,84 @@ export function AppLockOverlay() {
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-between p-6 bg-background/95 backdrop-blur-md select-none touch-none animate-in fade-in duration-200"
       style={{ direction: isRTL ? 'rtl' : 'ltr' }}
     >
+      <style>{`
+        @keyframes lock-shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-8px); }
+          40%, 80% { transform: translateX(8px); }
+        }
+      `}</style>
+
       {/* رأس الشاشة مع أيقونة الأمان */}
       <div className="flex flex-col items-center mt-6 text-center">
         <div className="relative mb-3 flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 shadow-inner">
           <ShieldCheck className="w-9 h-9 text-primary animate-pulse" />
           <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
-            <Lock className="w-2.5 h-2.5 text-white" />
+            <Lock className="w-3 h-3 text-white stroke-[3]" />
           </div>
         </div>
-        <h2 id="app-lock-title" className="text-xl font-bold tracking-tight text-foreground">
-          {isRTL ? 'قفل أمان نقطة البيع' : 'POS Terminal Security Lock'}
-        </h2>
-        <p className="text-xs text-muted-foreground mt-1 max-w-[260px]">
-          {isRTL
-            ? 'يرجى إدخال رمز PIN لحماية ومتابعة سلة المبيعات الجارية'
-            : 'Enter cashier PIN to resume active checkout terminal'}
-        </p>
-      </div>
 
-      {/* مؤشر النقاط ورسائل الخطأ */}
-      <div className="flex flex-col items-center my-auto w-full max-w-xs">
-        {/* مؤشر النقاط للرمز */}
+        <h1 id="app-lock-title" className="text-xl font-bold tracking-tight text-foreground">
+          {isRTL ? 'تطبيق نقطة البيع مقفل' : 'POS Terminal Locked'}
+        </h1>
+
+        <p className="text-xs text-muted-foreground mt-1 max-w-[260px]">
+          {isLockedOut
+            ? isRTL
+              ? `تم حظر المحاولات مؤقتاً! يرجى الانتظار (${lockoutRemainingSeconds} ثانية)`
+              : `Locked out temporarily! Wait (${lockoutRemainingSeconds}s)`
+            : isRTL
+            ? 'أدخل رمز PIN أو استخدم البصمة لفتح القفل'
+            : 'Enter PIN or scan fingerprint to unlock'}
+        </p>
+
+        {/* نقاط عرض الرمز المدخل مع حركة الاهتزاز الفورية */}
         <div
-          className={`flex items-center justify-center gap-3 py-3 px-6 rounded-2xl bg-muted/40 border border-border/60 transition-transform ${
-            isShaking ? 'animate-bounce' : ''
-          }`}
+          className="flex items-center justify-center gap-3.5 my-5"
+          style={
+            isShaking
+              ? {
+                  animation: 'lock-shake 0.4s ease-in-out',
+                }
+              : undefined
+          }
         >
-          {Array.from({ length: Math.max(4, enteredPin.length) }).map((_, i) => {
-            const isFilled = i < enteredPin.length;
-            return (
-              <div
-                key={i}
-                className={`w-3.5 h-3.5 rounded-full transition-all duration-200 ${
-                  isFilled
-                    ? 'bg-primary scale-110 shadow-sm'
-                    : 'bg-muted-foreground/30 scale-90'
-                }`}
-              />
-            );
-          })}
+          {Array.from({ length: pinLength }).map((_, idx) => (
+            <div
+              key={idx}
+              className={`w-3.5 h-3.5 rounded-full border transition-all duration-200 ${
+                idx < enteredPin.length
+                  ? 'bg-primary border-primary scale-110 shadow-sm shadow-primary/40'
+                  : 'border-muted-foreground/30 bg-muted/20'
+              }`}
+            />
+          ))}
         </div>
 
-        {/* رسائل التنبيه والخطأ */}
-        <div className="h-7 mt-2 flex items-center justify-center text-center">
-          {isLockedOut ? (
-            <p className="text-xs font-semibold text-destructive animate-pulse flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              {isRTL
-                ? `محاولات خاطئة متعددة. يرجى الانتظار ${lockoutRemainingSeconds} ثانية`
-                : `Too many attempts. Wait ${lockoutRemainingSeconds}s`}
+        {/* تنبيه الخطأ أو جاري التحقق */}
+        <div className="h-6 flex items-center justify-center">
+          {isVerifying ? (
+            <p className="text-primary font-medium text-xs flex items-center gap-1.5 animate-pulse">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>{isRTL ? 'جاري التحقق...' : 'Verifying...'}</span>
+            </p>
+          ) : isBiometricPrompting ? (
+            <p className="text-primary font-medium text-xs flex items-center gap-1.5 animate-pulse">
+              <Fingerprint className="w-3.5 h-3.5 animate-bounce" />
+              <span>{isRTL ? 'يرجى لمس مستشعر البصمة...' : 'Scan fingerprint...'}</span>
             </p>
           ) : errorMessage ? (
-            <p className="text-xs font-medium text-destructive animate-in fade-in">
-              {errorMessage}
+            <p className="text-destructive font-bold text-xs flex items-center gap-1.5 animate-in fade-in duration-150">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>{errorMessage}</span>
             </p>
           ) : null}
         </div>
+      </div>
 
-        {/* لوحة الأرقام اللمسية المحسنة للكاشير */}
-        <div className="grid grid-cols-3 gap-3 w-full max-w-[280px] mt-2">
+      {/* لوحة الأرقام (Touch Keypad) المصممة للمس فائق السرعة */}
+      <div className="w-full max-w-[280px] flex flex-col items-center">
+        <div className="grid grid-cols-3 gap-3 w-full">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <Button
               key={digit}
@@ -194,23 +293,36 @@ export function AppLockOverlay() {
               variant="outline"
               disabled={isLockedOut || isVerifying}
               onClick={() => handleDigitPress(digit)}
-              className="h-14 rounded-2xl text-xl font-bold font-mono border-border/80 bg-card hover:bg-muted active:scale-95 transition-all shadow-sm"
+              className="h-14 rounded-2xl text-2xl font-bold font-mono border-border/80 bg-card hover:bg-muted active:scale-95 transition-all shadow-sm"
             >
               {digit}
             </Button>
           ))}
 
-          {/* زر مسح الكل */}
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={isLockedOut || isVerifying || enteredPin.length === 0}
-            onClick={handleClear}
-            className="h-14 rounded-2xl text-xs font-medium text-muted-foreground hover:bg-muted/80 active:scale-95 transition-all"
-            title={isRTL ? 'مسح الكل' : 'Clear All'}
-          >
-            <RotateCcw className="w-5 h-5" />
-          </Button>
+          {/* الزر الأيسر السفلي: زر البصمة إذا كانت مفعلة، أو زر مسح الكل */}
+          {isBiometricEnabled && isBiometricAvailable ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isLockedOut || isVerifying || isBiometricPrompting}
+              onClick={() => void handleBiometricAuth()}
+              className="h-14 rounded-2xl border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all shadow-sm flex flex-col items-center justify-center"
+              title={isRTL ? 'الفتح بالبصمة' : 'Fingerprint'}
+            >
+              <Fingerprint className="w-6 h-6 stroke-[2.2]" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={isLockedOut || isVerifying || enteredPin.length === 0}
+              onClick={handleClear}
+              className="h-14 rounded-2xl text-xs font-medium text-muted-foreground hover:bg-muted/80 active:scale-95 transition-all"
+              title={isRTL ? 'مسح الكل' : 'Clear All'}
+            >
+              <RotateCcw className="w-5 h-5" />
+            </Button>
+          )}
 
           {/* الرقم صفر */}
           <Button
@@ -218,7 +330,7 @@ export function AppLockOverlay() {
             variant="outline"
             disabled={isLockedOut || isVerifying}
             onClick={() => handleDigitPress('0')}
-            className="h-14 rounded-2xl text-xl font-bold font-mono border-border/80 bg-card hover:bg-muted active:scale-95 transition-all shadow-sm"
+            className="h-14 rounded-2xl text-2xl font-bold font-mono border-border/80 bg-card hover:bg-muted active:scale-95 transition-all shadow-sm"
           >
             0
           </Button>
@@ -236,22 +348,20 @@ export function AppLockOverlay() {
           </Button>
         </div>
 
-        {/* زر التأكيد والدخول الواضح */}
-        <Button
-          type="button"
-          disabled={isLockedOut || isVerifying || enteredPin.length < 4}
-          onClick={() => void handleSubmit()}
-          className="w-full max-w-[280px] h-13 mt-4 rounded-xl text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-98 transition-all flex items-center justify-center gap-2"
-        >
-          {isVerifying ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <>
-              <Check className="w-5 h-5 stroke-[2.5]" />
-              <span>{isRTL ? 'تأكيد ودخول' : 'Confirm & Unlock'}</span>
-            </>
-          )}
-        </Button>
+        {/* زر الفتح بالبصمة السريع أسفل اللوحة إذا كانت مفعلة ومرئية */}
+        {isBiometricEnabled && isBiometricAvailable && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isLockedOut || isVerifying || isBiometricPrompting}
+            onClick={() => void handleBiometricAuth()}
+            className="mt-3 text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 rounded-xl flex items-center gap-1.5 transition-all"
+          >
+            <Fingerprint className="w-4 h-4" />
+            <span>{isRTL ? 'الفتح بمستشعر البصمة' : 'Unlock with Fingerprint'}</span>
+          </Button>
+        )}
       </div>
 
       {/* زر الطوارئ لتسجيل الخروج وتبديل الحساب */}

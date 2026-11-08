@@ -29,14 +29,15 @@ import {
   Loader2,
   Phone,
   KeyRound,
-  ShieldCheck
+  ShieldCheck,
+  Fingerprint
 } from 'lucide-react';
 
 export function ProfileManagement() {
   const { user, profile, refreshProfile } = useAuth();
   const { isBoss, isAdmin } = useUserRole();
   const { t } = useLanguage();
-  const { isLockEnabled, lockTimeout, setLockConfig, updatePin } = useAppLock();
+  const { isLockEnabled, lockTimeout, setLockConfig, updatePin, isBiometricAvailable, isBiometricEnabled, toggleBiometrics } = useAppLock();
   
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
@@ -589,6 +590,30 @@ export function ProfileManagement() {
                   <option value={60}>بعد دقيقة واحدة</option>
                   <option value={300}>بعد 5 دقائق</option>
                 </select>
+              </div>
+            )}
+
+            {isLockEnabled && isBiometricAvailable && (
+              <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
+                <div className="flex items-center gap-2">
+                  <Fingerprint className="w-4 h-4 text-primary" />
+                  <span className="text-foreground font-medium">الفتح بالبصمة / المقاييس الحيوية (Biometric Unlock)</span>
+                </div>
+                <Switch
+                  checked={isBiometricEnabled}
+                  onCheckedChange={async (checked) => {
+                    const success = await toggleBiometrics(checked);
+                    if (success) {
+                      toast.success(
+                        checked
+                          ? 'تم تفعيل الفتح بالبصمة بنجاح'
+                          : 'تم تعطيل الفتح بالبصمة'
+                      );
+                    } else {
+                      toast.error('فشل تفعيل البصمة أو تم إلغاؤها');
+                    }
+                  }}
+                />
               </div>
             )}
           </div>

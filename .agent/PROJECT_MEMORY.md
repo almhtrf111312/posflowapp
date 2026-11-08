@@ -368,6 +368,13 @@
     * **Phase 6 Data Backfill:** Automated query to purge 35 phantom debts linked to cash invoices (`payment_type = 'cash'`) and recalculate `customers.total_debt`.
   * **EGM Architecture Documentation:** Updated `docs/designs/security-and-financial-audit.md` with Section 12 detailing the root-cause reconciliation.
 
+* **2026-11-08 (Build 459 - Instant PIN Auto-Submit & Biometric Unlock via EGM):**
+  * **Instant PIN Auto-Submit (`AppLockOverlay.tsx`):** Implemented zero-latency automatic PIN verification upon entering the target length (`pinLength`), unlocking the POS terminal immediately without requiring an extra confirmation button click.
+  * **Incorrect PIN Feedback:** Added native-style horizontal shake animation, auto-clearing of entered digits for instant re-entry, and clear red error message ("كلمة المرور خاطئة"), while preserving the 5-attempt rate limit.
+  * **Cross-Platform Biometric Authentication Engine (`biometric-auth.ts`):** Created a zero-dependency hybrid biometric engine supporting native Capacitor biometric auth on mobile and WebAuthn platform authenticators (`window.PublicKeyCredential`) across Desktop/PWA/Electron (Windows Hello, Touch ID, Face ID, Android Biometrics).
+  * **Biometric Auto-Prompt & UI Integration:** Added automatic biometric prompt on app lock display, dedicated `Fingerprint` keypad trigger, and biometric toggle in `ProfileManagement.tsx`.
+  * **Security Lock Architecture Update:** Documented Stage 2 specifications in Section 10 of `docs/designs/security-lock-and-theme-animation.md`.
+
 ## ⚠️ Known Technical Debt & Edge Cases
 1. **Large Bundle Size:** Main chunk exceeds 800KB gzipped. Dynamic code-splitting on heavy reports (`Reports.tsx`, `BossPanel.tsx`) is advised for future performance optimization.
 2. **Offline Refund Currency Conversion:** Historical invoices refunded offline must resolve historical exchange rates from invoice snapshots to prevent currency drift.

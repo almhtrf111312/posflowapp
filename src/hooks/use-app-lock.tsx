@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { useAuth } from './use-auth';
 import { useAppLifecycle } from './use-app-lifecycle';
+import { isBiometricSupported, registerBiometricCredential, authenticateBiometric } from '@/lib/biometric-auth';
 
 export interface AppLockConfig {
   enabled: boolean;
@@ -11,18 +12,23 @@ export interface AppLockContextType {
   isLocked: boolean;
   isLockEnabled: boolean;
   lockTimeout: number;
+  pinLength: number;
   failedAttempts: number;
   lockoutRemainingSeconds: number;
   isLockedOut: boolean;
+  isBiometricAvailable: boolean;
+  isBiometricEnabled: boolean;
   lockApp: () => void;
   unlockApp: (pin: string) => Promise<boolean>;
+  unlockWithBiometrics: () => Promise<boolean>;
+  toggleBiometrics: (enabled: boolean, pin?: string) => Promise<boolean>;
   setLockConfig: (config: AppLockConfig) => Promise<void>;
   updatePin: (newPin: string) => Promise<void>;
 }
 
 const AppLockContext = createContext<AppLockContextType | undefined>(undefined);
 
-// دوال مساعدة لتوليد الملح والهاش أوفلاين
+// تحويل مصفوفة بايت إلى تمثيل سداسي عشري
 function bufferToHex(buffer: ArrayBuffer): string {
   const byteArray = new Uint8Array(buffer);
   let hexString = '';
@@ -38,7 +44,6 @@ function generateRandomSalt(): string {
     window.crypto.getRandomValues(bytes);
     return bufferToHex(bytes.buffer);
   }
-  // Fallback عشوائي آمن في حال عدم توفر Web Crypto
   let fallback = '';
   for (let i = 0; i < 32; i++) {
     fallback += Math.floor(Math.random() * 16).toString(16);
@@ -63,11 +68,6 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   const { user, isLoading: authLoading } = useAuth();
   const userId = user?.id;
 
-  // مفاتيح التخزين المنسوبة للمستخدم الحالي
-  const getStorageKey = useCallback((suffix: string) => {
-    return userId ? `flowpos_app_lock_${userId}_${suffix}` : null;
-  }, [userId]);
-
   // حالة تفعيل القفل للمستخدم
   const [isLockEnabled, setIsLockEnabled] = useState<boolean>(() => {
     if (!userId) return false;
@@ -81,12 +81,25 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     return val ? parseInt(val, 10) : 0;
   });
 
+  // طول الرمز المخزن (افتراضياً 4 خانات)
+  const [pinLength, setPinLength] = useState<number>(() => {
+    if (!userId) return 4;
+    const val = localStorage.getItem(`flowpos_app_lock_${userId}_length`);
+    return val ? parseInt(val, 10) : 4;
+  });
+
+  // دعم وأجهزة البصمة المتاحة
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean>(false);
+  const [isBiometricEnabled, setIsBiometricEnabled] = useState<boolean>(() => {
+    if (!userId) return false;
+    return localStorage.getItem(`flowpos_app_lock_${userId}_biometric_enabled`) === 'true';
+  });
+
   // حالة القفل اللحظية - تهيئة متزامنة لمنع أي وميض بصري (Zero Flash)
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     if (!userId) return false;
     const enabled = localStorage.getItem(`flowpos_app_lock_${userId}_enabled`) === 'true';
     const hasHash = !!localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
-    // فحص ما إذا كان المستخدم قد فتح القفل بالفعل في جلسة المتصفح الحالية
     const sessionUnlocked = sessionStorage.getItem(`flowpos_app_lock_${userId}_session_unlocked`) === 'true';
     return enabled && hasHash && !sessionUnlocked;
   });
@@ -98,21 +111,39 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   const isLockedRef = useRef(isLocked);
   isLockedRef.current = isLocked;
 
+  // فحص توفر أجهزة البصمة على المنصة الحالية
+  useEffect(() => {
+    let mounted = true;
+    isBiometricSupported().then((supported) => {
+      if (mounted) {
+        setIsBiometricAvailable(supported);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // مزامنة حالة التفعيل والمهلة عند تبديل المستخدم أو تسجيل الدخول
   useEffect(() => {
     if (!userId || authLoading) {
       setIsLocked(false);
       setIsLockEnabled(false);
+      setIsBiometricEnabled(false);
       return;
     }
 
     const enabled = localStorage.getItem(`flowpos_app_lock_${userId}_enabled`) === 'true';
     const hasHash = !!localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
     const timeoutVal = localStorage.getItem(`flowpos_app_lock_${userId}_timeout`);
+    const lengthVal = localStorage.getItem(`flowpos_app_lock_${userId}_length`);
+    const bioVal = localStorage.getItem(`flowpos_app_lock_${userId}_biometric_enabled`) === 'true';
     const sessionUnlocked = sessionStorage.getItem(`flowpos_app_lock_${userId}_session_unlocked`) === 'true';
 
     setIsLockEnabled(enabled);
     setLockTimeout(timeoutVal ? parseInt(timeoutVal, 10) : 0);
+    setPinLength(lengthVal ? parseInt(lengthVal, 10) : 4);
+    setIsBiometricEnabled(bioVal);
 
     // التحقق من انتهاء حظر التخمين المستمر
     const savedLockout = localStorage.getItem(`flowpos_app_lock_${userId}_lockout_until`);
@@ -149,7 +180,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer);
   }, [lockoutRemainingSeconds, userId]);
 
-  // استهلاك دورة حياة التطبيق (useAppLifecycle) دون أي تعديل على ملف البنية التحتية
+  // استهلاك دورة حياة التطبيق (useAppLifecycle)
   useAppLifecycle({
     onPause: useCallback(() => {
       if (!userId || !isLockEnabled) return;
@@ -188,7 +219,6 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     const storedHash = localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
 
     if (!salt || !storedHash) {
-      // إغلاق أمني صارم (Fail-Closed): غياب أو مسح بيانات التجزئة يمنع فتح القفل تماماً
       console.warn('[AppLock] Security parameters missing or cleared. Enforcing strict Fail-Closed.');
       setIsLocked(true);
       return false;
@@ -219,6 +249,55 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     return false;
   }, [userId, lockoutRemainingSeconds, failedAttempts]);
 
+  // فتح القفل باستخدام البصمة اللحظية
+  const unlockWithBiometrics = useCallback(async (): Promise<boolean> => {
+    if (!userId || !isBiometricEnabled || lockoutRemainingSeconds > 0) return false;
+
+    const credId = localStorage.getItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
+    const success = await authenticateBiometric(credId);
+
+    if (success) {
+      setIsLocked(false);
+      setFailedAttempts(0);
+      sessionStorage.setItem(`flowpos_app_lock_${userId}_session_unlocked`, 'true');
+      localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
+      return true;
+    }
+    return false;
+  }, [userId, isBiometricEnabled, lockoutRemainingSeconds]);
+
+  // تفعيل أو تعطيل الفتح بالبصمة
+  const toggleBiometrics = useCallback(
+    async (enabled: boolean, pin?: string): Promise<boolean> => {
+      if (!userId) return false;
+
+      if (!enabled) {
+        localStorage.setItem(`flowpos_app_lock_${userId}_biometric_enabled`, 'false');
+        setIsBiometricEnabled(false);
+        return true;
+      }
+
+      // إذا تم تمرير PIN للتأكيد، نتحقق منه أولاً
+      if (pin) {
+        const salt = localStorage.getItem(`flowpos_app_lock_${userId}_salt`);
+        const storedHash = localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
+        if (!salt || !storedHash) return false;
+        const calc = await computePinHash(salt, pin);
+        if (calc !== storedHash) return false;
+      }
+
+      // تسجيل بيانات اعتماد البصمة على الجهاز
+      const credId = await registerBiometricCredential(userId, user?.email || 'User');
+      if (credId) {
+        localStorage.setItem(`flowpos_app_lock_${userId}_biometric_cred_id`, credId);
+      }
+      localStorage.setItem(`flowpos_app_lock_${userId}_biometric_enabled`, 'true');
+      setIsBiometricEnabled(true);
+      return true;
+    },
+    [userId, user?.email]
+  );
+
   const setLockConfig = useCallback(async (config: AppLockConfig) => {
     if (!userId) return;
 
@@ -237,14 +316,17 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   const updatePin = useCallback(async (newPin: string) => {
     if (!userId) return;
 
+    const cleanPin = newPin.trim();
     const salt = generateRandomSalt();
-    const hash = await computePinHash(salt, newPin);
+    const hash = await computePinHash(salt, cleanPin);
 
     localStorage.setItem(`flowpos_app_lock_${userId}_salt`, salt);
     localStorage.setItem(`flowpos_app_lock_${userId}_hash`, hash);
+    localStorage.setItem(`flowpos_app_lock_${userId}_length`, String(cleanPin.length));
     localStorage.setItem(`flowpos_app_lock_${userId}_enabled`, 'true');
 
     setIsLockEnabled(true);
+    setPinLength(cleanPin.length);
   }, [userId]);
 
   const isLockedOut = lockoutRemainingSeconds > 0;
@@ -255,11 +337,16 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
         isLocked: isLocked && !!user && !authLoading,
         isLockEnabled,
         lockTimeout,
+        pinLength,
         failedAttempts,
         lockoutRemainingSeconds,
         isLockedOut,
+        isBiometricAvailable,
+        isBiometricEnabled,
         lockApp,
         unlockApp,
+        unlockWithBiometrics,
+        toggleBiometrics,
         setLockConfig,
         updatePin,
       }}

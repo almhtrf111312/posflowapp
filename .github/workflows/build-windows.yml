@@ -29,7 +29,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           clean: true
 
       - name: Setup Node.js
@@ -61,7 +61,7 @@ jobs:
           echo "Unified Version: v$VERSION_NAME (SemVer: $SEMVER_VERSION, Build $VERSION_CODE)"
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund --prefer-offline
 
       - name: Install Electron dependencies
         run: npm install --save-dev electron@${{ env.ELECTRON_VER }} electron-builder@${{ env.BUILDER_VER }} --legacy-peer-deps --no-audit --no-fund
@@ -140,4 +140,4 @@ jobs:
         with:
           name: FlowPOS-Pro-Windows-v${{ env.VERSION_NAME }}
           path: electron-dist/*.exe
-          retention-days: 5
+          retention-days: 90

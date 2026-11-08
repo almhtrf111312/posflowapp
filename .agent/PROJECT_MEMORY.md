@@ -375,6 +375,12 @@
   * **Biometric Auto-Prompt & UI Integration:** Added automatic biometric prompt on app lock display, dedicated `Fingerprint` keypad trigger, and biometric toggle in `ProfileManagement.tsx`.
   * **Security Lock Architecture Update:** Documented Stage 2 specifications in Section 10 of `docs/designs/security-lock-and-theme-animation.md`.
 
+* **2026-11-08 (Build 460 - Native Android APK Biometric Integration & Synchronization):**
+  * **Native Biometric Plugin Installed:** Added `@aparajita/capacitor-biometric-auth` (v10.0.0) configured specifically for Capacitor 8+ Android runtime.
+  * **Android Manifest Permissions:** Added `<uses-permission android:name="android.permission.USE_BIOMETRIC" />` and `<uses-permission android:name="android.permission.USE_FINGERPRINT" />` to `android/app/src/main/AndroidManifest.xml`.
+  * **Unified Mobile & Web Architecture (`biometric-auth.ts`):** Directly linked `BiometricAuth.checkBiometry()` and `BiometricAuth.authenticate()` for Android APK / Capacitor native runtime, ensuring biometrics appear and function on APK, while retaining WebAuthn platform authentication on web/desktop.
+  * **Capacitor Sync:** Executed `npx cap sync android` to sync web assets and register the native `BiometricAuthNative` plugin in Android Gradle project.
+
 ## ⚠️ Known Technical Debt & Edge Cases
 1. **Large Bundle Size:** Main chunk exceeds 800KB gzipped. Dynamic code-splitting on heavy reports (`Reports.tsx`, `BossPanel.tsx`) is advised for future performance optimization.
 2. **Offline Refund Currency Conversion:** Historical invoices refunded offline must resolve historical exchange rates from invoice snapshots to prevent currency drift.

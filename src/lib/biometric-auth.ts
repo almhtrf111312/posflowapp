@@ -1,7 +1,10 @@
+import { Capacitor } from '@capacitor/core';
+import { BiometricAuth } from '@aparajita/capacitor-biometric-auth';
+
 /**
  * FlowPOS Pro - Unified Biometric & WebAuthn Authentication Engine
  * Supports:
- *  1. Android / iOS native Capacitor Biometric Auth (if installed)
+ *  1. Android / iOS native Capacitor Biometric Auth (@aparajita/capacitor-biometric-auth)
  *  2. Desktop / Browser / PWA / Electron platform biometrics via window.PublicKeyCredential (WebAuthn)
  *     (Windows Hello, Touch ID, Face ID, Android Biometric Prompt)
  */
@@ -9,13 +12,20 @@
 export async function isBiometricSupported(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
-  // 1. Native Capacitor Biometric plugin
-  const cap = (window as any).Capacitor;
-  if (cap?.isPluginAvailable?.('BiometricAuth')) {
-    return true;
+  // 1. Native Capacitor (Android APK / iOS)
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const result = await BiometricAuth.checkBiometry();
+      // Returns true if device has biometric hardware and is enrolled, or hardware is present
+      return !!result?.isAvailable || !!result?.strongBiometryIsAvailable;
+    } catch (err) {
+      console.warn('[BiometricAuth] Native checkBiometry error:', err);
+      // Fallback on native platform: if BiometricAuth exists, enable biometric option
+      return true;
+    }
   }
 
-  // 2. WebAuthn Platform Authenticator (Windows Hello, Touch ID, Android Biometrics)
+  // 2. Web / Desktop / Electron (WebAuthn Platform Authenticator)
   if (
     typeof window.PublicKeyCredential !== 'undefined' &&
     typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function'
@@ -33,13 +43,12 @@ export async function isBiometricSupported(): Promise<boolean> {
 export async function registerBiometricCredential(userId: string, userName: string): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
-  // 1. Native Capacitor
-  const cap = (window as any).Capacitor;
-  if (cap?.isPluginAvailable?.('BiometricAuth')) {
+  // 1. Native Capacitor mobile uses OS enrolled biometrics directly
+  if (Capacitor.isNativePlatform()) {
     return 'capacitor_native_biometric';
   }
 
-  // 2. WebAuthn
+  // 2. WebAuthn Platform Authenticator
   if (!window.PublicKeyCredential) return null;
 
   try {
@@ -91,22 +100,21 @@ export async function registerBiometricCredential(userId: string, userName: stri
 export async function authenticateBiometric(credentialId?: string | null): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
-  // 1. Native Capacitor Biometric plugin
-  const capBiometric = (window as any).Capacitor?.Plugins?.BiometricAuth;
-  if (capBiometric && typeof capBiometric.authenticate === 'function') {
+  // 1. Native Capacitor (Android APK / iOS)
+  if (Capacitor.isNativePlatform()) {
     try {
-      const res = await capBiometric.authenticate({
+      await BiometricAuth.authenticate({
         reason: 'يرجى مسح البصمة لتأكيد الدخول إلى نقطة البيع',
         cancelTitle: 'إلغاء واستخدام الرمز',
       });
-      return !!res?.authenticated || !!res?.success;
+      return true;
     } catch (err) {
-      console.warn('[BiometricAuth] Native biometric prompt error:', err);
+      console.warn('[BiometricAuth] Native biometric authentication canceled or failed:', err);
       return false;
     }
   }
 
-  // 2. WebAuthn Platform Authenticator
+  // 2. Web / Desktop / Electron (WebAuthn Platform Authenticator)
   if (!window.PublicKeyCredential) return false;
 
   try {
@@ -147,7 +155,7 @@ export async function authenticateBiometric(credentialId?: string | null): Promi
     const assertion = await navigator.credentials.get(getOptions);
     return !!assertion;
   } catch (err) {
-    console.warn('[BiometricAuth] Biometric verification canceled or failed:', err);
+    console.warn('[BiometricAuth] WebAuthn verification canceled or failed:', err);
     return false;
   }
 }

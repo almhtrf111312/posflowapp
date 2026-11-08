@@ -1,5 +1,9 @@
 name: Telegram public release
 
+# يُشغَّل يدوياً فقط، ويُستدعى أيضاً من لوحة Boss عبر دوال Supabase
+# (publish-telegram-release / trigger-public-release) التي ترسل بالضبط:
+#   confirm_publish = "true"  و  source_branch = "main"
+# ⚠️ لا تغيّر اسم الملف ولا أسماء المدخلات أدناه وإلا ينكسر زر النشر في اللوحة.
 on:
   workflow_dispatch:
     inputs:
@@ -31,6 +35,7 @@ jobs:
   release:
     if: github.event_name == 'workflow_dispatch' && (inputs.confirm_publish == 'true' || inputs.confirm_publish == true)
     runs-on: ubuntu-26.04
+    timeout-minutes: 20
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
@@ -52,111 +57,94 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # سحب أحدث APK جاهز من الـ Artifacts فوراً في 5 ثوانٍ
-      - name: Grab Ready APK Instantly (Skip Build - 5 Seconds)
+      # سحب الـ APK الجاهز من Artifacts دون أي بناء:
+      #  1) يفضّل artifact باسم FlowPOS-v<الإصدار الحالي>
+      #  2) وإن لم يوجد يأخذ أحدث APK (نفس سلوك النسخة القديمة) مع تحذير ظاهر في السجل
+      #  3) يبحث عن ملف .apk داخل الـ zip بشكل متداخل (النسخة الجديدة كانت تقرأ المستوى الأول فقط)
+      - name: Grab Ready APK Instantly (Skip Build)
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          node -e '
-          const fs = require("fs");
-          const { execSync } = require("child_process");
+          command -v unzip >/dev/null 2>&1 || { sudo apt-get update -qq && sudo apt-get install -y -qq unzip; }
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const { execFileSync } = require('child_process');
+
+          const { GH_TOKEN, REPO, VERSION_NAME, GITHUB_ENV } = process.env;
+          const TMP = process.env.RUNNER_TEMP || '/tmp';
+          const headers = {
+            Authorization: `Bearer ${GH_TOKEN}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          };
+          const byNewest = (a, b) => new Date(b.created_at) - new Date(a.created_at);
+
+          async function gh(url) {
+            const r = await fetch(url, { headers });
+            if (!r.ok) throw new Error(`GitHub API ${r.status} ${r.statusText} — ${url}`);
+            return r;
+          }
+
+          function findApk(dir) {
+            for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+              const p = path.join(dir, e.name);
+              if (e.isDirectory()) { const f = findApk(p); if (f) return f; }
+              else if (e.name.toLowerCase().endsWith('.apk')) return p;
+            }
+            return null;
+          }
 
           async function run() {
-            const token = process.env.GH_TOKEN;
-            const repo = process.env.REPO;
-            
-            console.log("⚡ Fetching pre-built APK from GitHub Artifacts...");
-            const listRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts?per_page=30`, {
-              headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
-            });
-            if (!listRes.ok) throw new Error("Failed to list artifacts: " + listRes.statusText);
-            const list = await listRes.json();
-            
-            const apkArtifact = list.artifacts.find(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name));
-            if (!apkArtifact) {
-              throw new Error("لم يتم العثور على ملف APK جاهز مسبقاً! يرجى تشغيل بناء APK مرة واحدة أولاً.");
+            const base = `https://api.github.com/repos/${REPO}/actions/artifacts`;
+            let art = null;
+
+            const exactName = `FlowPOS-v${VERSION_NAME}`;
+            const exact = await (await gh(`${base}?name=${encodeURIComponent(exactName)}&per_page=20`)).json();
+            art = (exact.artifacts || []).filter((a) => !a.expired).sort(byNewest)[0] || null;
+
+            if (art) {
+              console.log(`🎯 Found artifact for the current version: ${art.name} (ID: ${art.id})`);
+            } else {
+              const list = await (await gh(`${base}?per_page=100`)).json();
+              art = (list.artifacts || [])
+                .filter((a) => !a.expired && /flowpos/i.test(a.name) && !/win|exe|setup/i.test(a.name))
+                .sort(byNewest)[0] || null;
+              if (!art) {
+                throw new Error('لم يتم العثور على ملف APK جاهز مسبقاً! شغّل «Build FlowPOS Pro APK» مرة واحدة أولاً.');
+              }
+              console.log(`::warning::لا يوجد artifact باسم ${exactName}. سيتم استخدام أحدث APK متاح: ${art.name}`);
             }
 
-            console.log(`📦 Found pre-built artifact: ${apkArtifact.name} (ID: ${apkArtifact.id})`);
-            
-            fs.mkdirSync("/tmp/ready-apk", { recursive: true });
-            
-            const zipRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts/${apkArtifact.id}/zip`, {
-              headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
-            });
-            if (!zipRes.ok) throw new Error("Failed to download artifact zip: " + zipRes.statusText);
-            
-            const arrayBuffer = await zipRes.arrayBuffer();
-            fs.writeFileSync("/tmp/ready-apk/artifact.zip", Buffer.from(arrayBuffer));
-            
-            execSync("unzip -q -o /tmp/ready-apk/artifact.zip -d /tmp/ready-apk");
-            
-            const files = fs.readdirSync("/tmp/ready-apk");
-            const targetApk = files.find(f => f.endsWith(".apk"));
-            if (!targetApk) throw new Error("No APK inside the downloaded artifact zip!");
-            
-            console.log(`✅ Extracted APK: /tmp/ready-apk/${targetApk}`);
-            fs.writeFileSync("/tmp/ready-apk/exact_path.txt", `/tmp/ready-apk/${targetApk}`);
-          }
-          run().catch(err => {
-            console.error("❌ " + err.message);
-            process.exit(1);
-          });
-          '
+            const dir = path.join(TMP, 'ready-apk');
+            fs.rmSync(dir, { recursive: true, force: true });
+            fs.mkdirSync(dir, { recursive: true });
 
-      # إرسال الملف المباشر إلى قناة تيليجرام (نفس منطق نسخة 11:49 مع تنظيف المسافات)
-      - name: Dispatch APK to Telegram Channel
+            const zipRes = await gh(`${base}/${art.id}/zip`); // fetch يتبع إعادة التوجيه لـ blob storage تلقائياً
+            const zipPath = path.join(dir, 'artifact.zip');
+            fs.writeFileSync(zipPath, Buffer.from(await zipRes.arrayBuffer()));
+            execFileSync('unzip', ['-q', '-o', zipPath, '-d', path.join(dir, 'x')]);
+
+            const apk = findApk(path.join(dir, 'x'));
+            if (!apk) throw new Error('ملف الـ APK غير موجود داخل الحزمة.');
+
+            const target = path.join(TMP, `FlowPOS-v${VERSION_NAME}.apk`);
+            fs.copyFileSync(apk, target);
+            console.log(`📦 APK ready: ${target} (${(fs.statSync(target).size / 1024 / 1024).toFixed(2)} MB)`);
+            fs.appendFileSync(GITHUB_ENV, `APK_PATH=${target}\n`);
+          }
+
+          run().catch((e) => { console.log('::error::' + e.message); process.exit(1); });
+          NODE
+
+      # كل منطق تيليجرام (تحديد القناة، فحص صلاحيات البوت، الوصف، الحد 1024، إعادة المحاولة)
+      # موجود في scripts/telegram-send-apk.cjs
+      - name: Send APK to Telegram
         shell: bash
         env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           CUSTOM_NOTES: ${{ inputs.custom_notes }}
-        run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::TELEGRAM_BOT_TOKEN is missing in secrets"
-            exit 1
-          fi
-
-          # تنظيف المعرف من أي مسافات أو أسطر أو علامات تنصيص زائدة
-          CLEAN_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]"' | tr -d "'")
-
-          if [ -z "$CLEAN_CHAT" ]; then
-            echo "::error::TELEGRAM_CHAT_ID is missing in secrets"
-            exit 1
-          fi
-
-          APK_PATH=$(cat /tmp/ready-apk/exact_path.txt)
-          node scripts/telegram-release-notes.cjs > /tmp/release_caption.txt 2>/dev/null || echo "تحديث جديد FlowPOS Pro" > /tmp/release_caption.txt
-
-          echo "🚀 Sending APK to Telegram ($CLEAN_CHAT)..."
-          HTTP_RES=$(curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-            -F "chat_id=${CLEAN_CHAT}" \
-            -F "document=@${APK_PATH}" \
-            -F "caption=$(cat /tmp/release_caption.txt)" \
-            -F "parse_mode=HTML")
-
-          echo "Telegram Response: $HTTP_RES"
-
-          if echo "$HTTP_RES" | grep -q '"ok":true'; then
-            echo "✅ Successfully published to Telegram!"
-          else
-            # إذا فشل وكان المعرف أرقاماً فقط دون بادئة -100، نجرب تلقائياً إضافة البادئة
-            if echo "$CLEAN_CHAT" | grep -qE '^[0-9]+$'; then
-              ALT_CHAT="-100$CLEAN_CHAT"
-              echo "🔄 Retrying with private channel prefix (-100): $ALT_CHAT..."
-              RETRY_RES=$(curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-                -F "chat_id=${ALT_CHAT}" \
-                -F "document=@${APK_PATH}" \
-                -F "caption=$(cat /tmp/release_caption.txt)" \
-                -F "parse_mode=HTML")
-              echo "Retry Response: $RETRY_RES"
-              if echo "$RETRY_RES" | grep -q '"ok":true'; then
-                echo "✅ Successfully published on retry!"
-                exit 0
-              fi
-            fi
-            echo "::error::Failed to send APK to Telegram. Details: $HTTP_RES"
-            exit 1
-          fi
+        run: node scripts/telegram-send-apk.cjs

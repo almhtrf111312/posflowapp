@@ -52,7 +52,7 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
-      # سحب فوري لأحدث APK جاهز من الـ Artifacts في 5 ثوانٍ
+      # سحب أحدث APK جاهز من الـ Artifacts فوراً في 5 ثوانٍ
       - name: Grab Ready APK Instantly (Skip Build - 5 Seconds)
         shell: bash
         env:
@@ -106,73 +106,57 @@ jobs:
           });
           '
 
-      # التحقق من هوية البوت ومعرف القناة
-      - name: Verify Bot & Resolve Channel
+      # إرسال الملف المباشر إلى قناة تيليجرام (نفس منطق نسخة 11:49 مع تنظيف المسافات)
+      - name: Dispatch APK to Telegram Channel
         shell: bash
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           RAW_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CUSTOM_NOTES: ${{ inputs.custom_notes }}
         run: |
           if [ -z "$TOKEN" ]; then
             echo "::error::TELEGRAM_BOT_TOKEN is missing in secrets"
             exit 1
           fi
 
-          echo "🔍 Checking Telegram Bot Identity..."
-          ME_RES=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getMe" || true)
-          echo "🤖 Bot Info: $ME_RES"
-
-          if ! echo "$ME_RES" | grep -q '"ok":true'; then
-            echo "::error::Invalid TELEGRAM_BOT_TOKEN!"
-            exit 1
-          fi
-
+          # تنظيف المعرف من أي مسافات أو أسطر أو علامات تنصيص زائدة
           CLEAN_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]"' | tr -d "'")
+
           if [ -z "$CLEAN_CHAT" ]; then
             echo "::error::TELEGRAM_CHAT_ID is missing in secrets"
             exit 1
           fi
 
-          echo "TARGET_CHANNEL=$CLEAN_CHAT" >> "$GITHUB_ENV"
-
-      # إرسال ملف APK المباشر إلى القناة
-      - name: Dispatch APK to Telegram Channel
-        shell: bash
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHANNEL: ${{ env.TARGET_CHANNEL }}
-          CUSTOM_NOTES: ${{ inputs.custom_notes }}
-        run: |
           APK_PATH=$(cat /tmp/ready-apk/exact_path.txt)
           node scripts/telegram-release-notes.cjs > /tmp/release_caption.txt 2>/dev/null || echo "تحديث جديد FlowPOS Pro" > /tmp/release_caption.txt
 
-          echo "📤 Sending APK to Telegram channel ($CHANNEL)..."
+          echo "🚀 Sending APK to Telegram ($CLEAN_CHAT)..."
           HTTP_RES=$(curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-            -F "chat_id=${CHANNEL}" \
+            -F "chat_id=${CLEAN_CHAT}" \
             -F "document=@${APK_PATH}" \
             -F "caption=$(cat /tmp/release_caption.txt)" \
             -F "parse_mode=HTML")
 
-          echo "Response: $HTTP_RES"
+          echo "Telegram Response: $HTTP_RES"
 
           if echo "$HTTP_RES" | grep -q '"ok":true'; then
-            echo "🚀 Sent successfully to Telegram!"
+            echo "✅ Successfully published to Telegram!"
           else
-            # محاولة أخيرة بإضافة بادئة -100 إذا كان المعرف أرقاماً فقط بدون بادئة
-            if echo "$CHANNEL" | grep -qE '^[0-9]+$'; then
-              ALT_CHANNEL="-100$CHANNEL"
-              echo "🔄 Retrying with prefix -100: $ALT_CHANNEL..."
-              HTTP_RES2=$(curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-                -F "chat_id=${ALT_CHANNEL}" \
+            # إذا فشل وكان المعرف أرقاماً فقط دون بادئة -100، نجرب تلقائياً إضافة البادئة
+            if echo "$CLEAN_CHAT" | grep -qE '^[0-9]+$'; then
+              ALT_CHAT="-100$CLEAN_CHAT"
+              echo "🔄 Retrying with private channel prefix (-100): $ALT_CHAT..."
+              RETRY_RES=$(curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
+                -F "chat_id=${ALT_CHAT}" \
                 -F "document=@${APK_PATH}" \
                 -F "caption=$(cat /tmp/release_caption.txt)" \
                 -F "parse_mode=HTML")
-              echo "Retry Response: $HTTP_RES2"
-              if echo "$HTTP_RES2" | grep -q '"ok":true'; then
-                echo "🚀 Sent successfully on retry!"
+              echo "Retry Response: $RETRY_RES"
+              if echo "$RETRY_RES" | grep -q '"ok":true'; then
+                echo "✅ Successfully published on retry!"
                 exit 0
               fi
             fi
-            echo "::error::Failed to send APK to Telegram. Verify that the bot is an Admin in the channel with Post Messages permission."
+            echo "::error::Failed to send APK to Telegram. Details: $HTTP_RES"
             exit 1
           fi

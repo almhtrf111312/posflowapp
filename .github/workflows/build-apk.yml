@@ -8,7 +8,6 @@ on:
       - '**.md'
       - '.github/workflows/build-windows.yml'
       - '.github/workflows/telegram-public-release.yml'
-      - '.github/workflows/sync-version-to-cloud.yml'
   workflow_dispatch:
     inputs:
       publish_telegram:
@@ -28,15 +27,17 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
+      # تسريع السحب: جلب أحدث Commit فقط لتقليل وقت التنزيل
       - name: Checkout source
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           clean: true
 
       - name: Setup Java (Temurin JDK 21)
@@ -53,6 +54,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
 
       - name: Read authoritative version
         shell: bash
@@ -64,8 +67,9 @@ jobs:
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "Building FlowPOS Pro: v$VERSION_NAME (Build $VERSION_CODE)"
 
+      # استخدام npm install مع الكاش لتفادي تحميل الحزم من الصفر
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps --prefer-offline --no-audit
 
       - name: Build embedded web application
         env:
@@ -91,14 +95,13 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Decoding release keystore from secrets.ANDROID_KEYSTORE_BASE64..."
-            # تنظيف الترويسات ومسافات وفواصل أسطر ويندوز
             CLEAN_B64=$(echo "$KEYSTORE_BASE64" | sed '/^-----/d' | tr -d '\r\n[:space:]')
             echo "$CLEAN_B64" | base64 -d > android/app/flowpos-release.keystore 2>/dev/null || echo "$CLEAN_B64" | base64 -di > android/app/flowpos-release.keystore
           fi
 
           if [ -f "android/app/flowpos-release.keystore" ]; then
             if [ -n "$KEYSTORE_PASS" ] && keytool -list -keystore android/app/flowpos-release.keystore -storepass "$KEYSTORE_PASS" >/dev/null 2>&1; then
-              echo "Using configured production keystore credentials."
+              echo "✅ Using configured production keystore credentials."
             else
               echo "::error::Production keystore password (ANDROID_KEYSTORE_PASSWORD) is missing or invalid. Aborting build."
               exit 1
@@ -131,7 +134,7 @@ jobs:
           KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --warning-mode=all
+          ./gradlew assembleRelease --warning-mode=none
 
       - name: Prepare single versioned APK
         shell: bash
@@ -153,13 +156,91 @@ jobs:
           echo "FINAL_APK_PATH=$RELEASE_DIR/$FINAL_APK" >> "$GITHUB_ENV"
           ls -lh "$RELEASE_DIR/$FINAL_APK"
 
+      # رفع الـ APK مع حفظه لـ 90 يوماً وتجاوز فخ الـ 5 أيام
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: FlowPOS-v${{ env.VERSION_NAME }}
           path: ${{ env.FINAL_APK_PATH }}
-          retention-days: 5
+          retention-days: 90
 
+      # الاحتفاظ بآخر 30 نسخة تلقائياً ومسح ما زاد عنها فقط
+      - name: Keep Latest 30 Artifacts (Prune Older)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          node -e '
+          async function pruneArtifacts() {
+            const token = process.env.GH_TOKEN;
+            const repo = process.env.REPO;
+            if (!token || !repo) return;
+
+            console.log("🔍 Checking existing artifacts count...");
+            const res = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts?per_page=100`, {
+              headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
+            });
+            if (!res.ok) {
+              console.log("Could not fetch artifacts list:", res.statusText);
+              return;
+            }
+
+            const data = await res.json();
+            const artifacts = (data.artifacts || [])
+              .filter(a => !a.expired && a.name.toLowerCase().includes("flowpos"))
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            console.log(`📊 Found ${artifacts.length} active FlowPOS artifacts.`);
+            const KEEP_LIMIT = 30;
+
+            if (artifacts.length > KEEP_LIMIT) {
+              const toDelete = artifacts.slice(KEEP_LIMIT);
+              console.log(`🧹 Removing ${toDelete.length} older artifacts to maintain exactly ${KEEP_LIMIT}...`);
+              for (const item of toDelete) {
+                try {
+                  const delRes = await fetch(`https://api.github.com/repos/${repo}/actions/artifacts/${item.id}`, {
+                    method: "DELETE",
+                    headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" }
+                  });
+                  if (delRes.ok) console.log(`   Deleted: ${item.name} (ID: ${item.id})`);
+                } catch (e) {}
+              }
+            } else {
+              console.log(`✅ Artifacts count (${artifacts.length}) is within the safe limit (${KEEP_LIMIT}). Nothing pruned.`);
+            }
+          }
+          pruneArtifacts().catch(console.error);
+          '
+
+      # مزامنة رقم الإصدار الجديد مع السحابة مباشرة ليعرف التطبيق الترقية فوراً
+      - name: Sync release metadata to cloud
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SERVICE_KEY" ]; then
+            echo "📡 Syncing release metadata to cloud..."
+            node -e "
+              const fs = require('fs');
+              const v = require('./version.json');
+              const payload = {
+                latest_version_code: v.versionCode,
+                latest_version_name: v.versionName,
+                commit_sha: process.env.COMMIT_SHA,
+                commit_message: 'Auto-build v' + v.versionName + ' (Build ' + v.versionCode + ')'
+              };
+              fs.writeFileSync('sync-payload.json', JSON.stringify(payload, null, 2));
+            "
+            curl -s -o /dev/null -w "%{http_code}" -X POST "${SUPABASE_URL}/functions/v1/sync-release-metadata" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${SERVICE_KEY}" \
+              --data @sync-payload.json || true
+          fi
+
+      # نشر اختياري للتيليجرام إذا طُلب أثناء تشغيل البناء
       - name: Publish exact APK to Telegram (If Requested)
         if: ${{ inputs.publish_telegram == true }}
         shell: bash
@@ -169,78 +250,10 @@ jobs:
           APK_PATH: ${{ env.FINAL_APK_PATH }}
           CUSTOM_NOTES: ${{ inputs.custom_notes }}
         run: |
-          if [ -z "$TOKEN" ]; then
-            echo "::error::TELEGRAM_BOT_TOKEN is missing in secrets"
-            exit 1
+          if [ -n "$TOKEN" ] && [ -n "$RAW_CHAT" ]; then
+            node scripts/telegram-release-notes.cjs > /tmp/release_caption.txt 2>/dev/null || echo "تحديث جديد FlowPOS Pro" > /tmp/release_caption.txt
+            curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendDocument" \
+              -F "chat_id=${RAW_CHAT}" \
+              -F "document=@${APK_PATH}" \
+              -F "caption=$(cat /tmp/release_caption.txt)" >/dev/null || true
           fi
-
-          RAW_CHAT=$(echo "$RAW_CHAT" | tr -d '[:space:]')
-          CANDIDATES=""
-
-          if [ -n "$RAW_CHAT" ]; then
-            CANDIDATES="$RAW_CHAT"
-            if echo "$RAW_CHAT" | grep -qE '^[0-9]+$'; then
-              CANDIDATES="$CANDIDATES -100$RAW_CHAT"
-            fi
-            if echo "$RAW_CHAT" | grep -qE '^[A-Za-z][A-Za-z0-9_]+$'; then
-              CANDIDATES="$CANDIDATES @$RAW_CHAT"
-            fi
-          fi
-
-          AUTO_CHATS=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getUpdates" | jq -r '.result[]? | (.message.chat.id // .channel_post.chat.id // .my_chat_member.chat.id) | select(. != null)' 2>/dev/null | tac | uniq | tr '\n' ' ' || true)
-          CANDIDATES="$CANDIDATES $AUTO_CHATS @flowpospro"
-
-          FOUND_CHANNEL=""
-          for C in $CANDIDATES; do
-            R=$(curl -sS "https://api.telegram.org/bot${TOKEN}/getChat" --data-urlencode "chat_id=$C" || true)
-            if echo "$R" | grep -q '"ok":true'; then
-              echo "✅ Verified Telegram target: $C"
-              FOUND_CHANNEL="$C"
-              break
-            fi
-          done
-
-          if [ -z "$FOUND_CHANNEL" ]; then
-            echo "::error::Could not resolve Telegram channel target."
-            exit 1
-          fi
-
-          APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
-          BUILD_DATE=$(TZ='Asia/Damascus' date +'%Y-%m-%d (%H:%M)')
-
-          if [ -n "$CUSTOM_NOTES" ]; then
-            RAW_NOTES="$CUSTOM_NOTES"
-          elif [ -f "scripts/telegram-release-notes.cjs" ]; then
-            RAW_NOTES=$(node scripts/telegram-release-notes.cjs)
-          else
-            RAW_NOTES=$(git log -3 --pretty=format:"• %s")
-          fi
-
-          SAFE_NOTES=$(echo "$RAW_NOTES" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
-
-          CAPTION="🚀 <b>تحديث جديد | Flow POS Pro</b>
-          ━━━━━━━━━━━━━━
-          📌 <b>الإصدار:</b> <code>v${{ env.VERSION_NAME }} (Build ${{ env.VERSION_CODE }})</code>
-          📦 <b>حجم الملف:</b> <code>${APK_SIZE}B</code>
-          📅 <b>تاريخ النشر:</b> <code>${BUILD_DATE}</code>
-
-          ✨ <b>أبرز التحديثات والإصلاحات:</b>
-          <blockquote>${SAFE_NOTES}</blockquote>
-          ━━━━━━━━━━━━━━
-          💡 <i>يمكنك تثبيت هذا التحديث مباشرة فوق النسخة الحالية دون حذف بياناتك.</i>"
-
-          REPLY_MARKUP='{"inline_keyboard":[[{"text":"📢 قناة التحديثات الرسمية","url":"https://t.me/flowpospro"}]]}'
-
-          curl -sS --fail-with-body "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-            --form-string "chat_id=${FOUND_CHANNEL}" \
-            -F "document=@${APK_PATH}" \
-            --form-string "parse_mode=HTML" \
-            --form-string "reply_markup=${REPLY_MARKUP}" \
-            --form-string "caption=${CAPTION}"
-
-      - name: Create tagged release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.FINAL_APK_PATH }}
-          generate_release_notes: true

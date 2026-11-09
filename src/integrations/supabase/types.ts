@@ -552,6 +552,7 @@ export type Database = {
           id: string
           operation_id: string
           paid_by: string | null
+          shift_id: string | null
           user_id: string
         }
         Insert: {
@@ -561,6 +562,7 @@ export type Database = {
           id?: string
           operation_id: string
           paid_by?: string | null
+          shift_id?: string | null
           user_id: string
         }
         Update: {
@@ -570,6 +572,7 @@ export type Database = {
           id?: string
           operation_id?: string
           paid_by?: string | null
+          shift_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -1182,6 +1185,39 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           withdrawal_history?: Json | null
+        }
+        Relationships: []
+      }
+      phone_transfer_requests: {
+        Row: {
+          attempts: number | null
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          source_user_id: string
+          target_user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          source_user_id: string
+          target_user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          source_user_id?: string
+          target_user_id?: string
         }
         Relationships: []
       }
@@ -2358,10 +2394,10 @@ export type Database = {
     Functions: {
       activate_code_strict: {
         Args: {
-          _code: string
-          _device_id: string
-          _user_email: string
-          _user_id: string
+          p_code: string
+          p_device_id: string
+          p_user_email: string
+          p_user_id: string
         }
         Returns: Json
       }
@@ -2379,6 +2415,10 @@ export type Database = {
       add_product_quantity: {
         Args: { _amount: number; _product_id: string }
         Returns: number
+      }
+      assign_store_and_profile_phone: {
+        Args: { _phone: string }
+        Returns: Json
       }
       boss_change_user_password: {
         Args: { _new_password: string; _target_user_id: string }
@@ -2409,31 +2449,47 @@ export type Database = {
         Args: { _invoice_id: string; _reason?: string }
         Returns: boolean
       }
+      check_and_bind_device: { Args: { p_device_id: string }; Returns: Json }
+      check_phone_email_availability: {
+        Args: { _email: string; _exclude_user_id?: string; _phone: string }
+        Returns: Json
+      }
+      check_product_addition_limit: {
+        Args: { p_has_image: boolean; p_owner_id: string }
+        Returns: Json
+      }
+      check_store_phone_status: { Args: { _phone: string }; Returns: Json }
+      clean_old_error_logs: { Args: never; Returns: number }
+      clear_user_pin: { Args: { _target_user_id: string }; Returns: boolean }
+      close_accounting_period_atomic: {
+        Args: { _period_end: string; _period_start: string }
+        Returns: Json
+      }
       close_cash_shift_atomic: {
         Args: {
-          _shift_id: string
           _actual_balance: number
-          _variance_reason?: string | null
+          _shift_id: string
+          _variance_reason?: string
         }
         Returns: Json
       }
-      close_accounting_period_atomic: {
-        Args: {
-          _period_start: string
-          _period_end: string
-        }
+      complete_phone_transfer: {
+        Args: { _entered_code: string; _request_id: string }
         Returns: Json
       }
-      check_and_bind_device: { Args: { p_device_id: string }; Returns: Json }
-      clean_old_error_logs: { Args: never; Returns: number }
       confirm_partner_debt_profit_atomic: {
-        Args: {
-          _invoice_id: string
-          _payment_ratio: number
-        }
+        Args: { _invoice_id: string; _payment_ratio: number }
+        Returns: Json
+      }
+      confirm_subscription_request: {
+        Args: { p_request_id: string }
         Returns: Json
       }
       count_owner_cashiers: { Args: { _owner_id: string }; Returns: number }
+      create_subscription_request: {
+        Args: { p_method_id: string; p_plan_id: string }
+        Returns: Json
+      }
       deduct_product_quantity: {
         Args: { _amount: number; _product_id: string }
         Returns: number
@@ -2442,7 +2498,15 @@ export type Database = {
         Args: { _debt_id: string; _reason?: string }
         Returns: Json
       }
+      delete_expense_atomic: {
+        Args: { _expense_id: string; _reason?: string }
+        Returns: Json
+      }
       delete_owner_cascade: { Args: { _owner_id: string }; Returns: boolean }
+      distribute_invoice_partner_profits_atomic: {
+        Args: { _invoice_id: string }
+        Returns: Json
+      }
       distribute_sale_profit_to_partners_atomic: {
         Args: {
           _category_profits: Json
@@ -2532,19 +2596,33 @@ export type Database = {
       is_first_user: { Args: never; Returns: boolean }
       is_license_valid: { Args: { _user_id: string }; Returns: boolean }
       issue_offline_lease: { Args: { p_device_id: string }; Returns: Json }
-      partner_deposit_atomic: {
-        Args: {
-          _amount_usd: number
-          _currency?: string
-          _deposit_target?: string
-          _exchange_rate?: number
-          _notes?: string
-          _original_amount?: number
-          _partner_id: string
-          _shift_id?: string
-        }
-        Returns: Json
-      }
+      normalize_phone_number: { Args: { p_phone: string }; Returns: string }
+      partner_deposit_atomic:
+        | {
+            Args: {
+              _amount_usd: number
+              _currency?: string
+              _deposit_target?: string
+              _notes?: string
+              _original_amount?: number
+              _partner_id: string
+              _shift_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _amount_usd: number
+              _currency?: string
+              _deposit_target?: string
+              _exchange_rate?: number
+              _notes?: string
+              _original_amount?: number
+              _partner_id: string
+              _shift_id?: string
+            }
+            Returns: Json
+          }
       partner_withdrawal_atomic: {
         Args: {
           _amount: number
@@ -2638,10 +2716,9 @@ export type Database = {
         Args: { _invoice_number: string; _items: Json; _operation_id: string }
         Returns: Json
       }
-      request_device_reset_secure: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
+      request_device_reset_secure:
+        | { Args: { _license_key: string; _user_email: string }; Returns: Json }
+        | { Args: { p_user_id: string }; Returns: Json }
       reset_device_for_user: {
         Args: { p_target_email: string }
         Returns: boolean
@@ -2650,6 +2727,10 @@ export type Database = {
       reset_user_store_data: { Args: never; Returns: Json }
       reverse_expense_atomic: {
         Args: { p_expense_id: string; p_reason?: string }
+        Returns: Json
+      }
+      revert_invoice_partner_profits_atomic: {
+        Args: { _invoice_id: string; _revert_ratio?: number }
         Returns: Json
       }
       revoke_license: {
@@ -2663,6 +2744,18 @@ export type Database = {
       send_support_message: {
         Args: { _conversation_id?: string; _message: string }
         Returns: Json
+      }
+      set_user_pin: {
+        Args: { _raw_pin: string; _target_user_id: string }
+        Returns: boolean
+      }
+      update_category_atomic: {
+        Args: { _category_id: string; _new_name: string }
+        Returns: Json
+      }
+      verify_user_pin: {
+        Args: { _entered_pin: string; _user_id: string }
+        Returns: boolean
       }
       writeoff_debt_atomic: {
         Args: { _debt_id: string; _operation_id: string; _reason: string }

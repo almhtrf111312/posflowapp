@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './use-auth';
 import { showToast } from '@/lib/toast-config';
 import { loadProductsCloud, getStatus } from '@/lib/cloud/products-cloud';
 import { loadDebtsCloud } from '@/lib/cloud/debts-cloud';
@@ -25,6 +27,7 @@ export interface Notification {
   timestamp: Date;
   read: boolean;
   persistent?: boolean;
+  actionUrl?: string;
   data?: {
     customerId?: string;
     customerName?: string;
@@ -86,9 +89,53 @@ const getExpiryStatus = (expiryDate: string): 'expired' | 'expiring_soon' | 'val
 };
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [archivedNotifications, setArchivedNotifications] = useState<Notification[]>(loadArchivedFromStorage);
   const [hasCheckedInitial, setHasCheckedInitial] = useState(false);
+
+  // جلب الإشعارات المحفوظة في السحابة عند تسجيل الدخول
+  useEffect(() => {
+    if (!user?.id) return;
+
+    async function loadCloudNotifications() {
+      try {
+        const { data, error } = await supabase
+          .from('user_notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_archived', false)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) {
+          console.warn('Failed to load cloud notifications:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const formatted: Notification[] = data.map((n: any) => ({
+            id: n.id,
+            title: n.title,
+            message: n.message,
+            type: n.type || 'system',
+            read: !!n.is_read,
+            timestamp: new Date(n.created_at),
+            actionUrl: n.action_url,
+          }));
+          setNotifications(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newOnes = formatted.filter(f => !existingIds.has(f.id));
+            return [...newOnes, ...prev];
+          });
+        }
+      } catch (err) {
+        console.warn('Error loading cloud notifications:', err);
+      }
+    }
+
+    loadCloudNotifications();
+  }, [user?.id]);
 
   // Sync archived to localStorage
   useEffect(() => {
@@ -143,13 +190,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
-  const markAsRead = useCallback((id: string) => {
+  const markAsRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  }, []);
+    if (user?.id) {
+      try {
+        await supabase.from('user_notifications').update({ is_read: true }).eq('id', id).eq('user_id', user.id);
+      } catch { /* ignore offline */ }
+    }
+  }, [user?.id]);
 
-  const markAllAsRead = useCallback(() => {
+  const markAllAsRead = useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }, []);
+    if (user?.id) {
+      try {
+        await supabase.from('user_notifications').update({ is_read: true }).eq('user_id', user.id);
+      } catch { /* ignore offline */ }
+    }
+  }, [user?.id]);
 
   const clearNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));

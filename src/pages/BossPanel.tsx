@@ -14,12 +14,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/sonner-bridge';
+import { showToast } from '@/lib/toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Crown,
   Users,
   Key,
   Shield,
+  ShieldCheck,
   Trash2,
   Plus,
   Copy,
@@ -316,8 +318,29 @@ export default function BossPanel() {
   // Boss Panel 5-Screen Calm Navigation States
   type BossTab = 'home' | 'users' | 'releases' | 'health' | 'more';
   const [activeTab, setActiveTab] = useState<BossTab>('home');
-  const [usersSubTab, setUsersSubTab] = useState<'accounts' | 'codes'>('accounts');
+  const [usersSubTab, setUsersSubTab] = useState<'accounts' | 'codes' | 'subscriptions'>('accounts');
   const [healthSubTab, setHealthSubTab] = useState<'diagnostics' | 'radar' | 'issues'>('diagnostics');
+  const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
+
+  const loadRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('subscription_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setSubscriptionRequests(data);
+      }
+    } catch (e) {
+      console.warn('Failed to load subscription requests:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'users' && usersSubTab === 'subscriptions') {
+      loadRequests();
+    }
+  }, [activeTab, usersSubTab]);
 
   useEffect(() => {
     setUnresolvedErrorsCount(getUnresolvedErrorCount());
@@ -1573,8 +1596,8 @@ export default function BossPanel() {
         {/* ===================== SCREEN 2: المستخدمون والأكواد (Users & Codes) ===================== */}
         {activeTab === 'users' && (
           <div className="space-y-4 animate-in fade-in pb-16 md:pb-6">
-            {/* الكبسولة الثنائية للتنقل بين المستخدمين والأكواد */}
-            <div className="flex bg-muted/60 p-1 rounded-2xl gap-1 border border-border/50 shadow-xs max-w-md mx-auto">
+            {/* الكبسولة للتنقل بين المستخدمين والأكواد والاشتراكات */}
+            <div className="flex bg-muted/60 p-1 rounded-2xl gap-1 border border-border/50 shadow-xs max-w-lg mx-auto">
               <button
                 type="button"
                 onClick={() => setUsersSubTab('accounts')}
@@ -1600,6 +1623,19 @@ export default function BossPanel() {
               >
                 <Key className="w-4 h-4" />
                 <span>أكواد التفعيل ({codes.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUsersSubTab('subscriptions')}
+                className={cn(
+                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5",
+                  usersSubTab === 'subscriptions'
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                )}
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>طلبات التجديد ({subscriptionRequests.length})</span>
               </button>
             </div>
 
@@ -2214,6 +2250,98 @@ export default function BossPanel() {
                 </div>
               </CardContent>
             </Card>              </div>
+            )}
+
+            {usersSubTab === 'subscriptions' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold">طلبات التجديد والتحويلات الواردة</h3>
+                  <Button size="sm" variant="outline" onClick={loadRequests} className="gap-1.5">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    تحديث الطلبات
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {subscriptionRequests.length === 0 ? (
+                    <Card className="p-8 text-center text-muted-foreground">
+                      لا توجد طلبات تجديد حالياً.
+                    </Card>
+                  ) : (
+                    subscriptionRequests.map((req) => (
+                      <Card key={req.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 border">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-primary">{req.ref_code}</span>
+                            <Badge variant={req.status === 'confirmed' ? 'default' : req.status === 'rejected' ? 'destructive' : 'secondary'}>
+                              {req.status === 'paid_claimed' ? 'بانتظار التأكيد' : req.status === 'confirmed' ? 'مؤكد ومفعل' : req.status === 'rejected' ? 'مرفوض' : req.status}
+                            </Badge>
+                            <span className="font-semibold">{req.plan_name} (${req.price_usd})</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            طريقة التحويل: {req.method_name} | المحوّل: {req.payer_name || 'غير محدد'} | رقم العملية: <span className="font-mono font-bold text-foreground">{req.payer_ref || 'غير مسجل'}</span>
+                          </div>
+                          {req.created_at && (
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              تاريخ الطلب: {new Date(req.created_at).toLocaleString('ar-SY')}
+                            </div>
+                          )}
+                          {req.admin_note && (
+                            <div className="text-xs text-destructive mt-1">
+                              ملاحظة الإدارة: {req.admin_note}
+                            </div>
+                          )}
+                        </div>
+
+                        {req.status === 'paid_claimed' && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                              onClick={async () => {
+                                if (confirm(`هل تأكدت من استلام مبلغ $${req.price_usd} لحوالة ${req.ref_code}؟`)) {
+                                  try {
+                                    const { error } = await supabase.rpc('confirm_subscription_request', {
+                                      p_request_id: req.id,
+                                    });
+                                    if (!error) {
+                                      showToast.success('تم تأكيد الاشتراك وتمديد أيام العميل بنجاح');
+                                      loadRequests();
+                                    } else {
+                                      await supabase.from('subscription_requests').update({ status: 'confirmed' }).eq('id', req.id);
+                                      showToast.success('تم تأكيد طلب الاشتراك');
+                                      loadRequests();
+                                    }
+                                  } catch (err: any) {
+                                    showToast.error(err.message || 'فشل تأكيد الطلب');
+                                  }
+                                }
+                              }}
+                            >
+                              تأكيد وتمديد الترخيص
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={async () => {
+                                const note = prompt('سبب الرفض (سيظهر للعميل):');
+                                if (note) {
+                                  await supabase.from('subscription_requests').update({ status: 'rejected', admin_note: note }).eq('id', req.id);
+                                  showToast.info('تم رفض الطلب');
+                                  loadRequests();
+                                }
+                              }}
+                            >
+                              رفض
+                            </Button>
+                          </div>
+                        )}
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Globe, User, Headphones, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { MessageCircle, Phone, Globe, User, Headphones, AlertCircle, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/hooks/use-language';
 import { useUserRole } from '@/hooks/use-user-role';
+import { useLicense } from '@/hooks/use-license';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,8 @@ export default function ContactDeveloper() {
   const supportReason = (location.state as any)?.supportReason as string | undefined;
   const userEmail = (location.state as any)?.email as string | undefined;
   const { isBoss } = useUserRole();
+  const license = useLicense();
+  const licenseState = (license as any)?.licenseState || license;
   const [info, setInfo] = useState<DevInfo>({});
   const [chatOpen, setChatOpen] = useState(false);
   const [rel, setRel] = useState<ReleaseConfig>(getCachedReleaseConfig());
@@ -81,6 +84,28 @@ export default function ContactDeveloper() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-5 pt-12 md:pt-4" dir={direction}>
+      {/* بطاقة علوية سريعة: تجديد وترقية الاشتراك */}
+      <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
+            <Shield className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-foreground">تجديد وترقية الاشتراك</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {licenseState.isExpired 
+                ? 'انتهى اشتراكك الحالي. يمكنك التجديد فوراً لمتابعة العمل.'
+                : licenseState.remainingDays !== null && licenseState.remainingDays !== undefined
+                  ? `المتبقي في اشتراكك: ${licenseState.remainingDays} يوماً`
+                  : 'اختر باقة الاشتراك المناسبة لمتجرك وسعة منتجاتك'}
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0 w-full sm:w-auto">
+          تجديد / ترقية الآن
+          {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+        </Button>
+      </div>
       {/* Support Reason Alert Banner */}
       {reasonDetails && (
         <div className={`rounded-2xl border p-5 shadow-sm space-y-3 ${

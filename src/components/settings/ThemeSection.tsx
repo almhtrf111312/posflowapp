@@ -162,7 +162,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
         </div>
       </div>
 
-      {/* Theme Style Selection (FlowPOS Standard vs Xiaomi HyperOS) */}
+      {/* Theme Style Selection (FlowPOS Standard vs Flow Glass) */}
       <div className="pt-2">
         <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
@@ -196,10 +196,10 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
 
           <button
             type="button"
-            onClick={(e) => handleStyleChange('xiaomi', e)}
+            onClick={(e) => handleStyleChange('flowglass', e)}
             className={cn(
               "p-3.5 sm:p-4 rounded-xl border-2 text-start transition-all relative active:scale-98",
-              pendingStyle === 'xiaomi'
+              (pendingStyle === 'flowglass' || pendingStyle === 'xiaomi')
                 ? "border-primary bg-primary/10 shadow-xs"
                 : "border-border/60 bg-muted/40 hover:bg-muted/70"
             )}
@@ -207,20 +207,20 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-xs sm:text-sm text-foreground">
-                  {isRTL ? 'مظهر شاومي (Xiaomi HyperOS)' : 'Xiaomi HyperOS'}
+                  {isRTL ? 'نمط زجاجي فائق (Flow Glass)' : 'Flow Glass Style'}
                 </span>
                 <span className="px-1.5 py-0.2 rounded-md bg-primary/20 text-primary text-[10px] font-bold">
-                  HyperOS
+                  Flow Glass
                 </span>
               </div>
-              {pendingStyle === 'xiaomi' && (
+              {(pendingStyle === 'flowglass' || pendingStyle === 'xiaomi') && (
                 <Check className="w-4 h-4 text-primary shrink-0" />
               )}
             </div>
             <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
               {isRTL 
-                ? 'زوايا دائرية ناعمة (Squircle) وتأثيرات زجاجية مستوحاة من واجهة HyperOS.'
-                : 'Soft squircle corners and dynamic glass depth inspired by HyperOS.'}
+                ? 'حواف منحنية ناعمة (Squircle) وتأثيرات زجاجية سائلة وانكسار ضوئي فيزيائي متقدم.'
+                : 'Smooth squircle corners, dynamic liquid glass depth, and optical light refraction.'}
             </p>
           </button>
         </div>

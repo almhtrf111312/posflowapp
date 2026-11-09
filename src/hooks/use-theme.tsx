@@ -7,7 +7,7 @@ export type { ThemeTransitionEvent };
 
 export type ThemeMode = 'light' | 'dark';
 export type ThemeColor = 'emerald' | 'blue' | 'purple' | 'rose' | 'orange' | 'cyan' | 'indigo' | 'coral' | 'lime' | 'magenta' | 'coffee' | 'silver';
-export type ThemeStyle = 'standard' | 'xiaomi';
+export type ThemeStyle = 'standard' | 'flowglass' | 'xiaomi';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -368,11 +368,11 @@ const DEFAULT_STYLE: ThemeStyle = 'standard';
 
 export function applyThemeStyle(style: ThemeStyle) {
   const root = document.documentElement;
-  root.setAttribute('data-theme-style', style);
-  if (style === 'xiaomi') {
-    root.classList.add('theme-xiaomi');
+  root.setAttribute('data-theme-style', (style === 'flowglass' || style === 'xiaomi') ? 'flowglass' : 'standard');
+  if (style === 'flowglass' || style === 'xiaomi') {
+    root.classList.add('theme-flowglass', 'theme-xiaomi');
   } else {
-    root.classList.remove('theme-xiaomi');
+    root.classList.remove('theme-flowglass', 'theme-xiaomi');
   }
 }
 
@@ -446,7 +446,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         const finalColor = savedColor || DEFAULT_COLOR;
         const finalBlur = savedBlur ?? DEFAULT_BLUR;
         const finalTransparency = savedTransparency ?? DEFAULT_TRANSPARENCY;
-        const finalStyle = (savedStyle as ThemeStyle) || DEFAULT_STYLE;
+        const finalStyle: ThemeStyle = (savedStyle === 'flowglass' || savedStyle === 'xiaomi') ? 'flowglass' : DEFAULT_STYLE;
         setModeState(finalMode);
         setColorState(finalColor);
         setBlurEnabledState(finalBlur);
@@ -479,7 +479,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           const finalColor = parsed.color || DEFAULT_COLOR;
           const finalBlur = parsed.blur ?? DEFAULT_BLUR;
           const finalTransparency = typeof parsed.transparency === 'number' ? parsed.transparency : DEFAULT_TRANSPARENCY;
-          const finalStyle = (parsed.style as ThemeStyle) || DEFAULT_STYLE;
+          const finalStyle: ThemeStyle = (parsed.style === 'flowglass' || parsed.style === 'xiaomi') ? 'flowglass' : DEFAULT_STYLE;
           setModeState(finalMode);
           setColorState(finalColor);
           setBlurEnabledState(finalBlur);

@@ -214,7 +214,7 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
           color: pt.color || 'emerald',
           blur: pt.blur ?? true,
           transparency: typeof pt.transparency === 'number' ? pt.transparency : 80,
-          style: pt.style === 'xiaomi' ? 'xiaomi' : 'standard',
+          style: (pt.style === 'flowglass' || pt.style === 'xiaomi') ? 'flowglass' : 'standard',
         };
       }
     } catch {
@@ -738,7 +738,7 @@ export const applyCloudStoreSettings = (cloudSettings: any) => {
       localStorage.setItem('hyperpos_theme_v1', newValue);
       applyTheme(theme.mode, theme.color);
       applyBlurTheme(theme.blur, theme.mode, theme.transparency);
-      applyThemeStyle(theme.style === 'xiaomi' ? 'xiaomi' : 'standard');
+      applyThemeStyle((theme.style === 'flowglass' || theme.style === 'xiaomi') ? 'flowglass' : 'standard');
       window.dispatchEvent(new StorageEvent('storage', { key: getThemeStorageKey(), newValue }));
     }
     if (profile.appFont && isValidAppFontId(profile.appFont)) {

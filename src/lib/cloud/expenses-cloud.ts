@@ -354,42 +354,8 @@ export const addExpenseCloud = async (expenseData: {
       return localExpense;
     }
 
-    console.warn('[addExpenseCloud] RPC failed, trying direct table insert fallback:', rpcError);
-
-    // 3. Fallback: Direct insert into expenses table (if RPC failed due to partner constraints or RPC issue)
-    try {
-      const directPayload = {
-        id: operationId,
-        user_id: ownerId,
-        cashier_id: currentUid !== ownerId ? currentUid : null,
-        expense_type: expenseData.type,
-        amount: roundedAmount,
-        description: payload._description,
-        notes: payload._notes,
-        date: expenseData.date,
-        created_at: nowIso,
-      };
-
-      const { error: insertError } = await sb.from('expenses').insert(directPayload);
-      if (!insertError) {
-        invalidateExpensesCache();
-        invalidatePartnersCache();
-        const existing = expensesCache || loadExpensesLocally() || [];
-        const list = [localExpense, ...existing.filter(e => e.id !== localExpense.id)];
-        expensesCache = list;
-        cacheTimestamp = Date.now();
-        saveExpensesLocally(list);
-        emitEvent(EVENTS.EXPENSES_UPDATED, null);
-        emitEvent(EVENTS.PARTNERS_UPDATED, null);
-        triggerAutoBackup(`مصروف جديد: ${expenseData.type}`);
-        return localExpense;
-      }
-      console.warn('[addExpenseCloud] Direct insert failed, queueing locally:', insertError);
-    } catch (insertEx) {
-      console.warn('[addExpenseCloud] Direct insert exception:', insertEx);
-    }
-
-    // 4. Resilient local-first fallback: queue the expense and return localExpense
+    // إذا فشل الـ RPC، نرميه مباشرة لطابور المزامنة الآمن ليعيد المحاولة ذرياً ولا ندرجه يدوياً
+    console.warn('[addExpenseCloud] RPC failed, queueing for safe retry:', rpcError);
     return saveToLocalAndQueue();
   } catch (ex) {
     console.warn('[addExpenseCloud] Exception during expense save, falling back to local queue:', ex);

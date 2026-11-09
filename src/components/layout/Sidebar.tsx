@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useLicense } from '@/hooks/use-license';
 import { useLanguage } from '@/hooks/use-language';
 import { useUserRole } from '@/hooks/use-user-role';
 import { toast } from '@/lib/sonner-bridge';
@@ -164,6 +165,11 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
 
   const effectiveCollapsed = isMobile ? false : collapsed;
 
+  const license = useLicense();
+  const licenseState = (license as any)?.licenseState || license;
+  const shouldShowContactDueToLicense = !!licenseState?.isExpired || (licenseState?.remainingDays !== null && licenseState?.remainingDays !== undefined && licenseState?.remainingDays <= 30);
+  const isContactUrgent = !!licenseState?.isExpired || (licenseState?.remainingDays !== null && licenseState?.remainingDays !== undefined && licenseState?.remainingDays <= 10);
+
   const visibleSections = getVisibleSections(storeType);
   const noInventory = isNoInventoryMode(storeType);
   const allowedPages = profile?.allowed_pages as string[] | null;
@@ -203,7 +209,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
     if (item.hideInNoInventory && noInventory) return false;
     if (item.requiresBakeryMode && !noInventory) return false;
     if (item.requiresBookstore && storeType !== 'bookstore') return false;
-    if (item.requiresContactSidebar && !showContactInSidebar) return false;
+    if (item.requiresContactSidebar && !showContactInSidebar && !shouldShowContactDueToLicense) return false;
     return true;
   });
 
@@ -392,6 +398,11 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                       "w-[18px] h-[18px] flex-shrink-0 transition-colors",
                       isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
                     )} />
+
+                    {/* شارة نقطة حمراء تنبيهية إذا كانت الأيام المتبقية <= 10 أيام أو منتهية */}
+                    {item.path === '/contact' && isContactUrgent && (
+                      <span className="absolute top-2 start-6 w-2.5 h-2.5 rounded-full bg-destructive ring-2 ring-background animate-pulse" />
+                    )}
                     
                     {(!effectiveCollapsed || isMobile) && (
                       <>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useProductLimits } from '@/hooks/use-product-limits';
 import {
   ArrowRight,
   Search,
@@ -111,6 +112,8 @@ import { getSignedImageUrl } from '@/lib/image-upload';
 import { usePageActivity } from '@/contexts/PageActivityContext';
 
 export default function Products() {
+  const navigate = useNavigate();
+  const productLimits = useProductLimits();
   const m = useMoney();
   const currencyCode = m.activeCode;
   const currencySymbol = m.activeSymbol;
@@ -211,9 +214,14 @@ export default function Products() {
   const showAddDialog = activeView === 'add';
   const showEditDialog = activeView === 'edit';
   const setShowAddDialog = useCallback((open: boolean) => {
+    if (open && !productLimits.canAdd) {
+      toast.error('تم الوصول إلى الحد الأقصى للمنتجات: باقتك الحالية تسمح بإضافة ' + productLimits.maxProducts + ' منتج كحد أقصى. يرجى تجديد أو ترقية الاشتراك.');
+      navigate('/renew');
+      return;
+    }
     setActiveView(open ? 'add' : 'list');
     if (open) window.scrollTo({ top: 0, behavior: 'instant' });
-  }, []);
+  }, [productLimits.canAdd, productLimits.maxProducts, navigate]);
   const setShowEditDialog = useCallback((open: boolean) => {
     setActiveView(open ? 'edit' : 'list');
     if (open) window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1022,6 +1030,18 @@ export default function Products() {
   const handleAddProduct = async () => {
     // ✅ منع النقر المتعدد
     if (isSaving) return;
+
+    // تحقق قبل الحفظ من حدود المنتجات
+    if (!productLimits.canAdd) {
+      toast.error(`تم الوصول إلى الحد الأقصى للمنتجات: باقتك الحالية (${productLimits.tier}) تسمح بإضافة ${productLimits.maxProducts} منتج كحد أقصى. يرجى تجديد أو ترقية الاشتراك.`);
+      navigate('/renew');
+      return;
+    }
+
+    if (formData.image && !productLimits.canAddWithImage) {
+      toast.warning('تنبيه الباقة الاحترافية (Pro): تسمح الباقة بإضافة ما يزيد عن 600 منتج بدون صور فقط (حتى 1000 منتج). يرجى إزالة الصورة للمتابعة أو الترقية لباقة المؤسسات.');
+      return;
+    }
 
     // 1. فحص اسم المنتج
     if (!formData.name || !formData.name.trim()) {

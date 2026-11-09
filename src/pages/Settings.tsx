@@ -100,6 +100,8 @@ import type { PaperWidth } from '@/lib/printer/receipt-escpos';
 import { checkNotificationPermissionNative, requestNotificationPermissionNative, sendLocalNotification } from '@/lib/native-notifications';
 import { cn, formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useLicense } from '@/hooks/use-license';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -264,6 +266,7 @@ interface BackupData {
 }
 
 export default function Settings() {
+  const licenseState = useLicense();
   const { toast } = useToast();
   const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
   const [phoneVerificationStatus, setPhoneVerificationStatus] = useState<'available' | 'requires_telegram_verification'>('available');
@@ -2259,6 +2262,43 @@ export default function Settings() {
       case 'license':
         return (
           <div className="space-y-6">
+            <Card className="mb-6 border-primary/20 bg-gradient-to-br from-card to-primary/5">
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-lg">{licenseState.isTrial ? 'فترة تجريبية' : 'اشتراك مفعّل'}</h3>
+                      <Badge variant={licenseState.isTrial ? 'outline' : 'default'}>
+                        {(licenseState as any).planName || (licenseState as any).licenseTier || 'الترخيص الأساسي'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      تاريخ الانتهاء: {licenseState.expiresAt ? new Date(licenseState.expiresAt).toLocaleDateString('ar-SY') : 'غير محدد'}
+                    </p>
+                  </div>
+                  <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0">
+                    تجديد / ترقية الاشتراك
+                  </Button>
+                </div>
+
+                {/* شريط الأيام المتبقية */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span>المتبقي: {licenseState.remainingDays ?? 0} يوماً</span>
+                    <span>إجمالي المدة: {(licenseState as any).totalDays || 30} يوماً</span>
+                  </div>
+                  <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all ${
+                        (licenseState.remainingDays ?? 0) <= 3 ? 'bg-destructive' : (licenseState.remainingDays ?? 0) <= 10 ? 'bg-amber-500' : 'bg-primary'
+                      }`}
+                      style={{ width: `${Math.min(100, Math.max(5, (((licenseState.remainingDays ?? 0)) / ((licenseState as any).totalDays || 30)) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <ActivationCodeInput />
             {/* Transfer License Button */}
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">

@@ -1,13 +1,13 @@
 {
   "versionCode": 480,
   "versionName": "1.5.92",
-  "lastUpdated": "2026-11-09T22:02:07.566Z",
+  "lastUpdated": "2026-11-09T23:00:41.694Z",
   "buildHistory": [
     {
       "versionCode": 480,
       "versionName": "1.5.92",
       "date": "2026-11-09",
-      "description": "Auto-bump on push (0811e29)"
+      "description": "Release v1.5.92 (Build 480)"
     },
     {
       "versionCode": 479,

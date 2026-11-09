@@ -59,6 +59,7 @@ const Appearance = lazy(() => import("./pages/Appearance"));
 const LibraryMembers = lazy(() => import("./pages/LibraryMembers"));
 const Help = lazy(() => import("./pages/Help"));
 const ContactDeveloper = lazy(() => import("./pages/ContactDeveloper"));
+const Renew = lazy(() => import("./pages/Renew"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -481,6 +482,7 @@ const PageFallback = () => (
           <Route path="/library" element={<FeatureErrorBoundary featureName="المكتبة"><LibraryMembers /></FeatureErrorBoundary>} />
           <Route path="/notifications" element={<FeatureErrorBoundary featureName="الإشعارات"><Notifications /></FeatureErrorBoundary>} />
           <Route path="/contact" element={<FeatureErrorBoundary featureName="تواصل مع المطور"><ContactDeveloper /></FeatureErrorBoundary>} />
+          <Route path="/renew" element={<FeatureErrorBoundary featureName="تجديد وترقية الاشتراك"><Renew /></FeatureErrorBoundary>} />
           {/* FROZEN: warehouses & stock transfer disabled — redirect home */}
           <Route path="/warehouses" element={<Navigate to="/" replace />} />
           <Route path="/stock-transfer" element={<Navigate to="/" replace />} />

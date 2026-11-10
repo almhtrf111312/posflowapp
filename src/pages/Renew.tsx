@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   Check,
@@ -20,6 +21,8 @@ import {
   MessageCircle,
   PhoneCall,
   CheckCircle2,
+  CreditCard,
+  Download,
 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 import { sendBossTelegramChatAlert } from '@/lib/telegram-alerts';
@@ -64,24 +67,27 @@ const DEFAULT_METHODS = [
   {
     id: 'method_sham',
     name: 'شام كاش / محفظة إلكترونية',
+    account_number: 'SHAM-7729104',
     button_label: 'فتح محفظة شام كاش',
     link_url: '',
-    qr_image_url: 'SHAM-7729104',
+    qr_image_url: '',
     badge: 'فوري ⚡',
     instructions: 'قم بالتحويل إلى رقم المحفظة أو امسح الباركود، ثم اضغط زر إرسال الإشعار للدعم الفني.',
   },
   {
     id: 'method_usdt',
     name: 'USDT (TRC20)',
+    account_number: 'TXyZ8829KmnPQ11234flowposproTRC20',
     button_label: 'نسخ عنوان المحفظة',
     link_url: '',
-    qr_image_url: 'TXyZ8829KmnPQ11234flowposproTRC20',
+    qr_image_url: '',
     badge: 'دولي 🌐',
     instructions: 'حول المبلغ بالدولار الرقمي عبر شبكة Tron (TRC20)، ثم اضغط زر إرسال الإشعار للدعم الفني.',
   },
   {
     id: 'method_direct',
     name: 'حوالة هرم / فؤاد / كاش',
+    account_number: 'اسم المستلم معتمد لدى الإدارة',
     button_label: 'طلب بيانات الحوالة المباشرة',
     link_url: '',
     qr_image_url: '',
@@ -186,9 +192,53 @@ export default function RenewPage() {
     }
   }
 
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isDownloadingQR, setIsDownloadingQR] = useState(false);
+
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    showToast.success(`تم نسخ ${label}`);
+    setCopiedField(text);
+    showToast.success(`تم نسخ ${label} بنجاح`);
+    setTimeout(() => {
+      setCopiedField(prev => (prev === text ? null : prev));
+    }, 2500);
+  };
+
+  const handleDownloadQR = async (imageUrl: string, methodName: string) => {
+    setIsDownloadingQR(true);
+    try {
+      const cleanName = (methodName || 'payment').replace(/[^\w\u0600-\u06FF-]/g, '_');
+      const filename = `${cleanName}-QR.png`;
+
+      if (imageUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast.success('تم تنزيل صورة الباركود وحفظها بنجاح');
+        return;
+      }
+
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      showToast.success('تم تنزيل صورة الباركود وحفظها بنجاح');
+    } catch (err) {
+      console.warn('Direct download fallback:', err);
+      window.open(imageUrl, '_blank');
+      showToast.info('تم فتح الصورة، يمكنك حفظها بالضغط المطول عليها');
+    } finally {
+      setIsDownloadingQR(false);
+    }
   };
 
   const isImageUrl = (url?: string) => {
@@ -401,101 +451,152 @@ export default function RenewPage() {
           </div>
 
           {/* بطاقة تفاصيل الدفع والـ QR والأزرار التفاعلية */}
-          {selectedMethod && (
-            <Card className="bg-card border-border shadow-xs">
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                  {/* التعليمات وأزرار التحويل المباشر */}
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <div className="text-base font-bold text-primary flex items-center gap-2">
+          {selectedMethod && (() => {
+            const transferCode = selectedMethod.account_number || (!isImageUrl(selectedMethod.qr_image_url) ? selectedMethod.qr_image_url : null);
+            const qrImage = isImageUrl(selectedMethod.qr_image_url) ? selectedMethod.qr_image_url : null;
+            const isCodeCopied = Boolean(transferCode && copiedField === transferCode);
+
+            return (
+              <Card className="bg-card border-border shadow-xs">
+                <CardContent className="pt-6 space-y-6">
+                  {/* رأس طريقة الدفع والتعليمات */}
+                  <div className="space-y-1.5 border-b pb-4">
+                    <div className="text-base font-bold text-primary flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-primary" />
                         <span>طريقة الدفع: {selectedMethod.name}</span>
-                        {selectedMethod.badge && <Badge variant="outline">{selectedMethod.badge}</Badge>}
                       </div>
-                      {selectedMethod.instructions && (
-                        <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
-                          {selectedMethod.instructions}
-                        </p>
+                      {selectedMethod.badge && (
+                        <Badge variant="secondary" className="font-medium text-xs px-2.5 py-0.5">
+                          {selectedMethod.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    {selectedMethod.instructions && (
+                      <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
+                        {selectedMethod.instructions}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    {/* العمود الأول: كود / عنوان التحويل ورابط الدفع */}
+                    <div className="space-y-4">
+                      {transferCode && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-bold text-foreground">
+                            كود / عنوان التحويل أو المحفظة:
+                          </Label>
+                          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/70 border border-primary/20 gap-2">
+                            <span className="font-mono font-bold text-sm truncate select-all text-foreground" dir="ltr">
+                              {transferCode}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant={isCodeCopied ? "default" : "outline"}
+                              className={`gap-1.5 shrink-0 h-9 px-3 font-semibold transition-all ${
+                                isCodeCopied ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
+                              }`}
+                              onClick={() => handleCopy(transferCode, 'كود التحويل / المحفظة')}
+                            >
+                              {isCodeCopied ? (
+                                <>
+                                  <Check className="w-4 h-4 text-white" />
+                                  <span>تم النسخ بنجاح</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-4 h-4" />
+                                  <span>نسخ الكود</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground block">
+                            انقر فوق نسخ لأخذ رقم الحساب أو كود المحفظة ولصقه مباشرة في تطبيق التحويل.
+                          </span>
+                        </div>
+                      )}
+
+                      {/* زر فتح الرابط المباشر إن وُجد */}
+                      {selectedMethod.link_url && (
+                        <div className="space-y-1.5 pt-1">
+                          <Button
+                            onClick={() => window.open(selectedMethod.link_url, '_blank')}
+                            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 text-sm shadow-xs"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            {selectedMethod.button_label || 'فتح رابط الدفع المباشر'}
+                          </Button>
+                          <span className="text-[11px] text-muted-foreground block text-center">
+                            يفتح بوابة الدفع أو التطبيق المعتمد مباشرة في نافذة جديدة.
+                          </span>
+                        </div>
                       )}
                     </div>
 
-                    {/* زر فتح الرابط المباشر إن وُجد */}
-                    {selectedMethod.link_url && (
-                      <Button
-                        onClick={() => window.open(selectedMethod.link_url, '_blank')}
-                        className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        {selectedMethod.button_label || 'فتح رابط الدفع المباشر'}
-                      </Button>
-                    )}
-
-                    {/* في حال وجود عنوان نصي أو رقم محفظة في qr_image_url */}
-                    {selectedMethod.qr_image_url && !isImageUrl(selectedMethod.qr_image_url) && (
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/70 border">
-                        <div className="space-y-0.5 truncate">
-                          <span className="text-[11px] text-muted-foreground block">معرّف المحفظة / الحساب:</span>
-                          <span className="font-mono font-bold text-xs truncate block" dir="ltr">
-                            {selectedMethod.qr_image_url}
+                    {/* العمود الثاني: صورة الباركود / QR مع زر التنزيل المباشر */}
+                    {qrImage ? (
+                      <div className="flex flex-col items-center justify-center p-4 border rounded-2xl bg-muted/20 space-y-3">
+                        <img
+                          src={qrImage}
+                          alt="QR Code"
+                          className="w-44 h-44 object-contain rounded-xl border p-2 bg-white shadow-xs"
+                        />
+                        <div className="w-full space-y-1.5 text-center">
+                          <Button
+                            onClick={() => handleDownloadQR(qrImage, selectedMethod.name)}
+                            variant="secondary"
+                            className="w-full gap-2 h-9 text-xs font-semibold bg-background hover:bg-muted border shadow-xs"
+                            disabled={isDownloadingQR}
+                          >
+                            <Download className="w-4 h-4 text-primary" />
+                            {isDownloadingQR ? 'جاري التحميل...' : '📥 تحميل وحفظ في المعرض'}
+                          </Button>
+                          <span className="text-[11px] text-muted-foreground block">
+                            يتم حفظ الصورة في مجلد التنزيلات لتتمكن من مسحها من تطبيق محفظتك أو بنكك.
                           </span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="gap-1 shrink-0 h-8"
-                          onClick={() => handleCopy(selectedMethod.qr_image_url, 'معرّف المحفظة')}
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          نسخ
-                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-6 border border-dashed rounded-2xl bg-muted/10 text-center space-y-2 text-muted-foreground">
+                        <QrCode className="w-8 h-8 opacity-40" />
+                        <span className="text-xs">
+                          طريقة الدفع هذه تعتمد على كود التحويل أعلاه مباشرة دون الحاجة لمسح باركود.
+                        </span>
                       </div>
                     )}
                   </div>
 
-                  {/* صورة الباركود / QR إن وُجدت */}
-                  {selectedMethod.qr_image_url && isImageUrl(selectedMethod.qr_image_url) && (
-                    <div className="flex flex-col items-center justify-center p-4 border rounded-2xl bg-muted/20">
-                      <img
-                        src={selectedMethod.qr_image_url}
-                        alt="QR Code"
-                        className="w-44 h-44 object-contain rounded-xl border p-2 bg-white shadow-xs"
-                      />
-                      <span className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                        <QrCode className="w-3.5 h-3.5 text-primary" />
-                        امسح الباركود مباشرة من كاميرا هاتفك
-                      </span>
-                    </div>
-                  )}
-                </div>
+                  {/* قسم إرسال الإشعار للدعم الفني (بدون تعقيد الحسابات البنكية) */}
+                  <div className="pt-4 border-t space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                      <div className="sm:col-span-2 space-y-1">
+                        <Input
+                          placeholder="اسم المحوّل أو ملاحظة اختيارية (اختياري)"
+                          value={payerName}
+                          onChange={(e) => setPayerName(e.target.value)}
+                          className="h-11"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          لا داعي لتعبئة تفاصيل معقدة؛ سيتم توليد رقم مرجع فوري وإرسال إشعار الدفع مباشرة للدعم.
+                        </p>
+                      </div>
 
-                {/* قسم إرسال الإشعار للدعم الفني (بدون تعقيد الحسابات البنكية) */}
-                <div className="pt-4 border-t space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                    <div className="sm:col-span-2 space-y-1">
-                      <Input
-                        placeholder="اسم المحوّل أو ملاحظة اختيارية (اختياري)"
-                        value={payerName}
-                        onChange={(e) => setPayerName(e.target.value)}
-                        className="h-11"
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        لا داعي لتعبئة تفاصيل معقدة؛ سيتم توليد رقم مرجع فوري وإرسال إشعار الدفع مباشرة للدعم.
-                      </p>
+                      <Button
+                        onClick={handleClaimPayment}
+                        disabled={submitting}
+                        className="gap-2 h-11 w-full bg-primary font-bold text-sm shadow-md"
+                      >
+                        <Send className="w-4 h-4" />
+                        {submitting ? 'جاري التسجيل...' : '📲 تم التحويل - إرسال الإشعار للدعم'}
+                      </Button>
                     </div>
-
-                    <Button
-                      onClick={handleClaimPayment}
-                      disabled={submitting}
-                      className="gap-2 h-11 w-full bg-primary font-bold text-sm shadow-md"
-                    >
-                      <Send className="w-4 h-4" />
-                      {submitting ? 'جاري التسجيل...' : '📲 تم التحويل - إرسال الإشعار للدعم'}
-                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
+            );
+          })()}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,12 +8,13 @@ import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit2, Trash2, QrCode, ExternalLink, RefreshCw, CreditCard, MessageSquare, PhoneCall } from 'lucide-react';
+import { Plus, Edit2, Trash2, QrCode, ExternalLink, RefreshCw, CreditCard, MessageSquare, PhoneCall, Upload, Image, X, Copy, Check, Download } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 
 export interface PaymentMethodItem {
   id: string;
   name: string;
+  account_number?: string;
   button_label?: string;
   link_url?: string;
   qr_image_url?: string;
@@ -39,9 +40,12 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMethod, setEditingMethod] = useState<PaymentMethodItem | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
+    account_number: '',
     button_label: 'فتح الرابط المباشر',
     link_url: '',
     qr_image_url: '',
@@ -75,11 +79,12 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
     setEditingMethod(null);
     setFormData({
       name: '',
+      account_number: '',
       button_label: 'فتح رابط الدفع المباشر',
       link_url: '',
       qr_image_url: '',
       badge: 'فوري ⚡',
-      instructions: 'قم بالتحويل عبر الرابط أو الباركود ثم اضغط على زر إرسال الإشعار للدعم الفني.',
+      instructions: 'قم بالتحويل عبر الكود أو الباركود ثم اضغط على زر إرسال الإشعار للدعم الفني.',
       enabled: true,
     });
     setDialogOpen(true);
@@ -89,6 +94,7 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
     setEditingMethod(m);
     setFormData({
       name: m.name,
+      account_number: m.account_number || '',
       button_label: m.button_label || 'فتح الرابط المباشر',
       link_url: m.link_url || '',
       qr_image_url: m.qr_image_url || '',
@@ -99,6 +105,68 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
     setDialogOpen(true);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast.error('يرجى اختيار ملف صورة صالح (PNG, JPG, WEBP)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast.error('حجم الصورة كبير، يرجى اختيار صورة أقل من 5 ميغابايت');
+      return;
+    }
+
+    setIsProcessingImage(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/png', 0.9);
+          setFormData(prev => ({ ...prev, qr_image_url: compressedDataUrl }));
+          showToast.success('تم رفع وضغط صورة الباركود بنجاح');
+        }
+        setIsProcessingImage(false);
+      };
+      img.onerror = () => {
+        showToast.error('فشلت معالجة الصورة');
+        setIsProcessingImage(false);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => {
+      showToast.error('فشلت قراءة الملف');
+      setIsProcessingImage(false);
+    };
+    reader.readAsDataURL(file);
+
+    e.target.value = '';
+  };
+
   const handleSaveMethod = async () => {
     if (!formData.name.trim()) {
       showToast.error('يرجى كتابة اسم طريقة الدفع');
@@ -107,6 +175,7 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
 
     const payload = {
       name: formData.name.trim(),
+      account_number: formData.account_number.trim() || null,
       button_label: formData.button_label.trim() || 'فتح الرابط المباشر',
       link_url: formData.link_url.trim() || null,
       qr_image_url: formData.qr_image_url.trim() || null,
@@ -236,21 +305,36 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
                   </p>
                 )}
 
-                <div className="space-y-1 text-xs border-t pt-2 mb-2">
+                <div className="space-y-2 text-xs border-t pt-2 mb-2">
+                  {method.account_number && (
+                    <div className="p-2 rounded-lg bg-primary/5 border border-primary/20 space-y-0.5">
+                      <span className="text-[10px] text-muted-foreground block font-medium">كود التحويل / عنوان المحفظة:</span>
+                      <div className="font-mono font-bold text-xs truncate text-foreground" dir="ltr">
+                        {method.account_number}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <span className="font-semibold text-foreground">نص الزر:</span>
                     <span>{method.button_label || 'فتح الرابط المباشر'}</span>
                   </div>
+
                   {method.link_url && (
                     <div className="flex items-center gap-1.5 text-primary truncate">
                       <ExternalLink className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate" dir="ltr">{method.link_url}</span>
                     </div>
                   )}
+
                   {method.qr_image_url && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <QrCode className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                      <span className="truncate">يحتوي على باركود / QR: {method.qr_image_url.substring(0, 24)}...</span>
+                    <div className="flex items-center gap-2 pt-1 border-t border-dashed">
+                      {method.qr_image_url.startsWith('data:') || method.qr_image_url.startsWith('http') ? (
+                        <img src={method.qr_image_url} alt="QR" className="w-8 h-8 object-contain rounded-md border p-0.5 bg-white shrink-0" />
+                      ) : (
+                        <QrCode className="w-4 h-4 text-emerald-600 shrink-0" />
+                      )}
+                      <span className="text-[11px] text-muted-foreground truncate">صورة الباركود / QR متوفرة</span>
                     </div>
                   )}
                 </div>
@@ -270,6 +354,15 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
         </div>
       )}
 
+      {/* مدخل ملف الصورة المخفي */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       {/* حوار إضافة / تعديل طريقة دفع */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir="rtl">
@@ -279,33 +372,133 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
 
           <div className="space-y-3.5 text-sm py-2">
             <div className="space-y-1.5">
-              <Label>اسم الطريقة</Label>
-              <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="مثال: شام كاش، USDT TRC20، الهرم" />
+              <Label>اسم طريقة الدفع</Label>
+              <Input
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                placeholder="مثال: شام كاش، USDT TRC20، الهرم، بنك زراعات"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="flex items-center justify-between">
+                <span>كود الدفع أو عنوان المحفظة / الحساب</span>
+                <span className="text-[11px] text-muted-foreground font-normal">(يظهر بجانبه زر نسخ للعميل)</span>
+              </Label>
+              <Input
+                value={formData.account_number}
+                onChange={e => setFormData({ ...formData, account_number: e.target.value })}
+                placeholder="رقم حسابك، عنوان محفظتك، أو كود التاجر"
+                dir="ltr"
+              />
+            </div>
+
+            {/* رفع صورة الـ QR / الباركود */}
+            <div className="space-y-2 border rounded-xl p-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Label className="font-bold flex items-center gap-1.5">
+                  <QrCode className="w-4 h-4 text-primary" />
+                  صورة الباركود أو الـ QR
+                </Label>
+                {formData.qr_image_url && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-destructive gap-1 px-2"
+                    onClick={() => setFormData(prev => ({ ...prev, qr_image_url: '' }))}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    إزالة الصورة
+                  </Button>
+                )}
+              </div>
+
+              {formData.qr_image_url ? (
+                <div className="flex items-center gap-3 p-2.5 border rounded-lg bg-background">
+                  <img
+                    src={formData.qr_image_url}
+                    alt="QR Preview"
+                    className="w-16 h-16 object-contain rounded-md border p-1 bg-white shrink-0 shadow-xs"
+                  />
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      تم تجهيز صورة الباركود بنجاح
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      سيتمكن العميل من تنزيلها وحفظها في المعرض بنقرة واحدة.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1 mt-0.5"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isProcessingImage}
+                    >
+                      <Upload className="w-3 h-3" />
+                      استبدال الصورة
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-4 border border-dashed rounded-xl bg-background text-center space-y-2">
+                  <QrCode className="w-8 h-8 text-muted-foreground/60" />
+                  <p className="text-xs text-muted-foreground">
+                    اختر صورة رمز الباركود أو QR المحفظة من جهازك
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="gap-1.5 h-8 text-xs font-semibold"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isProcessingImage}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    {isProcessingImage ? 'جاري المعالجة...' : 'اختر صورة من جهازك'}
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label>نص الزر التفاعلي</Label>
-              <Input value={formData.button_label} onChange={e => setFormData({ ...formData, button_label: e.target.value })} placeholder="مثال: فتح محفظة شام كاش أو فتح رابط الدفع" />
+              <Input
+                value={formData.button_label}
+                onChange={e => setFormData({ ...formData, button_label: e.target.value })}
+                placeholder="مثال: فتح محفظة شام كاش أو فتح رابط الدفع"
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label>رابط الدفع المباشر (اختياري)</Label>
-              <Input value={formData.link_url} onChange={e => setFormData({ ...formData, link_url: e.target.value })} placeholder="https://..." dir="ltr" />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>رابط أو كود صورة الـ QR / الباركود (اختياري)</Label>
-              <Input value={formData.qr_image_url} onChange={e => setFormData({ ...formData, qr_image_url: e.target.value })} placeholder="رابط الصورة أو عنوان المحفظة" dir="ltr" />
+              <Input
+                value={formData.link_url}
+                onChange={e => setFormData({ ...formData, link_url: e.target.value })}
+                placeholder="https://..."
+                dir="ltr"
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label>شارة تمييز الزر (اختياري)</Label>
-              <Input value={formData.badge} onChange={e => setFormData({ ...formData, badge: e.target.value })} placeholder="مثال: فوري ⚡ أو بدون عمولة" />
+              <Input
+                value={formData.badge}
+                onChange={e => setFormData({ ...formData, badge: e.target.value })}
+                placeholder="مثال: فوري ⚡ أو بدون عمولة"
+              />
             </div>
 
             <div className="space-y-1.5">
               <Label>تعليمات الدفع المختصرة للعميل</Label>
-              <Textarea rows={2} value={formData.instructions} onChange={e => setFormData({ ...formData, instructions: e.target.value })} placeholder="مثال: بعد التحويل، اضغط الزر أدناه لإرسال صورة الإيصال مباشرة للدعم الفني." />
+              <Textarea
+                rows={2}
+                value={formData.instructions}
+                onChange={e => setFormData({ ...formData, instructions: e.target.value })}
+                placeholder="مثال: بعد التحويل، اضغط الزر أدناه لإرسال صورة الإيصال مباشرة للدعم الفني."
+              />
             </div>
 
             <div className="flex items-center justify-between border rounded-xl p-3">

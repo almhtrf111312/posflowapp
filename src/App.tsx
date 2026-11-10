@@ -454,8 +454,9 @@ const PageFallback = () => (
   </div>
 );
 
+  // لا يتم تطبيق inert إلا إذا كان المستخدم مسجلاً فعلياً والقفل أو تعيين الـ PIN نشط
   const isPublicAuthRoute = ['/login', '/signup', '/reset-password', '/contact-developer'].includes(location.pathname);
-  const shouldBeInert = !isPublicAuthRoute && (isLocked || requiresPinSetup);
+  const shouldBeInert = Boolean(user && !isPublicAuthRoute && (isLocked || requiresPinSetup));
 
   return (
     <>

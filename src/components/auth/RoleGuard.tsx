@@ -55,7 +55,7 @@ export function RoleGuard({
   }
 
   if (!role || !allowedRoles.includes(role)) {
-    // Check if cashier has explicit permission for this page
+    // التحقق من صلاحيات الكاشير فقط إذا كان الدور كاشير صريح
     if (role === 'cashier' && profile) {
       const allowedPages = (profile as any).allowed_pages as string[] | null;
       if (allowedPages && allowedPages.length > 0) {

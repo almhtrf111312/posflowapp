@@ -43,9 +43,25 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
         .update({ is_read: true })
         .eq('conversation_id', conversationId)
         .neq('sender_id', user.id)
-        .then(() => {});
+        .then(() => {
+          window.dispatchEvent(new CustomEvent('flowpos:support-read'));
+        });
     }
   }, [conversationId, user, isBoss]);
+
+  // Mark as read when Boss opens a conversation
+  useEffect(() => {
+    if (activeChatConvId && user && isBoss) {
+      supabase
+        .from('support_messages')
+        .update({ is_read: true })
+        .eq('conversation_id', activeChatConvId)
+        .neq('sender_id', user.id)
+        .then(() => {
+          window.dispatchEvent(new CustomEvent('flowpos:support-read'));
+        });
+    }
+  }, [activeChatConvId, user, isBoss]);
 
   if (!user) return null;
 

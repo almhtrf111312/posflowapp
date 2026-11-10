@@ -56,6 +56,8 @@ import {
   Package,
   Tags,
   HardDrive,
+  Layers,
+  CreditCard,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -95,8 +97,43 @@ import { SystemDiagnostics } from '@/components/settings/SystemDiagnostics';
 import { ErrorRadarPanel } from '@/components/boss/ErrorRadarPanel';
 import { BossAIAssistant } from '@/components/boss/BossAIAssistant';
 import { BossReleasesPanel } from '@/components/boss/BossReleasesPanel';
+import { BossPlansManager } from '@/components/boss/BossPlansManager';
+import { BossPaymentMethodsManager } from '@/components/boss/BossPaymentMethodsManager';
 import { Rocket } from 'lucide-react';
 import { getUnresolvedErrorCount, subscribeToErrorRadar } from '@/lib/error-radar';
+
+/**
+ * دالة اعتماد الطلب من لوحة البوس بأمان تام دون كتابة مباشرة في جدول التراخيص
+ */
+export async function handleApproveRequestSecure(requestId: string, adminNote?: string): Promise<boolean> {
+  try {
+    const { data, error } = await (supabase.rpc as any)('approve_subscription_request_atomic', {
+      p_request_id: requestId,
+      p_admin_note: adminNote || null,
+    });
+
+    if (error) {
+      // إذا لم تكن الدالة منشأة بعد، نجرب الدالة الاحتياطية confirm_subscription_request
+      const fallback = await (supabase.rpc as any)('confirm_subscription_request', {
+        p_request_id: requestId,
+      });
+      if (fallback.error) throw fallback.error;
+      showToast.success('تم تأكيد الاشتراك وتمديد أيام العميل بنجاح');
+      return true;
+    }
+
+    if (!data?.success) {
+      showToast.error(data?.error || 'حدث خطأ أثناء تفعيل الترخيص');
+      return false;
+    }
+
+    showToast.success(`تم تمديد اشتراك العميل حتى ${new Date(data.expires_at).toLocaleDateString('ar-SY')}`);
+    return true;
+  } catch (err: any) {
+    showToast.error(err.message || 'خطأ في عملية الاعتماد');
+    return false;
+  }
+}
 
 interface CashierInfo {
   user_id: string;
@@ -318,7 +355,7 @@ export default function BossPanel() {
   // Boss Panel 5-Screen Calm Navigation States
   type BossTab = 'home' | 'users' | 'releases' | 'health' | 'more';
   const [activeTab, setActiveTab] = useState<BossTab>('home');
-  const [usersSubTab, setUsersSubTab] = useState<'accounts' | 'codes' | 'subscriptions'>('accounts');
+  const [usersSubTab, setUsersSubTab] = useState<'accounts' | 'codes' | 'subscriptions' | 'plans' | 'payments'>('accounts');
   const [healthSubTab, setHealthSubTab] = useState<'diagnostics' | 'radar' | 'issues'>('diagnostics');
   const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
 
@@ -1596,13 +1633,13 @@ export default function BossPanel() {
         {/* ===================== SCREEN 2: المستخدمون والأكواد (Users & Codes) ===================== */}
         {activeTab === 'users' && (
           <div className="space-y-4 animate-in fade-in pb-16 md:pb-6">
-            {/* الكبسولة للتنقل بين المستخدمين والأكواد والاشتراكات */}
-            <div className="flex bg-muted/60 p-1 rounded-2xl gap-1 border border-border/50 shadow-xs max-w-lg mx-auto">
+            {/* الكبسولة للتنقل بين المستخدمين والأكواد والاشتراكات والباقات */}
+            <div className="flex bg-muted/60 p-1 rounded-2xl gap-1 border border-border/50 shadow-xs max-w-2xl mx-auto overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setUsersSubTab('accounts')}
                 className={cn(
-                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5",
+                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-3",
                   usersSubTab === 'accounts'
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -1615,7 +1652,7 @@ export default function BossPanel() {
                 type="button"
                 onClick={() => setUsersSubTab('codes')}
                 className={cn(
-                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5",
+                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-3",
                   usersSubTab === 'codes'
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -1628,7 +1665,7 @@ export default function BossPanel() {
                 type="button"
                 onClick={() => setUsersSubTab('subscriptions')}
                 className={cn(
-                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5",
+                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-3",
                   usersSubTab === 'subscriptions'
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "text-muted-foreground hover:text-foreground hover:bg-card/40"
@@ -1636,6 +1673,32 @@ export default function BossPanel() {
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>طلبات التجديد ({subscriptionRequests.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUsersSubTab('plans')}
+                className={cn(
+                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-3",
+                  usersSubTab === 'plans'
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                )}
+              >
+                <Layers className="w-4 h-4" />
+                <span>إدارة الباقات</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUsersSubTab('payments')}
+                className={cn(
+                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-3",
+                  usersSubTab === 'payments'
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                )}
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>طرق الدفع والتواصل</span>
               </button>
             </div>
 
@@ -2273,8 +2336,8 @@ export default function BossPanel() {
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono font-bold text-primary">{req.ref_code}</span>
-                            <Badge variant={req.status === 'confirmed' ? 'default' : req.status === 'rejected' ? 'destructive' : 'secondary'}>
-                              {req.status === 'paid_claimed' ? 'بانتظار التأكيد' : req.status === 'confirmed' ? 'مؤكد ومفعل' : req.status === 'rejected' ? 'مرفوض' : req.status}
+                            <Badge variant={req.status === 'confirmed' || req.status === 'approved' ? 'default' : req.status === 'rejected' ? 'destructive' : 'secondary'}>
+                              {req.status === 'paid_claimed' || req.status === 'pending' ? 'بانتظار التأكيد' : req.status === 'confirmed' || req.status === 'approved' ? 'مؤكد ومفعل' : req.status === 'rejected' ? 'مرفوض' : req.status}
                             </Badge>
                             <span className="font-semibold">{req.plan_name} (${req.price_usd})</span>
                           </div>
@@ -2293,7 +2356,7 @@ export default function BossPanel() {
                           )}
                         </div>
 
-                        {req.status === 'paid_claimed' && (
+                        {(req.status === 'paid_claimed' || req.status === 'pending') && (
                           <div className="flex items-center gap-2 shrink-0">
                             <Button
                               size="sm"
@@ -2301,20 +2364,9 @@ export default function BossPanel() {
                               className="bg-emerald-600 hover:bg-emerald-700 text-white"
                               onClick={async () => {
                                 if (confirm(`هل تأكدت من استلام مبلغ $${req.price_usd} لحوالة ${req.ref_code}؟`)) {
-                                  try {
-                                    const { error } = await supabase.rpc('confirm_subscription_request', {
-                                      p_request_id: req.id,
-                                    });
-                                    if (!error) {
-                                      showToast.success('تم تأكيد الاشتراك وتمديد أيام العميل بنجاح');
-                                      loadRequests();
-                                    } else {
-                                      await supabase.from('subscription_requests').update({ status: 'confirmed' }).eq('id', req.id);
-                                      showToast.success('تم تأكيد طلب الاشتراك');
-                                      loadRequests();
-                                    }
-                                  } catch (err: any) {
-                                    showToast.error(err.message || 'فشل تأكيد الطلب');
+                                  const ok = await handleApproveRequestSecure(req.id);
+                                  if (ok) {
+                                    loadRequests();
                                   }
                                 }
                               }}
@@ -2341,6 +2393,21 @@ export default function BossPanel() {
                     ))
                   )}
                 </div>
+              </div>
+            )}
+
+            {usersSubTab === 'plans' && (
+              <div className="space-y-4">
+                <BossPlansManager />
+              </div>
+            )}
+
+            {usersSubTab === 'payments' && (
+              <div className="space-y-4">
+                <BossPaymentMethodsManager
+                  onOpenContactLinks={() => setShowContactLinksDialog(true)}
+                  contactLinks={contactLinks}
+                />
               </div>
             )}
           </div>

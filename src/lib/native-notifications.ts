@@ -67,7 +67,6 @@ export async function initNotificationChannels(): Promise<void> {
         description: ch.description,
         importance: ch.importance,
         visibility: 1, // Public on lockscreen
-        sound: 'beep.wav',
         vibration: true,
         lights: true,
         lightColor: '#10b981',
@@ -139,7 +138,8 @@ export async function requestNotificationPermissionNative(): Promise<'granted' |
 export async function sendLocalNotification(
   title: string,
   body: string,
-  channel: NotificationChannelType = 'critical'
+  channel: NotificationChannelType = 'critical',
+  extra?: Record<string, any>
 ): Promise<boolean> {
   // Deduplication guard
   if (isDuplicate(title, body)) {
@@ -162,7 +162,8 @@ export async function sendLocalNotification(
             summaryText: 'FlowPOS Pro',
             channelId: targetChannel.id,
             smallIcon: 'ic_launcher',
-            // No schedule date => immediate dispatch via NotificationManager
+            extra,
+            schedule: { at: new Date(Date.now() + 50), allowWhileIdle: true },
           },
         ],
       });

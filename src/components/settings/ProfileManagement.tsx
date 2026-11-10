@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { useAppLock } from '@/hooks/use-app-lock';
+import { useAppLock, setUserPinSecurely } from '@/hooks/use-app-lock';
 import { toast } from '@/lib/sonner-bridge';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { normalizePhoneNumber } from '@/lib/phone-utils';
@@ -246,13 +246,10 @@ export function ProfileManagement() {
 
     setIsSavingPin(true);
     try {
-      const { data, error } = await (supabase.rpc as any)('set_user_pin', {
-        _target_user_id: user?.id,
-        _raw_pin: cleanPin,
-      });
+      const pinRes = await setUserPinSecurely(user?.id || '', cleanPin);
 
-      if (error) {
-        toast.error('فشل في تعيين رمز الـ PIN: ' + error.message);
+      if (!pinRes.success) {
+        toast.error('فشل في تعيين رمز الـ PIN: ' + (pinRes.error || 'غير مصرح'));
         return;
       }
 

@@ -37,6 +37,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useLicense } from '@/hooks/use-license';
 import { useLanguage } from '@/hooks/use-language';
 import { useUserRole } from '@/hooks/use-user-role';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useSupportUnread } from '@/hooks/use-support-unread';
 import { toast } from '@/lib/sonner-bridge';
 import { TranslationKey } from '@/lib/i18n';
 import { supabase } from '@/integrations/supabase/client';
@@ -123,6 +125,8 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
   const { user, profile, signOut } = useAuth();
   const { t, tDynamic, storeType, isRTL } = useLanguage();
   const { isBoss, isAdmin } = useUserRole();
+  const { unreadCount: notificationsUnreadCount } = useNotifications();
+  const supportUnreadCount = useSupportUnread();
 
   // On mobile, close sidebar first then navigate after animation
   const handleNavClick = (e: React.MouseEvent, path: string) => {
@@ -351,6 +355,11 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
           <ul className="space-y-1">
             {filteredNavItems.map((item, index) => {
               const isActive = location.pathname === item.path;
+              const itemBadge = item.path === '/notifications'
+                ? notificationsUnreadCount
+                : item.path === '/contact'
+                ? supportUnreadCount
+                : item.badge;
               return (
                 <li 
                   key={item.path}
@@ -394,22 +403,30 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                       )} />
                     )}
                     
-                    <item.icon className={cn(
-                      "w-[18px] h-[18px] flex-shrink-0 transition-colors",
-                      isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
-                    )} />
+                    <div className="relative flex items-center justify-center">
+                      <item.icon className={cn(
+                        "w-[18px] h-[18px] flex-shrink-0 transition-colors",
+                        isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
+                      )} />
+                      {/* عداد الشارة الحية بلون أحمر نابض على الأيقونة */}
+                      {itemBadge !== undefined && itemBadge > 0 && (
+                        <span className="absolute -top-1.5 -end-2 min-w-[1rem] h-[1rem] px-0.5 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse ring-2 ring-sidebar shadow-xs select-none">
+                          {itemBadge > 99 ? '99+' : itemBadge}
+                        </span>
+                      )}
+                    </div>
 
-                    {/* شارة نقطة حمراء تنبيهية إذا كانت الأيام المتبقية <= 10 أيام أو منتهية */}
-                    {item.path === '/contact' && isContactUrgent && (
+                    {/* شارة نقطة حمراء تنبيهية إذا كانت الأيام المتبقية <= 10 أيام أو منتهية ولم يكن هناك إشعار رسائل */}
+                    {item.path === '/contact' && isContactUrgent && (!itemBadge || itemBadge === 0) && (
                       <span className="absolute top-2 start-6 w-2.5 h-2.5 rounded-full bg-destructive ring-2 ring-background animate-pulse" />
                     )}
                     
                     {(!effectiveCollapsed || isMobile) && (
                       <>
                         <span className="text-sm truncate select-none">{item.labelOverride || (item.dynamicKey ? tDynamic(item.dynamicKey as any) : t(item.translationKey))}</span>
-                        {!!item.badge && (
-                          <span className="ms-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full select-none">
-                            {item.badge}
+                        {itemBadge !== undefined && itemBadge > 0 && (
+                          <span className="ms-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full select-none animate-pulse shadow-sm shadow-destructive/25">
+                            {itemBadge > 99 ? '99+' : itemBadge}
                           </span>
                         )}
                       </>
@@ -491,6 +508,9 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
 // Mobile menu trigger button - unified across all pages
 export function MobileMenuTrigger({ onClick }: { onClick: () => void }) {
   const { isRTL } = useLanguage();
+  const { unreadCount: notifUnread } = useNotifications();
+  const supportUnread = useSupportUnread();
+  const totalUnread = (notifUnread || 0) + (supportUnread || 0);
   
   return (
     <button
@@ -500,13 +520,18 @@ export function MobileMenuTrigger({ onClick }: { onClick: () => void }) {
         "fixed top-[calc(0.75rem+env(safe-area-inset-top))] z-40 md:hidden",
         "w-11 h-11 bg-background",
         "text-foreground flex items-center justify-center shadow-sm",
-        "hover:bg-muted active:scale-95 transition-[transform,colors] duration-150",
+        "hover:bg-muted active:scale-95 transition-[transform,colors] duration-150 relative",
         isRTL 
           ? "right-0 left-auto rounded-l-xl border-y border-l border-border" 
           : "left-0 right-auto rounded-r-xl border-y border-r border-border"
       )}
     >
       <Menu className="w-5 h-5" />
+      {totalUnread > 0 && (
+        <span className="absolute top-1.5 end-1.5 min-w-[0.95rem] h-[0.95rem] px-0.5 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center animate-pulse ring-2 ring-background">
+          {totalUnread > 9 ? '9+' : totalUnread}
+        </span>
+      )}
     </button>
   );
 }

@@ -24,9 +24,22 @@ export default function ContactDeveloper() {
   const license = useLicense();
   const licenseState = (license as any)?.licenseState || license;
   const [info, setInfo] = useState<DevInfo>({});
-  const [chatOpen, setChatOpen] = useState(false);
+  const isDirectChatOpen = Boolean((location.state as any)?.openChat);
+  const [chatOpen, setChatOpen] = useState(isDirectChatOpen);
   const [rel, setRel] = useState<ReleaseConfig>(getCachedReleaseConfig());
   useEffect(() => { fetchReleaseConfig().then(setRel).catch(() => {}); }, []);
+
+  useEffect(() => {
+    if ((location.state as any)?.openChat) {
+      setChatOpen(true);
+    }
+  }, [location.state]);
+
+  useEffect(() => {
+    const handleOpenChat = () => setChatOpen(true);
+    window.addEventListener('flowpos:open-support-chat', handleOpenChat);
+    return () => window.removeEventListener('flowpos:open-support-chat', handleOpenChat);
+  }, []);
 
   useEffect(() => {
     supabase.from('app_settings').select('value').eq('key', 'contact_links').maybeSingle().then(({ data }) => {

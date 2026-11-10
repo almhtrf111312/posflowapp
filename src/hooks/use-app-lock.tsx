@@ -31,6 +31,46 @@ export interface AppLockContextType {
 
 const AppLockContext = createContext<AppLockContextType | undefined>(undefined);
 
+// دالة تعيين رمز PIN في واجهة المستخدم مع التقاط الأخطاء الصريحة
+export async function setUserPinSecurely(targetUserId: string, rawPin: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await (supabase.rpc as any)('set_user_pin', {
+      _target_user_id: targetUserId,
+      _raw_pin: rawPin.trim(),
+    });
+
+    if (error) {
+      console.error('[Security] set_user_pin error:', error.message);
+      return { success: false, error: error.message };
+    }
+
+    return { success: !!data };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'فشل تعيين رمز الأمان' };
+  }
+}
+
+// دالة التحقق الآمن مع التأكد من وجود جلسة مسجلة قبل الاستدعاء
+export async function verifyPinSecurely(userId: string, enteredPin: string): Promise<boolean> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    console.warn('[Security] محاولة تحقق من PIN دون جلسة نشطة - تم المنع محلياً');
+    return false;
+  }
+
+  const { data, error } = await (supabase.rpc as any)('verify_user_pin', {
+    _user_id: userId,
+    _entered_pin: enteredPin.trim(),
+  });
+
+  if (error) {
+    console.error('[Security] verify_user_pin failed:', error.message);
+    return false;
+  }
+
+  return !!data;
+}
+
 // تحويل مصفوفة بايت إلى تمثيل سداسي عشري
 function bufferToHex(buffer: ArrayBuffer): string {
   const byteArray = new Uint8Array(buffer);
@@ -406,14 +446,10 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
         // 1. تحديث الرمز محلياً وتفعيل القفل فوراً
         await updatePin(cleanPin);
 
-        // 2. تحديث الرمز سحابياً لملف المستخدم
-        try {
-          await (supabase.rpc as any)('set_user_pin', {
-            _target_user_id: userId,
-            _raw_pin: cleanPin,
-          });
-        } catch (err: any) {
-          console.warn('[AppLock] Cloud set_user_pin notice:', err?.message || err);
+        // 2. تحديث الرمز سحابياً لملف المستخدم بشكل آمن
+        const pinRes = await setUserPinSecurely(userId, cleanPin);
+        if (!pinRes.success) {
+          console.warn('[AppLock] Cloud set_user_pin notice:', pinRes.error);
         }
 
         // 3. مسح راية طلب إعادة التعيين وتفعيل الجلسة

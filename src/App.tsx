@@ -66,6 +66,7 @@ const Signup = lazy(() => import("./pages/Signup"));
 import { WarehouseProvider } from "./hooks/use-warehouse";
 import { useLicenseReminder } from "./hooks/use-license-reminder";
 import { useDueExpensesChecker } from "./hooks/use-due-expenses-checker";
+import { useNativeChatAlerts } from "./hooks/use-native-chat-alerts";
 import { SmartToast } from '@/components/ui/SmartToast';
 
 const queryClient = new QueryClient({
@@ -137,6 +138,9 @@ const AppContent = () => {
 
   // License expiration reminder toasts
   useLicenseReminder();
+
+  // Android heads-up system tray and native chat notifications
+  useNativeChatAlerts();
 
   // Staged & Progressive Bundle Pre-warming during idle time (Native Feel Pillar 4)
   useEffect(() => {

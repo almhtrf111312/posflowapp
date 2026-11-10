@@ -20,6 +20,7 @@ interface LicenseState {
   error: string | null;
   role: string | null;
   maxCashiers: number | null;
+  maxProducts: number | null;
   licenseTier: string | null;
   expiringWarning: boolean;
   offlineDays: number;
@@ -87,6 +88,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     error: null,
     role: effectiveCache?.role ?? null,
     maxCashiers: effectiveCache?.maxCashiers ?? null,
+    maxProducts: effectiveCache?.maxProducts ?? null,
     licenseTier: effectiveCache?.licenseTier ?? null,
     expiringWarning: effectiveCache?.expiringWarning ?? false,
     offlineDays: getOfflineStatus().daysOffline,
@@ -205,6 +207,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         error: null,
         role: data.role || null,
         maxCashiers: data.maxCashiers || null,
+        maxProducts: data.maxProducts || data.max_products || null,
         licenseTier: data.licenseTier || null,
         expiringWarning: data.expiringWarning || false,
         offlineDays: 0,

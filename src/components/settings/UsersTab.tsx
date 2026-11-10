@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
 import { useLanguage } from '@/hooks/use-language';
 import { useToast } from '@/hooks/use-toast';
+import { useLicense } from '@/hooks/use-license';
 import { useUsersManagement, UserData } from '@/hooks/use-users-management';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { PasswordChangeDialog } from '@/components/settings/PasswordChangeDialog';
@@ -33,6 +34,8 @@ export function UsersTab() {
   const { user: currentUser } = useAuth();
   const { isBoss } = useUserRole();
   const { toast } = useToast();
+  const license = useLicense();
+  const licenseState = (license as any)?.licenseState || license;
   const { users, isLoading: usersLoading, addUser, updateUserProfile, deleteUser } = useUsersManagement();
 
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -67,6 +70,24 @@ export function UsersTab() {
       });
       return;
     }
+
+    // قفل عدد الكاشيرات المسموح به في الباقة
+    if (!isBoss) {
+      const maxAllowedCashiers = Number(licenseState?.maxCashiers) || 1;
+      const currentCashiersCount = users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length;
+
+      if (currentCashiersCount >= maxAllowedCashiers) {
+        toast({
+          title: isRTL ? 'تنبيه الباقة والترخيص' : 'Plan Limit Reached',
+          description: isRTL 
+            ? `لقد استنفدت الحد الأقصى للكاشيرات المسموح به في باقتك (${maxAllowedCashiers} كاشير). يرجى ترقية باقتك لإضافة المزيد.`
+            : `You have reached the maximum cashiers limit for your plan (${maxAllowedCashiers}). Please upgrade your plan.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setSelectedUser(null);
     setUserForm({ name: '', email: '', password: '', phone: '', role: 'cashier', userType: 'cashier', allowedPages: [] });
     setEmailError('');
@@ -218,6 +239,23 @@ export function UsersTab() {
         return;
       }
 
+      // قفل إضافي قبل الحفظ لمنع تجاوز حد الكاشيرات
+      if (!isBoss) {
+        const maxAllowedCashiers = Number(licenseState?.maxCashiers) || 1;
+        const currentCashiersCount = users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length;
+
+        if (currentCashiersCount >= maxAllowedCashiers) {
+          toast({
+            title: isRTL ? 'تنبيه الباقة والترخيص' : 'Plan Limit Reached',
+            description: isRTL 
+              ? `لقد استنفدت الحد الأقصى للكاشيرات المسموح به في باقتك (${maxAllowedCashiers} كاشير). يرجى ترقية باقتك لإضافة المزيد.`
+              : `You have reached the maximum cashiers limit for your plan (${maxAllowedCashiers}). Please upgrade your plan.`,
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       setIsSavingUser(true);
 
       const success = await addUser(
@@ -248,7 +286,14 @@ export function UsersTab() {
         </div>
       )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h2 className="text-base sm:text-lg font-bold text-foreground">{t('settings.userManagement')}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-bold text-foreground">{t('settings.userManagement')}</h2>
+          {!isBoss && (
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+              {users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length} / {Number(licenseState?.maxCashiers) || 1} {isRTL ? 'كاشير متاح' : 'cashiers'}
+            </span>
+          )}
+        </div>
         <Button onClick={handleAddUser} className="w-full sm:w-auto h-9">
           <Plus className="w-4 h-4" />
           {t('settings.addUser')}

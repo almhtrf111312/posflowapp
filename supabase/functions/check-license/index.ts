@@ -232,6 +232,7 @@ Deno.serve(async (req) => {
         needsActivation: false,
         role: roleData.role,
         maxCashiers: license.max_cashiers,
+        maxProducts: license.max_products,
         licenseTier: license.license_tier,
         isRevoked: false,
         // Include warning if expiring soon (7 days)

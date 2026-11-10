@@ -56,11 +56,20 @@ export function useProductLimits() {
         (licenseState as any)?.licenseTier ||
         (isTrial ? 'trial' : 'standard');
 
+      // قراءة الحد الأقصى الفعلي المسجل لترخيص هذا المتجر بدقة
+      const dynamicLimit = Number(licenseState?.maxProducts ?? (licenseState as any)?.max_products);
       let maxProducts = 100;
-      if (tierName === 'institution') maxProducts = 5000;
-      else if (tierName === 'pro') maxProducts = 1000;
-      else if (tierName === 'standard') maxProducts = 600;
-      else maxProducts = 100;
+      if (dynamicLimit > 0) {
+        maxProducts = dynamicLimit;
+      } else if (tierName === 'institution') {
+        maxProducts = 5000;
+      } else if (tierName === 'pro') {
+        maxProducts = 1000;
+      } else if (tierName === 'standard') {
+        maxProducts = 600;
+      } else {
+        maxProducts = 100;
+      }
 
       const canAdd = currentCount < maxProducts;
       // شرط باقة Pro: فوق 600 منتج بدون صور

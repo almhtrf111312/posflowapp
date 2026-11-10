@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Globe, User, Headphones, AlertCircle, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
+import { MessageCircle, Phone, Globe, User, Headphones, AlertCircle, ArrowLeft, ArrowRight, Shield, CheckCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/hooks/use-language';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -8,6 +8,7 @@ import { useLicense } from '@/hooks/use-license';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/lib/sonner-bridge';
 import { getCachedReleaseConfig, fetchReleaseConfig, openExternal, CURRENT_VERSION_NAME, CURRENT_VERSION_CODE, type ReleaseConfig } from '@/lib/remote-updates';
 import { Download, Send } from 'lucide-react';
 import { InlineSupportChatPanel } from '@/components/support/InlineSupportChatPanel';
@@ -25,9 +26,15 @@ export default function ContactDeveloper() {
   const licenseState = (license as any)?.licenseState || license;
   const [info, setInfo] = useState<DevInfo>({});
   const isDirectChatOpen = Boolean((location.state as any)?.openChat);
-  const [chatOpen, setChatOpen] = useState(isDirectChatOpen);
+  const [chatOpen, setChatOpen] = useState(isDirectChatOpen || isBoss);
   const [rel, setRel] = useState<ReleaseConfig>(getCachedReleaseConfig());
   useEffect(() => { fetchReleaseConfig().then(setRel).catch(() => {}); }, []);
+
+  useEffect(() => {
+    if (isBoss) {
+      setChatOpen(true);
+    }
+  }, [isBoss]);
 
   useEffect(() => {
     if ((location.state as any)?.openChat) {
@@ -97,28 +104,63 @@ export default function ContactDeveloper() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-5 pt-12 md:pt-4" dir={direction}>
-      {/* بطاقة علوية سريعة: تجديد وترقية الاشتراك */}
-      <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
-            <Shield className="w-5 h-5" />
+      {/* للمدير العام (Boss): بطاقة صندوق استفسارات العملاء وتصفير الشارات */}
+      {isBoss ? (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-primary/10 border border-primary/20 rounded-2xl p-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
+              <Headphones className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-foreground">صندوق استفسارات ومحادثات العملاء</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                يمكنك الرد على العملاء مباشرة أو تصفير شارات التنبيهات الحمراء المعلقة
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-foreground">تجديد وترقية الاشتراك</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {licenseState.isExpired 
-                ? 'انتهى اشتراكك الحالي. يمكنك التجديد فوراً لمتابعة العمل.'
-                : licenseState.remainingDays !== null && licenseState.remainingDays !== undefined
-                  ? `المتبقي في اشتراكك: ${licenseState.remainingDays} يوماً`
-                  : 'اختر باقة الاشتراك المناسبة لمتجرك وسعة منتجاتك'}
-            </p>
-          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2 bg-background hover:bg-muted text-xs font-semibold shrink-0"
+            onClick={async () => {
+              try {
+                const { data, error } = await supabase.rpc('mark_all_support_messages_read');
+                if (error) throw error;
+                toast.success('تم تحديد كافة رسائل الدعم كمقروءة وتصفير الشارات');
+                window.dispatchEvent(new CustomEvent('flowpos:support-read'));
+              } catch (err: any) {
+                toast.error('فشل في تحديث حالة الرسائل: ' + err.message);
+              }
+            }}
+          >
+            <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            تحديد الكل كمقروء وتصفير الشارة
+          </Button>
         </div>
-        <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0 w-full sm:w-auto">
-          تجديد / ترقية الآن
-          {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-        </Button>
-      </div>
+      ) : (
+        /* للعملاء العاديين: بطاقة تجديد وترقية الاشتراك */
+        <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">تجديد وترقية الاشتراك</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {licenseState.isExpired 
+                  ? 'انتهى اشتراكك الحالي. يمكنك التجديد فوراً لمتابعة العمل.'
+                  : licenseState.remainingDays !== null && licenseState.remainingDays !== undefined
+                    ? `المتبقي في اشتراكك: ${licenseState.remainingDays} يوماً`
+                    : 'اختر باقة الاشتراك المناسبة لمتجرك وسعة منتجاتك'}
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0 w-full sm:w-auto">
+            تجديد / ترقية الآن
+            {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+          </Button>
+        </div>
+      )}
       {/* Support Reason Alert Banner */}
       {reasonDetails && (
         <div className={`rounded-2xl border p-5 shadow-sm space-y-3 ${

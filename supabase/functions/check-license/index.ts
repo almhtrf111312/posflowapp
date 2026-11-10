@@ -226,14 +226,17 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         valid: true,
         hasLicense: true,
-        isTrial: license.is_trial,
+        isTrial: license.is_trial === true,
         expiresAt: license.expires_at,
         remainingDays,
         needsActivation: false,
         role: roleData.role,
-        maxCashiers: license.max_cashiers,
-        maxProducts: license.max_products,
-        licenseTier: license.license_tier,
+        maxCashiers: license.max_cashiers || 1,
+        maxProducts: license.max_products !== null && license.max_products !== undefined ? license.max_products : 100,
+        licenseTier: license.license_tier || 'standard',
+        planName: license.plan_name || (license.is_trial ? 'فترة تجريبية' : 'اشتراك مفعّل'),
+        planAudience: license.plan_audience || license.license_tier || 'standard',
+        totalDays: license.total_days || 30,
         isRevoked: false,
         // Include warning if expiring soon (7 days)
         expiringWarning: remainingDays <= 7

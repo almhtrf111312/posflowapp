@@ -6,7 +6,7 @@ import { recordServerContact, getOfflineStatus, isDataEncrypted, decryptLocalDat
 import { fetchOfflineLease, getOfflineLeaseStatus, clearOfflineLease } from '@/lib/offline-lease';
 import { toast } from '@/lib/sonner-bridge';
 
-interface LicenseState {
+export interface LicenseState {
   isLoading: boolean;
   isValid: boolean;
   hasLicense: boolean;
@@ -22,6 +22,9 @@ interface LicenseState {
   maxCashiers: number | null;
   maxProducts: number | null;
   licenseTier: string | null;
+  planName?: string | null;
+  planAudience?: string | null;
+  totalDays?: number | null;
   expiringWarning: boolean;
   offlineDays: number;
   offlineWarning: boolean;
@@ -90,6 +93,9 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     maxCashiers: effectiveCache?.maxCashiers ?? null,
     maxProducts: effectiveCache?.maxProducts ?? null,
     licenseTier: effectiveCache?.licenseTier ?? null,
+    planName: effectiveCache?.planName ?? null,
+    planAudience: effectiveCache?.planAudience ?? null,
+    totalDays: effectiveCache?.totalDays ?? null,
     expiringWarning: effectiveCache?.expiringWarning ?? false,
     offlineDays: getOfflineStatus().daysOffline,
     offlineWarning: getOfflineStatus().shouldWarn,
@@ -156,21 +162,65 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Strict 1.5s timeout race to guarantee instant response on dead VPN or offline
-      const invokePromise = supabase.functions.invoke('check-license', {
-        body: { device_id: getDeviceKey() },
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      // 1. استدعاء دالة check-license مع مهلة 4 ثوانٍ
+      let data: any = null;
+      try {
+        const invokePromise = supabase.functions.invoke('check-license', {
+          body: { device_id: getDeviceKey() },
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
 
-      const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
-        setTimeout(() => reject(new Error('license check network timeout')), 1500)
-      );
+        const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
+          setTimeout(() => reject(new Error('license check network timeout')), 4000)
+        );
 
-      const response = await Promise.race([invokePromise, timeoutPromise]);
+        const response = await Promise.race([invokePromise, timeoutPromise]);
+        if (!response.error && response.data) {
+          data = response.data;
+        }
+      } catch (e) {
+        console.warn('[License] Edge function timed out or failed, attempting direct DB fallback...');
+      }
 
-      if (response.error) throw new Error(response.error.message);
+      // 2. استعلام احتياطي مباشر وفوري من جدول app_licenses (محمي بـ RLS وسريع جداً 30ms)
+      if (!data && user?.id) {
+        try {
+          const { data: dbLicense } = await supabase
+            .from('app_licenses')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
 
-      const data = response.data;
+          if (dbLicense) {
+            const now = new Date();
+            const exp = new Date(dbLicense.expires_at);
+            const remDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            data = {
+              valid: exp > now && !dbLicense.is_revoked,
+              hasLicense: true,
+              isTrial: dbLicense.is_trial === true,
+              expiresAt: dbLicense.expires_at,
+              remainingDays: remDays,
+              needsActivation: false,
+              role: 'admin',
+              maxCashiers: dbLicense.max_cashiers || 1,
+              maxProducts: dbLicense.max_products !== null && dbLicense.max_products !== undefined ? dbLicense.max_products : 100,
+              licenseTier: dbLicense.license_tier || 'standard',
+              planName: dbLicense.plan_name || (dbLicense.is_trial ? 'فترة تجريبية' : 'اشتراك مفعّل'),
+              planAudience: dbLicense.plan_audience || dbLicense.license_tier || 'standard',
+              totalDays: dbLicense.total_days || 30,
+              isRevoked: dbLicense.is_revoked,
+              expiringWarning: remDays <= 7,
+            };
+          }
+        } catch (dbErr) {
+          console.warn('[License] Direct DB fallback error:', dbErr);
+        }
+      }
+
+      if (!data) {
+        throw new Error('Could not fetch license from edge function or database');
+      }
 
       if (data.userNotFound) {
         console.log('User not found in database, signing out...');
@@ -197,7 +247,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         isValid: data.valid,
         hasLicense: data.hasLicense,
-        isTrial: data.isTrial || false,
+        isTrial: data.isTrial === true,
         isExpired: data.isExpired || false,
         isRevoked: data.isRevoked || false,
         needsActivation: data.needsActivation,
@@ -207,8 +257,11 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         error: null,
         role: data.role || null,
         maxCashiers: data.maxCashiers || null,
-        maxProducts: data.maxProducts || data.max_products || null,
+        maxProducts: data.maxProducts !== null && data.maxProducts !== undefined ? data.maxProducts : (data.max_products || null),
         licenseTier: data.licenseTier || null,
+        planName: data.planName || data.plan_name || null,
+        planAudience: data.planAudience || data.plan_audience || null,
+        totalDays: data.totalDays || data.total_days || null,
         expiringWarning: data.expiringWarning || false,
         offlineDays: 0,
         offlineWarning: false,

@@ -57,10 +57,16 @@ export function useProductLimits() {
         (isTrial ? 'trial' : 'standard');
 
       // قراءة الحد الأقصى الفعلي المسجل لترخيص هذا المتجر بدقة
-      const dynamicLimit = Number(licenseState?.maxProducts ?? (licenseState as any)?.max_products);
+      const rawLimit = licenseState?.maxProducts ?? (licenseState as any)?.max_products;
+      const dynamicLimit = (rawLimit !== null && rawLimit !== undefined && !isNaN(Number(rawLimit)))
+        ? Number(rawLimit)
+        : -1;
+
       let maxProducts = 100;
-      if (dynamicLimit > 0) {
+      if (dynamicLimit >= 0) {
         maxProducts = dynamicLimit;
+      } else if (isTrial) {
+        maxProducts = 100;
       } else if (tierName === 'institution') {
         maxProducts = 5000;
       } else if (tierName === 'pro') {

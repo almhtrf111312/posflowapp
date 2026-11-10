@@ -36,6 +36,8 @@ export function useNativeChatAlerts() {
   const checkUnreadMessagesAndAlert = useCallback(async () => {
     if (!user?.id) return;
     try {
+      // لا ننبّه إلا عن الرسائل الحديثة: الرسائل الأقدم من 24 ساعة تبقى في المحادثة والشارة فقط
+      const recentCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       if (isBoss) {
         // المدير العام: فحص رسائل العملاء التي لم يتم إطلاق إشعار نظام لها بعد
         const { data: unnotifiedMsgs, error } = await supabase
@@ -43,6 +45,7 @@ export function useNativeChatAlerts() {
           .select('id, conversation_id, sender_id, sender_role, message, created_at')
           .eq('sender_role', 'user')
           .eq('notified_native', false)
+          .gte('created_at', recentCutoff)
           .order('created_at', { ascending: false })
           .limit(5);
 
@@ -76,6 +79,7 @@ export function useNativeChatAlerts() {
             .in('conversation_id', convIds)
             .in('sender_role', ['boss', 'admin'])
             .eq('notified_native', false)
+            .gte('created_at', recentCutoff)
             .order('created_at', { ascending: false })
             .limit(5);
 

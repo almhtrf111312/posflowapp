@@ -12,6 +12,19 @@ import {
 
 const FORCED_DISMISS_KEY = 'hp_forced_update_dismissed_day';
 const NOTIFIED_KEY = 'hp_notified_broadcasts';
+// لحظة أول تشغيل على هذا الجهاز: الإعلانات الأقدم منها لا تُعرض كلافتة أو تنبيه (تبقى في صفحة الإشعارات)
+const BASELINE_KEY = 'hp_broadcast_baseline_ts';
+const getBroadcastBaseline = (): number => {
+  try {
+    const saved = Number(localStorage.getItem(BASELINE_KEY) || 0);
+    if (saved > 0) return saved;
+    const now = Date.now();
+    localStorage.setItem(BASELINE_KEY, String(now));
+    return now;
+  } catch {
+    return 0;
+  }
+};
 const POLL_MS = 60 * 1000;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const BANNER_AUTO_DISMISS_MS = 7000;
@@ -63,7 +76,10 @@ export function RemoteUpdatesGate() {
         return true;
       });
 
-      const fresh = activeItems.filter(b => !seen.has(b.id));
+      const baseline = getBroadcastBaseline();
+      const fresh = activeItems.filter(b =>
+        !seen.has(b.id) && (b.kind === 'update' || new Date(b.created_at).getTime() >= baseline)
+      );
       const notified = new Set<string>(JSON.parse(localStorage.getItem(NOTIFIED_KEY) || '[]'));
       for (const b of fresh.filter(x => !notified.has(x.id))) {
         notified.add(b.id);

@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 
 export function ActivationScreen() {
-  const { activateCode, isTrial, isExpired } = useLicense();
+  const { activateCode, checkLicense, isTrial, isExpired } = useLicense();
   const { t, direction, isRTL } = useLanguage();
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
@@ -130,38 +130,23 @@ export function ActivationScreen() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <div className="relative">
-                <Key className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground ${isRTL ? 'right-3' : 'left-3'}`} />
-                <Input
-                  type="text"
-                  placeholder="HYPER-XXXX-XXXX-XXXX-XXXX"
-                  value={code}
-                  onChange={handleCodeChange}
-                  className={`${isRTL ? 'pr-10 text-right' : 'pl-10'} text-center font-mono tracking-wider`}
-                  maxLength={25}
-                  disabled={isLoading}
-                />
-              </div>
-              {error && (
-                <div className="flex items-center gap-2 text-destructive text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>{error}</span>
-                </div>
-              )}
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading || !code.trim()}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="ms-2">{t('license.verifying')}</span>
-                </>
-              ) : (
-                t('license.activateApp')
-              )}
-            </Button>
-          </form>
+          {/* إدخال أكواد التفعيل اليدوية مُلغى: التفعيل يتم من لوحة الإدارة مباشرة، ثم يعيد العميل التحقق */}
+          <Button
+            type="button"
+            className="w-full gap-2"
+            disabled={isLoading}
+            onClick={async () => {
+              setIsLoading(true);
+              try {
+                await checkLicense();
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            <span>{t('license.recheck')}</span>
+          </Button>
 
           <div className="pt-4 border-t space-y-3">
             <p className="text-sm text-muted-foreground text-center">{t('license.getCodeContact')}</p>

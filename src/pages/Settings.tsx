@@ -2299,7 +2299,7 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <ActivationCodeInput />
+            {/* إدخال كود التفعيل اليدوي مُلغى: التفعيل يتم من لوحة الإدارة فقط */}
             {/* Transfer License Button */}
             <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">

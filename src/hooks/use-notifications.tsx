@@ -125,7 +125,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           }));
           setNotifications(prev => {
             const existingIds = new Set(prev.map(p => p.id));
-            const newOnes = formatted.filter(f => !existingIds.has(f.id));
+            // تجاهل النسخة السحابية لإشعار أضافه هذا الجهاز نفسه للتو (معرّف محلي مختلف)
+            const newOnes = formatted.filter(f =>
+              !existingIds.has(f.id) &&
+              !prev.some(p => p.title === f.title && p.message === f.message &&
+                Math.abs(p.timestamp.getTime() - f.timestamp.getTime()) < 15000)
+            );
             return [...newOnes, ...prev];
           });
         }
@@ -135,6 +140,54 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
 
     loadCloudNotifications();
+
+    // استقبال الإشعارات السحابية الجديدة فور وصولها (طلبات التجديد للمدير، تفعيل الاشتراك للعميل...)
+    const channel = supabase
+      .channel(`user_notifications_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const n = payload.new as any;
+          if (!n?.id || n.is_archived) return;
+          setNotifications(prev => {
+            if (prev.some(p => p.id === n.id)) return prev;
+            // تجاهل النسخة السحابية لإشعار أضافه هذا الجهاز نفسه للتو
+            const createdMs = new Date(n.created_at).getTime();
+            if (prev.some(p => p.title === n.title && p.message === n.message && Math.abs(p.timestamp.getTime() - createdMs) < 15000)) {
+              return prev;
+            }
+            return [{
+              id: n.id,
+              title: n.title,
+              message: n.message,
+              type: n.type || 'system',
+              read: !!n.is_read,
+              timestamp: new Date(n.created_at),
+              actionUrl: n.action_url,
+            }, ...prev];
+          });
+          const type = String(n.type || '');
+          if (type.startsWith('license')) {
+            window.dispatchEvent(new Event('flowpos:license-changed'));
+          }
+          if (type.startsWith('license') || type === 'subscription_request') {
+            showToast.info(n.title, { description: n.message });
+          }
+        }
+      )
+      .subscribe();
+
+    // تحديث القائمة عند العودة إلى التطبيق (في حال انقطع الاتصال اللحظي)
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') loadCloudNotifications();
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
   }, [user?.id]);
 
   // Sync archived to localStorage

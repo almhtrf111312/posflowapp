@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useUserRole } from '@/hooks/use-user-role';
 import { useAuth } from '@/hooks/use-auth';
@@ -188,6 +188,7 @@ const calculateDaysRemaining = (expiresAt: string | null) => {
 
 export default function BossPanel() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isBoss, isLoading: roleLoading } = useUserRole();
   const { user } = useAuth();
   const { t, direction } = useLanguage();
@@ -216,7 +217,9 @@ export default function BossPanel() {
   const [isSavingTrialDays, setIsSavingTrialDays] = useState(false);
 
   // Direct activation (by plan or custom days) dialog
-  const [directActivateDialog, setDirectActivateDialog] = useState<{ owner: Owner } | null>(null);
+  const [directActivateDialog, setDirectActivateDialog] = useState<{ owner: Owner; request?: any } | null>(null);
+  // طريقة احتساب التاريخ: إضافة على التاريخ الحالي (extend) أو بدء من اليوم (reset)
+  const [activationMode, setActivationMode] = useState<'extend' | 'reset'>('extend');
   const [directActivateDays, setDirectActivateDays] = useState<string>('90');
   const [isDirectActivating, setIsDirectActivating] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<any[]>([]);
@@ -534,8 +537,10 @@ export default function BossPanel() {
   };
 
   // Open direct activate dialog and pre-fetch available subscription plans
-  const openDirectActivate = async (owner: Owner) => {
-    setDirectActivateDialog({ owner });
+  const openDirectActivate = async (owner: Owner, request?: any) => {
+    setDirectActivateDialog({ owner, request });
+    // الافتراضي: إضافة على المدة المتبقية، إلا إذا كان الحساب تجريبياً فيبدأ من اليوم
+    setActivationMode(owner.is_trial ? 'reset' : 'extend');
     setSelectedPlanId(null);
     setDirectActivateDays('90');
     setLoadingPlans(true);
@@ -546,7 +551,8 @@ export default function BossPanel() {
         .order('sort_order', { ascending: true });
       if (!error && data && data.length > 0) {
         setAvailablePlans(data);
-        setSelectedPlanId(data[0].id);
+        const requestedPlan = request?.plan_id ? (data as any[]).find((p) => p.id === request.plan_id) : null;
+        setSelectedPlanId(requestedPlan ? requestedPlan.id : (data as any[])[0].id);
       } else {
         setAvailablePlans([]);
         setSelectedPlanId('custom');
@@ -575,22 +581,45 @@ export default function BossPanel() {
       customDays = days;
     }
 
+    const request = directActivateDialog.request;
+    const planId = (selectedPlanId && selectedPlanId !== 'custom') ? selectedPlanId : null;
+
     setIsDirectActivating(true);
     try {
-      const { data, error } = await supabase.rpc('boss_direct_activate_by_plan', {
+      // الدالة الموحدة للتفعيل: باقة أو أيام مخصصة + طريقة احتساب التاريخ + ربط اختياري بطلب التجديد
+      let { data, error } = await (supabase.rpc as any)('boss_activate_license', {
         p_target_user_id: owner.user_id,
-        p_plan_id: (selectedPlanId && selectedPlanId !== 'custom') ? selectedPlanId : null,
+        p_plan_id: planId,
         p_custom_days: customDays,
+        p_mode: activationMode,
+        p_request_id: request?.id || null,
+        p_admin_note: null,
       });
+
+      // توافق مؤقت: إذا لم يُطبَّق ملف SQL الجديد بعد على قاعدة البيانات
+      if (error && (error.code === 'PGRST202' || /boss_activate_license/i.test(error.message || ''))) {
+        if (request || activationMode === 'reset') {
+          throw new Error('يجب تطبيق ملف SQL الخاص بالتفعيل الموحد على قاعدة البيانات أولاً');
+        }
+        const legacy = await supabase.rpc('boss_direct_activate_by_plan', {
+          p_target_user_id: owner.user_id,
+          p_plan_id: planId,
+          p_custom_days: customDays,
+        });
+        data = legacy.data;
+        error = legacy.error;
+      }
 
       if (error) throw error;
       if (data && !data.success) {
         throw new Error(data.error || 'فشل التفعيل');
       }
 
-      toast.success(`تم تفعيل حساب "${owner.full_name || owner.email}" بنجاح (${data?.plan_name || 'تفعيل مباشر'})`);
+      const newExpiry = data?.expires_at ? new Date(data.expires_at).toLocaleDateString('ar-EG') : '';
+      toast.success(`تم تفعيل حساب "${owner.full_name || owner.email || 'العميل'}" بنجاح (${data?.plan_name || 'تفعيل مباشر'})${newExpiry ? ` — صالح حتى ${newExpiry}` : ''}`);
       setDirectActivateDialog(null);
       fetchData();
+      if (request) loadRequests();
     } catch (err: any) {
       console.error('Direct activation failed:', err);
       toast.error('فشل التفعيل المباشر: ' + (err.message || 'خطأ غير معروف'));
@@ -598,6 +627,66 @@ export default function BossPanel() {
       setIsDirectActivating(false);
     }
   };
+
+  // فتح حساب المتجر وواجهة التفعيل انطلاقاً من طلب تجديد
+  const openRequestActivation = (req: any) => {
+    const owner =
+      owners.find((o) => o.user_id === req.user_id) ||
+      owners.find((o) => o.cashiers?.some((c) => c.user_id === req.user_id));
+    const target: Owner = owner || ({
+      user_id: req.user_id,
+      email: null,
+      role: 'admin',
+      role_created_at: req.created_at || new Date().toISOString(),
+      is_active: true,
+      full_name: req.payer_name || null,
+      license_expires: null,
+      license_revoked: null,
+      max_cashiers: null,
+      license_tier: null,
+      cashier_count: 0,
+    } as Owner);
+    setActiveTab('users');
+    setUsersSubTab('accounts');
+    setSearchTerm(owner ? (owner.email || owner.full_name || owner.user_id) : '');
+    openDirectActivate(target, req);
+  };
+
+  // رابط مباشر من إشعار طلب التجديد: /boss?request=<id>
+  const deepLinkRequestId = searchParams.get('request');
+  useEffect(() => {
+    if (!deepLinkRequestId || !isBoss || isLoading) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: req } = await supabase
+          .from('subscription_requests' as any)
+          .select('*')
+          .eq('id', deepLinkRequestId)
+          .maybeSingle();
+        if (cancelled) return;
+        const next = new URLSearchParams(searchParams);
+        next.delete('request');
+        setSearchParams(next, { replace: true });
+        if (!req) {
+          toast.error('طلب التجديد غير موجود');
+          return;
+        }
+        const status = (req as any).status;
+        if (status === 'pending' || status === 'paid_claimed') {
+          openRequestActivation(req);
+        } else {
+          // طلب تمت معالجته مسبقاً: نعرضه في قائمة الطلبات فقط
+          setActiveTab('users');
+          setUsersSubTab('subscriptions');
+        }
+      } catch (e) {
+        console.warn('Failed to open subscription request:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkRequestId, isBoss, isLoading]);
 
   useEffect(() => {
     if (isBoss) {
@@ -1679,19 +1768,7 @@ export default function BossPanel() {
                 <Users className="w-4 h-4" />
                 <span>حسابات المتاجر ({owners.length})</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setUsersSubTab('codes')}
-                className={cn(
-                  "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 whitespace-nowrap px-3",
-                  usersSubTab === 'codes'
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground hover:bg-card/40"
-                )}
-              >
-                <Key className="w-4 h-4" />
-                <span>أكواد التفعيل ({codes.length})</span>
-              </button>
+              {/* تبويب أكواد التفعيل اليدوية مُلغى: التفعيل يتم من قائمة الحساب (تفعيل مباشر) فقط */}
               <button
                 type="button"
                 onClick={() => setUsersSubTab('subscriptions')}
@@ -2029,10 +2106,7 @@ export default function BossPanel() {
                                       <CheckCircle className="w-4 h-4" />
                                       تفعيل مباشر باختيار باقة
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setActivationDialog({ owner })}>
-                                      <Ticket className="w-4 h-4" />
-                                      تفعيل عن بعد
-                                    </DropdownMenuItem>
+                                    {/* «تفعيل عن بعد» بالأكواد اليدوية مُلغى: التفعيل من «تفعيل مباشر» فقط */}
                                     {isLicenseValid && (
                                       <DropdownMenuItem
                                         onClick={() => setRevokeLicenseConfirm({
@@ -2390,16 +2464,9 @@ export default function BossPanel() {
                               size="sm"
                               variant="default"
                               className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={async () => {
-                                if (confirm(`هل تأكدت من استلام مبلغ $${req.price_usd} لحوالة ${req.ref_code}؟`)) {
-                                  const ok = await handleApproveRequestSecure(req.id);
-                                  if (ok) {
-                                    loadRequests();
-                                  }
-                                }
-                              }}
+                              onClick={() => openRequestActivation(req)}
                             >
-                              تأكيد وتمديد الترخيص
+                              فتح الحساب والتفعيل
                             </Button>
                             <Button
                               size="sm"
@@ -2723,15 +2790,7 @@ export default function BossPanel() {
                                 <CheckCircle className="w-3 h-3" />
                                 تفعيل مباشر
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-8"
-                                onClick={() => setActivationDialog({ owner })}
-                              >
-                                <Ticket className="w-3 h-3" />
-                                بكود
-                              </Button>
+                              {/* زر التفعيل «بكود» مُلغى: التفعيل من «تفعيل مباشر» فقط */}
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -2939,6 +2998,11 @@ export default function BossPanel() {
               <DialogDescription className="text-xs">
                 المستخدم المستهدف: <strong className="text-foreground">{directActivateDialog?.owner.full_name || directActivateDialog?.owner.email}</strong>
                 {directActivateDialog?.owner.store_name ? ` • متجر: ${directActivateDialog.owner.store_name}` : ''}
+                {directActivateDialog?.request && (
+                  <span className="block mt-1 text-primary font-semibold">
+                    طلب تجديد رقم {directActivateDialog.request.ref_code} — {directActivateDialog.request.plan_name} (${directActivateDialog.request.price_usd}) — {directActivateDialog.request.method_name}
+                  </span>
+                )}
               </DialogDescription>
             </DialogHeader>
 
@@ -3030,7 +3094,7 @@ export default function BossPanel() {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">
-                        تحديد مدة الترخيص يدوياً (حد افتراضي 600 منتج، 1 كاشير)
+                        تحديد مدة الترخيص يدوياً مع الإبقاء على حدود باقة العميل الحالية
                       </p>
 
                       {selectedPlanId === 'custom' && (
@@ -3072,8 +3136,66 @@ export default function BossPanel() {
                 </div>
               )}
 
+              {/* طريقة احتساب تاريخ الانتهاء: إضافة على الحالي أو بدء من اليوم */}
+              {(() => {
+                const currentExpiry = directActivateDialog?.owner.license_expires
+                  ? new Date(directActivateDialog.owner.license_expires)
+                  : null;
+                const isStillActive = !!currentExpiry && currentExpiry.getTime() > Date.now();
+                const selectedPlan = availablePlans.find((p) => p.id === selectedPlanId);
+                const days = selectedPlan
+                  ? Number(selectedPlan.duration_days) || 0
+                  : (parseInt(directActivateDays, 10) || 0);
+                const baseMs = activationMode === 'extend' && isStillActive ? currentExpiry!.getTime() : Date.now();
+                const previewExpiry = days > 0 ? new Date(baseMs + days * 86400000) : null;
+                return (
+                  <div className="rounded-xl border border-border p-3 space-y-2.5">
+                    <div className="text-xs text-muted-foreground">
+                      تاريخ الانتهاء الحالي:{' '}
+                      <strong className="text-foreground">
+                        {currentExpiry
+                          ? `${currentExpiry.toLocaleDateString('ar-EG')} ${isStillActive ? `(متبقي ${calculateDaysRemaining(directActivateDialog!.owner.license_expires)} يوم)` : '(منتهٍ)'}`
+                          : 'لا يوجد ترخيص'}
+                      </strong>
+                    </div>
+                    <RadioGroup
+                      value={activationMode}
+                      onValueChange={(v) => setActivationMode(v as 'extend' | 'reset')}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                    >
+                      <label
+                        htmlFor="activation-mode-extend"
+                        className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer ${activationMode === 'extend' ? 'border-primary bg-primary/5' : 'border-border'}`}
+                      >
+                        <RadioGroupItem value="extend" id="activation-mode-extend" className="mt-0.5" />
+                        <span className="text-xs">
+                          <strong className="block text-sm text-foreground">إضافة على التاريخ الحالي</strong>
+                          تُضاف المدة الجديدة فوق الأيام المتبقية للعميل
+                        </span>
+                      </label>
+                      <label
+                        htmlFor="activation-mode-reset"
+                        className={`flex items-start gap-2 p-2.5 rounded-lg border cursor-pointer ${activationMode === 'reset' ? 'border-primary bg-primary/5' : 'border-border'}`}
+                      >
+                        <RadioGroupItem value="reset" id="activation-mode-reset" className="mt-0.5" />
+                        <span className="text-xs">
+                          <strong className="block text-sm text-foreground">بدء من اليوم</strong>
+                          يُلغى التاريخ الحالي وتبدأ المدة الجديدة من الآن
+                        </span>
+                      </label>
+                    </RadioGroup>
+                    {previewExpiry && (
+                      <div className="text-xs text-muted-foreground">
+                        تاريخ الانتهاء بعد التفعيل:{' '}
+                        <strong className="text-primary">{previewExpiry.toLocaleDateString('ar-EG')}</strong>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="rounded-lg bg-muted/60 p-2.5 text-xs text-muted-foreground space-y-1">
-                <div>⚡ <strong>آلية التطبيق:</strong> يتم تمديد الترخيص إن كان نشطاً أو تفعيله من اليوم إن كان منتهياً أو جديداً.</div>
+                <div>⚡ <strong>آلية التطبيق:</strong> تُطبَّق مدة الباقة وحدودها (المنتجات والكاشيرات) على حساب العميل وتظهر له في الإعدادات.</div>
                 <div>🔔 <strong>الإشعار التلقائي:</strong> سيتم إرسال إشعار فوري بحساب العميل يحتوي رسالة التفعيل وتاريخ الانتهاء الجديد.</div>
               </div>
             </div>

@@ -378,6 +378,13 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     checkLicense();
   }, [user?.id, authLoading, checkLicense]);
 
+  // إعادة فحص الترخيص فور وصول إشعار تفعيل/تجديد من لوحة الإدارة (دون إعادة تسجيل الدخول)
+  useEffect(() => {
+    const handleLicenseChanged = () => { checkLicense(); };
+    window.addEventListener('flowpos:license-changed', handleLicenseChanged);
+    return () => window.removeEventListener('flowpos:license-changed', handleLicenseChanged);
+  }, [checkLicense]);
+
   return (
     <LicenseContext.Provider value={{ ...state, checkLicense, activateCode, startTrial }}>
       {children}

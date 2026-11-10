@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getDeviceId } from '@/lib/device-fingerprint';
+import { getDeviceId, getStableDeviceId } from '@/lib/device-fingerprint';
 import { useAuth } from './use-auth';
 import { secureSet, secureGet, secureRemove, getDeviceKey } from '@/lib/secure-storage';
 
@@ -137,7 +137,7 @@ export function useDeviceBinding() {
         // الربط بالمعرّف الموحّد (HP…SK) المستخدم في فحص الترخيص والتفعيل
         await supabase
           .from('app_licenses')
-          .update({ device_id: currentDeviceKey })
+          .update({ device_id: await getStableDeviceId() })
           .eq('user_id', user.id)
           .eq('is_revoked', false);
 
@@ -148,7 +148,8 @@ export function useDeviceBinding() {
       }
 
       // فحص التطابق الصارم مع معرف الجهاز المسجل بالسحابة
-      const isMatch = license.device_id === currentDeviceId || license.device_id === currentDeviceKey;
+      const stableDeviceId = await getStableDeviceId();
+      const isMatch = license.device_id === currentDeviceId || license.device_id === currentDeviceKey || license.device_id === stableDeviceId;
       
       if (isMatch) {
         const result = { isDeviceBlocked: false, deviceId: currentDeviceId, registeredDeviceId: license.device_id };

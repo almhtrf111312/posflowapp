@@ -108,20 +108,50 @@ export const clearDeviceId = (): void => {
 };
 
 /**
- * معرّف الجهاز الموحّد للترخيص
- * كان التطبيق يستخدم معرّفين مختلفين لنفس الجهاز: HP…SK (التفعيل وفحص الترخيص) و DEV-/CAP- (تسجيل الدخول)،
- * فيُربط الترخيص بأحدهما ويُفحص بالآخر فيُحظر صاحب الحساب على جهازه نفسه.
- * القاعدة: إذا كان الترخيص مربوطاً مسبقاً بأحد معرّفي هذا الجهاز نستخدمه كما هو، وإلا نعتمد HP…SK.
+ * معرّف ثابت للجهاز لا يتغير بحذف التطبيق وإعادة تثبيته (يتغير فقط بفرمتة الجهاز):
+ * على أندرويد نستخدم معرّف النظام عبر Device.getId() (CAP-…)، وعلى الويب لا يوجد معرّف ثابت فنستخدم HP…SK المحفوظ.
  */
-export const getCanonicalDeviceId = async (registeredDeviceId?: string | null): Promise<string> => {
+export const getStableDeviceId = async (): Promise<string> => {
+  let isNative = false;
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    isNative = Capacitor.isNativePlatform();
+  } catch { /* web */ }
+  if (isNative) {
+    try {
+      const id = await getDeviceId();
+      if (id && id.startsWith('CAP-')) return id;
+    } catch { /* fall back */ }
+  }
+  const { getDeviceKey } = await import('./secure-storage');
+  return getDeviceKey();
+};
+
+/**
+ * معرّف الجهاز الموحّد للترخيص
+ * - المعرّف المعتمد هو المعرّف الثابت (getStableDeviceId).
+ * - إذا كان الترخيص مربوطاً بمعرّف قديم لنفس هذا الجهاز (HP…SK أو DEV-/CAP- القديم) نحاول نقل الربط
+ *   إلى المعرّف الثابت عبر migrate؛ وإذا تعذّر النقل نستخدم المعرّف القديم كما هو حتى لا يُحظر صاحب الحساب.
+ */
+export const getCanonicalDeviceId = async (
+  registeredDeviceId?: string | null,
+  migrate?: (stableId: string) => Promise<boolean>
+): Promise<string> => {
+  const stable = await getStableDeviceId();
+  if (!registeredDeviceId || registeredDeviceId === stable) return stable;
+
   const { getDeviceKey } = await import('./secure-storage');
   const key = getDeviceKey();
-  if (registeredDeviceId) {
-    if (registeredDeviceId === key) return key;
-    try {
-      const legacy = await getDeviceId();
-      if (registeredDeviceId === legacy) return legacy;
-    } catch { /* ignore */ }
+  let legacy: string | null = null;
+  try { legacy = await getDeviceId(); } catch { /* ignore */ }
+
+  if (registeredDeviceId === key || registeredDeviceId === legacy) {
+    if (migrate) {
+      try {
+        if (await migrate(stable)) return stable;
+      } catch { /* keep legacy binding */ }
+    }
+    return registeredDeviceId;
   }
-  return key;
+  return stable;
 };

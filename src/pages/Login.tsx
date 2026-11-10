@@ -12,7 +12,7 @@ import { Loader2, Store, Eye, EyeOff, Smartphone, RefreshCw, AlertTriangle, Mail
 import { supabase } from '@/integrations/supabase/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { LanguageQuickSelector } from '@/components/auth/LanguageQuickSelector';
-import { getDeviceId, getCanonicalDeviceId } from '@/lib/device-fingerprint';
+import { getDeviceId, getCanonicalDeviceId, getStableDeviceId } from '@/lib/device-fingerprint';
 import { getDeviceKey } from '@/lib/secure-storage';
 import { ContactLinksSection, CHANNELS, type ContactLinks } from '@/components/settings/ContactLinksSection';
 import { getAuthErrorMessage, isValidEmailFormat } from '@/lib/auth-errors';
@@ -299,7 +299,15 @@ export default function Login() {
         .select('device_id')
         .eq('user_id', userId)
         .maybeSingle();
-      const bindDeviceId = await getCanonicalDeviceId(ownLicense?.device_id ?? null);
+      const registeredId = ownLicense?.device_id ?? null;
+      const bindDeviceId = await getCanonicalDeviceId(registeredId, async (stableId) => {
+        const { error } = await supabase
+          .from('app_licenses')
+          .update({ device_id: stableId })
+          .eq('user_id', userId)
+          .eq('device_id', registeredId as string);
+        return !error;
+      });
 
       // استدعاء دالة السحابة الموثوقة لفحص وربط الجهاز
       const { data: bindResult, error: bindError } = await supabase.rpc(
@@ -332,7 +340,7 @@ export default function Login() {
       }
 
       if (!license.device_id) {
-        await supabase.from('app_licenses').update({ device_id: currentDeviceKey }).eq('id', license.id);
+        await supabase.from('app_licenses').update({ device_id: await getStableDeviceId() }).eq('id', license.id);
         return { blocked: false, allowMultiDevice: false };
       }
 
@@ -887,7 +895,7 @@ export default function Login() {
                 ) : (
                   <>
                     <RefreshCw className="w-4 h-4" />
-                    <span>تصفير وربط هذا الجهاز (كل 5 أيام)</span>
+                    <span>نقل الحساب إلى هذا الجهاز</span>
                   </>
                 )}
               </Button>
@@ -921,7 +929,7 @@ export default function Login() {
             </div>
 
             <p className="text-[11px] text-center text-muted-foreground leading-normal">
-              🔒 يُسمح بنقل الترخيص وتغيير الجهاز مرة واحدة كل 5 أيام كحد أقصى لأمان النظام.
+              🔒 يمكنك نقل الحساب بنفسك إذا مضت 5 أيام على ربط الجهاز السابق. قبل ذلك يتم النقل عبر بوت تيليغرام.
             </p>
           </div>
         </div>

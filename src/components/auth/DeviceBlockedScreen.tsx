@@ -42,9 +42,14 @@ export function DeviceBlockedScreen() {
             </div>
           </div>
 
-          <Button onClick={() => setShowActivation(true)} className="w-full gap-2" size="lg">
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground leading-relaxed">
+            إذا مضت 5 أيام على ربط الجهاز السابق: سجّل الخروج ثم ادخل من جديد واضغط «نقل الحساب إلى هذا الجهاز».
+            قبل ذلك يتم النقل عبر بوت تيليغرام أو الدعم الفني.
+          </div>
+
+          <Button onClick={handleSignOut} className="w-full gap-2" size="lg">
             <Key className="w-5 h-5" />
-            {t('license.activateApp')}
+            تسجيل الخروج ونقل الحساب لهذا الجهاز
           </Button>
 
           <div className="space-y-2">

@@ -81,7 +81,15 @@ async function resolveLicenseDeviceId(userId: string): Promise<string> {
       registered = (own || (data.length === 1 ? data[0] : null))?.device_id ?? null;
     }
   } catch { /* offline */ }
-  return getCanonicalDeviceId(registered);
+  // نقل الربط القديم إلى المعرّف الثابت (لصاحب الترخيص فقط؛ الكاشير يعمل على ترخيص المالك)
+  return getCanonicalDeviceId(registered, async (stableId) => {
+    const { error } = await supabase
+      .from('app_licenses')
+      .update({ device_id: stableId })
+      .eq('user_id', userId)
+      .eq('device_id', registered as string);
+    return !error;
+  });
 }
 
 export function readLicenseCacheRaw(): (Partial<LicenseState> & { _uid?: string | null }) | null {

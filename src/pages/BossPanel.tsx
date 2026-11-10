@@ -693,6 +693,7 @@ export default function BossPanel() {
       fetchData();
       fetchContactLinksSettings();
       fetchTrialSetting();
+      loadRequests();
     }
   }, [isBoss]);
 
@@ -1483,6 +1484,17 @@ export default function BossPanel() {
     return !o.license_expires || new Date(o.license_expires) <= new Date() || o.license_revoked || !o.is_active;
   });
 
+  // مؤشرات لوحة البوس الرئيسية
+  const storeOwners = owners.filter(o => o.role !== 'boss');
+  const activeLicenseOwners = storeOwners.filter(o =>
+    Boolean(o.license_expires) && new Date(o.license_expires as string) > new Date() && !o.license_revoked && o.is_active !== false
+  );
+  const expiringSoonOwners = activeLicenseOwners.filter(o => {
+    const d = calculateDaysRemaining(o.license_expires);
+    return d > 0 && d <= 7;
+  });
+  const pendingRequests = subscriptionRequests.filter(r => r.status === 'pending' || r.status === 'paid_claimed');
+
   if (roleLoading || !isBoss) {
     return (
       <MainLayout>
@@ -1638,8 +1650,28 @@ export default function BossPanel() {
         {/* ===================== SCREEN 1: الرئيسية (Home) ===================== */}
         {activeTab === 'home' && (
           <div className="space-y-4 animate-in fade-in pb-16 md:pb-6">
-            {/* بطاقة يحتاج انتباهك الآن (تظهر فقط عند وجود تنبيهات أو أخطاء) */}
-            {(licenseIssueOwners.length > 0 || unresolvedErrorsCount > 0) && (
+            {/* مؤشرات سريعة */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {[
+                { label: 'إجمالي المتاجر', value: storeOwners.length, tone: 'text-foreground', go: () => { setActiveTab('users'); setUsersSubTab('accounts'); } },
+                { label: 'تراخيص سارية', value: activeLicenseOwners.length, tone: 'text-emerald-600 dark:text-emerald-400', go: () => { setActiveTab('users'); setUsersSubTab('accounts'); } },
+                { label: 'تنتهي خلال 7 أيام', value: expiringSoonOwners.length, tone: 'text-amber-600 dark:text-amber-400', go: () => { setActiveTab('users'); setUsersSubTab('accounts'); } },
+                { label: 'طلبات تجديد معلقة', value: pendingRequests.length, tone: 'text-primary', go: () => { setActiveTab('users'); setUsersSubTab('subscriptions'); } },
+              ].map(k => (
+                <button
+                  key={k.label}
+                  type="button"
+                  onClick={k.go}
+                  className="rounded-2xl border border-border/70 bg-card p-3 text-start shadow-xs hover:bg-muted/40 transition-colors"
+                >
+                  <p className="text-[11px] font-medium text-muted-foreground">{k.label}</p>
+                  <p className={cn('text-xl font-extrabold mt-0.5', k.tone)}>{k.value}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* بطاقة يحتاج انتباهك الآن (تظهر فقط عند وجود تنبيهات أو أخطاء أو طلبات تجديد) */}
+            {(licenseIssueOwners.length > 0 || unresolvedErrorsCount > 0 || pendingRequests.length > 0) && (
               <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4 sm:p-5 shadow-xs space-y-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
@@ -1652,6 +1684,21 @@ export default function BossPanel() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                  {pendingRequests.length > 0 && (
+                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border/70 shadow-xs">
+                      <div>
+                        <p className="font-bold text-xs text-foreground">طلبات تجديد بانتظار التأكيد</p>
+                        <p className="text-[11px] text-muted-foreground">{pendingRequests.length} طلب تحويل بحاجة لمراجعة وتفعيل</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="text-xs font-semibold h-8 rounded-lg shrink-0"
+                        onClick={() => { setActiveTab('users'); setUsersSubTab('subscriptions'); }}
+                      >
+                        مراجعة الطلبات
+                      </Button>
+                    </div>
+                  )}
                   {licenseIssueOwners.length > 0 && (
                     <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border/70 shadow-xs">
                       <div>
@@ -1750,7 +1797,7 @@ export default function BossPanel() {
           </div>
         )}
 
-        {/* ===================== SCREEN 2: المستخدمون والأكواد (Users & Codes) ===================== */}
+        {/* ===================== SCREEN 2: المتاجر والاشتراكات (Stores & Subscriptions) ===================== */}
         {activeTab === 'users' && (
           <div className="space-y-4 animate-in fade-in pb-16 md:pb-6">
             {/* الكبسولة للتنقل بين المستخدمين والأكواد والاشتراكات والباقات */}
@@ -1780,7 +1827,7 @@ export default function BossPanel() {
                 )}
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>طلبات التجديد ({subscriptionRequests.length})</span>
+                <span>طلبات التجديد ({pendingRequests.length})</span>
               </button>
               <button
                 type="button"
@@ -2090,18 +2137,7 @@ export default function BossPanel() {
 
                                     <DropdownMenuSeparator />
                                     <DropdownMenuLabel>إدارة الترخيص</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => {
-                                      setEditLicenseDialog({ owner });
-                                      setEditLicenseSettings({
-                                        duration_days: 180,
-                                        max_cashiers: owner.max_cashiers || 1,
-                                        license_tier: owner.license_tier || 'basic',
-                                        generated_code: '',
-                                      });
-                                    }}>
-                                      <Pencil className="w-4 h-4" />
-                                      تعديل التفعيل
-                                    </DropdownMenuItem>
+                                    {/* «تعديل التفعيل» بالأكواد مُلغى: استخدم «تفعيل مباشر باختيار باقة» */}
                                     <DropdownMenuItem onClick={() => openDirectActivate(owner)}>
                                       <CheckCircle className="w-4 h-4" />
                                       تفعيل مباشر باختيار باقة
@@ -2251,162 +2287,6 @@ export default function BossPanel() {
                                 </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </CardContent>
-            </Card>              </div>
-            )}
-
-            {usersSubTab === 'codes' && (
-              <div className="space-y-4">
-<Card className="overflow-hidden border border-border/80 shadow-sm rounded-2xl">
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 md:px-6 bg-gradient-to-br from-primary/8 via-primary/3 to-transparent border-b border-border/50">
-                <div className="flex items-center justify-between w-full sm:w-auto">
-                  <CardTitle className="flex items-center gap-2.5 text-base md:text-lg font-bold">
-                    <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0 text-primary">
-                      <Key className="w-4 h-4" />
-                    </div>
-                    <span>أكواد التفعيل</span>
-                  </CardTitle>
-                  <Badge variant="secondary" className="text-xs px-2.5 py-0.5 rounded-full font-bold">
-                    {codes.length}
-                  </Badge>
-                </div>
-                <Button
-                  onClick={() => setShowNewCodeDialog(true)}
-                  size="sm"
-                  className="w-full sm:w-auto h-9 rounded-xl text-xs md:text-sm font-semibold"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  إنشاء كود جديد
-                </Button>
-              </CardHeader>
-              <CardContent className="px-3 md:px-6">
-                <div className="space-y-2 md:space-y-3">
-                  {filteredCodes.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-6 md:py-8 text-sm">لا توجد أكواد</p>
-                  ) : (
-                    filteredCodes.map((code) => {
-                      const linkedOwner = codeToOwnerMap.get(code.id);
-                      const createdDate = new Date(code.created_at);
-                      const remainingDays = code.expires_at
-                        ? Math.ceil((new Date(code.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                        : null;
-
-                      const assignedOwner = code.assigned_user_id ? ownerById.get(code.assigned_user_id) : null;
-                      const usedOwner = code.used_by ? ownerById.get(code.used_by) : null;
-
-                      return (
-                        <div key={code.id} className={`p-3 rounded-xl space-y-2.5 border border-border/60 border-s-4 bg-card/50 ${
-                          !code.is_active ? 'border-s-muted bg-muted/30' :
-                          code.current_uses >= code.max_uses ? 'border-s-orange-400' :
-                          'border-s-emerald-500'
-                        }`}>
-                          {/* Code on its own full-width row so it never overlaps the actions */}
-                          <button
-                            onClick={() => copyToClipboard(code.code)}
-                            className="w-full flex items-center justify-between gap-2 font-mono text-xs md:text-sm bg-background px-2.5 py-2 rounded-lg border hover:bg-muted transition-colors text-start"
-                          >
-                            <span className="truncate tracking-wider">{code.code}</span>
-                            <Copy className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                          </button>
-                          <div className="flex items-center justify-end gap-1 md:gap-2">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                                setEditCodeDialog(code);
-                                setEditCodeForm({ duration_days: code.duration_days, max_uses: code.max_uses, max_cashiers: code.max_cashiers, license_tier: code.license_tier, note: code.note || '' });
-                              }}>
-                                <Pencil className="w-4 h-4 text-primary" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleToggleCode(code.id, code.is_active)}>
-                                {code.is_active ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteConfirm({ type: 'code', id: code.id, name: code.code })}>
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1 md:gap-2">
-                            <Badge variant={code.is_active ? 'default' : 'secondary'} className="text-[10px] md:text-xs">{code.is_active ? 'نشط' : 'معطل'}</Badge>
-                            <Badge variant="outline" className="text-[10px] md:text-xs">{code.duration_days} يوم</Badge>
-                            <Badge variant="outline" className="text-[10px] md:text-xs">{code.current_uses}/{code.max_uses} استخدام</Badge>
-                            <Badge variant="outline" className="text-[10px] md:text-xs">{code.max_cashiers} كاشير</Badge>
-                            <Badge variant="outline" className="text-[10px] md:text-xs">{code.license_tier}</Badge>
-                            {code.assigned_user_id && (
-                              <Badge className="text-[10px] md:text-xs bg-primary/15 text-primary hover:bg-primary/20">مخصص لحساب واحد</Badge>
-                            )}
-                          </div>
-                          {(assignedOwner || code.assigned_email) && (
-                            <div className="flex items-start gap-1.5 text-[11px] md:text-xs bg-primary/10 text-primary rounded-lg px-2 py-1.5 min-w-0">
-                              <Mail className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <span>مخصص لـ: {assignedOwner?.full_name || code.assigned_email || 'حساب محدد'}</span>
-                                {assignedOwner?.email && (
-                                  <span
-                                    dir="ltr"
-                                    title={assignedOwner.email}
-                                    className="whitespace-nowrap truncate max-w-[200px] sm:max-w-none inline-block text-left font-mono opacity-80"
-                                  >
-                                    {' '}({assignedOwner.email})
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                          {(usedOwner || code.used_at) && (
-                            <div className="flex items-start gap-1.5 text-[11px] md:text-xs bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-lg px-2 py-1.5 min-w-0">
-                              <CheckCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <span>فُعِّل بواسطة: {usedOwner?.full_name || ''}</span>
-                                {usedOwner?.email && (
-                                  <span
-                                    dir="ltr"
-                                    title={usedOwner.email}
-                                    className="whitespace-nowrap truncate max-w-[200px] sm:max-w-none inline-block text-left font-mono opacity-80"
-                                  >
-                                    {' '}({usedOwner.email})
-                                  </span>
-                                )}
-                                {!usedOwner?.full_name && !usedOwner?.email && <span>حساب</span>}
-                                {code.used_at && <span className="opacity-80"> — {new Date(code.used_at).toLocaleDateString('ar-EG')}</span>}
-                              </div>
-                            </div>
-                          )}
-                          <div className="flex flex-wrap items-center gap-2 text-[10px] md:text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              أُنشئ: {createdDate.toLocaleDateString('ar-EG')}
-                            </span>
-                            {remainingDays !== null && (
-                              <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${
-                                remainingDays <= 0 ? 'bg-destructive/10 text-destructive' :
-                                remainingDays <= 7 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                                'bg-muted'
-                              }`}>
-                                <Calendar className="w-3 h-3" />
-                                {remainingDays > 0 ? `${remainingDays} يوم متبقي` : 'منتهي الصلاحية'}
-                              </span>
-                            )}
-                            {linkedOwner && (
-                              <span className="flex items-center gap-1.5 bg-primary/10 text-primary px-2 py-1 rounded text-xs font-medium min-w-0">
-                                <Mail className="w-3.5 h-3.5 shrink-0" />
-                                <span>مرتبط بـ: {linkedOwner.name || 'بدون اسم'}</span>
-                                {linkedOwner.email && (
-                                  <span
-                                    dir="ltr"
-                                    title={linkedOwner.email}
-                                    className="whitespace-nowrap truncate max-w-[200px] sm:max-w-none inline-block text-left font-mono text-[11px] opacity-80"
-                                  >
-                                    ({linkedOwner.email})
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </div>
-                          {code.note && (
-                            <p className="text-xs text-muted-foreground italic">📝 {code.note}</p>
                           )}
                         </div>
                       );
@@ -2789,24 +2669,6 @@ export default function BossPanel() {
                               >
                                 <CheckCircle className="w-3 h-3" />
                                 تفعيل مباشر
-                              </Button>
-                              {/* زر التفعيل «بكود» مُلغى: التفعيل من «تفعيل مباشر» فقط */}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-8"
-                                onClick={() => {
-                                  setEditLicenseDialog({ owner });
-                                  setEditLicenseSettings({
-                                    duration_days: 180,
-                                    max_cashiers: owner.max_cashiers || 1,
-                                    license_tier: owner.license_tier || 'basic',
-                                    generated_code: '',
-                                  });
-                                }}
-                              >
-                                <Pencil className="w-3 h-3" />
-                                تعديل
                               </Button>
                             </div>
                           </div>

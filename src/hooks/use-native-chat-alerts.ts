@@ -17,20 +17,8 @@ export function useNativeChatAlerts() {
   const { isBoss } = useUserRole();
   const navigate = useNavigate();
 
-  // 1. التأكد من منح أذونات الإشعارات على أندرويد 13+
-  useEffect(() => {
-    async function ensurePermission() {
-      try {
-        const perm = await checkNotificationPermissionNative();
-        if (perm === 'prompt') {
-          await requestNotificationPermissionNative();
-        }
-      } catch (err) {
-        console.debug('[ChatAlerts] Permission check skipped:', err);
-      }
-    }
-    ensurePermission();
-  }, []);
+  // 1. لا يُطلب إذن الإشعارات تلقائياً عند الإقلاع:
+  //    نافذة NotificationPermissionPrompt تشرح الفائدة وتنقل المستخدم لتفعيلها من الإعدادات
 
   // 2. فحص الرسائل غير المقروءة عند إيقاظ التطبيق من الخلفية (App Lifecycle / Doze Mode)
   const checkUnreadMessagesAndAlert = useCallback(async () => {

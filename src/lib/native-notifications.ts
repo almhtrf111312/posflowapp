@@ -195,9 +195,10 @@ let channelInitialized = false;
 export async function initAndroidNotificationChannel() {
   if (!Capacitor.isNativePlatform() || channelInitialized) return;
   try {
+    // لا نطلب الإذن هنا: الطلب يتم فقط عندما يضغط المستخدم «تفعيل» في قسم الإشعارات
     const perm = await LocalNotifications.checkPermissions();
     if (perm.display !== 'granted') {
-      await LocalNotifications.requestPermissions();
+      return;
     }
     await LocalNotifications.createChannel({
       id: ANDROID_CHANNEL_ID,

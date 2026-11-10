@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Store, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
 import { LicenseGuard } from "./components/license/LicenseGuard";
 import { RemoteUpdatesGate } from "./components/updates/RemoteUpdatesGate";
+import { NotificationPermissionPrompt } from "./components/NotificationPermissionPrompt";
 import { LicenseWarningBadge } from "./components/license/LicenseWarningBadge";
 import { OfflineProtectionBanner } from "./components/license/OfflineProtectionBanner";
 import { DemoModeBanner } from "./components/demo/DemoModeBanner";
@@ -553,6 +554,8 @@ const App = () => (
                         <RemoteUpdatesGate />
                         <LicenseGuard>
                           <AppContent />
+                          {/* شرح إذن الإشعارات بدلاً من طلبه تلقائياً عند الإقلاع */}
+                          <NotificationPermissionPrompt />
                         </LicenseGuard>
                       </NotificationsProvider>
                     </WarehouseProvider>

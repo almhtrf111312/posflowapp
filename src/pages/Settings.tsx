@@ -2045,6 +2045,31 @@ export default function Settings() {
       case 'notifications':
         return (
           <div className="space-y-4">
+            {/* إذن إشعارات الجهاز: يُطلب هنا فقط بضغطة من المستخدم */}
+            {notificationPerm !== 'granted' && (
+              <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Bell className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground">إشعارات الجهاز غير مفعّلة</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      فعّلها ليصلك تنبيه نفاد المخزون، والديون المستحقة، وردود الدعم الفني، والتحديثات الجديدة حتى والتطبيق في الخلفية.
+                    </p>
+                  </div>
+                </div>
+                {notificationPerm === 'denied' ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    تم رفض الإذن سابقاً. فعّله من إعدادات الهاتف: التطبيقات ← FlowPOS Pro ← الإشعارات.
+                  </p>
+                ) : (
+                  <Button className="w-full sm:w-auto" onClick={() => void handleRequestNotificationPermission()}>
+                    تفعيل إشعارات الجهاز
+                  </Button>
+                )}
+              </div>
+            )}
             {/* بطاقة التفعيل الشامل للإشعارات */}
             <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${
               notificationSettings.masterEnabled

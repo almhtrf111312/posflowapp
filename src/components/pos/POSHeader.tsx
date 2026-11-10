@@ -1,8 +1,11 @@
-import { ShoppingCart, Wrench, Store, Menu } from 'lucide-react';
+import { ShoppingCart, Wrench, Store, Menu, MessageCircle, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useLanguage } from '@/hooks/use-language';
+import { useUserRole } from '@/hooks/use-user-role';
+import { useSupportUnread } from '@/hooks/use-support-unread';
 import { cn } from '@/lib/utils';
 
 interface POSHeaderProps {
@@ -26,6 +29,9 @@ export function POSHeader({
 }: POSHeaderProps) {
   const isMobile = useIsMobile();
   const { t, tDynamic } = useLanguage();
+  const navigate = useNavigate();
+  const { isBoss, isAdmin, canAccessSettings } = useUserRole();
+  const supportUnread = useSupportUnread();
 
   return (
     <header className="h-auto min-h-[calc(3.5rem+env(safe-area-inset-top,0px))] md:min-h-20 flex items-center justify-between px-3 md:px-6 sticky top-0 z-20 pt-[env(safe-area-inset-top,0px)] shrink-0 bg-background/95 shadow-xs border-b border-border/40 transition-[transform,opacity] duration-300">
@@ -56,9 +62,36 @@ export function POSHeader({
 
       </div>
 
-      {/* جهة اليسار (RTL): التحكم المدمج للموبايل + اختصارات الديسكتوب */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* جهة اليسار (RTL): التحكم المدمج للموبايل + اختصارات الديسكتوب والوصول السريع */}
+      <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+        {/* زر الدعم الفني والتواصل المباشر مع المطور */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate('/contact')}
+          title="التواصل مع المطور"
+          className="relative h-9 w-9 md:h-10 md:w-10 rounded-xl hover:bg-muted"
+        >
+          <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground hover:text-foreground transition-colors" />
+          {supportUnread > 0 && (
+            <span className="absolute top-1 end-1 min-w-[0.95rem] h-[0.95rem] px-0.5 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center animate-pulse ring-2 ring-background">
+              {supportUnread > 9 ? '9+' : supportUnread}
+            </span>
+          )}
+        </Button>
 
+        {/* زر الإعدادات السريعة للمدير */}
+        {(isBoss || isAdmin || canAccessSettings) && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/settings')}
+            title="الإعدادات"
+            className="h-9 w-9 md:h-10 md:w-10 rounded-xl hover:bg-muted"
+          >
+            <Settings className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground hover:text-foreground transition-colors" />
+          </Button>
+        )}
 
         {/* زر اختصارات الكيبورد على الديسكتوب */}
         {!isMobile && <KeyboardShortcutsHelp />}

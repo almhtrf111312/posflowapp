@@ -20,6 +20,10 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
   const [selectedConv, setSelectedConv] = useState<SupportConversation | null>(null);
   const [bossView, setBossView] = useState<'list' | 'chat'>('list');
 
+  const activeChatConvId = isBoss
+    ? selectedConv?.id ?? null
+    : conversationId;
+
   // Load existing user conversation
   useEffect(() => {
     if (!user || isBoss) return;
@@ -69,10 +73,6 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
     setSelectedConv(conv);
     setBossView('chat');
   };
-
-  const activeChatConvId = isBoss
-    ? selectedConv?.id ?? null
-    : conversationId;
 
   return (
     <div

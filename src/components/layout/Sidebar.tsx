@@ -80,7 +80,7 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, translationKey: 'nav.reports', path: '/reports', adminOnly: true, tourId: 'reports', tooltipKey: 'tooltip.reports' as TranslationKey },
   { icon: Palette, translationKey: 'settings.theme', path: '/appearance', tourId: 'appearance', tooltipKey: 'tooltip.appearance' as TranslationKey },
   { icon: HelpCircle, translationKey: 'nav.help', path: '/help', tourId: 'help', tooltipKey: 'tooltip.help' as TranslationKey },
-  { icon: MessageCircle, translationKey: 'license.contactDeveloper' as TranslationKey, path: '/contact', requiresContactSidebar: true, tourId: 'contact', tooltipKey: 'license.contactDeveloper' as TranslationKey },
+  { icon: MessageCircle, translationKey: 'license.contactDeveloper' as TranslationKey, path: '/contact', requiresContactSidebar: false, tourId: 'contact', tooltipKey: 'license.contactDeveloper' as TranslationKey },
   { icon: Bell, translationKey: 'nav.notifications' as TranslationKey, path: '/notifications', tourId: 'notifications', tooltipKey: 'nav.notifications' as TranslationKey },
   { icon: Settings, translationKey: 'nav.settings', path: '/settings', adminOnly: true, tourId: 'settings', tooltipKey: 'tooltip.settings' as TranslationKey },
 ];
@@ -124,7 +124,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
   const isTablet = useIsTablet();
   const { user, profile, signOut } = useAuth();
   const { t, tDynamic, storeType, isRTL } = useLanguage();
-  const { isBoss, isAdmin } = useUserRole();
+  const { isBoss, isAdmin, canAccessSettings } = useUserRole();
   const { unreadCount: notificationsUnreadCount } = useNotifications();
   const supportUnreadCount = useSupportUnread();
 
@@ -201,7 +201,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
       if (item.requiresContactSidebar && !showContactInSidebar) return false;
       return true;
     }
-    if (item.adminOnly && !(isBoss || isAdmin)) {
+    if (item.adminOnly && !(isBoss || isAdmin || canAccessSettings)) {
       if (allowedPages && allowedPages.length > 0) {
         const pageKey = item.path.replace('/', '') || 'pos';
         if (allowedPages.includes(pageKey)) return true;
@@ -213,6 +213,8 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
     if (item.hideInNoInventory && noInventory) return false;
     if (item.requiresBakeryMode && !noInventory) return false;
     if (item.requiresBookstore && storeType !== 'bookstore') return false;
+    // التواصل مع المطور متاح دائماً بدون حجب
+    if (item.path === '/contact') return true;
     if (item.requiresContactSidebar && !showContactInSidebar && !shouldShowContactDueToLicense) return false;
     return true;
   });

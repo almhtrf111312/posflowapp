@@ -454,11 +454,14 @@ const PageFallback = () => (
   </div>
 );
 
+  const isPublicAuthRoute = ['/login', '/signup', '/reset-password', '/contact-developer'].includes(location.pathname);
+  const shouldBeInert = !isPublicAuthRoute && (isLocked || requiresPinSetup);
+
   return (
     <>
       <AppLockOverlay />
       <MandatoryPinSetupModal />
-      <div id="app-main-layout" inert={isLocked || requiresPinSetup ? '' : undefined} className="contents">
+      <div id="app-main-layout" inert={shouldBeInert ? '' : undefined} className="contents">
         {isDebugClick && <ClickProbe />}
       <ExitConfirmDialog />
       <Suspense fallback={<PageFallback />}>

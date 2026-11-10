@@ -1183,7 +1183,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                   }
                 } catch (error) {
                   console.error('Delete debt error:', error);
-                  toast.error(t('common.deleteError'), { id: toastId });
+                  toast.error(error instanceof Error && error.message ? error.message : t('common.deleteError'), { id: toastId, duration: 8000 });
                 }
               })}
             >

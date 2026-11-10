@@ -598,7 +598,7 @@ export const withdrawProfitCloud = async (
 
     try {
       const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
-      await syncActiveShiftTransactionCloud('withdrawal', origAmt, currency as any, undefined, partnerId, withdrawalNote);
+      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, currency as any, origAmt, partnerId, withdrawalNote);
     } catch (e) {
       console.warn('[withdrawProfitCloud] shift tx sync failed:', e);
     }
@@ -715,7 +715,7 @@ export const withdrawCapitalCloud = async (
 
     try {
       const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
-      await syncActiveShiftTransactionCloud('withdrawal', origAmt, currency as any, undefined, partnerId, withdrawalNote);
+      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, currency as any, origAmt, partnerId, withdrawalNote);
     } catch (e) {
       console.warn('[withdrawCapitalCloud] shift tx sync failed:', e);
     }

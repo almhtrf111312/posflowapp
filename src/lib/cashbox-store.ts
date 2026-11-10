@@ -442,6 +442,21 @@ export const addSalesToShift = (
     shift.cogsTotal = addUsd(shift.cogsTotal || 0, roundedCogs);
     saveShifts(shifts);
     emitEvent(EVENTS.CASH_SHIFTS_UPDATED, shifts);
+
+    // تسجيل المبيعات النقدية في حركات الوردية السحابية: إقفال الوردية في الخادم يحسب الرصيد المتوقع منها
+    if (roundedAmount > 0 && shift.id) {
+      const shiftId = shift.id;
+      import('./cloud/cashbox-cloud').then(({ addShiftTransactionCloud }) => {
+        addShiftTransactionCloud({
+          shiftId,
+          type: 'sale',
+          amount: roundedAmount,
+          currency,
+          currencyAmount: roundedCurrAmount,
+          notes: 'مبيعات نقدية',
+        }).catch(() => {});
+      }).catch(() => {});
+    }
   }
 };
 

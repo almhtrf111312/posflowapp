@@ -622,7 +622,7 @@ export default function Reports() {
     const partnerProfitData = filteredPartners.map(partner => {
       const filteredProfitHistory = (partner.profitHistory || []).filter(record => {
         const recordDate = toLocalDateString(record.createdAt);
-        return isDateInRange(recordDate, dateRange.from, dateRange.to) && !record.isDebt;
+        return isDateInRange(recordDate, dateRange.from, dateRange.to) && !record.isDebt && !(record as any).superseded;
       });
       const totalProfitInPeriod = filteredProfitHistory.reduce((sum, r) => sum + r.amount, 0);
 

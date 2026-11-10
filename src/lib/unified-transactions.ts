@@ -231,18 +231,8 @@ export const processDebtPayment = (
     const roundedAmount = round8(amount);
     // Step 1: إضافة المبلغ المدفوع للصندوق إذا كانت طريقة الدفع كاش
     if (method === 'cash') {
+      // تحديث الوردية المحلية فقط؛ الحركة السحابية يسجلها recordPaymentCloud مرة واحدة بعد نجاح الدفعة
       addDepositToShift(roundedAmount, currency, currencyAmount);
-      // مزامنة حركة الوردية سحابياً
-      import('./cloud/cashbox-cloud').then(({ syncActiveShiftTransactionCloud }) => {
-        syncActiveShiftTransactionCloud(
-          'debt_payment',
-          roundedAmount,
-          currency,
-          currencyAmount,
-          customerId,
-          'سداد دين عميل'
-        );
-      }).catch(() => {});
     }
 
     // Step 2: تسجيل النشاط (نوع debt_payment محدد بدلاً من deposit عام)

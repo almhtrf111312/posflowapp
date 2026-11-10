@@ -113,6 +113,8 @@ export function PartnerProfitDetailedReport({ dateRange }: PartnerProfitDetailed
       const profitHistory = partner.profitHistory || [];
 
       profitHistory.forEach(record => {
+        // قيد تحرير دفعة دين أصبح مشمولاً بالقيد الأصلي المؤكد بعد السداد الكامل
+        if ((record as any).superseded) return;
         const recordDate = toLocalDateString(record.createdAt);
 
         // Filter by date range

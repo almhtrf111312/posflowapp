@@ -873,19 +873,8 @@ export function CartPanel({
       // ✅ تسجيل الربح محلياً فوراً برقم الفاتورة ومعرف العملية (يمنع المضاعفة عند المزامنة)
       addGrossProfit(invoiceNumber, discountedProfit, totalCOGS, totalSnapshot, operationId);
 
-      // 🤝 توزيع الأرباح على الشركاء محلياً
-      const categoryProfits = Object.entries(profitsByCategory)
-        .filter(([_, profit]) => Number(profit) > 0)
-        .map(([category, profit]) => ({ category, profit: Number(profit) }));
-
-      if (categoryProfits.length > 0) {
-        distributeDetailedProfitCloud(
-          categoryProfits,
-          invoiceNumber,
-          customerNameSnapshot || 'عميل نقدي',
-          false
-        ).catch(err => console.warn('[POS] Partner profit distribution failed:', err));
-      }
+      // 🤝 أرباح الشركاء يوزعها الخادم ذرياً داخل process_pos_sale_atomic برقم الفاتورة الحقيقي.
+      // التوزيع من الواجهة هنا كان يضيف الأرباح مرة ثانية برقم فاتورة محلي.
 
       // 2. ✅ إضافة الفاتورة لطابور المزامنة sync-queue
       addUniqueOperation('invoice_create', {
@@ -1367,19 +1356,8 @@ export function CartPanel({
       // ✅ تسجيل الربح محلياً فوراً برقم الفاتورة ومعرف العملية (يمنع المضاعفة عند المزامنة)
       addGrossProfit(invoiceNumber, discountedProfit, totalCOGS, totalSnapshot, operationId);
 
-      // 🤝 توزيع الأرباح على الشركاء محلياً (معلقة للبيع الآجل)
-      const debtCategoryProfits = Object.entries(profitsByCategory)
-        .filter(([_, profit]) => Number(profit) > 0)
-        .map(([category, profit]) => ({ category, profit: Number(profit) }));
-
-      if (debtCategoryProfits.length > 0) {
-        distributeDetailedProfitCloud(
-          debtCategoryProfits,
-          invoiceNumber,
-          selectedCustomer?.name || 'عميل بيع مؤجل',
-          true
-        ).catch(err => console.warn('[POS] Debt partner profit distribution failed:', err));
-      }
+      // 🤝 أرباح الشركاء المعلقة للبيع الآجل يوزعها الخادم ذرياً داخل process_pos_sale_atomic.
+      // التوزيع من الواجهة هنا كان يضيف أرباحاً معلقة مكررة لا تُحرَّر أبداً.
 
       // 2. ✅ إضافة حزمة البيع الآجل لطابور المزامنة sync-queue
       addUniqueOperation('debt_sale_bundle', { localId: operationId, bundle }, operationId);

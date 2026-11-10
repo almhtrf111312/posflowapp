@@ -70,6 +70,11 @@ const cashierNamesCache: Record<string, string> = {};
 function toDebt(cloud: CloudDebt & { cashier_name?: string }): Debt {
   const today = new Date().toISOString().split('T')[0];
   let status = cloud.status as DebtStatus;
+  // الدين المشطوب أو الملغى مُغلق: لا يظهر كمتأخر أو مستحق
+  const isClosed = (cloud.status as string) === 'written_off' || (cloud.status as string) === 'cancelled';
+  if (isClosed) {
+    status = 'fully_paid';
+  }
 
   // Update status if overdue
   if (status !== 'fully_paid' && cloud.due_date && cloud.due_date < today) {
@@ -83,7 +88,7 @@ function toDebt(cloud: CloudDebt & { cashier_name?: string }): Debt {
     customerPhone: cloud.customer_phone || '',
     totalDebt: Number(cloud.total_debt) || 0,
     totalPaid: Number(cloud.total_paid) || 0,
-    remainingDebt: Number(cloud.remaining_debt) || 0,
+    remainingDebt: isClosed ? 0 : (Number(cloud.remaining_debt) || 0),
     dueDate: cloud.due_date || '',
     status,
     notes: cloud.notes || undefined,
@@ -426,20 +431,21 @@ export const recordPaymentCloud = async (
   const opId = operationId || `debtpay_${debtId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const amt = round8(amount);
 
-  // تسجيل حركة النقدية في الصندوق للوردية النشطة (تدعم الأونلاين والأوفلاين تلقائياً)
-  if (method === 'cash') {
+  // حركة النقدية في الوردية تُسجَّل مرة واحدة فقط بعد قبول الدفعة أو وضعها في طابور المزامنة
+  const recordShiftCash = () => {
+    if (method !== 'cash') return;
     import('./cashbox-cloud').then(({ syncActiveShiftTransactionCloud }) => {
       void syncActiveShiftTransactionCloud(
         'debt_payment',
         amt,
         currency,
         currencyAmount,
-        debtId,
+        opId,
         'قبض دفعة دين',
         exchangeRate
       );
     }).catch(() => {});
-  }
+  };
 
   const queuePayment = (): Debt | null => {
     addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: shiftId || null }, 10);
@@ -451,30 +457,21 @@ export const recordPaymentCloud = async (
     });
     debtsCache = list; cacheTimestamp = Date.now(); saveDebtsLocally(list);
     emitEvent(EVENTS.DEBTS_UPDATED, null);
+    recordShiftCash();
     return list.find(d => d.id === debtId) || null;
   };
   if (!navigator.onLine) return queuePayment();
+  // لا نمرر _shift_id للخادم: حركة الوردية تُسجَّل من الواجهة مرة واحدة (كان المبلغ يُضاف للوردية مرتين أو ثلاثاً)
   const rpcArgs: Record<string, unknown> = {
     _debt_id: debtId,
     _amount: amt,
     _operation_id: opId,
   };
-  if (shiftId) {
-    rpcArgs._shift_id = shiftId;
-  }
-  let { data, error } = await sb.rpc('record_debt_payment_atomic', rpcArgs);
-  if (error && error.message?.includes('_shift_id')) {
-    const fallback = await sb.rpc('record_debt_payment_atomic', {
-      _debt_id: debtId,
-      _amount: amt,
-      _operation_id: opId,
-    });
-    data = fallback.data;
-    error = fallback.error;
-  }
+  const { data, error } = await sb.rpc('record_debt_payment_atomic', rpcArgs);
   if (error) {
     throw new Error(error.message || 'فشل تسجيل الدفعة');
   }
+  recordShiftCash();
   const res = (data || {}) as Record<string, unknown>;
   invalidateDebtsCache();
   import('./partners-cloud').then(({ invalidatePartnersCache }) => {
@@ -581,9 +578,9 @@ export const deleteDebtCloud = async (debtId: string, reason = 'إلغاء ال�
       _reason: reason,
     });
     if (error) {
-      console.warn('[deleteDebtCloud] cancel_debt_atomic failed, fallback to client delete:', error);
-      const success = await deleteFromSupabase('debts', debtId);
-      if (!success) return false;
+      // لا حذف احتياطي من الواجهة: الحذف المباشر كان يترك الفاتورة وأرباح الشركاء معلقة
+      console.warn('[deleteDebtCloud] cancel_debt_atomic failed:', error);
+      throw new Error(error.message || 'تعذر إلغاء الدين');
     }
 
     invalidateDebtsCache();

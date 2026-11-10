@@ -114,6 +114,41 @@ export function markBroadcastSeen(id: string) {
   s.add(id);
   localStorage.setItem(SEEN_KEY, JSON.stringify([...s].slice(-200)));
   window.dispatchEvent(new Event('hp-broadcasts-updated'));
+}
+
+export async function syncSeenBroadcastsWithCloud(userId: string): Promise<string[]> {
+  const localSeen = new Set(getSeenBroadcasts());
+  if (!userId) return [...localSeen];
+  try {
+    const { data, error } = await supabase
+      .from('broadcast_reads' as any)
+      .select('broadcast_id')
+      .eq('user_id', userId);
+      
+    if (!error && data && data.length > 0) {
+      data.forEach((r: any) => localSeen.add(r.broadcast_id));
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...localSeen].slice(-200)));
+      window.dispatchEvent(new Event('hp-broadcasts-updated'));
+    }
+  } catch (err) {
+    console.warn('[Broadcasts] Cloud sync error:', err);
+  }
+  return [...localSeen];
+}
+
+export async function markBroadcastSeenCloud(id: string, userId?: string) {
+  markBroadcastSeen(id); // حفظ محلي فوري
+  if (userId) {
+    try {
+      await supabase.from('broadcast_reads' as any).upsert({
+        user_id: userId,
+        broadcast_id: id,
+        read_at: new Date().toISOString()
+      }, { onConflict: 'user_id,broadcast_id' });
+    } catch (err) {
+      console.warn('[Broadcasts] Cloud mark error:', err);
+    }
+  }
 }
 
 export async function reportClientVersion(userId: string) {

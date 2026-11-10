@@ -173,7 +173,7 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
       return;
     }
 
-    const payload = {
+    const basePayload: Record<string, any> = {
       name: formData.name.trim(),
       account_number: formData.account_number.trim() || null,
       button_label: formData.button_label.trim() || 'فتح الرابط المباشر',
@@ -182,25 +182,41 @@ export function BossPaymentMethodsManager({ onOpenContactLinks, contactLinks }: 
       badge: formData.badge.trim() || null,
       instructions: formData.instructions.trim() || null,
       enabled: formData.enabled,
-      updated_at: new Date().toISOString(),
     };
 
     try {
       if (editingMethod) {
-        const { error } = await supabase
+        let updateRes = await supabase
           .from('payment_methods' as any)
-          .update(payload)
+          .update({ ...basePayload, updated_at: new Date().toISOString() })
           .eq('id', editingMethod.id);
-        if (error) throw error;
+
+        if (updateRes.error && updateRes.error.message?.includes('updated_at')) {
+          updateRes = await supabase
+            .from('payment_methods' as any)
+            .update(basePayload)
+            .eq('id', editingMethod.id);
+        }
+        if (updateRes.error) throw updateRes.error;
         showToast.success('تم تحديث طريقة الدفع بنجاح');
       } else {
-        const { error } = await supabase
+        let insertRes = await supabase
           .from('payment_methods' as any)
           .insert({
-            ...payload,
+            ...basePayload,
+            updated_at: new Date().toISOString(),
             sort_order: methods.length + 1,
           });
-        if (error) throw error;
+
+        if (insertRes.error && insertRes.error.message?.includes('updated_at')) {
+          insertRes = await supabase
+            .from('payment_methods' as any)
+            .insert({
+              ...basePayload,
+              sort_order: methods.length + 1,
+            });
+        }
+        if (insertRes.error) throw insertRes.error;
         showToast.success('تمت إضافة طريقة الدفع الجديدة');
       }
 

@@ -142,8 +142,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     saveArchivedToStorage(archivedNotifications);
   }, [archivedNotifications]);
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>, silent = false) => {
-    const newId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'> & { id?: string }, silent = false) => {
+    const newId = notification.id || (Date.now().toString() + Math.random().toString(36).substr(2, 9));
     const newNotification: Notification = {
       ...notification,
       id: newId,
@@ -153,6 +153,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
     setNotifications(prev => {
       const exists = prev.some(n => {
+        if (n.id === newId) return true;
         if (n.type !== notification.type) return false;
         if (notification.data?.productId && n.data?.productId === notification.data.productId) return true;
         if (notification.data?.customerId && n.data?.customerId === notification.data.customerId) return true;
@@ -165,8 +166,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       return [newNotification, ...prev];
     });
 
-    // حفظ الإشعار في جدول user_notifications بالسحابة لضمان بقائه عبر الأجهزة والتحديثات
-    if (user?.id) {
+    // حفظ الإشعار في جدول user_notifications بالسحابة فقط للإشعارات الصريحة (تجنب الإشعارات الصامتة الآلية لمنع تكرار الإشعارات)
+    if (user?.id && !silent) {
       supabase.from('user_notifications').insert({
         user_id: user.id,
         title: notification.title,
@@ -349,6 +350,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           if (diffDays < 0) {
             alertsCount++;
             addNotification({
+              id: 'alert_debt_overdue_' + debt.id,
               type: 'debt_overdue', title: 'دين متأخر',
               message: `الدين المستحق من ${debt.customerName} بقيمة ${formatMoney(debt.remainingDebt)} متأخر عن موعد السداد`,
               data: { customerId: debt.id, customerName: debt.customerName, amount: debt.remainingDebt },
@@ -356,6 +358,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           } else if (diffDays === 0) {
             alertsCount++;
             addNotification({
+              id: 'alert_debt_due_' + debt.id,
               type: 'debt_due_today', title: 'دين مستحق اليوم',
               message: `الدين المستحق من ${debt.customerName} بقيمة ${formatMoney(debt.remainingDebt)} يستحق اليوم`,
               data: { customerId: debt.id, customerName: debt.customerName, amount: debt.remainingDebt },
@@ -367,6 +370,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       products.filter(p => p.status === 'low_stock').forEach(product => {
         alertsCount++;
         addNotification({
+          id: 'alert_low_stock_' + product.id,
           type: 'low_stock', title: 'مخزون منخفض',
           message: `المنتج "${product.name}" لديه كمية منخفضة (${product.quantity} فقط)`,
           data: { productId: product.id, productName: product.name, quantity: product.quantity },
@@ -376,6 +380,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       products.filter(p => p.status === 'out_of_stock').forEach(product => {
         alertsCount++;
         addNotification({
+          id: 'alert_out_of_stock_' + product.id,
           type: 'out_of_stock', title: 'نفذ المخزون',
           message: `المنتج "${product.name}" نفذ من المخزون`,
           data: { productId: product.id, productName: product.name, quantity: 0 },
@@ -388,6 +393,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           if (status === 'expired') {
             alertsCount++;
             addNotification({
+              id: 'alert_expired_' + product.id,
               type: 'expired', title: 'منتج منتهي الصلاحية ⚠️',
               message: `المنتج "${product.name}" انتهت صلاحيته في ${product.expiryDate}`,
               data: { productId: product.id, productName: product.name, expiryDate: product.expiryDate },
@@ -395,6 +401,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           } else if (status === 'expiring_soon') {
             alertsCount++;
             addNotification({
+              id: 'alert_expiring_soon_' + product.id,
               type: 'expiring_soon', title: 'صلاحية قريبة الانتهاء',
               message: `المنتج "${product.name}" ستنتهي صلاحيته في ${product.expiryDate}`,
               data: { productId: product.id, productName: product.name, expiryDate: product.expiryDate },
@@ -403,11 +410,22 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      // إشعار مُجمّع واحد فقط بدل عشرات الإشعارات المتتالية
+      // إشعار مُجمّع ذكي: لا نكرر ظهور التنبيه إلا إذا زاد عدد التنبيهات أو مضت 12 ساعة
       if (alertsCount > 0) {
-        showToast.warning('تنبيهات جديدة', {
-          description: `لديك ${alertsCount} تنبيه بحاجة للمراجعة. افتح قائمة الإشعارات للتفاصيل.`,
-        });
+        const lastToastTime = Number(localStorage.getItem('hp_last_alert_toast_time') || 0);
+        const lastAlertCount = Number(localStorage.getItem('hp_last_alert_count') || 0);
+        const twelveHoursMs = 12 * 60 * 60 * 1000;
+        const now = Date.now();
+
+        if (alertsCount > lastAlertCount || now - lastToastTime > twelveHoursMs) {
+          localStorage.setItem('hp_last_alert_toast_time', String(now));
+          localStorage.setItem('hp_last_alert_count', String(alertsCount));
+          showToast.warning('تنبيهات جديدة', {
+            description: `لديك ${alertsCount} تنبيه بحاجة للمراجعة. افتح قائمة الإشعارات للتفاصيل.`,
+          });
+        }
+      } else {
+        localStorage.setItem('hp_last_alert_count', '0');
       }
     } catch (error) {
       console.error('Failed to check alerts:', error);

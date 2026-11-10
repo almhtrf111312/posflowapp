@@ -19,12 +19,15 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications, type Notification } from '@/hooks/use-notifications';
+import { useAuth } from '@/hooks/use-auth';
 import { toast } from '@/lib/sonner-bridge';
 import { Badge } from '@/components/ui/badge';
 import {
   fetchActiveBroadcasts,
   getCachedReleaseConfig,
   getSeenBroadcasts,
+  syncSeenBroadcastsWithCloud,
+  markBroadcastSeenCloud,
   openExternal,
   SEEN_KEY,
   CURRENT_VERSION_CODE,
@@ -50,6 +53,7 @@ export interface UnifiedItem {
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     notifications,
     markAsRead: markUserNotificationAsRead,
@@ -68,12 +72,15 @@ export default function Notifications() {
   const latestBuildCode = releaseConfig.latest_version_code || releaseConfig.min_version_code || CURRENT_VERSION_CODE;
   const updateUrl = releaseConfig.update_url || releaseConfig.telegram_url || 'https://t.me/flowpospro';
 
-  // جلب إعلانات البث النشطة من السحابة
+  // جلب إعلانات البث النشطة من السحابة ومزامنة المقروء
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const list = await fetchActiveBroadcasts();
       setRawItems(list);
+      if (user?.id) {
+        await syncSeenBroadcastsWithCloud(user.id);
+      }
       setSeenIds(getSeenBroadcasts());
       if (refreshNotifications) refreshNotifications();
     } catch {
@@ -81,7 +88,7 @@ export default function Notifications() {
     } finally {
       setLoading(false);
     }
-  }, [refreshNotifications]);
+  }, [refreshNotifications, user?.id]);
 
   useEffect(() => {
     load();
@@ -175,6 +182,7 @@ export default function Notifications() {
         next = prev.filter((x) => x !== id);
       } else {
         next = [...prev, id];
+        markBroadcastSeenCloud(id, user?.id);
       }
       localStorage.setItem(SEEN_KEY, JSON.stringify(next.slice(-200)));
       window.dispatchEvent(new Event('hp-broadcasts-updated'));
@@ -200,6 +208,7 @@ export default function Notifications() {
     const next = Array.from(set).slice(-200);
     setSeenIds(next);
     localStorage.setItem(SEEN_KEY, JSON.stringify(next));
+    allIds.forEach((id) => markBroadcastSeenCloud(id, user?.id));
     window.dispatchEvent(new Event('hp-broadcasts-updated'));
 
     markAllUserNotificationsAsRead();

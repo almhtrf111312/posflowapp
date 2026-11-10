@@ -8,7 +8,7 @@ import { useLicense } from '@/hooks/use-license';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getCachedReleaseConfig, fetchReleaseConfig, openExternal, CURRENT_VERSION_NAME, type ReleaseConfig } from '@/lib/remote-updates';
+import { getCachedReleaseConfig, fetchReleaseConfig, openExternal, CURRENT_VERSION_NAME, CURRENT_VERSION_CODE, type ReleaseConfig } from '@/lib/remote-updates';
 import { Download, Send } from 'lucide-react';
 import { InlineSupportChatPanel } from '@/components/support/InlineSupportChatPanel';
 

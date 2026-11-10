@@ -277,9 +277,11 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
           {effectiveCollapsed && !isMobile ? (
             /* Collapsed: icon only */
             <div className="flex flex-col items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md">
-                <Zap className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <img 
+                src="/app-icon.png" 
+                alt="FlowPOS Pro" 
+                className="w-10 h-10 rounded-xl object-cover shadow-md"
+              />
               <div className="flex flex-col items-center gap-1.5">
                 <SyncStatusMenu 
                   onOpenChange={(open) => {
@@ -295,9 +297,11 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md flex-shrink-0">
-                    <Zap className="w-4.5 h-4.5 text-primary-foreground" />
-                  </div>
+                  <img 
+                    src="/app-icon.png" 
+                    alt="FlowPOS Pro" 
+                    className="w-9 h-9 rounded-xl object-cover shadow-md flex-shrink-0"
+                  />
                   <div className="min-w-0">
                     <StoreTypeBadge storeType={storeType} t={t} />
                     <h1 className="font-bold text-sm text-foreground leading-tight tracking-tight">FlowPOS Pro</h1>

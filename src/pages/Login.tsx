@@ -495,9 +495,11 @@ export default function Login() {
       <div className="w-full max-w-md mx-auto pt-[env(safe-area-inset-top,12px)] flex items-center justify-between pb-4">
         {/* شعار المتجر والعنوان المدمج */}
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
-            <Store className="w-5 h-5" />
-          </div>
+          <img 
+            src="/app-icon.png" 
+            alt="FlowPOS Pro" 
+            className="w-10 h-10 rounded-2xl shadow-sm object-cover" 
+          />
           <span className="font-bold text-sm sm:text-base text-foreground tracking-tight">FlowPOS Pro</span>
         </div>
 

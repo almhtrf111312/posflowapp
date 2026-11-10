@@ -92,9 +92,11 @@ export default function Signup() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4 relative" dir={direction}>
       <Card className="w-full max-w-md shadow-2xl border-border/50 bg-card">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
-            <Store className="w-8 h-8 text-primary" />
-          </div>
+          <img 
+            src="/app-icon.png" 
+            alt="FlowPOS Pro" 
+            className="mx-auto w-16 h-16 rounded-2xl shadow-md object-cover" 
+          />
           <div>
             <CardTitle className="text-2xl font-bold">{t('auth.welcome')}</CardTitle>
             <CardDescription className="mt-2">{t('auth.signupSubtitle')}</CardDescription>

@@ -215,10 +215,13 @@ export default function BossPanel() {
   const [trialDaysInput, setTrialDaysInput] = useState<string>('30');
   const [isSavingTrialDays, setIsSavingTrialDays] = useState(false);
 
-  // Direct activation (no code) dialog
+  // Direct activation (by plan or custom days) dialog
   const [directActivateDialog, setDirectActivateDialog] = useState<{ owner: Owner } | null>(null);
   const [directActivateDays, setDirectActivateDays] = useState<string>('90');
   const [isDirectActivating, setIsDirectActivating] = useState(false);
+  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [loadingPlans, setLoadingPlans] = useState(false);
 
   // Edit Code Dialog
   const [editCodeDialog, setEditCodeDialog] = useState<ActivationCode | null>(null);
@@ -530,39 +533,67 @@ export default function BossPanel() {
     }
   };
 
-  // Activate / extend a license directly, without issuing a code
+  // Open direct activate dialog and pre-fetch available subscription plans
+  const openDirectActivate = async (owner: Owner) => {
+    setDirectActivateDialog({ owner });
+    setSelectedPlanId(null);
+    setDirectActivateDays('90');
+    setLoadingPlans(true);
+    try {
+      const { data, error } = await supabase
+        .from('subscription_plans' as any)
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (!error && data && data.length > 0) {
+        setAvailablePlans(data);
+        setSelectedPlanId(data[0].id);
+      } else {
+        setAvailablePlans([]);
+        setSelectedPlanId('custom');
+      }
+    } catch (err) {
+      console.error('Failed to load plans for direct activation:', err);
+      setAvailablePlans([]);
+      setSelectedPlanId('custom');
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  // Activate / extend a license directly via selected plan or custom days
   const handleDirectActivate = async () => {
     if (!directActivateDialog) return;
-    const days = parseInt(directActivateDays, 10);
-    if (!Number.isFinite(days) || days < 1 || days > 3650) {
-      toast.error('أدخل عدد أيام صحيح');
-      return;
-    }
-    setIsDirectActivating(true);
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.access_token) {
-        toast.error('يرجى تسجيل الدخول مرة أخرى');
+    const owner = directActivateDialog.owner;
+
+    let customDays: number | null = null;
+    if (!selectedPlanId || selectedPlanId === 'custom') {
+      const days = parseInt(directActivateDays, 10);
+      if (!Number.isFinite(days) || days < 1 || days > 3650) {
+        toast.error('أدخل عدد أيام صحيح (بين 1 و 3650)');
         return;
       }
-      const owner = directActivateDialog.owner;
-      const response = await supabase.functions.invoke('remote-activate-user', {
-        body: {
-          target_user_id: owner.user_id,
-          duration_days: days,
-          max_cashiers: owner.max_cashiers || 1,
-          license_tier: owner.license_tier || 'basic',
-        },
-        headers: { Authorization: `Bearer ${session.session.access_token}` },
-      });
-      if (response.error) throw new Error(response.error.message || 'Failed');
+      customDays = days;
+    }
 
-      toast.success(`تم تفعيل "${owner.full_name || owner.email}" لمدة ${days} يوم`);
+    setIsDirectActivating(true);
+    try {
+      const { data, error } = await supabase.rpc('boss_direct_activate_by_plan', {
+        p_target_user_id: owner.user_id,
+        p_plan_id: (selectedPlanId && selectedPlanId !== 'custom') ? selectedPlanId : null,
+        p_custom_days: customDays,
+      });
+
+      if (error) throw error;
+      if (data && !data.success) {
+        throw new Error(data.error || 'فشل التفعيل');
+      }
+
+      toast.success(`تم تفعيل حساب "${owner.full_name || owner.email}" بنجاح (${data?.plan_name || 'تفعيل مباشر'})`);
       setDirectActivateDialog(null);
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Direct activation failed:', err);
-      toast.error('فشل التفعيل المباشر');
+      toast.error('فشل التفعيل المباشر: ' + (err.message || 'خطأ غير معروف'));
     } finally {
       setIsDirectActivating(false);
     }
@@ -1994,12 +2025,9 @@ export default function BossPanel() {
                                       <Pencil className="w-4 h-4" />
                                       تعديل التفعيل
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                      setDirectActivateDialog({ owner });
-                                      setDirectActivateDays('90');
-                                    }}>
+                                    <DropdownMenuItem onClick={() => openDirectActivate(owner)}>
                                       <CheckCircle className="w-4 h-4" />
-                                      تفعيل مباشر بدون كود
+                                      تفعيل مباشر باختيار باقة
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setActivationDialog({ owner })}>
                                       <Ticket className="w-4 h-4" />
@@ -2690,10 +2718,7 @@ export default function BossPanel() {
                               <Button
                                 size="sm"
                                 className="text-xs h-8"
-                                onClick={() => {
-                                  setDirectActivateDialog({ owner });
-                                  setDirectActivateDays('90');
-                                }}
+                                onClick={() => openDirectActivate(owner)}
                               >
                                 <CheckCircle className="w-3 h-3" />
                                 تفعيل مباشر
@@ -2903,49 +2928,173 @@ export default function BossPanel() {
 
         </nav>
 
-        {/* Direct activation without generating a code */}
+        {/* Direct activation with Plan selection or custom days */}
         <Dialog open={!!directActivateDialog} onOpenChange={() => setDirectActivateDialog(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
             <DialogHeader>
-              <DialogTitle>تفعيل مباشر بدون كود</DialogTitle>
-              <DialogDescription>
-                {directActivateDialog?.owner.full_name || directActivateDialog?.owner.email}
+              <DialogTitle className="flex items-center gap-2 text-lg">
+                <Sparkles className="w-5 h-5 text-primary" />
+                تفعيل الحساب باختيار باقة مباشرة
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                المستخدم المستهدف: <strong className="text-foreground">{directActivateDialog?.owner.full_name || directActivateDialog?.owner.email}</strong>
+                {directActivateDialog?.owner.store_name ? ` • متجر: ${directActivateDialog.owner.store_name}` : ''}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>مدة الترخيص (أيام)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={3650}
-                  value={directActivateDays}
-                  onChange={(e) => setDirectActivateDays(e.target.value)}
-                  className="h-11 rounded-xl text-center font-bold"
-                />
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {[30, 90, 180, 365].map((d) => (
-                    <Button
-                      key={d}
-                      type="button"
-                      variant={directActivateDays === String(d) ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8 rounded-lg text-xs"
-                      onClick={() => setDirectActivateDays(String(d))}
-                    >
-                      {d} يوم
-                    </Button>
-                  ))}
-                </div>
+
+            <div className="space-y-4 py-2">
+              <div className="text-xs text-muted-foreground">
+                اختر إحدى الباقات الجاهزة لتطبيق مدتها وقيودها (المنتجات والكاشيرات) ورسالتها التلقائية، أو اختر تخصيصاً حراً بعدد الأيام:
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                يبدأ الترخيص من اليوم وينتهي بعد المدة المحددة، دون الحاجة لإنشاء كود أو إرساله.
-              </p>
+
+              {loadingPlans ? (
+                <div className="py-8 text-center text-sm text-muted-foreground flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span>جاري تحميل الباقات المتاحة...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {availablePlans.map((plan) => {
+                    const isSelected = selectedPlanId === plan.id;
+                    return (
+                      <div
+                        key={plan.id}
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`p-3.5 rounded-xl border text-start cursor-pointer transition-all relative flex flex-col justify-between ${
+                          isSelected
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary/40 shadow-xs'
+                            : 'border-border hover:border-primary/50 bg-card hover:bg-muted/30'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                            <div className="flex items-center gap-1.5 font-bold text-sm">
+                              <span>{plan.name}</span>
+                              {plan.badge && (
+                                <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                                  {plan.badge}
+                                </Badge>
+                              )}
+                            </div>
+                            {plan.enabled ? (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/20">
+                                مرئية للعملاء
+                              </span>
+                            ) : (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium border border-border">
+                                عرض داخلي خاص
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-base font-black text-primary font-mono mb-2">
+                            ${plan.price_usd} <span className="text-xs font-normal text-muted-foreground">/ {plan.duration_days} يوماً</span>
+                          </div>
+
+                          <div className="space-y-1 text-[11px] text-muted-foreground">
+                            <div>📦 حد المنتجات: <strong className="text-foreground">{plan.max_products} منتج</strong></div>
+                            <div>👥 حد الكاشيرات: <strong className="text-foreground">{plan.max_cashiers || 1} كاشير</strong></div>
+                          </div>
+
+                          {plan.activation_message && (
+                            <div className="mt-2 p-1.5 rounded-md bg-muted/60 text-[10px] text-muted-foreground line-clamp-2">
+                              ✉️ {plan.activation_message}
+                            </div>
+                          )}
+                        </div>
+
+                        {isSelected && (
+                          <div className="mt-2.5 pt-2 border-t border-primary/20 flex items-center justify-end text-xs font-semibold text-primary gap-1">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span>الباقة المحددة</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* بطاقة التخصيص اليدوي الحر */}
+                  <div
+                    onClick={() => setSelectedPlanId('custom')}
+                    className={`p-3.5 rounded-xl border text-start cursor-pointer transition-all relative flex flex-col justify-between ${
+                      selectedPlanId === 'custom'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/40 shadow-xs'
+                        : 'border-border hover:border-primary/50 bg-card hover:bg-muted/30'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                        <span className="font-bold text-sm">⚙️ تخصيص يدوي حر</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium border border-border">
+                          بدون باقة
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        تحديد مدة الترخيص يدوياً (حد افتراضي 600 منتج، 1 كاشير)
+                      </p>
+
+                      {selectedPlanId === 'custom' && (
+                        <div className="space-y-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={3650}
+                            value={directActivateDays}
+                            onChange={(e) => setDirectActivateDays(e.target.value)}
+                            className="h-9 rounded-lg text-center font-bold text-sm"
+                            placeholder="عدد الأيام"
+                          />
+                          <div className="flex flex-wrap gap-1">
+                            {[30, 90, 180, 365].map((d) => (
+                              <Button
+                                key={d}
+                                type="button"
+                                variant={directActivateDays === String(d) ? 'default' : 'outline'}
+                                size="sm"
+                                className="h-7 px-2 rounded-md text-[11px]"
+                                onClick={() => setDirectActivateDays(String(d))}
+                              >
+                                {d} يوم
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedPlanId === 'custom' && (
+                      <div className="mt-2.5 pt-2 border-t border-primary/20 flex items-center justify-end text-xs font-semibold text-primary gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        <span>تخصيص حر محدد</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-lg bg-muted/60 p-2.5 text-xs text-muted-foreground space-y-1">
+                <div>⚡ <strong>آلية التطبيق:</strong> يتم تمديد الترخيص إن كان نشطاً أو تفعيله من اليوم إن كان منتهياً أو جديداً.</div>
+                <div>🔔 <strong>الإشعار التلقائي:</strong> سيتم إرسال إشعار فوري بحساب العميل يحتوي رسالة التفعيل وتاريخ الانتهاء الجديد.</div>
+              </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDirectActivateDialog(null)}>إلغاء</Button>
-              <Button onClick={handleDirectActivate} disabled={isDirectActivating}>
-                {isDirectActivating ? 'جارٍ التفعيل...' : 'تفعيل الآن'}
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setDirectActivateDialog(null)}>
+                إلغاء
+              </Button>
+              <Button
+                onClick={handleDirectActivate}
+                disabled={isDirectActivating || !selectedPlanId}
+                className="bg-primary text-primary-foreground min-w-[120px]"
+              >
+                {isDirectActivating ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    جارٍ التفعيل...
+                  </span>
+                ) : (
+                  'تأكيد وتفعيل الحساب الآن'
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

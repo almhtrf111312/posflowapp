@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit2, Trash2, Layers, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Layers, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { showToast } from '@/lib/toast';
 
 export interface PlanItem {
@@ -155,6 +155,25 @@ export function BossPlansManager() {
     }
   };
 
+  const handleToggleVisibility = async (plan: PlanItem) => {
+    const nextState = !plan.enabled;
+    try {
+      const { error } = await supabase
+        .from('subscription_plans' as any)
+        .update({ enabled: nextState, updated_at: new Date().toISOString() })
+        .eq('id', plan.id);
+      if (error) throw error;
+      showToast.success(
+        nextState 
+          ? `تم إظهار باقة "${plan.name}" للعملاء في شاشة التجديد` 
+          : `تم إخفاء باقة "${plan.name}" عن العملاء (متاحة للتفعيل المباشر فقط)`
+      );
+      setPlans(prev => prev.map(p => p.id === plan.id ? { ...p, enabled: nextState } : p));
+    } catch (err: any) {
+      showToast.error('فشل تحديث حالة الباقة: ' + err.message);
+    }
+  };
+
   const handleDeletePlan = async (id: string, name: string) => {
     if (!confirm(`هل أنت متأكد من حذف الباقة "${name}"؟`)) return;
     try {
@@ -210,10 +229,36 @@ export function BossPlansManager() {
                     <span className="font-bold text-base">{plan.name}</span>
                     {plan.badge && <Badge variant="secondary" className="text-[11px]">{plan.badge}</Badge>}
                   </div>
-                  <Badge variant={plan.enabled ? 'default' : 'outline'}>
-                    {plan.enabled ? 'مفعّلة' : 'معطلة'}
-                  </Badge>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleVisibility(plan)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs ${
+                      plan.enabled 
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25' 
+                        : 'bg-muted text-muted-foreground border border-border hover:bg-muted/80'
+                    }`}
+                    title={plan.enabled ? 'الباقة مرئية للعملاء في شاشة التجديد (انقر للإخفاء)' : 'الباقة مخفية عن العملاء (انقر للإظهار)'}
+                  >
+                    {plan.enabled ? (
+                      <>
+                        <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>مرئية للعملاء</span>
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span>مخفية (خاصة)</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+
+                {!plan.enabled && (
+                  <div className="mb-2 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-medium flex items-center gap-1.5">
+                    <span>🔒</span>
+                    <span>عرض داخلي مخفي عن العملاء (متاح للتفعيل المباشر فقط)</span>
+                  </div>
+                )}
 
                 <div className="text-2xl font-black text-primary font-mono mb-3">
                   ${plan.price_usd} <span className="text-xs font-normal text-muted-foreground">/ {plan.duration_days} يوماً</span>

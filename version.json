@@ -1,8 +1,14 @@
 {
-  "versionCode": 488,
-  "versionName": "1.5.100",
-  "lastUpdated": "2026-11-10T10:31:41.859Z",
+  "versionCode": 489,
+  "versionName": "1.5.101",
+  "lastUpdated": "2026-11-10T11:17:39.211Z",
   "buildHistory": [
+    {
+      "versionCode": 489,
+      "versionName": "1.5.101",
+      "date": "2026-11-10",
+      "description": "Release v1.5.101 (Build 489)"
+    },
     {
       "versionCode": 488,
       "versionName": "1.5.100",
@@ -116,12 +122,6 @@
       "versionName": "1.5.82",
       "date": "2026-11-08",
       "description": "Auto-bump on push (ddc9235)"
-    },
-    {
-      "versionCode": 469,
-      "versionName": "1.5.81",
-      "date": "2026-11-08",
-      "description": "Auto-bump on push (31d4d64)"
     }
   ]
 }

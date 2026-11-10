@@ -247,6 +247,11 @@ export default function RenewPage() {
     return clean.startsWith('http') || clean.startsWith('data:image') || clean.endsWith('.png') || clean.endsWith('.jpg') || clean.endsWith('.jpeg') || clean.endsWith('.webp');
   };
 
+  const isValidUUID = (str?: string | null): boolean => {
+    if (!str) return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  };
+
   const handleClaimPayment = async () => {
     if (!selectedPlan || !selectedMethod) return;
     setSubmitting(true);
@@ -255,21 +260,25 @@ export default function RenewPage() {
       // توليد كود مرجعي رسمي سهل القراءة (مثال: FP-9281)
       const refCode = `FP-${Math.floor(1000 + Math.random() * 9000)}`;
 
+      const planUuid = isValidUUID(selectedPlan.id) ? selectedPlan.id : null;
+      const methodUuid = isValidUUID(selectedMethod.id) ? selectedMethod.id : null;
+
       const { data: insertData, error: insertError } = await supabase
         .from('subscription_requests' as any)
         .insert({
           user_id: user?.id,
-          plan_id: selectedPlan.id,
+          plan_id: planUuid,
           plan_name: selectedPlan.name,
           plan_days: selectedPlan.duration_days,
           plan_audience: selectedPlan.audience || 'standard',
           price_usd: selectedPlan.price_usd,
-          method_id: selectedMethod.id,
+          method_id: methodUuid,
           method_name: selectedMethod.name,
           ref_code: refCode,
           payer_name: payerName.trim() || user?.email || 'عميل المتجر',
           payer_ref: refCode,
-          status: 'paid_claimed',
+          status: 'pending',
+          equivalents_snapshot: selectedPlan.equivalents || [],
         })
         .select('id')
         .single();

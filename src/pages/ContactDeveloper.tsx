@@ -199,10 +199,21 @@ export default function ContactDeveloper() {
       <div className="rounded-2xl border border-border bg-card p-4 flex flex-wrap items-center gap-2">
         <div className="flex-1 min-w-[8rem]">
           <p className="text-sm font-bold text-foreground">تحديث التطبيق</p>
-          <p className="text-xs text-muted-foreground" dir="ltr">v{CURRENT_VERSION_NAME}{rel.latest_version_name ? ` → v${rel.latest_version_name}` : ''}</p>
+          <p className="text-xs text-muted-foreground" dir="ltr">
+            v{CURRENT_VERSION_NAME}
+            {rel.latest_version_code && rel.latest_version_code > CURRENT_VERSION_CODE && rel.latest_version_name && rel.latest_version_name !== CURRENT_VERSION_NAME
+              ? ` → v${rel.latest_version_name} (تحديث جديد متوفر)`
+              : ' (أحدث إصدار مثبت)'}
+          </p>
         </div>
-        <Button size="sm" className="gap-1.5" disabled={!rel.update_url && !rel.telegram_url} onClick={() => openExternal(rel.update_url || rel.telegram_url)}>
-          <Download className="w-3.5 h-3.5" /> تحديث التطبيق
+        <Button
+          size="sm"
+          className="gap-1.5"
+          disabled={!rel.update_url && !rel.telegram_url}
+          onClick={() => openExternal(rel.update_url || rel.telegram_url)}
+        >
+          <Download className="w-3.5 h-3.5" />
+          {rel.latest_version_code && rel.latest_version_code > CURRENT_VERSION_CODE ? 'تحميل التحديث' : 'فحص التحديثات'}
         </Button>
         {rel.telegram_url && (
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => openExternal(rel.telegram_url)}>

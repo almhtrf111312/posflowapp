@@ -143,6 +143,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [archivedNotifications]);
 
   const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>, silent = false) => {
+    const newId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    const newNotification: Notification = {
+      ...notification,
+      id: newId,
+      timestamp: new Date(),
+      read: false,
+    };
+
     setNotifications(prev => {
       const exists = prev.some(n => {
         if (n.type !== notification.type) return false;
@@ -154,15 +162,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         return false;
       });
       if (exists) return prev;
-
-      const newNotification: Notification = {
-        ...notification,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        timestamp: new Date(),
-        read: false,
-      };
       return [newNotification, ...prev];
     });
+
+    // حفظ الإشعار في جدول user_notifications بالسحابة لضمان بقائه عبر الأجهزة والتحديثات
+    if (user?.id) {
+      supabase.from('user_notifications').insert({
+        user_id: user.id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type || 'system',
+        is_read: false,
+        is_archived: false,
+        action_url: notification.actionUrl || null,
+      }).then(({ error }) => {
+        if (error) console.warn('[Notifications] Cloud persistence error:', error);
+      });
+    }
 
     if (!silent && notification.type !== 'license_status') {
       const toastType = notification.type.includes('overdue') ||
@@ -187,7 +203,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         showToast.warning(notification.title, structuredOptions);
       }
     }
-  }, []);
+  }, [user?.id]);
 
 
   const markAsRead = useCallback(async (id: string) => {
@@ -208,13 +224,23 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id]);
 
-  const clearNotification = useCallback((id: string) => {
+  const clearNotification = useCallback(async (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
+    if (user?.id) {
+      try {
+        await supabase.from('user_notifications').delete().eq('id', id).eq('user_id', user.id);
+      } catch { /* ignore offline */ }
+    }
+  }, [user?.id]);
 
-  const clearAllNotifications = useCallback(() => {
+  const clearAllNotifications = useCallback(async () => {
     setNotifications(prev => prev.filter(n => n.persistent));
-  }, []);
+    if (user?.id) {
+      try {
+        await supabase.from('user_notifications').delete().eq('user_id', user.id);
+      } catch { /* ignore offline */ }
+    }
+  }, [user?.id]);
 
   const archiveNotification = useCallback((id: string) => {
     setNotifications(prev => {

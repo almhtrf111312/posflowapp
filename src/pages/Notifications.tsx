@@ -1,21 +1,64 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
-import { Bell, Download, Megaphone, Wrench, AlertTriangle, RefreshCw, Eye, EyeOff, CheckCheck, Archive } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Bell,
+  Download,
+  Megaphone,
+  Wrench,
+  AlertTriangle,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  CheckCheck,
+  Archive,
+  Clock,
+  ShieldCheck,
+  Trash2,
+  ArrowLeft,
+  Package,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useNotifications } from '@/hooks/use-notifications';
+import { useNotifications, type Notification } from '@/hooks/use-notifications';
 import { toast } from '@/lib/sonner-bridge';
 import { Badge } from '@/components/ui/badge';
 import {
-  fetchActiveBroadcasts, getCachedReleaseConfig, getSeenBroadcasts, openExternal,
-  markBroadcastSeen, SEEN_KEY,
+  fetchActiveBroadcasts,
+  getCachedReleaseConfig,
+  getSeenBroadcasts,
+  openExternal,
+  SEEN_KEY,
   CURRENT_VERSION_CODE,
   type Broadcast,
 } from '@/lib/remote-updates';
 
-const ICONS = { info: Megaphone, warning: AlertTriangle, update: Download, maintenance: Wrench } as const;
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; // 72 ساعة
 
+export interface UnifiedItem {
+  id: string;
+  source: 'broadcast' | 'store';
+  title: string;
+  body: string;
+  kind: string;
+  created_at: string;
+  isRead: boolean;
+  link_url?: string | null;
+  target_version_code?: number | null;
+  actionUrl?: string;
+  rawBroadcast?: Broadcast;
+  rawNotification?: Notification;
+}
+
 export default function Notifications() {
-  const { addArchivedNotification } = useNotifications();
+  const navigate = useNavigate();
+  const {
+    notifications,
+    markAsRead: markUserNotificationAsRead,
+    markAllAsRead: markAllUserNotificationsAsRead,
+    clearNotification,
+    addArchivedNotification,
+    refreshNotifications,
+  } = useNotifications();
+
   const [rawItems, setRawItems] = useState<Broadcast[]>([]);
   const [seenIds, setSeenIds] = useState<string[]>(getSeenBroadcasts);
   const [loading, setLoading] = useState(true);
@@ -25,19 +68,20 @@ export default function Notifications() {
   const latestBuildCode = releaseConfig.latest_version_code || releaseConfig.min_version_code || CURRENT_VERSION_CODE;
   const updateUrl = releaseConfig.update_url || releaseConfig.telegram_url || 'https://t.me/flowpospro';
 
-  // جلب الإشعارات النشطة من السحابة (تختفي فوراً إذا حذفها Boss)
+  // جلب إعلانات البث النشطة من السحابة
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const list = await fetchActiveBroadcasts();
       setRawItems(list);
       setSeenIds(getSeenBroadcasts());
+      if (refreshNotifications) refreshNotifications();
     } catch {
       /* وضع عدم الاتصال */
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshNotifications]);
 
   useEffect(() => {
     load();
@@ -49,10 +93,7 @@ export default function Notifications() {
     return () => window.removeEventListener('hp-broadcasts-updated', h);
   }, [load]);
 
-  // تطبيق شروط الاختفاء التلقائي:
-  // 1. الإشعارات العادية تختفي بعد 3 أيام
-  // 2. إشعارات التحديث لا تختفي بعد 3 أيام إذا لم يثبت التحديث بعد (CURRENT < target)
-  // 3. تختفي إشعارات التحديث تلقائياً بمجرد تحديث التطبيق إلى الإصدار المعلن (CURRENT >= target)
+  // تصفية إعلانات البث
   const filteredBroadcasts = useMemo(() => {
     const now = Date.now();
 
@@ -61,17 +102,12 @@ export default function Notifications() {
       const targetCode = b.target_version_code || latestBuildCode;
 
       if (isUpdate) {
-        // إذا كان التحديث قد تم تثبيته بالفعل على جهاز العميل -> يختفي تلقائياً
-        if (CURRENT_VERSION_CODE >= targetCode) {
-          return false;
-        }
-        // إذا لم يُثبت التحديث بعد -> يظل موجوداً دائماً ولا يختفي بعد 3 أيام
+        if (CURRENT_VERSION_CODE >= targetCode) return false;
         return true;
       }
 
-      // الإشعارات العادية الأخرى: ترحل تلقائياً إلى الأرشيف الدائم بعد 3 أيام (72 ساعة) من تاريخ الإنشاء بدلاً من فقدانها
       const createdAt = new Date(b.created_at).getTime();
-      const isOlderThan3Days = (now - createdAt) > THREE_DAYS_MS;
+      const isOlderThan3Days = now - createdAt > THREE_DAYS_MS;
       if (isOlderThan3Days) {
         addArchivedNotification({
           id: b.id,
@@ -84,17 +120,55 @@ export default function Notifications() {
           data: {
             category: b.kind,
             version: b.target_version_code,
-          } as any
+          } as any,
         });
         return false;
       }
 
       return true;
     });
-  }, [rawItems, latestBuildCode]);
+  }, [rawItems, latestBuildCode, addArchivedNotification]);
 
-  // تبديل حالة القراءة (مقروء / غير مقروء)
-  const toggleRead = (id: string) => {
+  // دمج إعلانات البث وإشعارات المتجر والنظام في قائمة موحدة
+  const allItems: UnifiedItem[] = useMemo(() => {
+    const list: UnifiedItem[] = [];
+
+    // 1. إعلانات البث الإدارية
+    for (const b of filteredBroadcasts) {
+      list.push({
+        id: b.id,
+        source: 'broadcast',
+        title: b.title,
+        body: b.body || '',
+        kind: b.kind,
+        created_at: b.created_at,
+        isRead: seenIds.includes(b.id),
+        link_url: b.link_url,
+        target_version_code: b.target_version_code,
+        rawBroadcast: b,
+      });
+    }
+
+    // 2. إشعارات النظام والمتجر (المخزون، الديون، الترخيص، العمليات)
+    for (const n of notifications) {
+      list.push({
+        id: n.id,
+        source: 'store',
+        title: n.title,
+        body: n.message,
+        kind: n.category || n.type || 'system',
+        created_at: n.timestamp instanceof Date ? n.timestamp.toISOString() : String(n.timestamp),
+        isRead: n.read,
+        actionUrl: n.actionUrl,
+        rawNotification: n,
+      });
+    }
+
+    return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [filteredBroadcasts, seenIds, notifications]);
+
+  // تبديل حالة القراءة لإعلان البث
+  const toggleBroadcastRead = (id: string) => {
     setSeenIds((prev) => {
       let next: string[];
       if (prev.includes(id)) {
@@ -108,6 +182,17 @@ export default function Notifications() {
     });
   };
 
+  // تبديل القراءة لعنصر موحد
+  const toggleItemRead = (item: UnifiedItem) => {
+    if (item.source === 'broadcast') {
+      toggleBroadcastRead(item.id);
+    } else {
+      if (!item.isRead) {
+        markUserNotificationAsRead(item.id);
+      }
+    }
+  };
+
   // تحديد الكل كمقروء
   const markAllRead = () => {
     const allIds = filteredBroadcasts.map((b) => b.id);
@@ -116,39 +201,64 @@ export default function Notifications() {
     setSeenIds(next);
     localStorage.setItem(SEEN_KEY, JSON.stringify(next));
     window.dispatchEvent(new Event('hp-broadcasts-updated'));
+
+    markAllUserNotificationsAsRead();
+    toast.success('تم تحديد جميع الإشعارات كمقروءة');
   };
 
-  // أرشفة الإشعار إلى السجل الدائم
-  const handleArchiveBroadcast = (b: Broadcast) => {
-    addArchivedNotification({
-      id: b.id,
-      type: 'system',
-      category: 'system',
-      title: b.title,
-      message: b.body || '',
-      timestamp: new Date(b.created_at || Date.now()),
-      read: true,
-      data: {
-        category: b.kind,
-        version: b.target_version_code,
-      } as any,
-    });
-    setRawItems((prev) => prev.filter((x) => x.id !== b.id));
-    toast.success('تم نقل الإشعار إلى الأرشيف الدائم');
+  // أرشفة أو حذف الإشعار
+  const handleDeleteOrArchive = (item: UnifiedItem) => {
+    if (item.source === 'broadcast' && item.rawBroadcast) {
+      addArchivedNotification({
+        id: item.rawBroadcast.id,
+        type: 'system',
+        category: 'system',
+        title: item.rawBroadcast.title,
+        message: item.rawBroadcast.body || '',
+        timestamp: new Date(item.rawBroadcast.created_at || Date.now()),
+        read: true,
+        data: {
+          category: item.rawBroadcast.kind,
+          version: item.rawBroadcast.target_version_code,
+        } as any,
+      });
+      setRawItems((prev) => prev.filter((x) => x.id !== item.id));
+      toast.success('تم نقل الإشعار إلى الأرشيف');
+    } else {
+      clearNotification(item.id);
+      toast.success('تم حذف الإشعار بنجاح');
+    }
   };
 
-  // تصفية العرض حسب التبويب المختار
+  const unreadCount = allItems.filter((i) => !i.isRead).length;
+  const readCount = allItems.filter((i) => i.isRead).length;
+
   const displayedItems = useMemo(() => {
-    return filteredBroadcasts.filter((b) => {
-      const isRead = seenIds.includes(b.id);
-      if (tab === 'unread') return !isRead;
-      if (tab === 'read') return isRead;
-      return true;
-    });
-  }, [filteredBroadcasts, seenIds, tab]);
+    if (tab === 'unread') return allItems.filter((i) => !i.isRead);
+    if (tab === 'read') return allItems.filter((i) => i.isRead);
+    return allItems;
+  }, [allItems, tab]);
 
-  const unreadCount = filteredBroadcasts.filter((b) => !seenIds.includes(b.id)).length;
-  const readCount = filteredBroadcasts.filter((b) => seenIds.includes(b.id)).length;
+  const getItemIcon = (item: UnifiedItem) => {
+    if (item.kind === 'update') return Download;
+    if (item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')) return Package;
+    if (item.kind === 'maintenance') return Wrench;
+    if (item.kind === 'debt' || item.kind.includes('debt')) return Clock;
+    if (item.kind.includes('license')) return ShieldCheck;
+    return Megaphone;
+  };
+
+  const getItemBadge = (item: UnifiedItem) => {
+    if (item.source === 'broadcast') {
+      if (item.kind === 'update') return 'تحديث النظام';
+      if (item.kind === 'maintenance') return 'صيانة مجدولة';
+      return 'إعلان إداري';
+    }
+    if (item.kind === 'inventory' || item.kind.includes('stock')) return 'المخزون';
+    if (item.kind === 'debt' || item.kind.includes('debt')) return 'الديون';
+    if (item.kind.includes('license')) return 'الترخيص';
+    return 'تنبيه النظام';
+  };
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4" dir="rtl">
@@ -184,7 +294,7 @@ export default function Notifications() {
           className="rounded-full text-xs h-7"
           onClick={() => setTab('all')}
         >
-          الكل ({filteredBroadcasts.length})
+          الكل ({allItems.length})
         </Button>
         <Button
           variant={tab === 'unread' ? 'default' : 'outline'}
@@ -218,31 +328,30 @@ export default function Notifications() {
         </div>
       )}
 
-      {/* قائمة الإشعارات */}
+      {/* قائمة الإشعارات الموحدة */}
       <div className="space-y-2.5">
-        {displayedItems.map((b) => {
-          const Icon = ICONS[b.kind] || Megaphone;
-          const isRead = seenIds.includes(b.id);
-          const isUpdate = b.kind === 'update';
-          const link = b.link_url || (isUpdate ? updateUrl : '');
+        {displayedItems.map((item) => {
+          const Icon = getItemIcon(item);
+          const isUpdate = item.kind === 'update';
+          const link = item.link_url || (isUpdate ? updateUrl : '');
 
           return (
             <div
-              key={b.id}
+              key={item.id}
               className={`rounded-2xl border p-4 flex gap-3.5 transition-all ${
-                b.kind === 'warning'
-                  ? 'border-destructive/40 bg-destructive/5'
+                item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')
+                  ? 'border-amber-500/40 bg-amber-500/5'
                   : isUpdate
                   ? 'border-primary/40 bg-primary/5'
-                  : isRead
+                  : item.isRead
                   ? 'border-border/60 bg-card/60 opacity-80'
                   : 'border-border bg-card shadow-xs'
               }`}
             >
               <div
                 className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                  b.kind === 'warning'
-                    ? 'bg-destructive/15 text-destructive'
+                  item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
                     : isUpdate
                     ? 'bg-primary/15 text-primary'
                     : 'bg-muted text-muted-foreground'
@@ -253,27 +362,25 @@ export default function Notifications() {
 
               <div className="flex-1 min-w-0 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-bold text-foreground flex flex-wrap items-center gap-2 break-words">
-                    {b.title}
-                    {isUpdate && (
-                      <Badge variant="outline" className="border-primary/50 text-primary text-[10px] px-1.5 py-0">
-                        تحديث معلّق
-                      </Badge>
-                    )}
-                  </p>
-                  <Badge variant={isRead ? 'secondary' : 'default'} className="text-[10px] px-1.5 py-0 shrink-0">
-                    {isRead ? 'مقروء' : 'جديد'}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-bold text-foreground break-words">{item.title}</p>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      {getItemBadge(item)}
+                    </Badge>
+                  </div>
+                  <Badge variant={item.isRead ? 'secondary' : 'default'} className="text-[10px] px-1.5 py-0 shrink-0">
+                    {item.isRead ? 'مقروء' : 'جديد'}
                   </Badge>
                 </div>
 
-                {b.body && (
+                {item.body && (
                   <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap leading-relaxed select-text">
-                    {b.body}
+                    {item.body}
                   </p>
                 )}
 
                 <p className="text-[11px] text-muted-foreground/80 font-mono" dir="ltr">
-                  {new Date(b.created_at).toLocaleString('en-GB')}
+                  {new Date(item.created_at).toLocaleString('en-GB')}
                 </p>
 
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -282,7 +389,7 @@ export default function Notifications() {
                       size="sm"
                       className="h-8 gap-1.5 text-xs font-bold"
                       onClick={() => {
-                        if (!isRead) toggleRead(b.id);
+                        if (!item.isRead) toggleItemRead(item);
                         openExternal(link);
                       }}
                     >
@@ -290,33 +397,40 @@ export default function Notifications() {
                       {isUpdate ? 'تحميل التحديث وتثبيته' : 'فتح الرابط'}
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant={isRead ? 'ghost' : 'outline'}
-                    className="h-8 gap-1.5 text-xs"
-                    onClick={() => toggleRead(b.id)}
-                  >
-                    {isRead ? (
-                      <>
-                        <EyeOff className="w-3.5 h-3.5" />
-                        تحديد كغير مقروء
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-3.5 h-3.5" />
-                        تحديد كمقروء
-                      </>
-                    )}
-                  </Button>
+
+                  {item.actionUrl && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 gap-1.5 text-xs font-semibold"
+                      onClick={() => navigate(item.actionUrl!)}
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      عرض التفاصيل
+                    </Button>
+                  )}
+
+                  {!item.isRead && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => toggleItemRead(item)}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      تحديد كمقروء
+                    </Button>
+                  )}
+
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() => handleArchiveBroadcast(b)}
-                    title="نقل إلى الأرشيف"
+                    className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDeleteOrArchive(item)}
+                    title="حذف أو أرشفة"
                   >
-                    <Archive className="w-3.5 h-3.5" />
-                    أرشفة
+                    <Trash2 className="w-3.5 h-3.5" />
+                    حذف
                   </Button>
                 </div>
               </div>

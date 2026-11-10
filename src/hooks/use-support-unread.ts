@@ -63,9 +63,10 @@ export function useSupportUnread(): number {
   useEffect(() => {
     fetchUnread();
 
-    // استماع لحظي لتحديثات جدول الرسائل (إضافة رسائل جديدة أو تعديل حالة القراءة)
+    // استخدام معرّف فريد للقناة لمنع تصادم الاشتراكات المتزامنة بين المكونات
+    const channelId = `support_unread_${user?.id || 'guest'}_${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel('support_unread_badge_listener')
+      .channel(channelId)
       .on(
         'postgres_changes',
         {
@@ -89,7 +90,7 @@ export function useSupportUnread(): number {
       supabase.removeChannel(channel);
       window.removeEventListener('flowpos:support-read', handleLocalRead);
     };
-  }, [fetchUnread]);
+  }, [fetchUnread, user?.id]);
 
   return unreadCount;
 }

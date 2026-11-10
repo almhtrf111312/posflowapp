@@ -154,13 +154,16 @@ Deno.serve(async (req) => {
     }
 
     // Check device_id match
-    if (license.device_id && !license.allow_multi_device) {
+    // الكاشير يعمل على جهازه الخاص ويرث ترخيص المالك: لا يُقارن جهازه بجهاز المالك
+    // اختلاف الجهاز ليس إلغاءً للترخيص: يُعاد deviceMismatch بدلاً من isRevoked حتى لا يُسجَّل خروج صاحب الحساب
+    if (license.device_id && !license.allow_multi_device && !isCashierWithOwner) {
       if (!incomingDeviceId || license.device_id !== incomingDeviceId) {
         return new Response(
           JSON.stringify({ 
             valid: false,
             hasLicense: true,
-            isRevoked: true,
+            isRevoked: false,
+            deviceMismatch: true,
             needsActivation: true,
             role: roleData.role,
             message: 'هذا الترخيص مرتبط بجهاز آخر. تشغيل الحساب المستنسخ ممنوع.'

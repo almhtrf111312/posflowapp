@@ -12,7 +12,7 @@ import { Loader2, Store, Eye, EyeOff, Smartphone, RefreshCw, AlertTriangle, Mail
 import { supabase } from '@/integrations/supabase/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { LanguageQuickSelector } from '@/components/auth/LanguageQuickSelector';
-import { getDeviceId } from '@/lib/device-fingerprint';
+import { getDeviceId, getCanonicalDeviceId } from '@/lib/device-fingerprint';
 import { getDeviceKey } from '@/lib/secure-storage';
 import { ContactLinksSection, CHANNELS, type ContactLinks } from '@/components/settings/ContactLinksSection';
 import { getAuthErrorMessage, isValidEmailFormat } from '@/lib/auth-errors';
@@ -293,12 +293,18 @@ export default function Login() {
         return { blocked: false, allowMultiDevice: true };
       }
 
+      // معرّف الجهاز الموحّد: نفس المعرّف الذي يُرسل لفحص الترخيص (منع الحظر الخاطئ بسبب اختلاف المعرّفين)
+      const { data: ownLicense } = await supabase
+        .from('app_licenses')
+        .select('device_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      const bindDeviceId = await getCanonicalDeviceId(ownLicense?.device_id ?? null);
+
       // استدعاء دالة السحابة الموثوقة لفحص وربط الجهاز
-      // (الدالة موجودة في القاعدة لكن أنواع الواجهة القديمة لم تُ再生 بعد،
-      // لذلك تُستدعى عبر قوس آمن مع نوع صريح للنتيجة.)
       const { data: bindResult, error: bindError } = await supabase.rpc(
         'check_and_bind_device' as never,
-        { p_device_id: currentDeviceId } as never
+        { p_device_id: bindDeviceId } as never
       );
       const bind = bindResult as
         | { blocked?: boolean; allow_multi_device?: boolean }
@@ -326,7 +332,7 @@ export default function Login() {
       }
 
       if (!license.device_id) {
-        await supabase.from('app_licenses').update({ device_id: currentDeviceId }).eq('id', license.id);
+        await supabase.from('app_licenses').update({ device_id: currentDeviceKey }).eq('id', license.id);
         return { blocked: false, allowMultiDevice: false };
       }
 

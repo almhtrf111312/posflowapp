@@ -134,9 +134,10 @@ export function useDeviceBinding() {
 
       // If !license.device_id is empty on cloud record, update with currentDeviceId
       if (!license.device_id) {
+        // الربط بالمعرّف الموحّد (HP…SK) المستخدم في فحص الترخيص والتفعيل
         await supabase
           .from('app_licenses')
-          .update({ device_id: currentDeviceId })
+          .update({ device_id: currentDeviceKey })
           .eq('user_id', user.id)
           .eq('is_revoked', false);
 

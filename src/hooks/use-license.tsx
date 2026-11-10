@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { getDeviceKey } from '@/lib/secure-storage';
+import { getCanonicalDeviceId } from '@/lib/device-fingerprint';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './use-auth';
 import { recordServerContact, getOfflineStatus, isDataEncrypted, decryptLocalData, checkAndEnforceProtection } from '@/lib/offline-protection';
@@ -32,6 +33,8 @@ export interface LicenseState {
   /** تذكرة الأوفلاين محظورة (انتهاء/عبث بالساعة/بلوغ حد الفواتير) */
   offlineLeaseBlocked: boolean;
   offlineLeaseReason: string | null;
+  /** الترخيص مربوط بجهاز آخر (ليس إلغاءً للترخيص) */
+  deviceMismatch?: boolean;
 }
 
 interface LicenseContextType extends LicenseState {
@@ -44,10 +47,48 @@ const LicenseContext = createContext<LicenseContextType | undefined>(undefined);
 
 const LICENSE_CACHE_KEY = 'hyperpos_license_cache_v1';
 
-function saveLicenseCache(state: Omit<LicenseState, 'isLoading' | 'error'>) {
+function saveLicenseCache(state: Omit<LicenseState, 'isLoading' | 'error'>, userId?: string) {
   try {
-    localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify({ ...state, _ts: Date.now() }));
+    localStorage.setItem(LICENSE_CACHE_KEY, JSON.stringify({ ...state, _ts: Date.now(), _uid: userId || null }));
   } catch { /* ignore */ }
+}
+
+/**
+ * هل تكفي نسخة الترخيص المحفوظة على الجهاز لفتح التطبيق؟
+ * وجود الملف وحده لا يكفي: يجب أن تكون صالحة وغير ملغاة ولم ينتهِ تاريخها، وتخص المستخدم الحالي.
+ */
+export function cachedLicenseGrantsAccess(
+  cache: Partial<LicenseState> & { _uid?: string | null } | null | undefined,
+  userId?: string | null
+): boolean {
+  if (!cache) return false;
+  if (userId && cache._uid && cache._uid !== userId) return false;
+  if (cache.role === 'boss') return true;
+  if (!cache.isValid || !cache.hasLicense || cache.isRevoked) return false;
+  if (cache.expiresAt && new Date(cache.expiresAt).getTime() <= Date.now()) return false;
+  return true;
+}
+
+/** يقرأ معرّف الجهاز المربوط بالترخيص (للمالك أو لمالك الكاشير عبر RLS) ويعيد المعرّف المحلي المطابق له */
+async function resolveLicenseDeviceId(userId: string): Promise<string> {
+  let registered: string | null = null;
+  try {
+    const query = supabase.from('app_licenses').select('user_id, device_id').limit(5);
+    const timeout = new Promise<{ data: null }>(resolve => setTimeout(() => resolve({ data: null }), 1500));
+    const { data } = await Promise.race([query, timeout]) as { data: Array<{ user_id: string; device_id: string | null }> | null };
+    if (data && data.length > 0) {
+      const own = data.find(r => r.user_id === userId);
+      registered = (own || (data.length === 1 ? data[0] : null))?.device_id ?? null;
+    }
+  } catch { /* offline */ }
+  return getCanonicalDeviceId(registered);
+}
+
+export function readLicenseCacheRaw(): (Partial<LicenseState> & { _uid?: string | null }) | null {
+  try {
+    const raw = localStorage.getItem(LICENSE_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
 function loadLicenseCache(): (Omit<LicenseState, 'isLoading' | 'error'>) | null {
@@ -78,9 +119,10 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   
   const [state, setState] = useState<LicenseState>({
     // ✅ If cache exists, start with isLoading=false for instant UI (< 0.5s)
+    // بدون نسخة محفوظة صالحة لا نفترض أن الترخيص ساري: ننتظر نتيجة الخادم
     isLoading: !initialCache && !fallbackCache,
-    isValid: effectiveCache?.isValid ?? true,
-    hasLicense: effectiveCache?.hasLicense ?? true,
+    isValid: cachedLicenseGrantsAccess(effectiveCache as any),
+    hasLicense: effectiveCache?.hasLicense ?? false,
     isTrial: effectiveCache?.isTrial ?? false,
     isExpired: effectiveCache?.isExpired ?? false,
     isRevoked: effectiveCache?.isRevoked ?? false,
@@ -104,22 +146,22 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     offlineLeaseReason: getOfflineLeaseStatus().reason,
   });
 
-  // Safety failsafe: ensure isLoading never blocks the screen longer than 1500ms
+  // Safety failsafe: لا يبقى التحميل أكثر من 8 ثوانٍ، ولا يُمنح الدخول إلا من نسخة محفوظة صالحة فعلاً
   useEffect(() => {
     const timer = setTimeout(() => {
       setState(prev => {
         if (!prev.isLoading) return prev;
-        console.log('[License] 1.5s safety timeout reached: releasing loading state for instant offline UI');
+        console.log('[License] 8s safety timeout reached: releasing loading state');
         const fb = loadLicenseCacheFallback();
         return {
           ...prev,
           isLoading: false,
-          isValid: fb?.isValid ?? true,
-          hasLicense: fb?.hasLicense ?? true,
+          isValid: cachedLicenseGrantsAccess(fb as any),
+          hasLicense: fb?.hasLicense ?? false,
           needsActivation: fb?.needsActivation ?? false,
         };
       });
-    }, 1500);
+    }, 8000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -162,11 +204,12 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // 1. استدعاء دالة check-license مع مهلة 4 ثوانٍ
+      // 1. استدعاء دالة check-license مع مهلة 4 ثوانٍ (بمعرّف الجهاز الموحّد المطابق لما رُبط به الترخيص)
       let data: any = null;
       try {
+        const deviceIdForLicense = await resolveLicenseDeviceId(user.id);
         const invokePromise = supabase.functions.invoke('check-license', {
-          body: { device_id: getDeviceKey() },
+          body: { device_id: deviceIdForLicense },
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
@@ -245,6 +288,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
 
       const newState: LicenseState = {
         isLoading: false,
+        deviceMismatch: data.deviceMismatch === true,
         isValid: data.valid,
         hasLicense: data.hasLicense,
         isTrial: data.isTrial === true,
@@ -296,7 +340,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       });
       // Save successful result to cache
       const { isLoading: _, error: _e, ...cacheData } = newState;
-      saveLicenseCache(cacheData);
+      saveLicenseCache(cacheData, user.id);
     } catch (error) {
       console.warn('[License] License check error or timeout (offline/VPN mode):', error);
       // Check if offline protection should encrypt data
@@ -308,8 +352,9 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        isValid: fallback?.isValid ?? true,
-        hasLicense: fallback?.hasLicense ?? true,
+        // دون اتصال: يُسمح بالعمل فقط إذا كانت النسخة المحفوظة صالحة وغير منتهية وتخص هذا المستخدم
+        isValid: cachedLicenseGrantsAccess(fallback as any, user?.id),
+        hasLicense: fallback?.hasLicense ?? false,
         needsActivation: fallback?.needsActivation ?? false,
         error: 'وضع غير متصل بالإنترنت',
         offlineDays: offlineStatus.daysOffline,
@@ -327,7 +372,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       if (!session) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
 
       const response = await supabase.functions.invoke('validate-activation-code', {
-        body: { code, device_id: getDeviceKey() },
+        body: { code, device_id: user ? await resolveLicenseDeviceId(user.id) : getDeviceKey() },
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 

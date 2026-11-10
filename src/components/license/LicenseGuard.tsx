@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { useLicense } from '@/hooks/use-license';
+import { useLicense, cachedLicenseGrantsAccess, readLicenseCacheRaw } from '@/hooks/use-license';
 import { useAuth } from '@/hooks/use-auth';
 import { useDeviceBinding } from '@/hooks/use-device-binding';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -121,7 +121,7 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   }
 
   const { user, isLoading: authLoading, signOut } = useAuth();
-  const { isLoading, isValid, hasLicense, needsActivation, startTrial, isTrial, checkLicense, expiresAt, remainingDays, ownerNeedsActivation, role, dataEncrypted, isRevoked, offlineLeaseBlocked, offlineLeaseReason } = useLicense();
+  const { isLoading, isValid, hasLicense, needsActivation, startTrial, isTrial, checkLicense, expiresAt, remainingDays, ownerNeedsActivation, role, dataEncrypted, isRevoked, offlineLeaseBlocked, offlineLeaseReason, deviceMismatch } = useLicense();
   const { isChecking: isCheckingDevice, isDeviceBlocked } = useDeviceBinding();
   const { checkLicenseStatus } = useNotifications();
   const { t, direction } = useLanguage();
@@ -130,17 +130,17 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   
   const [hasTimedOut, setHasTimedOut] = useState(false);
   
-  // Fast-path: Check if any license cache was ever recorded on this device
-  const hasCachedLicense = typeof window !== 'undefined' && Boolean(localStorage.getItem('hyperpos_license_cache_v1'));
+  // Fast-path: نسخة ترخيص محفوظة صالحة فعلاً (غير منتهية وغير ملغاة وتخص هذا المستخدم) — وجود الملف وحده لا يكفي
+  const hasCachedLicense = typeof window !== 'undefined' && cachedLicenseGrantsAccess(readLicenseCacheRaw(), user?.id);
   const hasActiveSession = Boolean(user && (hasLicense || hasCachedLicense));
   const isFullyLoading = (authLoading || isLoading || isCheckingDevice) && !hasActiveSession && !hasTimedOut;
 
-  // Failsafe timer: Never hold the user on the license loading screen for more than 1.5s
+  // Failsafe timer: لا يبقى المستخدم على شاشة التحميل أكثر من 8 ثوانٍ
   useEffect(() => {
     if (isFullyLoading) {
       const timer = setTimeout(() => {
         setHasTimedOut(true);
-      }, 1500);
+      }, 8000);
       return () => clearTimeout(timer);
     }
   }, [isFullyLoading]);
@@ -212,6 +212,8 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   // If user has a valid active session, do not mount DeviceBlockedScreen while isCheckingDevice is running.
   // Only mount if verified against both IDs, check has concluded (!isCheckingDevice), and device is confirmed blocked.
   if (isDeviceBlocked && !isCheckingDevice) return <DeviceBlockedScreen />;
+  // الترخيص مربوط بجهاز آخر: شاشة الجهاز المحظور بدلاً من اعتبار الحساب ملغى وتسجيل الخروج
+  if (deviceMismatch) return <DeviceBlockedScreen />;
 
   if ((isValid && hasLicense) || (user && hasCachedLicense)) return <>{children}</>;
 

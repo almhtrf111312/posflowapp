@@ -106,3 +106,22 @@ export const clearDeviceId = (): void => {
     // Ignore errors
   }
 };
+
+/**
+ * معرّف الجهاز الموحّد للترخيص
+ * كان التطبيق يستخدم معرّفين مختلفين لنفس الجهاز: HP…SK (التفعيل وفحص الترخيص) و DEV-/CAP- (تسجيل الدخول)،
+ * فيُربط الترخيص بأحدهما ويُفحص بالآخر فيُحظر صاحب الحساب على جهازه نفسه.
+ * القاعدة: إذا كان الترخيص مربوطاً مسبقاً بأحد معرّفي هذا الجهاز نستخدمه كما هو، وإلا نعتمد HP…SK.
+ */
+export const getCanonicalDeviceId = async (registeredDeviceId?: string | null): Promise<string> => {
+  const { getDeviceKey } = await import('./secure-storage');
+  const key = getDeviceKey();
+  if (registeredDeviceId) {
+    if (registeredDeviceId === key) return key;
+    try {
+      const legacy = await getDeviceId();
+      if (registeredDeviceId === legacy) return legacy;
+    } catch { /* ignore */ }
+  }
+  return key;
+};

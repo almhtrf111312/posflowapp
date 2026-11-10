@@ -480,7 +480,8 @@ export default function Reports() {
             : (catalogProduct?.costPrice !== undefined && catalogProduct?.costPrice !== null ? Number(catalogProduct.costPrice) : 0);
 
           let singleItemProfit: number;
-          if (item.profit !== undefined && item.profit !== null && Number(item.profit) > 0) {
+          // الربح السالب (بيع بخسارة) يُحتسب كما هو ولا يُعاد حسابه كصفر
+          if (item.profit !== undefined && item.profit !== null && Number.isFinite(Number(item.profit)) && Number(item.profit) !== 0) {
             singleItemProfit = Number(item.profit);
           } else {
             const price = Number(item.price || 0);
@@ -488,7 +489,7 @@ export default function Reports() {
             const taxRate = Number(inv.taxRate || 0);
             const isInclusive = inv.taxMode === 'inclusive' || (inv as any).tax_inclusive;
             const netPrice = (isInclusive && taxRate > 0) ? price / (1 + taxRate / 100) : price;
-            singleItemProfit = Math.max(0, (netPrice - actualCost) * qty);
+            singleItemProfit = (netPrice - actualCost) * qty;
           }
           itemsProfit += singleItemProfit;
           hasCalculatedItems = true;
@@ -496,10 +497,11 @@ export default function Reports() {
       }
 
       let profit = 0;
-      if (inv.profit !== undefined && inv.profit !== null && Number(inv.profit) > 0) {
+      // الخسارة تظهر في التقارير بقيمتها السالبة بدلاً من إخفائها كصفر
+      if (inv.profit !== undefined && inv.profit !== null && Number.isFinite(Number(inv.profit)) && Number(inv.profit) !== 0) {
         profit = Number(inv.profit);
       } else if (hasCalculatedItems) {
-        profit = Math.max(0, itemsProfit - discount);
+        profit = itemsProfit - discount;
       }
 
       return { profit, discount };

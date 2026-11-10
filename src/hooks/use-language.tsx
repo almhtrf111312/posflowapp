@@ -128,9 +128,18 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(lang);
   }, []);
 
+  // يتغير عند اكتمال تحميل ملف ترجمة لغة (التحميل عند الحاجة) لإعادة رسم النصوص
+  const [translationsVersion, setTranslationsVersion] = useState(0);
+  useEffect(() => {
+    const onLoaded = () => setTranslationsVersion(v => v + 1);
+    window.addEventListener('translationsloaded', onLoaded);
+    return () => window.removeEventListener('translationsloaded', onLoaded);
+  }, []);
+
   const t = useCallback((key: TranslationKey, lang?: Language) => {
     return translate(key, lang || language);
-  }, [language]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, translationsVersion]);
 
   const [storeType, setStoreType] = useState(getCurrentStoreType);
 

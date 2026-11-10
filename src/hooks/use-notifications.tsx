@@ -77,6 +77,18 @@ const saveArchivedToStorage = (items: Notification[]) => {
   } catch {}
 };
 
+// حالة "مقروء" لتنبيهات المخزون والديون الآلية تُحفظ محلياً حتى لا تعود غير مقروءة عند كل فحص
+const READ_ALERTS_KEY = 'hp_read_alert_ids';
+const loadReadAlertIds = (): Set<string> => {
+  try { return new Set(JSON.parse(localStorage.getItem(READ_ALERTS_KEY) || '[]')); } catch { return new Set(); }
+};
+const saveReadAlertIds = (ids: Iterable<string>) => {
+  try {
+    const merged = new Set([...loadReadAlertIds(), ...ids]);
+    localStorage.setItem(READ_ALERTS_KEY, JSON.stringify([...merged].slice(-500)));
+  } catch { /* ignore */ }
+};
+
 const getExpiryStatus = (expiryDate: string): 'expired' | 'expiring_soon' | 'valid' => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -262,6 +274,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    if (id.startsWith('alert_')) saveReadAlertIds([id]);
+    if (id.startsWith('alert_') || id.startsWith('license_')) return;
     if (user?.id) {
       try {
         await supabase.from('user_notifications').update({ is_read: true }).eq('id', id).eq('user_id', user.id);
@@ -270,7 +284,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   const markAllAsRead = useCallback(async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => {
+      saveReadAlertIds(prev.filter(n => n.id.startsWith('alert_')).map(n => n.id));
+      return prev.map(n => ({ ...n, read: true }));
+    });
     if (user?.id) {
       try {
         await supabase.from('user_notifications').update({ is_read: true }).eq('user_id', user.id);
@@ -388,6 +405,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const checkAlerts = useCallback(async () => {
     try {
+      // تُجمع التنبيهات أولاً ثم تُستبدل دفعة واحدة: لا تفرغ القائمة مؤقتاً (كان ذلك سبب الوميض)
+      const collected: Notification[] = [];
+      const readAlerts = loadReadAlertIds();
+      const pushAlert = (n: Omit<Notification, 'timestamp' | 'read'> & { id: string }) => {
+        collected.push({ ...n, timestamp: new Date(), read: readAlerts.has(n.id) } as Notification);
+      };
       const [products, debts] = await Promise.all([loadProductsCloud(), loadDebtsCloud()]);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -402,42 +425,42 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
           if (diffDays < 0) {
             alertsCount++;
-            addNotification({
+            pushAlert({
               id: 'alert_debt_overdue_' + debt.id,
               type: 'debt_overdue', title: 'دين متأخر',
               message: `الدين المستحق من ${debt.customerName} بقيمة ${formatMoney(debt.remainingDebt)} متأخر عن موعد السداد`,
               data: { customerId: debt.id, customerName: debt.customerName, amount: debt.remainingDebt },
-            }, true);
+            });
           } else if (diffDays === 0) {
             alertsCount++;
-            addNotification({
+            pushAlert({
               id: 'alert_debt_due_' + debt.id,
               type: 'debt_due_today', title: 'دين مستحق اليوم',
               message: `الدين المستحق من ${debt.customerName} بقيمة ${formatMoney(debt.remainingDebt)} يستحق اليوم`,
               data: { customerId: debt.id, customerName: debt.customerName, amount: debt.remainingDebt },
-            }, true);
+            });
           }
         }
       });
 
       products.filter(p => p.status === 'low_stock').forEach(product => {
         alertsCount++;
-        addNotification({
+        pushAlert({
           id: 'alert_low_stock_' + product.id,
           type: 'low_stock', title: 'مخزون منخفض',
           message: `المنتج "${product.name}" لديه كمية منخفضة (${product.quantity} فقط)`,
           data: { productId: product.id, productName: product.name, quantity: product.quantity },
-        }, true);
+        });
       });
 
       products.filter(p => p.status === 'out_of_stock').forEach(product => {
         alertsCount++;
-        addNotification({
+        pushAlert({
           id: 'alert_out_of_stock_' + product.id,
           type: 'out_of_stock', title: 'نفذ المخزون',
           message: `المنتج "${product.name}" نفذ من المخزون`,
           data: { productId: product.id, productName: product.name, quantity: 0 },
-        }, true);
+        });
       });
 
       products.forEach(product => {
@@ -445,22 +468,32 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           const status = getExpiryStatus(product.expiryDate);
           if (status === 'expired') {
             alertsCount++;
-            addNotification({
+            pushAlert({
               id: 'alert_expired_' + product.id,
               type: 'expired', title: 'منتج منتهي الصلاحية ⚠️',
               message: `المنتج "${product.name}" انتهت صلاحيته في ${product.expiryDate}`,
               data: { productId: product.id, productName: product.name, expiryDate: product.expiryDate },
-            }, true);
+            });
           } else if (status === 'expiring_soon') {
             alertsCount++;
-            addNotification({
+            pushAlert({
               id: 'alert_expiring_soon_' + product.id,
               type: 'expiring_soon', title: 'صلاحية قريبة الانتهاء',
               message: `المنتج "${product.name}" ستنتهي صلاحيته في ${product.expiryDate}`,
               data: { productId: product.id, productName: product.name, expiryDate: product.expiryDate },
-            }, true);
+            });
           }
         }
+      });
+
+      setNotifications(prev => {
+        const prevById = new Map(prev.map(n => [n.id, n]));
+        const fresh = collected.map(n => {
+          const old = prevById.get(n.id);
+          return old ? { ...n, timestamp: old.timestamp, read: old.read || n.read } : n;
+        });
+        const others = prev.filter(n => !n.id.startsWith('alert_'));
+        return [...others, ...fresh];
       });
 
       // إشعار مُجمّع ذكي: لا نكرر ظهور التنبيه إلا إذا زاد عدد التنبيهات أو مضت 12 ساعة
@@ -483,12 +516,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Failed to check alerts:', error);
     }
-  }, [addNotification]);
+  }, []);
 
 
   const refreshNotifications = useCallback(() => {
-    setNotifications(prev => prev.filter(n => n.persistent));
-    setTimeout(() => { checkAlerts(); }, 100);
+    // يعيد حساب تنبيهات المخزون والديون فقط ويستبدلها ذرياً، دون مسح إشعارات السحابة أو الترخيص
+    checkAlerts();
   }, [checkAlerts]);
 
   useEffect(() => {

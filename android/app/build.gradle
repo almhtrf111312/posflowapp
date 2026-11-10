@@ -14,6 +14,11 @@ android {
         
         versionCode versionProps.versionCode
         versionName versionProps.versionName
+
+        // هواتف ومحطات Android الفعلية تعمل بمعالجات ARM فقط؛ استبعاد مكتبات x86 (المحاكيات) يقلّص حجم الـ APK
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
         
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

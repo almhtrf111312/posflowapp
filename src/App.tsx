@@ -34,6 +34,7 @@ import { checkSettingsVersion } from "./lib/settings-version";
 import { EVENTS } from "./lib/events";
 import { saveLastRoute } from "./lib/last-route";
 import { hideSplashScreen } from "./lib/splash-screen";
+import { resolveEffectivePerformanceMode } from "./lib/performance-mode";
 // Demo data loading removed - app uses cloud sync for data persistence
 import { ClickProbe } from "./components/debug/ClickProbe";
 import { SafeModeScreen } from "./components/debug/SafeModeScreen";
@@ -164,27 +165,39 @@ const AppContent = () => {
         () => import("./pages/Appearance"),
       ];
 
-      // Staggered sequential warmup (1 chunk every 350ms) to avoid network contention & CPU spikes
+      // على الأجهزة الضعيفة (الوضع الخفيف) نجهّز الشاشات الثلاث الأكثر استخداماً فقط
+      const targets = resolveEffectivePerformanceMode() === 'lite'
+        ? prioritizedTargets.slice(0, 3)
+        : prioritizedTargets;
+
+      // شاشة واحدة في كل فترة خمول للمعالج (بدلاً من شاشة كل 350ms) حتى لا يتقطع التطبيق في ثوانيه الأولى
       let index = 0;
-      const intervalId = setInterval(() => {
-        if (index >= prioritizedTargets.length) {
-          clearInterval(intervalId);
-          return;
+      const scheduleNext = () => {
+        if (cancelled || index >= targets.length) return;
+        const run = () => {
+          if (cancelled) return;
+          try { targets[index]().catch(() => {}); } catch {}
+          index++;
+          warmTimer = setTimeout(scheduleNext, 1500);
+        };
+        if ('requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(run, { timeout: 5000 });
+        } else {
+          warmTimer = setTimeout(run, 500);
         }
-        try {
-          prioritizedTargets[index]().catch(() => {});
-        } catch {}
-        index++;
-      }, 350);
+      };
+      scheduleNext();
     };
 
-    if (typeof window !== 'undefined') {
-      if ('requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(warmUpRoutes, { timeout: 2000 });
-      } else {
-        setTimeout(warmUpRoutes, 1000);
-      }
-    }
+    let cancelled = false;
+    let warmTimer: ReturnType<typeof setTimeout> | undefined;
+    // البدء بعد استقرار الإقلاع بدلاً من التنافس مع الرسم الأول
+    const startTimer = setTimeout(warmUpRoutes, 4000);
+    return () => {
+      cancelled = true;
+      clearTimeout(startTimer);
+      if (warmTimer) clearTimeout(warmTimer);
+    };
   }, []);
 
   // Privacy policy acceptance

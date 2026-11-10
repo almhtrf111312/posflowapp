@@ -44,6 +44,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { EVENTS, emitEvent } from '@/lib/events';
 import { useLanguage } from '@/hooks/use-language';
 import { useAuth } from '@/hooks/use-auth';
+import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 
 interface RepairRequest {
   id: string;
@@ -240,6 +241,7 @@ const getDeviceTypes = (t: (key: string) => string) => [
 ];
 
 export default function Services() {
+  const deferWhileHidden = useDeferWhileHidden();
   const { t, isRTL } = useLanguage();
   const { user, profile } = useAuth();
   const statusConfig = getStatusConfig(t);
@@ -290,7 +292,7 @@ export default function Services() {
     void fetchCloudServices();
 
     const handleMaintenanceUpdate = () => {
-      void fetchCloudServices();
+      deferWhileHidden('services', () => { void fetchCloudServices(); });
     };
     window.addEventListener(EVENTS.MAINTENANCE_UPDATED, handleMaintenanceUpdate);
     return () => {

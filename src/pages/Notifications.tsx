@@ -92,9 +92,9 @@ export default function Notifications() {
 
   useEffect(() => {
     load();
+    // حدث تحديث المقروء يحدّث الحالة فقط؛ إعادة التحميل هنا كانت تصنع حلقة لا تنتهي (سبب الوميض)
     const h = () => {
       setSeenIds(getSeenBroadcasts());
-      load();
     };
     window.addEventListener('hp-broadcasts-updated', h);
     return () => window.removeEventListener('hp-broadcasts-updated', h);
@@ -116,25 +116,34 @@ export default function Notifications() {
       const createdAt = new Date(b.created_at).getTime();
       const isOlderThan3Days = now - createdAt > THREE_DAYS_MS;
       if (isOlderThan3Days) {
-        addArchivedNotification({
-          id: b.id,
-          type: 'system',
-          category: 'system',
-          title: b.title,
-          message: b.body || '',
-          timestamp: new Date(b.created_at),
-          read: true,
-          data: {
-            category: b.kind,
-            version: b.target_version_code,
-          } as any,
-        });
         return false;
       }
 
       return true;
     });
-  }, [rawItems, latestBuildCode, addArchivedNotification]);
+  }, [rawItems, latestBuildCode]);
+
+  // أرشفة إعلانات البث الأقدم من 3 أيام خارج مرحلة الرسم (كانت تُنفَّذ داخل useMemo فتسبب إعادة رسم إضافية)
+  useEffect(() => {
+    const now = Date.now();
+    for (const b of rawItems) {
+      if (b.kind === 'update') continue;
+      if (now - new Date(b.created_at).getTime() <= THREE_DAYS_MS) continue;
+      addArchivedNotification({
+        id: b.id,
+        type: 'system',
+        category: 'system',
+        title: b.title,
+        message: b.body || '',
+        timestamp: new Date(b.created_at),
+        read: true,
+        data: {
+          category: b.kind,
+          version: b.target_version_code,
+        } as any,
+      });
+    }
+  }, [rawItems, addArchivedNotification]);
 
   // دمج إعلانات البث وإشعارات المتجر والنظام في قائمة موحدة
   const allItems: UnifiedItem[] = useMemo(() => {

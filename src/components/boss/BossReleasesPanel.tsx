@@ -7,6 +7,7 @@ import {
   type ReleaseConfig,
   type Broadcast,
   BROADCAST_TEMPLATES,
+  openExternal,
 } from '@/lib/remote-updates';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/sonner-bridge';
@@ -121,8 +122,8 @@ export function BossReleasesPanel() {
     const cloudCode = cfg?.latest_version_code ?? 0;
     // فك التجمد: إذا كان الرقم في السحابة مشوهاً (>1000 بينما الكود الحقيقي مئات)
     if (cloudCode > 1000 && mainCode < 1000) return true;
+    // المقارنة برقم البناء فقط: اختلاف الـ commit وحده (مثل تعديل ملفات توثيق لا تُبنى) لا يعني إصداراً جديداً
     if (mainCode > cloudCode) return true;
-    if (mainVersion.sha && cfg?.latest_commit_sha && mainVersion.sha !== cfg.latest_commit_sha) return true;
     return false;
   }, [mainVersion, cfg]);
 
@@ -450,6 +451,53 @@ export function BossReleasesPanel() {
           تعذر قراءة أحدث نسخة من main ({mainError}) — تُعرض نسخة هذا التطبيق.
         </p>
       )}
+
+      {/* 0.1 حالة نسختك المثبتة مقارنة بأحدث إصدار */}
+      {(() => {
+        const latestCode = Math.max(mainVersion?.versionCode || 0, cfg?.latest_version_code || 0);
+        const latestName = (mainVersion?.versionCode || 0) >= (cfg?.latest_version_code || 0)
+          ? (mainVersion?.versionName || cfg?.latest_version_name || BUNDLED_VERSION_NAME)
+          : (cfg?.latest_version_name || BUNDLED_VERSION_NAME);
+        const isUpToDate = latestCode === 0 || BUNDLED_VERSION_CODE >= latestCode;
+        const updateLink = cfg?.update_url || cfg?.telegram_url || '';
+        return (
+          <div className={cn(
+            'rounded-2xl border p-3.5 space-y-2',
+            isUpToDate ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/10'
+          )}>
+            <div className="flex items-center justify-between gap-2">
+              <p className={cn('text-xs font-black', isUpToDate ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
+                {isUpToDate ? '✅ نسختك المثبتة هي أحدث إصدار' : '⬆️ يوجد إصدار أحدث من نسختك المثبتة'}
+              </p>
+              {!isUpToDate && updateLink && (
+                <Button size="sm" variant="outline" className="h-7 text-[11px] rounded-lg shrink-0" onClick={() => openExternal(updateLink)}>
+                  تحميل التحديث
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
+              <div>
+                <p className="text-muted-foreground">نسختك المثبتة</p>
+                <p className="font-bold font-mono" dir="ltr">v{BUNDLED_VERSION_NAME}</p>
+                <p className="text-[10px] text-muted-foreground font-mono">Build {BUNDLED_VERSION_CODE}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">آخر بناء على main</p>
+                <p className="font-bold font-mono" dir="ltr">{mainVersion ? `v${mainVersion.versionName}` : '—'}</p>
+                <p className="text-[10px] text-muted-foreground font-mono">{mainVersion ? `Build ${mainVersion.versionCode}` : ''}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">المنشور للمستخدمين</p>
+                <p className="font-bold font-mono" dir="ltr">{cfg?.latest_version_name ? `v${cfg.latest_version_name}` : '—'}</p>
+                <p className="text-[10px] text-muted-foreground font-mono">{cfg?.latest_version_code ? `Build ${cfg.latest_version_code}` : ''}</p>
+              </div>
+            </div>
+            {!isUpToDate && (
+              <p className="text-[10px] text-muted-foreground">أحدث إصدار متاح: v{latestName}</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 1. بطاقة إحصاءات الإصدارات الحالية */}
       <div className="grid grid-cols-3 gap-2.5 text-center">

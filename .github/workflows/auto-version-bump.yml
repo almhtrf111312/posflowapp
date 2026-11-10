@@ -1,13 +1,9 @@
 name: Auto Version Bump
 
+# متوقف عن العمل التلقائي: رفع الإصدار أصبح داخل build-apk.yml قبل البناء مباشرة.
+# كان هذا الملف يرفع الإصدار بعد البناء، فيظهر على main إصدار أحدث من آخر APK مبني.
 on:
-  push:
-    branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/workflows/build-windows.yml'
-      - '.github/workflows/sync-version-to-cloud.yml'
+  workflow_dispatch:
 
 concurrency:
   group: auto-version-bump-main

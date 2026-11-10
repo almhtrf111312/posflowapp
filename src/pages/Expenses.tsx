@@ -87,8 +87,10 @@ import { useLanguage } from '@/hooks/use-language';
 import { processExpense, reverseExpenseTransaction, restoreExpenseCash } from '@/lib/unified-transactions';
 import { toLocalDateString } from '@/lib/date-utils';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 
 export default function Expenses() {
+  const deferWhileHidden = useDeferWhileHidden();
   const m = useMoney();
   const [expenseCurrency, setExpenseCurrency] = useState<string>(() => m.activeCode);
   const selectedCurrencyDef = m.enabledCurrencies.find(c => c.code === expenseCurrency) || m.getCurrencyDef(expenseCurrency);
@@ -176,12 +178,13 @@ export default function Expenses() {
     };
     loadData();
 
-    const handleUpdate = () => loadData();
-    const handleRecurringUpdate = async () => {
+    // التحديثات القادمة أثناء إخفاء الصفحة تُؤجَّل إلى لحظة فتحها
+    const handleUpdate = () => deferWhileHidden('expenses', loadData);
+    const handleRecurringUpdate = () => deferWhileHidden('recurring', async () => {
       const recurringData = await loadRecurringExpensesCloud();
       setRecurringExpenses(recurringData);
       setDueExpenses(getDueExpenses());
-    };
+    });
 
     window.addEventListener(EVENTS.EXPENSES_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.RECURRING_EXPENSES_UPDATED, handleRecurringUpdate);

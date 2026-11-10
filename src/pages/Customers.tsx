@@ -80,8 +80,10 @@ import { useMoney } from '@/hooks/use-money';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { EVENTS } from '@/lib/events';
 import Debts from '@/pages/Debts';
+import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 
 export default function Customers() {
+  const deferWhileHidden = useDeferWhileHidden();
   const { t, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') === 'debts' ? 'debts' : 'customers';
@@ -158,8 +160,8 @@ export default function Customers() {
   useEffect(() => {
     loadData();
 
-    // Listen for updates
-    const handleUpdate = () => loadData();
+    // Listen for updates (مؤجلة إذا كانت الصفحة مخفية في الخلفية)
+    const handleUpdate = () => deferWhileHidden('customers', loadData);
     window.addEventListener(EVENTS.CUSTOMERS_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.APP_REFRESH, handleUpdate);
 

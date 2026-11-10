@@ -89,7 +89,7 @@ const TabFallback = () => (
  * الحد الأقصى لعدد التبويبات المحتفظ بها في الذاكرة الحية RAM في نفس الوقت
  * 8 تبويبات تضمن تجربة تنقل فائقة السلاسة ولحظية 100% مع الاستفادة من contentVisibility: hidden
  */
-const MAX_MOUNTED_TABS = 8;
+const MAX_MOUNTED_TABS = 5;
 
 /**
  * NativeTabHost

@@ -3,7 +3,7 @@ import { Component, ReactNode, ErrorInfo } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { Capacitor } from '@capacitor/core';
 import { restoreLastRouteIfNeeded } from "./lib/last-route";
-import { initializeLanguage } from "./lib/i18n";
+import { initializeLanguage, loadLanguage, getCurrentLanguage } from "./lib/i18n";
 import { applyAppFontToDOM, getStoredAppFont } from "./lib/app-font-config";
 import { applyUIScaleToDOM, getStoredUIScale } from "./lib/ui-scale-config";
 import { initPerformanceMode } from "./lib/performance-mode";
@@ -139,8 +139,16 @@ try {
   document.getElementById('offline-fallback-screen')?.remove();
 } catch {}
 
-createRoot(document.getElementById("root")!).render(
-  <GlobalErrorBoundary>
-    <App />
-  </GlobalErrorBoundary>
-);
+// تحميل ملف ترجمة اللغة النشطة قبل الرسم الأول (العربية مضمّنة فوراً) لتجنب ظهور نصوص بلغة أخرى لحظياً
+const renderApp = () => {
+  createRoot(document.getElementById("root")!).render(
+    <GlobalErrorBoundary>
+      <App />
+    </GlobalErrorBoundary>
+  );
+};
+const languageReady = Promise.race([
+  loadLanguage(getCurrentLanguage()),
+  new Promise<void>(resolve => setTimeout(resolve, 1500)),
+]);
+languageReady.then(renderApp, renderApp);

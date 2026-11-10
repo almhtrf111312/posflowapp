@@ -13,8 +13,10 @@ import { PurchaseInvoiceViewDialog } from '@/components/purchases/PurchaseInvoic
 import { EVENTS } from '@/lib/events';
 import { format } from 'date-fns';
 import { ar, enUS, tr } from 'date-fns/locale';
+import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 
 export default function Purchases() {
+  const deferWhileHidden = useDeferWhileHidden();
   const { t, language } = useLanguage();
   const m = useMoney();
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
@@ -40,7 +42,7 @@ export default function Purchases() {
 
   useEffect(() => {
     loadData();
-    const handler = () => loadData();
+    const handler = () => deferWhileHidden('purchases', loadData);
     window.addEventListener(EVENTS.PRODUCTS_UPDATED, handler);
     window.addEventListener(EVENTS.PURCHASES_UPDATED, handler);
     return () => {

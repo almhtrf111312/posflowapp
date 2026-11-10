@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useRef, useEffect, useCallback } from 'react';
 
 export interface PageActivityContextValue {
   isActive: boolean;
@@ -37,4 +37,34 @@ export function usePageActivity(): PageActivityContextValue {
 
 export function usePageActivityDetails(): PageActivityContextValue {
   return useContext(PageActivityContext);
+}
+
+/**
+ * useDeferWhileHidden
+ * للصفحات المحفوظة في الذاكرة (Keep-Alive): تحديث البيانات القادم من أحداث المزامنة
+ * يُنفَّذ فوراً إذا كانت الصفحة ظاهرة، ويؤجَّل إلى لحظة فتحها إذا كانت مخفية
+ * (يُدمج التحديث المتكرر بنفس المفتاح في تحديث واحد). خارج Keep-Alive يعمل فوراً دائماً.
+ */
+export function useDeferWhileHidden(): (key: string, fn: () => void) => void {
+  const { isActive } = useContext(PageActivityContext);
+  const activeRef = useRef(isActive);
+  activeRef.current = isActive;
+  const pendingRef = useRef<Map<string, () => void>>(new Map());
+
+  useEffect(() => {
+    if (!isActive || pendingRef.current.size === 0) return;
+    const fns = Array.from(pendingRef.current.values());
+    pendingRef.current.clear();
+    fns.forEach(fn => {
+      try { fn(); } catch (err) { console.warn('[PageActivity] deferred refresh failed:', err); }
+    });
+  }, [isActive]);
+
+  return useCallback((key: string, fn: () => void) => {
+    if (activeRef.current) {
+      fn();
+    } else {
+      pendingRef.current.set(key, fn);
+    }
+  }, []);
 }

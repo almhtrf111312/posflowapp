@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDeviceBinding } from '@/hooks/use-device-binding';
 import { useNotifications } from '@/hooks/use-notifications';
 import { ActivationScreen } from './ActivationScreen';
+import { TrialNoticeDialog } from './TrialNoticeDialog';
 import { DeviceBlockedScreen } from '@/components/auth/DeviceBlockedScreen';
 import { DataEncryptedScreen } from './DataEncryptedScreen';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
@@ -128,6 +129,7 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   const { t, direction } = useLanguage();
   const [isStartingTrial, setIsStartingTrial] = useState(false);
   const [showActivation, setShowActivation] = useState(false);
+  const [showTrialNotice, setShowTrialNotice] = useState(false);
   
   const [hasTimedOut, setHasTimedOut] = useState(false);
   
@@ -242,15 +244,23 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   if (!hasLicense && !isStartingTrial) {
     if (showActivation) return <ActivationScreen />;
     return (
-      <LicenseChoiceScreen
-        onChooseActivation={() => setShowActivation(true)}
-        onChooseTrial={async () => {
-          setIsStartingTrial(true);
-          await startTrial();
-          setIsStartingTrial(false);
-        }}
-        isStartingTrial={isStartingTrial}
-      />
+      <>
+        <LicenseChoiceScreen
+          onChooseActivation={() => setShowActivation(true)}
+          onChooseTrial={() => setShowTrialNotice(true)}
+          isStartingTrial={isStartingTrial}
+        />
+        <TrialNoticeDialog
+          open={showTrialNotice}
+          onOpenChange={setShowTrialNotice}
+          onConfirm={async () => {
+            setShowTrialNotice(false);
+            setIsStartingTrial(true);
+            await startTrial();
+            setIsStartingTrial(false);
+          }}
+        />
+      </>
     );
   }
 

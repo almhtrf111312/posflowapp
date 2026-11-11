@@ -3,7 +3,9 @@
 // وعند ذهاب التطبيق إلى الخلفية (وهي نقطة الخروج الوحيدة الموثوقة على أندرويد).
 // لا يُمسح: الجلسة، الجهاز، الترخيص، سجل الحظر، إعدادات اللغة والمظهر، وعلامة وضع التجربة نفسها.
 import { Capacitor } from '@capacitor/core';
-import { isLocalOnlyMode } from '@/lib/subscription-lock';
+import { isLocalOnlyMode, LOCAL_MODE_EVENT } from '@/lib/subscription-lock';
+import { demoProducts } from '@/lib/demo-data';
+import { saveProducts } from '@/lib/products-store';
 
 const PENDING_WIPE_KEY = 'hp_trial_wipe_pending';
 
@@ -97,11 +99,37 @@ export async function wipeTrialDatabases(): Promise<void> {
   }
 }
 
-/** يُستدعى عند الإقلاع: إن كان وضع التجربة مفعّلاً تُمسح البيانات قبل رسم الواجهة. */
+const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
+
+/**
+ * منتجات نموذجية لوضع التجربة حتى يتمكن العميل من إجراء بيع تجريبي.
+ * تُضاف فقط إذا كان المخزن فارغاً، فلا تُكرَّر ولا تمسح ما أضافه العميل خلال الجلسة.
+ */
+export async function seedTrialSampleProducts(): Promise<void> {
+  if (!isLocalOnlyMode()) return;
+  try {
+    const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+    const current = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(current) && current.length > 0) return;
+  } catch {
+    /* بيانات تالفة: نعيد التعبئة بالنماذج */
+  }
+
+  saveProducts(demoProducts);
+  try {
+    const { saveProductsToIDB } = await import('@/lib/indexeddb-cache');
+    await saveProductsToIDB(demoProducts);
+  } catch (err) {
+    console.warn('[TrialWipe] Sample products IDB save failed:', err);
+  }
+}
+
+/** يُستدعى عند الإقلاع: إن كان وضع التجربة مفعّلاً تُمسح البيانات قبل رسم الواجهة، ثم تُضاف النماذج. */
 export async function wipeTrialDataOnBoot(): Promise<void> {
   if (!isLocalOnlyMode()) return;
   wipeTrialLocalStorage();
   await wipeTrialDatabases();
+  await seedTrialSampleProducts();
 }
 
 /**
@@ -109,6 +137,9 @@ export async function wipeTrialDataOnBoot(): Promise<void> {
  * وعند العودة تُعاد تحميل الواجهة إن كان المسح قد حدث.
  */
 export function initTrialLifecycle(): void {
+  // عند تفعيل وضع التجربة (بعد بدء الفترة التجريبية) تُضاف المنتجات النموذجية فوراً
+  window.addEventListener(LOCAL_MODE_EVENT, () => { void seedTrialSampleProducts(); });
+
   if (!Capacitor.isNativePlatform()) return;
 
   import('@capacitor/app')

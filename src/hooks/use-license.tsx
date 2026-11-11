@@ -83,12 +83,14 @@ async function resolveLicenseDeviceId(userId: string): Promise<string> {
   } catch { /* offline */ }
   // نقل الربط القديم إلى المعرّف الثابت (لصاحب الترخيص فقط؛ الكاشير يعمل على ترخيص المالك)
   return getCanonicalDeviceId(registered, async (stableId) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('app_licenses')
       .update({ device_id: stableId })
       .eq('user_id', userId)
-      .eq('device_id', registered as string);
-    return !error;
+      .eq('device_id', registered as string)
+      .select('id');
+    // يُعتبر النقل ناجحاً فقط إذا تحدّث صف فعلاً (الكاشير لا يملك صف الترخيص فيبقى الربط القديم)
+    return !error && Array.isArray(data) && data.length > 0;
   });
 }
 

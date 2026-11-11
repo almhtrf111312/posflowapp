@@ -301,12 +301,14 @@ export default function Login() {
         .maybeSingle();
       const registeredId = ownLicense?.device_id ?? null;
       const bindDeviceId = await getCanonicalDeviceId(registeredId, async (stableId) => {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('app_licenses')
           .update({ device_id: stableId })
           .eq('user_id', userId)
-          .eq('device_id', registeredId as string);
-        return !error;
+          .eq('device_id', registeredId as string)
+          .select('id');
+        // يُعتبر النقل ناجحاً فقط إذا تحدّث صف فعلاً (الكاشير لا يملك صف الترخيص فيبقى الربط القديم)
+        return !error && Array.isArray(data) && data.length > 0;
       });
 
       // استدعاء دالة السحابة الموثوقة لفحص وربط الجهاز

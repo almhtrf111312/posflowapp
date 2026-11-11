@@ -18,6 +18,6 @@ const sections = [
   ['🛠️ إصلاحات', clean(pub.fixed)],
 ].filter(([, items]) => items.length);
 
-let text = `🚀 تحديث جديد - Flow POS Pro\n🏷️ الإصدار v${v.versionName} (Build ${v.versionCode})`;
+let text = `🚀 تحديث جديد - Flow POS Pro\n🏷️ الإصدار v${v.versionName}`;
 for (const [title, items] of sections) text += `\n\n${title}:\n` + items.map((x) => '• ' + x).join('\n');
 process.stdout.write(text);

@@ -382,14 +382,13 @@ jobs:
           function buildMessages(sizeBytes) {
             const notes = readNotes();
             const sep = '━━━━━━━━━━━━━━';
-            const ver = `v${VERSION_NAME}` + (VERSION_CODE ? ` (Build ${VERSION_CODE})` : '');
+            // للعميل: رقم الإصدار فقط (بدون رقم البناء والحجم وتاريخ النشر)
+            const ver = `v${VERSION_NAME}`;
             const sizeTxt = (sizeBytes / 1024 / 1024).toFixed(1) + ' MB';
 
             const head =
               `🚀 <b>تحديث جديد | Flow POS Pro</b>\n${sep}\n` +
-              `📌 <b>الإصدار:</b> <code>${esc(ver)}</code>\n` +
-              `📦 <b>حجم الملف:</b> <code>${sizeTxt}</code>\n` +
-              `📅 <b>تاريخ النشر:</b> <code>${damascusStamp()}</code>\n\n` +
+              `📌 <b>الإصدار:</b> <code>${esc(ver)}</code>\n\n` +
               `✨ <b>أبرز التحديثات والإصلاحات:</b>\n`;
             const foot = `\n${sep}\n💡 <i>يمكنك تثبيت هذا التحديث مباشرة فوق النسخة الحالية دون حذف بياناتك.</i>`;
 

@@ -1,13 +1,17 @@
-// مسح بيانات وضع التجربة المحلي.
+// مسح بيانات وضع التجربة المحلي وإعادة تعبئتها بالنماذج.
 // وضع التجربة لا يحتفظ بأي بيانات بين الجلسات: تُمسح عند الإقلاع (قبل الرسم)،
-// وعند ذهاب التطبيق إلى الخلفية (وهي نقطة الخروج الوحيدة الموثوقة على أندرويد).
-// لا يُمسح: الجلسة، الجهاز، الترخيص، سجل الحظر، إعدادات اللغة والمظهر، وعلامة وضع التجربة نفسها.
+// وعند ذهاب التطبيق إلى الخلفية (وهي نقطة الخروج الوحيدة الموثوقة على أندرويد)،
+// ثم تُضاف المنتجات النموذجية ليتمكن العميل من البيع التجريبي محلياً.
+// لا يُمسح: الجلسة، الجهاز، الترخيص، سجل الحظر، اللغة، موافقة الخصوصية، وعلامة وضع التجربة نفسها.
 import { Capacitor } from '@capacitor/core';
 import { isLocalOnlyMode, LOCAL_MODE_EVENT } from '@/lib/subscription-lock';
-import { demoProducts } from '@/lib/demo-data';
 import { saveProducts } from '@/lib/products-store';
+import { saveCategories } from '@/lib/categories-store';
+import { buildTrialCatalog, buildTrialCategories, applyTrialDisplayDefaults } from '@/lib/trial-sample-catalog';
 
 const PENDING_WIPE_KEY = 'hp_trial_wipe_pending';
+const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
+const PRODUCTS_CACHE_KEY = 'hyperpos_products_cache';
 
 /** بادئات تُمسح من localStorage (بيانات الأعمال والكاش والطابور والتشخيص) */
 const WIPE_PREFIXES = ['hyperpos_', 'flowpos_', 'fps_swr_', 'hp_sync_', 'hp_audit_', 'hp_offline_', 'hp_radar_'];
@@ -99,46 +103,71 @@ export async function wipeTrialDatabases(): Promise<void> {
   }
 }
 
-const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
-
-/**
- * منتجات نموذجية لوضع التجربة حتى يتمكن العميل من إجراء بيع تجريبي.
- * تُضاف فقط إذا كان المخزن فارغاً، فلا تُكرَّر ولا تمسح ما أضافه العميل خلال الجلسة.
- */
-export async function seedTrialSampleProducts(): Promise<void> {
-  if (!isLocalOnlyMode()) return;
+/** هل يلزم إعادة تعبئة الكتالوج؟ (المخزن فارغ، أو ما زال فيه نماذج الإصدار القديم) */
+function trialCatalogNeeded(): boolean {
   try {
     const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
     const current = raw ? JSON.parse(raw) : [];
-    if (Array.isArray(current) && current.length > 0) return;
+    if (!Array.isArray(current) || current.length === 0) return true;
+    return current.every((p) => typeof p?.id === 'string' && p.id.startsWith('prod_'));
   } catch {
-    /* بيانات تالفة: نعيد التعبئة بالنماذج */
-  }
-
-  saveProducts(demoProducts);
-  try {
-    const { saveProductsToIDB } = await import('@/lib/indexeddb-cache');
-    await saveProductsToIDB(demoProducts);
-  } catch (err) {
-    console.warn('[TrialWipe] Sample products IDB save failed:', err);
+    return true;
   }
 }
 
-/** يُستدعى عند الإقلاع: إن كان وضع التجربة مفعّلاً تُمسح البيانات قبل رسم الواجهة، ثم تُضاف النماذج. */
+/** الجزء المتزامن من التعبئة: يكتب المنتجات والتصنيفات إلى localStorage قبل رسم الواجهة */
+function seedTrialLocalStorage(): void {
+  const catalog = buildTrialCatalog();
+  saveProducts(catalog);
+  try {
+    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ products: catalog, timestamp: Date.now() }));
+  } catch {
+    /* noop */
+  }
+  saveCategories(buildTrialCategories());
+}
+
+/** الجزء غير المتزامن: IndexedDB أو SQLite حسب المنصة */
+async function seedTrialDatabase(): Promise<void> {
+  try {
+    const { saveProductsToIDB } = await import('@/lib/indexeddb-cache');
+    await saveProductsToIDB(buildTrialCatalog());
+  } catch (err) {
+    console.warn('[TrialWipe] Sample products DB save failed:', err);
+  }
+}
+
+/** يضيف المنتجات النموذجية إذا كان المخزن فارغاً، فلا يكرّرها ولا يمسح ما أضافه العميل خلال الجلسة. */
+export async function seedTrialSampleProducts(): Promise<void> {
+  if (!isLocalOnlyMode() || !trialCatalogNeeded()) return;
+  seedTrialLocalStorage();
+  await seedTrialDatabase();
+}
+
+/** يُستدعى عند الإقلاع: إن كان وضع التجربة مفعّلاً تُمسح البيانات ثم تُعاد تعبئتها قبل رسم الواجهة. */
 export async function wipeTrialDataOnBoot(): Promise<void> {
   if (!isLocalOnlyMode()) return;
   wipeTrialLocalStorage();
+  applyTrialDisplayDefaults();
+  seedTrialLocalStorage();
   await wipeTrialDatabases();
-  await seedTrialSampleProducts();
+  await seedTrialDatabase();
 }
 
 /**
- * على أندرويد في وضع التجربة: عند ذهاب التطبيق إلى الخلفية تُمسح البيانات فوراً،
- * وعند العودة تُعاد تحميل الواجهة إن كان المسح قد حدث.
+ * - عند تفعيل وضع التجربة (بعد بدء الفترة): تُضبط الواجهة وتُضاف النماذج، ويُعاد التحميل إن تغيّر الشكل.
+ * - على أندرويد في وضع التجربة: عند ذهاب التطبيق إلى الخلفية تُمسح البيانات فوراً،
+ *   وعند العودة تُعاد تحميل الواجهة إن كان المسح قد حدث.
  */
 export function initTrialLifecycle(): void {
-  // عند تفعيل وضع التجربة (بعد بدء الفترة التجريبية) تُضاف المنتجات النموذجية فوراً
-  window.addEventListener(LOCAL_MODE_EVENT, () => { void seedTrialSampleProducts(); });
+  window.addEventListener(LOCAL_MODE_EVENT, () => {
+    if (!isLocalOnlyMode()) return;
+    const displayChanged = applyTrialDisplayDefaults();
+    void seedTrialSampleProducts().finally(() => {
+      // الثيم يُقرأ عند الإقلاع، فإن تغيّر نعيد التحميل ليظهر اللون البرتقالي
+      if (displayChanged) window.location.reload();
+    });
+  });
 
   if (!Capacitor.isNativePlatform()) return;
 

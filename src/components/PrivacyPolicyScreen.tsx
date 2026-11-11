@@ -282,9 +282,7 @@ function KurdishTerms() {
 const AVAILABLE_LANGUAGES: { code: Language; label: string; flag: string }[] = [
   { code: 'ar', label: 'العربية', flag: '🇸🇦' },
   { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
-  { code: 'fa', label: 'فارسی', flag: '🇮🇷' },
-  { code: 'ku', label: 'کوردی', flag: '☀️' },
+  // التركية والفارسية والكردية معطّلة مؤقتاً حتى تكتمل ترجمتها
 ];
 
 export function PrivacyPolicyScreen({ onAccept }: { onAccept: () => void }) {

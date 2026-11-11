@@ -11,10 +11,14 @@ export interface LanguageInfo {
 export const languages: LanguageInfo[] = [
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', direction: 'rtl' },
   { code: 'en', name: 'English', nativeName: 'English', direction: 'ltr' },
-  { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', direction: 'ltr' },
-  { code: 'fa', name: 'Persian', nativeName: 'فارسی', direction: 'rtl' },
-  { code: 'ku', name: 'Kurdish', nativeName: 'کوردی', direction: 'rtl' },
+  // التركية والفارسية والكردية معطّلة مؤقتاً حتى تكتمل ترجمتها (ملفات الترجمة محفوظة، أعد السطور لتفعيلها):
+  // { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', direction: 'ltr' },
+  // { code: 'fa', name: 'Persian', nativeName: 'فارسی', direction: 'rtl' },
+  // { code: 'ku', name: 'Kurdish', nativeName: 'کوردی', direction: 'rtl' },
 ];
+
+/** اللغات المفعّلة حالياً: أي لغة محفوظة خارجها (من إصدار سابق) تعود إلى العربية */
+export const ENABLED_LANGUAGE_CODES: Language[] = ['ar', 'en'];
 
 
 import ar from './locales/ar';
@@ -60,9 +64,8 @@ export function getCurrentLanguage(): Language {
   if (typeof window === 'undefined') return 'ar';
   try {
     const stored = localStorage.getItem('hyperpos_language');
-    const validLangs: Language[] = ['ar', 'en', 'tr', 'fa', 'ku'];
-    if (stored && validLangs.includes(stored as Language)) return stored as Language;
-    // Always default to 'ar' on first launch and persist it immediately
+    if (stored && ENABLED_LANGUAGE_CODES.includes(stored as Language)) return stored as Language;
+    // أول تشغيل أو لغة معطّلة محفوظة سابقاً: العربية وتُحفظ فوراً
     localStorage.setItem('hyperpos_language', 'ar');
   } catch {}
   return 'ar';

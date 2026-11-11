@@ -28,9 +28,7 @@ export function mapSystemLanguage(systemLang: string): 'ar' | 'en' | 'tr' | 'fa'
   // Map to supported languages
   if (baseLang === 'ar') return 'ar';
   if (baseLang === 'en') return 'en';
-  if (baseLang === 'tr') return 'tr';
-  if (baseLang === 'fa') return 'fa';
-  if (baseLang === 'ku' || baseLang === 'ckb') return 'ku';
+  // التركية والفارسية والكردية معطّلة مؤقتاً: تعود إلى العربية
   return 'ar'; // Default to Arabic for FlowPOS
 }
 
@@ -58,7 +56,7 @@ export function setupSystemLanguageListener(callback: (lang: string) => void) {
  */
 export async function initializeLanguage(userPreference: string | null): Promise<'ar' | 'en' | 'tr' | 'fa' | 'ku'> {
   // Use user's explicit preference if valid
-  const validLangs = ['ar', 'en', 'tr', 'fa', 'ku'] as const;
+  const validLangs = ['ar', 'en'] as const;
   if (userPreference && validLangs.includes(userPreference as any)) {
     return userPreference as any;
   }

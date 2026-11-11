@@ -10,6 +10,7 @@ import { initPerformanceMode } from "./lib/performance-mode";
 import App from "./App.tsx";
 import "./index.css";
 import { initErrorRadar, captureError } from "./lib/error-radar";
+import { wipeTrialDataOnBoot, initTrialLifecycle } from "./lib/trial-wipe";
 
 // Initialize Error Radar listeners as early as possible
 initErrorRadar();
@@ -151,4 +152,10 @@ const languageReady = Promise.race([
   loadLanguage(getCurrentLanguage()),
   new Promise<void>(resolve => setTimeout(resolve, 1500)),
 ]);
-languageReady.then(renderApp, renderApp);
+// وضع التجربة المحلي: يُمسح كل شيء قبل الرسم (بحد أقصى 1.5 ثانية حتى لا يتأخر الإقلاع)
+const trialWipeReady = Promise.race([
+  wipeTrialDataOnBoot().catch(() => {}),
+  new Promise<void>(resolve => setTimeout(resolve, 1500)),
+]);
+initTrialLifecycle();
+Promise.all([languageReady, trialWipeReady]).then(renderApp, renderApp);

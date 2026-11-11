@@ -54,7 +54,9 @@ jobs:
           cache: 'npm'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        # مثبّت على v6.3.0: الإصدارات الأحدث تضيف تنبيه «Gradle out of date» لأي إصدار ليس الأحدث،
+        # والأحدث (9.6+) غير متوافق مع Android Gradle Plugin 8 الذي تحتاجه إضافات Capacitor حالياً
+        uses: gradle/actions/setup-gradle@v6.3.0
         with:
           cache-read-only: false
 

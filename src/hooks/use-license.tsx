@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './use-auth';
 import { recordServerContact, getOfflineStatus, isDataEncrypted, decryptLocalData, checkAndEnforceProtection } from '@/lib/offline-protection';
 import { fetchOfflineLease, getOfflineLeaseStatus, clearOfflineLease } from '@/lib/offline-lease';
-import { setLocalOnlyMode } from '@/lib/subscription-lock';
+import { setLocalOnlyMode, setCloudWriteBlocked } from '@/lib/subscription-lock';
 import { toast } from '@/lib/sonner-bridge';
 
 export interface LicenseState {
@@ -446,6 +446,14 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     if (state.isLoading) return;
     setLocalOnlyMode(!!state.isTrial && !!state.hasLicense && state.role !== 'boss');
   }, [state.isLoading, state.isTrial, state.hasLicense, state.role]);
+
+  // حاجز الكتابة السحابية: مسموح فقط لمالك/كاشير برخصة مدفوعة فعّالة، أو للـ Boss
+  useEffect(() => {
+    if (state.isLoading) return;
+    const notExpired = !state.expiresAt || new Date(state.expiresAt).getTime() > Date.now();
+    const paidActive = state.role === 'boss' || (state.hasLicense && !state.isTrial && state.isValid && notExpired);
+    setCloudWriteBlocked(!paidActive);
+  }, [state.isLoading, state.hasLicense, state.isTrial, state.isValid, state.expiresAt, state.role]);
 
   return (
     <LicenseContext.Provider value={{ ...state, checkLicense, activateCode, startTrial }}>

@@ -9,6 +9,7 @@ import { secureSet, secureGet, secureRemove } from './secure-storage';
 import { emitEvent, EVENTS } from './events';
 import { addToHistory, updateHistoryStatus } from './sync-history';
 import { isGuestDemoMode } from './demo-data';
+import { isCloudWriteBlocked } from './subscription-lock';
 import { isOperationCancelled } from './cancellation-registry';
 
 // Storage key
@@ -465,6 +466,12 @@ export const processQueue = async (
     return { processed: 0, failed: 0 };
   }
 
+  // الحساب غير مدفوع (تجربة/منتهٍ/غير مفعّل): لا إرسال، والعمليات تبقى في الطابور كما هي
+  if (isCloudWriteBlocked()) {
+    console.log('[SyncQueue] Cloud writes blocked (no active paid subscription) - queue kept intact');
+    return { processed: 0, failed: 0 };
+  }
+
   // لا توجد إنترنت فعلي: نؤجل الطابور كاملاً دون استهلاك أي محاولة
   if (syncNetworkHooks?.isOffline()) {
     console.log('[SyncQueue] Internet unreachable - deferring queue without counting retries');
@@ -559,6 +566,13 @@ export const processQueue = async (
         const errorMessage = extractErrorMessage(error);
         if (isNetworkSyncError(errorMessage)) {
           deferForNetwork(operation);
+          break;
+        }
+        // رفض الخادم بسبب الاشتراك (trigger a_paid_write_gate): تأجيل بلا احتساب محاولة، وإيقاف الدفعة
+        if (errorMessage.toLowerCase().includes('subscription_required')) {
+          console.warn(`[SyncQueue] Subscription required - deferring ${operation.id} without counting a retry`);
+          updateOperationStatus(operation.id, 'pending');
+          updateHistoryStatus(operation.id, 'pending', 'بانتظار تفعيل الاشتراك');
           break;
         }
         const terminal = isTerminalSyncError(errorMessage);

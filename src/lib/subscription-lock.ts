@@ -14,6 +14,27 @@ export function isLocalOnlyMode(): boolean {
   }
 }
 
+// حاجز الكتابة السحابية: يحجب الطابور عن الإرسال للحسابات غير المدفوعة.
+// الحجب الحقيقي على السيرفر (trigger a_paid_write_gate)، وهذا الحاجز يمنع إرسال عمليات مرفوضة سلفاً
+// ويُبقيها في الطابور دون احتساب أي محاولة فاشلة.
+const CLOUD_WRITE_BLOCKED_KEY = 'hp_cloud_write_blocked';
+
+export function isCloudWriteBlocked(): boolean {
+  try {
+    return localStorage.getItem(CLOUD_WRITE_BLOCKED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setCloudWriteBlocked(blocked: boolean): void {
+  try {
+    localStorage.setItem(CLOUD_WRITE_BLOCKED_KEY, blocked ? '1' : '0');
+  } catch {
+    /* التخزين غير متاح: نتجاهل */
+  }
+}
+
 export function setLocalOnlyMode(enabled: boolean): void {
   try {
     const previous = isLocalOnlyMode();

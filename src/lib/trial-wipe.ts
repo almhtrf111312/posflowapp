@@ -1,7 +1,6 @@
 // مسح بيانات وضع التجربة المحلي وإعادة تعبئتها بالنماذج.
-// وضع التجربة لا يحتفظ بأي بيانات بين الجلسات: تُمسح عند الإقلاع (قبل الرسم)،
-// وعند ذهاب التطبيق إلى الخلفية (وهي نقطة الخروج الوحيدة الموثوقة على أندرويد)،
-// ثم تُضاف المنتجات النموذجية ليتمكن العميل من البيع التجريبي محلياً.
+// بيانات التجربة تبقى على الجهاز 24 ساعة من بدايتها ثم تُمسح كلها (دون رفع شيء للسحابة)،
+// وتُفحص المدة عند الإقلاع وعند العودة إلى التطبيق. بعد المسح تُضاف المنتجات النموذجية من جديد.
 // لا يُمسح: الجلسة، الجهاز، الترخيص، سجل الحظر، اللغة، موافقة الخصوصية، وعلامة وضع التجربة نفسها.
 import { Capacitor } from '@capacitor/core';
 import { isLocalOnlyMode, LOCAL_MODE_EVENT } from '@/lib/subscription-lock';
@@ -9,7 +8,8 @@ import { saveProducts } from '@/lib/products-store';
 import { saveCategories } from '@/lib/categories-store';
 import { buildTrialCatalog, buildTrialCategories, applyTrialDisplayDefaults } from '@/lib/trial-sample-catalog';
 
-const PENDING_WIPE_KEY = 'hp_trial_wipe_pending';
+const WINDOW_START_KEY = 'hp_trial_window_start';
+const TRIAL_DATA_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
 const PRODUCTS_CACHE_KEY = 'hyperpos_products_cache';
 
@@ -137,35 +137,72 @@ async function seedTrialDatabase(): Promise<void> {
   }
 }
 
-/** يضيف المنتجات النموذجية إذا كان المخزن فارغاً، فلا يكرّرها ولا يمسح ما أضافه العميل خلال الجلسة. */
-export async function seedTrialSampleProducts(): Promise<void> {
-  if (!isLocalOnlyMode() || !trialCatalogNeeded()) return;
-  seedTrialLocalStorage();
-  await seedTrialDatabase();
+function readWindowStart(): number | null {
+  try {
+    const value = Number(localStorage.getItem(WINDOW_START_KEY));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
 }
 
-/** يُستدعى عند الإقلاع: إن كان وضع التجربة مفعّلاً تُمسح البيانات ثم تُعاد تعبئتها قبل رسم الواجهة. */
-export async function wipeTrialDataOnBoot(): Promise<void> {
-  if (!isLocalOnlyMode()) return;
-  wipeTrialLocalStorage();
-  applyTrialDisplayDefaults();
-  seedTrialLocalStorage();
-  await wipeTrialDatabases();
-  await seedTrialDatabase();
+function writeWindowStart(now: number): void {
+  try {
+    localStorage.setItem(WINDOW_START_KEY, String(now));
+  } catch {
+    /* noop */
+  }
+}
+
+/** انتهت نافذة الـ24 ساعة؟ (ساعة مرتدّة إلى الخلف تُعامل كمنتهية حتى لا تُطال المدة) */
+function isTrialWindowExpired(now: number = Date.now()): boolean {
+  const start = readWindowStart();
+  if (start === null) return false;
+  const age = now - start;
+  return age >= TRIAL_DATA_WINDOW_MS || age < 0;
 }
 
 /**
- * - عند تفعيل وضع التجربة (بعد بدء الفترة): تُضبط الواجهة وتُضاف النماذج، ويُعاد التحميل إن تغيّر الشكل.
- * - على أندرويد في وضع التجربة: عند ذهاب التطبيق إلى الخلفية تُمسح البيانات فوراً،
- *   وعند العودة تُعاد تحميل الواجهة إن كان المسح قد حدث.
+ * تحضير جلسة التجربة: يبدأ النافذة عند أول مرة، ويمسح كل شيء إذا انتهت النافذة، ثم يضبط الشكل ويعبّئ النماذج عند الحاجة.
+ * يرجع true إذا تغيّر شكل الواجهة (ويلزم إعادة تحميل إن كان الحدث أثناء الجلسة).
+ */
+async function prepareTrialSession(): Promise<boolean> {
+  const now = Date.now();
+  if (readWindowStart() === null) writeWindowStart(now);
+
+  if (isTrialWindowExpired(now)) {
+    wipeTrialLocalStorage();
+    writeWindowStart(now);
+    const displayChanged = applyTrialDisplayDefaults();
+    seedTrialLocalStorage();
+    await wipeTrialDatabases();
+    await seedTrialDatabase();
+    return displayChanged;
+  }
+
+  const displayChanged = applyTrialDisplayDefaults();
+  if (trialCatalogNeeded()) {
+    seedTrialLocalStorage();
+    await seedTrialDatabase();
+  }
+  return displayChanged;
+}
+
+/** يُستدعى عند الإقلاع قبل الرسم: في وضع التجربة تُفحص النافذة وتُحضَّر الجلسة. */
+export async function wipeTrialDataOnBoot(): Promise<void> {
+  if (!isLocalOnlyMode()) return;
+  await prepareTrialSession();
+}
+
+/**
+ * - عند تفعيل وضع التجربة (بعد بدء الفترة): تُحضَّر الجلسة، ويُعاد التحميل إن تغيّر شكل الواجهة.
+ * - على أندرويد: عند العودة إلى التطبيق تُعاد تحميل الواجهة إن انتهت نافذة الـ24 ساعة ليُمسح كل شيء.
  */
 export function initTrialLifecycle(): void {
   window.addEventListener(LOCAL_MODE_EVENT, () => {
     if (!isLocalOnlyMode()) return;
-    const displayChanged = applyTrialDisplayDefaults();
-    void seedTrialSampleProducts().finally(() => {
-      // الثيم يُقرأ عند الإقلاع، فإن تغيّر نعيد التحميل ليظهر اللون البرتقالي
-      if (displayChanged) window.location.reload();
+    void prepareTrialSession().then((changed) => {
+      if (changed) window.location.reload();
     });
   });
 
@@ -173,19 +210,8 @@ export function initTrialLifecycle(): void {
 
   import('@capacitor/app')
     .then(({ App }) => {
-      App.addListener('pause', () => {
-        if (!isLocalOnlyMode()) return;
-        try { localStorage.setItem(PENDING_WIPE_KEY, '1'); } catch { /* noop */ }
-        wipeTrialLocalStorage();
-        void wipeTrialDatabases();
-      });
-
       App.addListener('resume', () => {
-        let pending = false;
-        try { pending = localStorage.getItem(PENDING_WIPE_KEY) === '1'; } catch { /* noop */ }
-        if (!pending) return;
-        try { localStorage.removeItem(PENDING_WIPE_KEY); } catch { /* noop */ }
-        window.location.reload();
+        if (isLocalOnlyMode() && isTrialWindowExpired()) window.location.reload();
       });
     })
     .catch((err) => console.warn('[TrialWipe] Lifecycle listener failed:', err));

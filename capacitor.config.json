@@ -4,7 +4,8 @@
   "webDir": "dist",
   "android": {
     "allowMixedContent": true,
-    "webContentsDebuggingEnabled": false
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#f4f6fb"
   },
   "server": {
     "androidScheme": "https",
@@ -19,5 +20,6 @@
     "Filesystem": {
       "androidExternalStorage": true
     }
-  }
+  },
+  "backgroundColor": "#f4f6fb"
 }

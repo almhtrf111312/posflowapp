@@ -13,7 +13,7 @@
           }
           document.documentElement.setAttribute('data-font', font);
           var lang = localStorage.getItem('hyperpos_language');
-          if (!lang || !['ar', 'en', 'tr', 'fa', 'ku'].includes(lang)) {
+          if (!lang || !['ar', 'en'].includes(lang)) {
             localStorage.setItem('hyperpos_language', 'ar');
             lang = 'ar';
           }
@@ -42,8 +42,16 @@
           document.documentElement.classList.remove('rtl', 'ltr');
           document.documentElement.classList.add(isRtl ? 'rtl' : 'ltr');
         } catch (e) {}
+        // لون الخلفية قبل أول رسم: آخر لون خلفية طبّقه الثيم (يمنع الوميض الأسود/الأبيض عند الإقلاع)
+        try {
+          var bootBg = localStorage.getItem('hp_boot_bg');
+          if (bootBg) document.documentElement.style.setProperty('--boot-bg', bootBg);
+        } catch (e2) {}
       })();
     </script>
+    <style>
+      html, body { background-color: var(--boot-bg, #f4f6fb); }
+    </style>
     <title>FlowPOS Pro - نظام إدارة محاسبي متكامل</title>
     
     <!-- Font Preloads (font-display: swap & zero FOIT) -->
@@ -55,7 +63,7 @@
     <link rel="apple-touch-icon" href="/app-icon.png" />
     <meta name="description" content="نظام إدارة محاسبي متكامل لمحلات الهواتف والصيانة والمحلات التجارية" />
     <meta name="author" content="FlowPOS Pro" />
-    <meta name="theme-color" content="#1a1a2e" />
+    <meta name="theme-color" content="#f4f6fb" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
@@ -69,7 +77,7 @@
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
   </head>
 
-  <body style="background-color: #0a0a0a; color: #fafafa;">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

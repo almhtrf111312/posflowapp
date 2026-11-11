@@ -183,7 +183,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={cn(
-          "min-h-screen overflow-x-hidden max-w-full transition-all duration-300 pt-4",
+          "min-h-screen overflow-x-hidden max-w-full pt-4",
           isMobile 
             ? "m-0" 
             : isTablet 

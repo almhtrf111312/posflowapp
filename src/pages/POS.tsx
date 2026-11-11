@@ -2286,6 +2286,8 @@ export default function POS() {
 
             <ProductGrid
 
+              isLoading={isLoadingProducts}
+
               products={products}
 
               categories={categories}

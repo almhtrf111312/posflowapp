@@ -11,9 +11,13 @@ import App from "./App.tsx";
 import "./index.css";
 import { initErrorRadar, captureError } from "./lib/error-radar";
 import { wipeTrialDataOnBoot, initTrialLifecycle } from "./lib/trial-wipe";
+import { applyStoredThemeEarly } from "./hooks/use-theme";
 
 // Initialize Error Radar listeners as early as possible
 initErrorRadar();
+
+// الثيم يُطبَّق قبل أي رسم (كان يُطبَّق بعد أول إطار فيظهر وميض داكن ثم فاتح)
+applyStoredThemeEarly();
 
 // Initialize font, scale, performance mode, and language layout immediately on startup
 applyAppFontToDOM(getStoredAppFont());
@@ -158,4 +162,5 @@ const trialWipeReady = Promise.race([
   new Promise<void>(resolve => setTimeout(resolve, 1500)),
 ]);
 initTrialLifecycle();
-Promise.all([languageReady, trialWipeReady]).then(renderApp, renderApp);
+const renderWithTheme = () => { applyStoredThemeEarly(); renderApp(); };
+Promise.all([languageReady, trialWipeReady]).then(renderWithTheme, renderWithTheme);

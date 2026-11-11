@@ -78,12 +78,19 @@ const Reports = lazy(() => import('@/pages/Reports'));
 const Purchases = lazy(() => import('@/pages/Purchases'));
 const Appearance = lazy(() => import('@/pages/Appearance'));
 
-const TabFallback = () => (
-  <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] gap-3 p-4">
-    <Loader2 className="w-8 h-8 animate-spin text-primary opacity-80" />
-    <span className="text-xs text-muted-foreground font-medium">جاري تجهيز الشاشة...</span>
-  </div>
-);
+// المؤشر يظهر فقط إذا طال التحميل: الشاشات المحمّلة مسبقاً تفتح دون وميض مؤشر
+const TabFallback = () => {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), 400);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] gap-3 p-4">
+      {show && <Loader2 className="w-8 h-8 animate-spin text-primary opacity-80" />}
+    </div>
+  );
+};
 
 /**
  * الحد الأقصى لعدد التبويبات المحتفظ بها في الذاكرة الحية RAM في نفس الوقت
@@ -129,7 +136,12 @@ export const NativeTabHost = memo(() => {
     }
   }, [user?.id]);
 
-  const mountedTabs = useMemo(() => new Set(tabLRU), [tabLRU]);
+  // التبويب النشط يُركَّب في نفس الإطار (كان يُضاف بعد أول رسم فتظهر شاشة بيضاء فارغة للحظة)
+  const mountedTabs = useMemo(() => {
+    const set = new Set(tabLRU);
+    if (activeTab) set.add(activeTab);
+    return set;
+  }, [tabLRU, activeTab]);
 
   return (
     <div className="w-full flex-1 flex flex-col relative min-h-[calc(100vh-4rem)]">

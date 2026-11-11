@@ -45,7 +45,9 @@ import NotFound from "./pages/NotFound";
 import { FeatureErrorBoundary } from "@/components/debug/FeatureErrorBoundary";
 
 // Lazy-loaded heavy pages to keep the initial startup bundle ultra-fast
-const POS = lazy(() => import("./pages/POS"));
+// نقطة البيع هي الشاشة الأولى: يبدأ تحميلها فوراً مع الإقلاع بدلاً من انتظار أول رسم (يلغي شاشة "جاري تحميل الصفحة")
+const posModule = import("./pages/POS");
+const POS = lazy(() => posModule);
 const Products = lazy(() => import("./pages/Products"));
 const Customers = lazy(() => import("./pages/Customers"));
 const Services = lazy(() => import("./pages/Services"));
@@ -168,7 +170,7 @@ const AppContent = () => {
 
       // على الأجهزة الضعيفة (الوضع الخفيف) نجهّز الشاشات الثلاث الأكثر استخداماً فقط
       const targets = resolveEffectivePerformanceMode() === 'lite'
-        ? prioritizedTargets.slice(0, 3)
+        ? prioritizedTargets.slice(0, 5)
         : prioritizedTargets;
 
       // شاشة واحدة في كل فترة خمول للمعالج (بدلاً من شاشة كل 350ms) حتى لا يتقطع التطبيق في ثوانيه الأولى
@@ -179,10 +181,10 @@ const AppContent = () => {
           if (cancelled) return;
           try { targets[index]().catch(() => {}); } catch {}
           index++;
-          warmTimer = setTimeout(scheduleNext, 1500);
+          warmTimer = setTimeout(scheduleNext, 250);
         };
         if ('requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(run, { timeout: 5000 });
+          (window as any).requestIdleCallback(run, { timeout: 1500 });
         } else {
           warmTimer = setTimeout(run, 500);
         }
@@ -193,7 +195,7 @@ const AppContent = () => {
     let cancelled = false;
     let warmTimer: ReturnType<typeof setTimeout> | undefined;
     // البدء بعد استقرار الإقلاع بدلاً من التنافس مع الرسم الأول
-    const startTimer = setTimeout(warmUpRoutes, 4000);
+    const startTimer = setTimeout(warmUpRoutes, 1200);
     return () => {
       cancelled = true;
       clearTimeout(startTimer);
@@ -461,12 +463,19 @@ const AppContent = () => {
     }
   }
 
-const PageFallback = () => (
-  <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] gap-3 p-4">
-    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-    <span className="text-xs text-muted-foreground font-medium">جاري تحميل الصفحة...</span>
-  </div>
-);
+// المؤشر يظهر فقط إذا طال التحميل: الشاشات المحمّلة مسبقاً تفتح دون وميض مؤشر
+const PageFallback = () => {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShow(true), 400);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] gap-3 p-4">
+      {show && <Loader2 className="w-8 h-8 animate-spin text-primary" />}
+    </div>
+  );
+};
 
   // لا يتم تطبيق inert إلا إذا كان المستخدم مسجلاً فعلياً والقفل أو تعيين الـ PIN نشط
   const isPublicAuthRoute = ['/login', '/signup', '/reset-password', '/contact-developer', '/contact'].includes(location.pathname);

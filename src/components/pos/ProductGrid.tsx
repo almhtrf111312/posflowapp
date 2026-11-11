@@ -49,6 +49,8 @@ interface ProductGridProps {
   onAddToCart?: (product: Product, quantity: number) => void;
   onBarcodeScan?: (barcode: string) => void;
   selectedCurrency?: { code: string; symbol: string; rate: number };
+  /** المنتجات ما زالت تُحمَّل من التخزين المحلي: تُعرض بطاقات هيكلية بدلاً من حالة الفراغ */
+  isLoading?: boolean;
 }
 
 type ViewMode = 'grid' | 'dense' | 'list' | 'compact';
@@ -64,6 +66,7 @@ export const ProductGrid = memo(function ProductGrid({
   onAddToCart,
   onBarcodeScan,
   selectedCurrency,
+  isLoading = false,
 }: ProductGridProps) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -429,7 +432,24 @@ export const ProductGrid = memo(function ProductGrid({
           </div>
         )}
 
-        {filteredProducts.length === 0 && (
+        {filteredProducts.length === 0 && isLoading && (
+          <div
+            className={viewMode === 'dense'
+              ? 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-1.5 sm:gap-2'
+              : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3'}
+            aria-hidden="true"
+          >
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="rounded-2xl bg-card border border-border/60 p-2">
+                <div className="aspect-square rounded-xl bg-muted/60" />
+                <div className="mt-2 h-3 rounded bg-muted/60" />
+                <div className="mt-1.5 h-3 w-1/2 rounded bg-muted/40" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {filteredProducts.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center h-40 text-muted-foreground fade-in">
             <Package className="w-12 h-12 mb-3 opacity-20" />
             <p className="font-medium text-sm">{t('common.all')}</p>

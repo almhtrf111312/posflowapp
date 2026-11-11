@@ -357,6 +357,13 @@ export function applyTheme(mode: ThemeMode, color: ThemeColor) {
     root.classList.remove('dark');
     root.classList.add('light');
   }
+
+  // يُقرأ في index.html قبل أول رسم حتى تظهر الخلفية بلون الثيم من أول لحظة
+  try {
+    const bootBg = `hsl(${colors.background})`;
+    localStorage.setItem('hp_boot_bg', bootBg);
+    root.style.setProperty('--boot-bg', bootBg);
+  } catch { /* noop */ }
 }
 
 // Default theme for new users: Light mode with Blue color
@@ -424,12 +431,44 @@ export function applyBlurTheme(enabled: boolean, mode: ThemeMode, transparency: 
   }
 }
 
+interface StoredTheme { mode: ThemeMode; color: ThemeColor; blur: boolean; transparency: number; style: ThemeStyle }
+
+/** يقرأ الثيم المحفوظ بشكل متزامن (أو الافتراضي) */
+function readStoredTheme(): StoredTheme {
+  const fallback: StoredTheme = { mode: DEFAULT_MODE, color: DEFAULT_COLOR, blur: DEFAULT_BLUR, transparency: DEFAULT_TRANSPARENCY, style: DEFAULT_STYLE };
+  try {
+    const saved = localStorage.getItem(getThemeStorageKey()) || localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    if (!saved) return fallback;
+    const parsed = JSON.parse(saved);
+    return {
+      mode: parsed.mode === 'dark' ? 'dark' : parsed.mode === 'light' ? 'light' : DEFAULT_MODE,
+      color: parsed.color && themeColors[parsed.color as ThemeColor] ? parsed.color : DEFAULT_COLOR,
+      blur: parsed.blur ?? DEFAULT_BLUR,
+      transparency: parsed.transparency ?? DEFAULT_TRANSPARENCY,
+      style: (parsed.style === 'flowglass' || parsed.style === 'xiaomi') ? 'flowglass' : DEFAULT_STYLE,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/** يُستدعى قبل رسم React: يطبّق الثيم المحفوظ فوراً حتى لا يظهر أول إطار بألوان الوضع الداكن الافتراضية */
+export function applyStoredThemeEarly(): void {
+  try {
+    const theme = readStoredTheme();
+    applyTheme(theme.mode, theme.color);
+    applyBlurTheme(theme.blur, theme.mode, theme.transparency);
+    applyThemeStyle(theme.style);
+  } catch { /* noop */ }
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>(DEFAULT_MODE);
-  const [color, setColorState] = useState<ThemeColor>(DEFAULT_COLOR);
-  const [blurEnabled, setBlurEnabledState] = useState<boolean>(DEFAULT_BLUR);
-  const [transparencyLevel, setTransparencyLevelState] = useState<number>(DEFAULT_TRANSPARENCY);
-  const [themeStyle, setThemeStyleState] = useState<ThemeStyle>(DEFAULT_STYLE);
+  const [initialTheme] = useState(readStoredTheme);
+  const [mode, setModeState] = useState<ThemeMode>(initialTheme.mode);
+  const [color, setColorState] = useState<ThemeColor>(initialTheme.color);
+  const [blurEnabled, setBlurEnabledState] = useState<boolean>(initialTheme.blur);
+  const [transparencyLevel, setTransparencyLevelState] = useState<number>(initialTheme.transparency);
+  const [themeStyle, setThemeStyleState] = useState<ThemeStyle>(initialTheme.style);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // ✅ Step 1: Load from platform-isolated localStorage IMMEDIATELY (synchronous, no blocking)

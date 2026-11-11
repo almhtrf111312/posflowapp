@@ -1,4 +1,5 @@
 import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalOnlyMode } from '@/lib/subscription-lock';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
 import { addExpenseCloud } from '@/lib/cloud/expenses-cloud';
@@ -1000,7 +1001,7 @@ export function CartPanel({
         duration: 4000,
       });
 
-      startSync('جاري رفع الفاتورة للسحابة...', false);
+      startSync(isLocalOnlyMode() ? 'جاري حفظ الفاتورة على الجهاز...' : 'جاري رفع الفاتورة للسحابة...', false);
 
       // ✅ تشغيل المزامنة الفورية بالخلفية بهدوء لتحديث المؤشر دون إشعارات مكررة
       (async () => {

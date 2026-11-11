@@ -35,6 +35,7 @@ import { CloudSyncContext } from '@/providers/CloudSyncProvider';
 import { getQueueStatus, SyncQueueStatus } from '@/lib/sync-queue';
 import { loadHistory, SyncHistoryItem, SYNC_HISTORY_UPDATED, cleanupSyncedItems } from '@/lib/sync-history';
 import { EVENTS } from '@/lib/events';
+import { isLocalOnlyMode } from '@/lib/subscription-lock';
 import { toast } from '@/lib/sonner-bridge';
 import { StuckOperationsList } from './StuckOperationsList';
 
@@ -116,6 +117,7 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
   const hasIssues = queueStatus.failedCount > 0;
 
   const getStatus = () => {
+    if (isLocalOnlyMode()) return 'localOnly';
     if (!isOnline) return 'offline';
     if (isOnline && !hasInternetAccess) return 'noInternet';
     if (isPaused) return 'paused';
@@ -133,6 +135,12 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
       color: 'text-destructive',
       label: t('sync.offline') || 'غير متصل بالإنترنت',
       animate: 'animate-pulse',
+    },
+    localOnly: {
+      icon: CloudOff,
+      color: 'text-muted-foreground',
+      label: isRTL ? 'وضع تجريبي: الحفظ على الجهاز فقط' : 'Trial: saved on this device only',
+      animate: '',
     },
     noInternet: {
       icon: WifiOff,

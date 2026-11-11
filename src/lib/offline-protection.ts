@@ -5,6 +5,7 @@
  */
 
 import { encryptBackup, decryptBackup } from './backup-encryption';
+import { isLocalOnlyMode } from './subscription-lock';
 import { loadProductsFromIDB, saveProductsToIDB, clearProductsIDB } from './indexeddb-cache';
 
 const WARNING_DAYS = 5;
@@ -178,6 +179,7 @@ export const decryptLocalData = async (): Promise<boolean> => {
 /** Check and enforce offline protection (called periodically) */
 export const checkAndEnforceProtection = async (): Promise<void> => {
   if (isDataEncrypted()) return; // Already encrypted
+  if (isLocalOnlyMode()) return; // وضع التجربة المحلي: لا قفل 30 يوم (البيانات مؤقتة أصلاً)
 
   const { shouldEncrypt } = getOfflineStatus();
   if (shouldEncrypt) {

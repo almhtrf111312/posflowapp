@@ -391,7 +391,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     // ✅ في المزامنة الفورية بعد عملية البيع (forceDirect)، لا نحظر المعالجة بفحوصات خارجية بطيئة
     // بل نتصل مباشرة بـ Supabase لمعالجة الطابور، فإذا رد الخادم كان هذا إثباتاً قاطعاً للاتصال
     if (isLocalDataMode()) {
-      setHasInternetAccess(false);
+      if (isAppOffline()) setHasInternetAccess(false);
       return { success: false, processed: 0, failed: 0 };
     }
     if (!forceDirect) {

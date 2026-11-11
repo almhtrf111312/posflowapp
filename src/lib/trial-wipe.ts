@@ -3,7 +3,7 @@
 // وتُفحص المدة عند الإقلاع وعند العودة إلى التطبيق. بعد المسح تُضاف المنتجات النموذجية من جديد.
 // لا يُمسح: الجلسة، الجهاز، الترخيص، سجل الحظر، اللغة، موافقة الخصوصية، وعلامة وضع التجربة نفسها.
 import { Capacitor } from '@capacitor/core';
-import { isLocalOnlyMode, LOCAL_MODE_EVENT } from '@/lib/subscription-lock';
+import { isLocalOnlyMode, isCloudWriteBlocked, LOCAL_MODE_EVENT } from '@/lib/subscription-lock';
 import { saveProducts } from '@/lib/products-store';
 import { saveCategories } from '@/lib/categories-store';
 import { buildTrialCatalog, buildTrialCategories, applyTrialDisplayDefaults } from '@/lib/trial-sample-catalog';
@@ -12,6 +12,9 @@ const WINDOW_START_KEY = 'hp_trial_window_start';
 const TRIAL_DATA_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
 const PRODUCTS_CACHE_KEY = 'hyperpos_products_cache';
+const CATEGORIES_CACHE_KEY = 'hyperpos_categories_cache';
+const CATALOG_VERSION_KEY = 'hp_trial_catalog_version';
+const CATALOG_VERSION = '2';
 
 /** بادئات تُمسح من localStorage (بيانات الأعمال والكاش والطابور والتشخيص) */
 const WIPE_PREFIXES = ['hyperpos_', 'flowpos_', 'fps_swr_', 'hp_sync_', 'hp_audit_', 'hp_offline_', 'hp_radar_'];
@@ -23,6 +26,8 @@ const PRESERVE_EXACT = new Set<string>([
   'hyperpos_theme_v1',
   'hyperpos_device_id',
   'hyperpos_stay_logged_in',
+  'hyperpos_setup_complete',
+  'hyperpos_settings_v1',
   'hyperpos_session_cache',
   'hyperpos_cached_profile',
   'hyperpos_last_user_id',
@@ -103,34 +108,38 @@ export async function wipeTrialDatabases(): Promise<void> {
   }
 }
 
-/** هل يلزم إعادة تعبئة الكتالوج؟ (المخزن فارغ، أو ما زال فيه نماذج الإصدار القديم) */
+/** هل يلزم إعادة تعبئة الكتالوج؟ (المخزن فارغ، أو الكتالوج من إصدار أقدم) */
 function trialCatalogNeeded(): boolean {
   try {
+    if (localStorage.getItem(CATALOG_VERSION_KEY) !== CATALOG_VERSION) return true;
     const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
     const current = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(current) || current.length === 0) return true;
-    return current.every((p) => typeof p?.id === 'string' && p.id.startsWith('prod_'));
+    return !Array.isArray(current) || current.length === 0;
   } catch {
     return true;
   }
 }
 
-/** الجزء المتزامن من التعبئة: يكتب المنتجات والتصنيفات إلى localStorage قبل رسم الواجهة */
+/** الجزء المتزامن من التعبئة: يكتب المنتجات والتصنيفات إلى المفاتيح التي تقرأ منها نقطة البيع */
 function seedTrialLocalStorage(): void {
   const catalog = buildTrialCatalog();
+  const categories = buildTrialCategories();
   saveProducts(catalog);
+  saveCategories(categories);
   try {
     localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ products: catalog, timestamp: Date.now() }));
+    localStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(categories));
+    localStorage.setItem(CATALOG_VERSION_KEY, CATALOG_VERSION);
   } catch {
     /* noop */
   }
-  saveCategories(buildTrialCategories());
 }
 
-/** الجزء غير المتزامن: IndexedDB أو SQLite حسب المنصة */
+/** الجزء غير المتزامن: يفرّغ مخزن المنتجات (SQLite لا يحذف القديم عند الحفظ) ثم يكتب الكتالوج */
 async function seedTrialDatabase(): Promise<void> {
   try {
-    const { saveProductsToIDB } = await import('@/lib/indexeddb-cache');
+    const { clearProductsIDB, saveProductsToIDB } = await import('@/lib/indexeddb-cache');
+    await clearProductsIDB();
     await saveProductsToIDB(buildTrialCatalog());
   } catch (err) {
     console.warn('[TrialWipe] Sample products DB save failed:', err);
@@ -163,29 +172,29 @@ function isTrialWindowExpired(now: number = Date.now()): boolean {
 }
 
 /**
- * تحضير جلسة التجربة: يبدأ النافذة عند أول مرة، ويمسح كل شيء إذا انتهت النافذة، ثم يضبط الشكل ويعبّئ النماذج عند الحاجة.
- * يرجع true إذا تغيّر شكل الواجهة (ويلزم إعادة تحميل إن كان الحدث أثناء الجلسة).
+ * تحضير جلسة التجربة. يرجع true إذا كُتبت بيانات جديدة (ويلزم إعادة تحميل إن حدث ذلك بعد رسم الواجهة).
+ * - بداية نافذة جديدة (أول مرة أو بعد انتهاء 24 ساعة): مسح كامل، ثم الشكل الافتراضي والكتالوج.
+ * - داخل النافذة: لا يُلمس شيء، إلا إذا كان الكتالوج مفقوداً أو من إصدار أقدم.
  */
 async function prepareTrialSession(): Promise<boolean> {
   const now = Date.now();
-  if (readWindowStart() === null) writeWindowStart(now);
-
-  if (isTrialWindowExpired(now)) {
+  if (readWindowStart() === null || isTrialWindowExpired(now)) {
     wipeTrialLocalStorage();
     writeWindowStart(now);
-    const displayChanged = applyTrialDisplayDefaults();
+    applyTrialDisplayDefaults();
     seedTrialLocalStorage();
     await wipeTrialDatabases();
     await seedTrialDatabase();
-    return displayChanged;
+    return true;
   }
 
-  const displayChanged = applyTrialDisplayDefaults();
   if (trialCatalogNeeded()) {
+    applyTrialDisplayDefaults();
     seedTrialLocalStorage();
     await seedTrialDatabase();
+    return true;
   }
-  return displayChanged;
+  return false;
 }
 
 /** يُستدعى عند الإقلاع قبل الرسم: في وضع التجربة تُفحص النافذة وتُحضَّر الجلسة. */
@@ -194,16 +203,37 @@ export async function wipeTrialDataOnBoot(): Promise<void> {
   await prepareTrialSession();
 }
 
+/** عند تفعيل اشتراك مدفوع: تُحذف بيانات التجربة (نماذج ومبيعات تجريبية) حتى لا تُرفع إلى الحساب الحقيقي */
+function discardTrialDataAfterActivation(): void {
+  if (readWindowStart() === null) return;
+  wipeTrialLocalStorage();
+  try {
+    localStorage.removeItem(WINDOW_START_KEY);
+    localStorage.removeItem(CATALOG_VERSION_KEY);
+    localStorage.removeItem('pos_view_mode');
+  } catch {
+    /* noop */
+  }
+  void wipeTrialDatabases().finally(() => window.location.reload());
+}
+
 /**
- * - عند تفعيل وضع التجربة (بعد بدء الفترة): تُحضَّر الجلسة، ويُعاد التحميل إن تغيّر شكل الواجهة.
- * - على أندرويد: عند العودة إلى التطبيق تُعاد تحميل الواجهة إن انتهت نافذة الـ24 ساعة ليُمسح كل شيء.
+ * - عند دخول وضع التجربة: تُحضَّر الجلسة، ويُعاد التحميل إن كُتبت بيانات جديدة لتظهر فوراً.
+ * - عند الخروج منه باشتراك مدفوع فعّال: تُحذف بيانات التجربة ويُعاد التحميل.
+ * - على أندرويد: عند العودة إلى التطبيق يُعاد التحميل إن انتهت نافذة الـ24 ساعة.
  */
 export function initTrialLifecycle(): void {
   window.addEventListener(LOCAL_MODE_EVENT, () => {
-    if (!isLocalOnlyMode()) return;
-    void prepareTrialSession().then((changed) => {
-      if (changed) window.location.reload();
-    });
+    // التأجيل يضمن أن علامة حجب الكتابة السحابية تحدّثت (تُضبط في نفس دورة الترخيص)
+    setTimeout(() => {
+      if (isLocalOnlyMode()) {
+        void prepareTrialSession().then((changed) => {
+          if (changed) window.location.reload();
+        });
+      } else if (!isCloudWriteBlocked()) {
+        discardTrialDataAfterActivation();
+      }
+    }, 0);
   });
 
   if (!Capacitor.isNativePlatform()) return;

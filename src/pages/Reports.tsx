@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useLicense } from '@/hooks/use-license';
+import { SubscriptionLockNotice } from '@/components/license/SubscriptionLockNotice';
 import { usePageActivity } from '@/contexts/PageActivityContext';
 import {
   BarChart3,
@@ -124,7 +126,16 @@ export interface ReportEntry {
   unavailableReasonKey?: string;
 }
 
+// التجربة المجانية لا تصل إلى التقارير: نعرض رسالة الاشتراك بدل المحتوى
 export default function Reports() {
+  const { isTrial, role } = useLicense();
+  if (isTrial && role !== 'boss') {
+    return <SubscriptionLockNotice sectionName="التقارير" />;
+  }
+  return <ReportsContent />;
+}
+
+function ReportsContent() {
   const navigate = useNavigate();
   const { isActive: isPageActive } = usePageActivity();
   const { t, isRTL } = useLanguage();

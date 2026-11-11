@@ -195,7 +195,11 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
     return () => { cancelled = true; };
   }, []);
 
+  // المستخدم التجريبي: التقارير مخفية من القائمة (تظهر رسالة الاشتراك عند فتحها مباشرة)
+  const isTrialLocked = !!licenseState?.isTrial && !isBoss;
+
   const filteredNavItems = navItems.filter(item => {
+    if (isTrialLocked && item.path === '/reports') return false;
     // In guest demo mode, allow exploring the full system locally for trial
     if (isGuestDemoMode()) {
       if (item.requiresContactSidebar && !showContactInSidebar) return false;

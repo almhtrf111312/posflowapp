@@ -772,9 +772,12 @@ export const distributeDetailedProfitCloud = async (
     } catch (err) {
       console.error('[distributeDetailedProfitCloud] Atomic RPC call failed:', err);
     }
+    // فاتورة نقطة بيع: الخادم وزّع أرباح الشركاء داخل دالة البيع نفسها وفي المعاملة نفسها.
+    // لا توزيع بديل من الواجهة هنا: كان يُعاد التوزيع عند أي خطأ في الاتصال فيتكرر ربح الشريك.
+    return [];
   }
 
-  // ✅ Fallback: التوزيع من الواجهة (للحالات بدون invoiceUuid أو عند فشل RPC)
+  // التوزيع من الواجهة يبقى فقط للفواتير التي لا تمر بدالة البيع في الخادم (مثل خدمات الصيانة)
   const partners = await loadPartnersCloud();
   const allDistributions: ProfitDistribution[] = [];
 

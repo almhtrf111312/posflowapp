@@ -17,6 +17,8 @@ export interface UserData {
   role: 'admin' | 'cashier' | 'boss';
   userType?: UserType;
   allowedPages?: string[] | null;
+  /** صلاحية الاسترداد للكاشير. undefined = غير معروفة (العمود غير متاح بعد أو تعذّر الجلب) */
+  canRefund?: boolean;
   isCurrentUser?: boolean;
   isOwner?: boolean;
 }
@@ -64,6 +66,19 @@ export function useUsersManagement() {
           variant: 'destructive',
         });
         return;
+      }
+
+      // صلاحية الاسترداد لكل كاشير: استعلام مستقل حتى لا يتعطل جلب المستخدمين إن لم يكن العمود متاحاً بعد
+      let refundByUser: Map<string, boolean> | null = null;
+      try {
+        const { data: refundRows, error: refundError } = await (supabase as unknown as { from: (table: string) => any })
+          .from('user_roles')
+          .select('user_id, can_refund');
+        if (!refundError && Array.isArray(refundRows)) {
+          refundByUser = new Map(refundRows.map((r: { user_id: string; can_refund: boolean | null }) => [r.user_id, r.can_refund === true]));
+        }
+      } catch {
+        refundByUser = null;
       }
 
       // Fetch profiles for each user (including phone, user_type, and allowed_pages)
@@ -132,6 +147,7 @@ export function useUsersManagement() {
           role: dbRole,
           userType: userType,
           allowedPages: Array.isArray(userProfile?.allowed_pages) ? userProfile.allowed_pages as string[] : null,
+          canRefund: refundByUser ? refundByUser.get(role.user_id) === true : undefined,
           isCurrentUser: isCurrentUserFlag,
           isOwner: isOwnerFlag,
         };
@@ -543,6 +559,33 @@ export function useUsersManagement() {
     }
   };
 
+  // منح أو حجب صلاحية الاسترداد لكاشير (تُحفظ في user_roles.can_refund ويتحقق منها الخادم)
+  const setUserRefundPermission = async (userId: string, allowed: boolean): Promise<boolean> => {
+    try {
+      const { data, error } = await (supabase as unknown as { from: (table: string) => any })
+        .from('user_roles')
+        .update({ can_refund: allowed })
+        .eq('user_id', userId)
+        .select('user_id');
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error('لم يتم العثور على حساب الكاشير');
+      setUsers(prev => prev.map(u => (u.user_id === userId ? { ...u, canRefund: allowed } : u)));
+      toast({
+        title: 'تم',
+        description: allowed ? 'تم منح صلاحية الاسترداد' : 'تم حجب صلاحية الاسترداد',
+      });
+      return true;
+    } catch (err) {
+      console.error('Error updating refund permission:', err);
+      toast({
+        title: 'خطأ',
+        description: 'تعذّر تحديث صلاحية الاسترداد',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   return {
     users,
     isLoading,
@@ -551,5 +594,6 @@ export function useUsersManagement() {
     updateUserRole,
     updateUserProfile,
     deleteUser,
+    setUserRefundPermission,
   };
 }

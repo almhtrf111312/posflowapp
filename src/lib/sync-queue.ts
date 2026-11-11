@@ -109,6 +109,10 @@ const isTerminalSyncError = (message: string): boolean => {
     'warehouse not found',
     'missing sale operation id',
     'missing invoice item',
+    // رفض صلاحية من الخادم (المرحلة 1): إعادة المحاولة لا تغيّر النتيجة
+    'ليست لديك صلاحية الاسترداد',
+    'مخصص لمالك المتجر فقط',
+    'بصلاحية مالك المتجر فقط',
   ].some(fragment => normalized.includes(fragment));
 };
 

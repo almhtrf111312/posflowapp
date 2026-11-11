@@ -105,10 +105,12 @@ import {
   recordPaymentWithInvoiceSyncCloud,
   invalidateDebtsCache,
   addDebtFromInvoiceCloud,
+  findInvoiceDebtOnServer,
   Debt,
 } from '@/lib/cloud/debts-cloud';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
+import { getOwnRefundPermission } from '@/lib/refund-permission';
 import { addActivityLog } from '@/lib/activity-log';
 import { confirmPendingProfit } from '@/lib/partners-store';
 import { confirmPendingProfitCloud } from '@/lib/cloud/partners-cloud';
@@ -876,9 +878,9 @@ export default function Invoices() {
       );
       return;
     }
-    // ✅ فحص دور المستخدم — الكاشير لا يملك صلاحية الاسترداد (يحتاج إذن مشرف)
-    getCurrentUserRole().then(role => {
-      if (role === 'cashier') {
+    // ✅ الكاشير يسترد فقط إذا منحه مالك المتجر الصلاحية (والخادم يتحقق منها أيضاً)
+    getCurrentUserRole().then(async role => {
+      if (role === 'cashier' && !(await getOwnRefundPermission())) {
         toast.error(
           language === 'en'
             ? 'You do not have permission to refund'
@@ -899,7 +901,7 @@ export default function Invoices() {
                 ? 'ئەم کردارە پێویستی بە دەسەڵاتی سەرپەرشتیار یان بەڕێوەبەر هەیە. پەیوەندی بە خاوەنی فرۆشگاوە بکە.'
                 : language === 'fa'
                 ? 'این عملیات نیاز به مجوز سرپرست یا مدیر دارد. با مالک فروشگاه تماس بگیرید.'
-                : 'هذه العملية تتطلب صلاحيات المشرف أو المدير. تواصل مع مالك المتجر.',
+                : 'يمنح مالك المتجر هذه الصلاحية من الإعدادات، قسم المستخدمين.',
             duration: 5000,
           }
         );
@@ -1337,7 +1339,20 @@ export default function Invoices() {
       const debtsList = await loadDebtsCloud();
       let targetDebt = debtsList.find(d => d.invoiceId === invoice.id || d.id === invoice.id);
 
-      // إذا لم يكن الدين مسجلاً بعد في جدول الديون ننشئه من الفاتورة
+      // الدين غير موجود في القائمة المحلية: نسأل الخادم أولاً، فدالة البيع تُنشئ دين الفاتورة الآجلة.
+      // كان إنشاء دين جديد هنا مباشرة يسجّل الدين مرتين على العميل.
+      if (!targetDebt && invoice.paymentType === 'debt') {
+        const lookup = await findInvoiceDebtOnServer(invoice.id);
+        if (lookup.status === 'found') {
+          targetDebt = lookup.debt;
+        } else if (lookup.status === 'unreachable') {
+          toast.dismiss('loading-debt-dialog');
+          toast.error('تعذّر الوصول إلى بيانات الدين. اتصل بالإنترنت ثم أعد المحاولة، أو سدّد من شاشة الديون.');
+          return;
+        }
+      }
+
+      // لا دين لهذه الفاتورة في الخادم: ننشئه من الفاتورة
       if (!targetDebt && invoice.paymentType === 'debt') {
         const remaining = (invoice.debtRemaining !== undefined && invoice.debtRemaining !== null) 
           ? invoice.debtRemaining 

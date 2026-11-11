@@ -526,6 +526,35 @@ const fetchOpenDebtsByInvoiceId = async (invoiceId: string): Promise<Array<{ id:
     .filter(d => d.remaining > 0);
 };
 
+export type InvoiceDebtLookup =
+  | { status: 'found'; debt: Debt }
+  | { status: 'none' }
+  | { status: 'unreachable' };
+
+/**
+ * يبحث في الخادم عن دين فاتورة قبل إنشاء دين جديد لها.
+ * دالة البيع في الخادم تُنشئ دين الفاتورة الآجلة، فإنشاء دين ثانٍ من الواجهة يسجّل الدين مرتين.
+ * 'unreachable' = تعذّر السؤال (بلا إنترنت أو خطأ): لا يجوز الإنشاء في هذه الحالة.
+ */
+export const findInvoiceDebtOnServer = async (invoiceId: string): Promise<InvoiceDebtLookup> => {
+  if (!invoiceId || isGuestDemoMode() || isLocalDataMode()) return { status: 'unreachable' };
+  try {
+    const { data, error } = await sb
+      .from('debts')
+      .select('*')
+      .eq('invoice_id', invoiceId)
+      .order('created_at', { ascending: true });
+    if (error) return { status: 'unreachable' };
+    const rows = (data || []) as CloudDebt[];
+    if (rows.length === 0) return { status: 'none' };
+    // الأقدم هو الدين الذي أنشأته دالة البيع؛ يُفضَّل ما زال عليه رصيد
+    const open = rows.find(r => (Number(r.remaining_debt) || 0) > 0);
+    return { status: 'found', debt: toDebt(open || rows[0]) };
+  } catch {
+    return { status: 'unreachable' };
+  }
+};
+
 // Settle every open debt linked to an invoice via the atomic payment RPC; returns the total amount paid
 export const settleDebtsByInvoiceIdCloud = async (invoiceId: string): Promise<number> => {
   let paid = 0;
@@ -631,19 +660,16 @@ export const writeOffDebtCloud = async (
     });
 
     if (error) {
+      // رفض الصلاحية (الشطب لمالك المتجر فقط) نهائي: لا يوضع في الطابور
+      if ((error as { code?: string }).code === '42501') {
+        console.warn('[writeOffDebtCloud] Not permitted:', error.message);
+        return false;
+      }
       console.warn('[writeOffDebtCloud] RPC failed, queuing for sync:', error);
       addToQueue('debt_writeoff', { debtId, reason, operationId });
     }
 
-    // 2. عكس أرباح الشركاء المعلقة إن وجدت
-    if (debt.invoiceId) {
-      try {
-        const { revertProfitDistributionCloud } = await import('./partners-cloud');
-        await revertProfitDistributionCloud(debt.invoiceId);
-      } catch (e) {
-        console.error('[writeOffDebtCloud] revert partners failed:', e);
-      }
-    }
+    // حصص الشركاء المعلّقة تعالجها دالة الشطب في الخادم داخل المعاملة نفسها؛ لا استدعاء من الواجهة
 
     invalidateDebtsCache();
     try {

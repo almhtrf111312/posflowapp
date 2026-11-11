@@ -9,6 +9,7 @@ import { isGuestDemoMode } from '@/lib/demo-data';
 import { PasswordChangeDialog } from '@/components/settings/PasswordChangeDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -36,7 +37,7 @@ export function UsersTab() {
   const { toast } = useToast();
   const license = useLicense();
   const licenseState = (license as any)?.licenseState || license;
-  const { users, isLoading: usersLoading, addUser, updateUserProfile, deleteUser } = useUsersManagement();
+  const { users, isLoading: usersLoading, addUser, updateUserProfile, deleteUser, setUserRefundPermission } = useUsersManagement();
 
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
@@ -370,6 +371,21 @@ export function UsersTab() {
                     <span>{t('common.delete')}</span>
                   </Button>
                 </div>
+                {user.role === 'cashier' && !user.isOwner && (
+                  <div className="flex items-center justify-between gap-3 pt-2 mt-2 border-t border-border/60">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium">{isRTL ? 'السماح بالاسترداد' : 'Allow refunds'}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {isRTL ? 'يستطيع هذا الكاشير استرداد الفواتير' : 'This cashier can refund invoices'}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={user.canRefund === true}
+                      disabled={user.canRefund === undefined || isGuestDemoMode()}
+                      onCheckedChange={(allowed) => { void setUserRefundPermission(user.user_id, allowed); }}
+                    />
+                  </div>
+                )}
               </div>
             ))
         )}

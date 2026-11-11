@@ -100,16 +100,8 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         _operation_id: String(data.operationId || operation.id)
       });
       if (error) {
-        // إذا لم تكن الدالة متوفرة، يتم التحديث المباشر لحالة الدين
-        const res = await assertSuccess(
-          sb.from('debts').update({
-            status: 'written_off',
-            notes: reason,
-            updated_at: new Date().toISOString()
-          }).eq('id', debtId)
-        );
-        invalidatePartnersCache();
-        return res;
+        // لا شطب بتحديث مباشر للجدول: الشطب يمر بالدالة الذرية فقط (صلاحية المالك، قيد الدين المعدوم، حصص الشركاء)
+        throw new Error(error.message);
       }
       invalidatePartnersCache();
       return true;

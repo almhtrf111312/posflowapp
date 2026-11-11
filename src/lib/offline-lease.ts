@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 /**
  * Offline Lease System — نظام تذكرة العمل دون اتصال
  *
@@ -305,7 +306,7 @@ export function getOfflineLeaseStatus(): OfflineLeaseStatus {
  * دون اتصال = يخضع لحالة التذكرة.
  */
 export function canSellOffline(): OfflineLeaseStatus {
-  if (typeof navigator !== 'undefined' && navigator.onLine) {
+  if (typeof navigator !== 'undefined' && !isAppOffline()) {
     return { allowed: true, legacy: false, reason: null, message: '', remainingDays: null, remainingInvoices: null };
   }
   return getOfflineLeaseStatus();

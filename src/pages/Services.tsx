@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { SmartFab } from '@/components/ui/SmartFab';
 import { useState, useEffect } from 'react';
 import {
@@ -171,7 +172,7 @@ function cloudRowToRequest(row: CloudMaintenanceRow): RepairRequest {
 
 const syncServiceToCloud = async (req: RepairRequest) => {
   const payload = requestToCloudPayload(req);
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const { addToQueue } = await import('@/lib/sync-queue');
     addToQueue('maintenance_upsert', payload);
     return;
@@ -260,7 +261,7 @@ export default function Services() {
   // Cloud sync: fetch & merge on mount and on EVENTS.MAINTENANCE_UPDATED
   useEffect(() => {
     const fetchCloudServices = async () => {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (typeof navigator !== 'undefined' && isAppOffline()) return;
       try {
         const { fetchFromSupabase } = await import('@/lib/supabase-store');
         const rows = await fetchFromSupabase<CloudMaintenanceRow>('maintenance_services', {

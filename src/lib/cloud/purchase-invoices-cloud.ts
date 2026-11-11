@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { supabase } from '@/integrations/supabase/client';
 import { isNoInventoryMode } from '@/lib/store-type-config';
 import { round8 } from '@/lib/money-engine';
@@ -99,7 +100,7 @@ export const loadPurchaseInvoicesLocally = (): PurchaseInvoice[] | null => {
 
 let bgFetchingPurchases = false;
 async function refreshPurchasesInBackground(): Promise<void> {
-  if (bgFetchingPurchases || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+  if (bgFetchingPurchases || (typeof navigator !== 'undefined' && isAppOffline())) return;
   bgFetchingPurchases = true;
   try {
     const { data, error } = await supabase
@@ -135,7 +136,7 @@ export async function loadPurchaseInvoicesCloud(): Promise<PurchaseInvoice[]> {
   const cached = purchaseInvoicesCache || loadPurchaseInvoicesLocally();
   if (cached !== null) {
     // Launch background fetch silently without blocking UI
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
+    if (typeof navigator !== 'undefined' && !isAppOffline()) {
       if (Date.now() - purchaseCacheTimestamp >= PURCHASE_CACHE_TTL) {
         void refreshPurchasesInBackground();
       }
@@ -144,7 +145,7 @@ export async function loadPurchaseInvoicesCloud(): Promise<PurchaseInvoice[]> {
   }
 
   // Fast offline return
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const local = loadPurchaseInvoicesLocally();
     return mergeSyncQueuePurchases(local || []);
   }
@@ -177,7 +178,7 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
   invoice: PurchaseInvoice | null;
   items: PurchaseInvoiceItem[];
 }> {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const local = loadPurchaseInvoicesLocally() || [];
     const invoice = local.find(i => i.id === invoiceId || i.invoice_number === invoiceId) || null;
     return { invoice, items: [] };

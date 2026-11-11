@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 /**
  * Global Background Sync & Cache Warmup Service
  * FlowPOS Pro
@@ -26,7 +27,7 @@ const WARMUP_INTERVAL_MS = 45000; // 45s throttle to prevent redundant network b
 
 export const warmupAllCaches = async (force: boolean = false): Promise<void> => {
   // If in demo mode or offline, don't attempt network preloading
-  if (isGuestDemoMode() || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+  if (isGuestDemoMode() || (typeof navigator !== 'undefined' && isAppOffline())) {
     return;
   }
 

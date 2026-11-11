@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 /**
  * Sync Status Menu & Drawer - Shows sync state with comprehensive operations history
  * Full-height responsive Sheet overlay replacing legacy small popover
@@ -76,7 +77,7 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
   const { isRTL, t, language } = useLanguage();
   const navigate = useNavigate();
   const cloudContext = useContext(CloudSyncContext);
-  const isOnline = cloudContext?.isOnline ?? (typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const isOnline = cloudContext?.isOnline ?? (typeof navigator !== 'undefined' ? !isAppOffline() : true);
   const isSyncing = cloudContext?.isSyncing ?? false;
   const isPaused = cloudContext?.isPaused ?? false;
   const hasInternetAccess = cloudContext?.hasInternetAccess ?? true;

@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { useState, useEffect } from 'react';
 import { Settings2, Package, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
@@ -40,6 +41,7 @@ export function ProductFieldsSection({ storeType, onConfigChange, pendingConfig 
   useEffect(() => {
     if (pendingConfig) return;
     const syncFromCloud = async () => {
+      if (isAppOffline()) return; // الإعدادات المحلية تبقى ظاهرة بدون انتظار
       const cloudConfig = await syncProductFieldsFromCloud();
       if (cloudConfig) {
         setConfig(cloudConfig);

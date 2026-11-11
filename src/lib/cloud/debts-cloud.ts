@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { getPendingOperations } from '../sync-queue';
 import { isOperationCancelled } from '../cancellation-registry';
 // Cloud Debts Store - Supabase-backed debts management
@@ -150,7 +151,7 @@ const fetchFresh_loadDebtsCloud = async (): Promise<Debt[]> => {
     return local;
   }
   // 1. Offline fast-path
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const local = loadDebtsLocally();
     if (local) {
       debtsCache = local;
@@ -246,7 +247,7 @@ const fetchFresh_loadDebtsCloud = async (): Promise<Debt[]> => {
 let bootServed_loadDebtsCloud = false;
 export const loadDebtsCloud = async (): Promise<Debt[]> => {
   // If offline, return immediately from local cache
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const local = loadDebtsLocally();
     if (local) {
       debtsCache = local;
@@ -262,7 +263,7 @@ export const loadDebtsCloud = async (): Promise<Debt[]> => {
     if (local && local.length > 0) {
       debtsCache = local;
       cacheTimestamp = Date.now();
-      if (navigator.onLine) {
+      if (!isAppOffline()) {
         setTimeout(() => {
           debtsCache = null;
           cacheTimestamp = 0;
@@ -353,7 +354,7 @@ export const addDebtCloud = async (
     return localDebt;
   };
 
-  if (!navigator.onLine) {
+  if (isAppOffline()) {
     return saveToLocalAndQueue();
   }
 
@@ -460,7 +461,7 @@ export const recordPaymentCloud = async (
     recordShiftCash();
     return list.find(d => d.id === debtId) || null;
   };
-  if (!navigator.onLine) return queuePayment();
+  if (isAppOffline()) return queuePayment();
   // لا نمرر _shift_id للخادم: حركة الوردية تُسجَّل من الواجهة مرة واحدة (كان المبلغ يُضاف للوردية مرتين أو ثلاثاً)
   const rpcArgs: Record<string, unknown> = {
     _debt_id: debtId,
@@ -729,7 +730,7 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
   const { startIso, endIso } = getLocalDayUtcRange(dateStr);
 
   // 1. Try Supabase debt_payments table
-  if (navigator.onLine) {
+  if (!isAppOffline()) {
     try {
       const { data, error } = await sb
         .from('debt_payments')
@@ -747,7 +748,7 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
   }
 
   // 2. Fallback: shift_transactions with type === 'debt_payment'
-  if (!foundInCloud && navigator.onLine) {
+  if (!foundInCloud && !isAppOffline()) {
     try {
       const { data: shiftTx, error } = await sb
         .from('shift_transactions')

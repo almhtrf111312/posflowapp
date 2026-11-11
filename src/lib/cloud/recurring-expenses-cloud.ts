@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 // Cloud Recurring Expenses Store - Supabase-backed recurring expenses management
 import { 
   fetchFromSupabase, 
@@ -89,7 +90,7 @@ const fetchFresh_loadRecurringExpensesCloud = async (): Promise<RecurringExpense
   }
 
   // Offline: return local cache
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const local = loadRecurringExpensesLocally();
     recurringCache = local;
     cacheTimestamp = Date.now();
@@ -147,7 +148,7 @@ const fetchFresh_loadRecurringExpensesCloud = async (): Promise<RecurringExpense
 
   // If cloud is empty, check if we have local unmigrated rows
   const local = loadRecurringExpensesLocally();
-  if (local.length > 0 && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (local.length > 0 && typeof navigator !== 'undefined' && !isAppOffline()) {
     // If cloud had 0 rows but local has rows, migrate them to cloud!
     console.log('[RecurringExpenses] Local cache has unmigrated items, syncing to cloud...');
     const effectiveOwner = ownerId || currentUid;
@@ -191,7 +192,7 @@ export const loadRecurringExpensesCloud = async (): Promise<RecurringExpense[]> 
     if (local && local.length > 0 && getCurrentUserId()) {
       recurringCache = local;
       cacheTimestamp = Date.now();
-      if (typeof navigator !== 'undefined' && navigator.onLine) {
+      if (typeof navigator !== 'undefined' && !isAppOffline()) {
         setTimeout(() => {
           recurringCache = null;
           cacheTimestamp = 0;
@@ -283,7 +284,7 @@ export const addRecurringExpenseCloud = async (data: {
   emitEvent(EVENTS.RECURRING_EXPENSES_UPDATED, updatedList);
 
   // 2. Offline fallback
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     addToQueue('recurring_expense_create', payload, 10);
     return newExpense;
   }
@@ -347,7 +348,7 @@ export const updateRecurringExpenseCloud = async (
   if (updates.isActive !== undefined) payload.is_active = updates.isActive;
   payload.updated_at = new Date().toISOString();
 
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     addToQueue('recurring_expense_update', { id, ...payload }, 10);
     return true;
   }
@@ -377,7 +378,7 @@ export const deleteRecurringExpenseCloud = async (id: string): Promise<boolean> 
   saveRecurringExpensesLocally(filtered);
   emitEvent(EVENTS.RECURRING_EXPENSES_UPDATED, filtered);
 
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     addToQueue('recurring_expense_delete', { id }, 10);
     return true;
   }

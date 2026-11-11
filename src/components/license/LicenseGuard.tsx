@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { ReactNode, useEffect, useState } from 'react';
 import { useLicense, cachedLicenseGrantsAccess, readLicenseCacheRaw } from '@/hooks/use-license';
 import { useAuth } from '@/hooks/use-auth';
@@ -175,7 +176,7 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   if (dataEncrypted) return <DataEncryptedScreen />;
 
   // 🎫 حظر تذكرة الأوفلاين: انتهاء الصلاحية أو عبث بالساعة أو بلوغ حد الفواتير دون اتصال
-  if (offlineLeaseBlocked && !navigator.onLine) {
+  if (offlineLeaseBlocked && isAppOffline()) {
     const reasonMessages: Record<string, string> = {
       tampered: 'تم رصد تلاعب بساعة الجهاز. تم إيقاف العمل دون اتصال حمايةً لبياناتك.',
       expired: 'انتهت صلاحية تذكرة العمل دون اتصال.',

@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 // Cloud Categories Store - Supabase-backed categories management
 import { 
   fetchFromSupabase, 
@@ -106,7 +107,7 @@ export const loadCategoriesCloud = async (): Promise<Category[]> => {
   };
 
   // Offline: return local cache (deduplicated)
-  if (!navigator.onLine) {
+  if (isAppOffline()) {
     const local = loadCategoriesLocally();
     if (local) {
       const { unique } = deduplicate(local);
@@ -284,7 +285,7 @@ export const addCategoryCloud = async (name: string): Promise<Category | null> =
     return duplicate;
   }
 
-  if (!navigator.onLine) {
+  if (isAppOffline()) {
     const newCat: Category = {
       id: generateCategoryUUID(),
       name: trimmedName,
@@ -339,7 +340,7 @@ export const updateCategoryCloud = async (id: string, name: string): Promise<boo
     return false;
   }
 
-  if (!navigator.onLine) {
+  if (isAppOffline()) {
     const current = categoriesCache || loadCategoriesLocally() || [];
     categoriesCache = current.map(c => c.id === id ? { ...c, name: trimmedName } : c);
     cacheTimestamp = Date.now();
@@ -381,7 +382,7 @@ export const deleteCategoryCloud = async (id: string): Promise<boolean> => {
     return true;
   }
 
-  if (!navigator.onLine) {
+  if (isAppOffline()) {
     const current = categoriesCache || loadCategoriesLocally() || [];
     categoriesCache = current.filter(c => c.id !== id);
     cacheTimestamp = Date.now();
@@ -429,7 +430,7 @@ export const getCategoryNamesCloud = async (): Promise<string[]> => {
   const normalizedExisting = new Set(categoryNames.map(n => n.toLowerCase()));
 
   // Fast return if offline - do NOT query supabase
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     return Array.from(new Set(categoryNames.filter(Boolean)));
   }
 

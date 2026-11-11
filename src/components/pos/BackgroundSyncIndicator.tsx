@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 /**
  * مؤشر المزامنة في الخلفية - يظهر حالة المعالجة
  */
@@ -66,7 +67,7 @@ export function BackgroundSyncIndicator({
     window.addEventListener('offline', handleOffline);
     
     // Initial offline check
-    if (!navigator.onLine) setInternalState('offline');
+    if (isAppOffline()) setInternalState('offline');
 
     return () => {
       window.removeEventListener(EVENTS.SYNC_QUEUE_UPDATED, handleUpdate);

@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 // Cloud Customers Store - Supabase-backed customers management
 import { 
   fetchFromSupabase, 
@@ -12,7 +13,7 @@ import { triggerAutoBackup } from '../local-auto-backup';
 import { supabase } from '@/integrations/supabase/client';
 import { addToQueue, getPendingOperations } from '../sync-queue';
 
-const isOfflineNow = () => typeof navigator !== 'undefined' && !navigator.onLine;
+const isOfflineNow = () => typeof navigator !== 'undefined' && isAppOffline();
 const commitLocal = (list: Customer[]) => {
   customersCache = list;
   cacheTimestamp = Date.now();
@@ -94,7 +95,7 @@ const CACHE_TTL = 30000; // 30 seconds
 // Background refresh control
 let bgRefreshing = false;
 const refreshCustomersInBackground = async () => {
-  if (bgRefreshing || !navigator.onLine) return;
+  if (bgRefreshing || isAppOffline()) return;
   bgRefreshing = true;
   try {
     const cloudCustomers = await fetchFromSupabase<CloudCustomer>('customers', {
@@ -126,7 +127,7 @@ export const loadCustomersCloud = async (): Promise<Customer[]> => {
     return local;
   }
   // Fast offline return: instant local cache + queue
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const local = loadCustomersLocally();
     return mergeSyncQueueCustomers(local || customersCache || []);
   }
@@ -143,7 +144,7 @@ export const loadCustomersCloud = async (): Promise<Customer[]> => {
 
   if (cachedData !== null) {
     customersCache = cachedData;
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
+    if (typeof navigator !== 'undefined' && !isAppOffline()) {
       if (Date.now() - cacheTimestamp >= CACHE_TTL) {
         void refreshCustomersInBackground();
       }
@@ -178,7 +179,7 @@ export const loadCustomersWithCashierNamesCloud = async (): Promise<Customer[]> 
   }
   const customers = await loadCustomersCloud();
   
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     return customers;
   }
   
@@ -273,7 +274,7 @@ export const addCustomerCloud = async (
 
   // ✅ جلب معرف الكاشير الحالي لحفظه مع العميل
   let cashierId = getCurrentUserId();
-  if (!cashierId && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (!cashierId && typeof navigator !== 'undefined' && !isAppOffline()) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       cashierId = session?.user?.id || null;

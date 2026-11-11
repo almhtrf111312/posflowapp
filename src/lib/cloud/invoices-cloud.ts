@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { getPendingOperations, addToQueue } from '../sync-queue';
 // Cloud Invoices Store - Supabase-backed invoices management
 import {
@@ -325,7 +326,7 @@ const getNextInvoiceNumber = async (): Promise<string> => {
   const datePrefix = `${year}${month}${day}`;
 
   // If offline, generate sequentially from local cache immediately
-  if (isGuestDemoMode() || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+  if (isGuestDemoMode() || (typeof navigator !== 'undefined' && isAppOffline())) {
     const local = loadInvoicesFromLocalCache() || [];
     const todayInvoices = local.filter(inv => inv.id && inv.id.startsWith(datePrefix));
     const nextNumber = todayInvoices.length + 1;
@@ -371,7 +372,7 @@ const getNextInvoiceNumber = async (): Promise<string> => {
 
 let bgFetchingInvoices = false;
 const refreshInvoicesInBackground = async (userId: string) => {
-  if (bgFetchingInvoices || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+  if (bgFetchingInvoices || (typeof navigator !== 'undefined' && isAppOffline())) return;
   bgFetchingInvoices = true;
   try {
     const oldCache = invoicesCache || loadInvoicesFromLocalCache() || [];
@@ -402,7 +403,7 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
   }
 
   // 1. Instant offline fast-path: zero network delay, instant local cache + queue
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const localInvoices = loadInvoicesFromLocalCache();
     if (localInvoices && localInvoices.length > 0) {
       invoicesCache = localInvoices;
@@ -431,7 +432,7 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
   if (cachedData !== null) {
     invoicesCache = cachedData;
     // Launch background fetch if online and TTL expired
-    if (userId && typeof navigator !== 'undefined' && navigator.onLine) {
+    if (userId && typeof navigator !== 'undefined' && !isAppOffline()) {
       if (Date.now() - cacheTimestamp >= CACHE_TTL) {
         void refreshInvoicesInBackground(userId);
       }
@@ -556,7 +557,7 @@ export const addInvoiceCloud = async (
 
   // ✅ جلب معرف المستخدم بأمان دون تعليق الشبكة
   let userId = getCurrentUserId();
-  if (!userId && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (!userId && typeof navigator !== 'undefined' && !isAppOffline()) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       userId = session?.user?.id || null;
@@ -565,7 +566,7 @@ export const addInvoiceCloud = async (
 
   // ✅ جلب اسم الكاشير/المستخدم الحالي
   let cashierName = invoice.cashierName || '';
-  if (userId && !cashierName && typeof navigator !== 'undefined' && navigator.onLine) {
+  if (userId && !cashierName && typeof navigator !== 'undefined' && !isAppOffline()) {
     try {
       const { data: profile } = await sb
         .from('profiles')
@@ -579,7 +580,7 @@ export const addInvoiceCloud = async (
   }
 
   // فرع أوفلاين فوري إذا كان الإنترنت مقطوعاً
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     const offlineInvoice: Invoice = {
       ...invoice,
       id: invoiceNumber,

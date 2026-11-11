@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ export default function DataResetSection() {
         setShowConfirmDialog(false);
         toast.success(t('settings.resetDataSuccess', language) || 'تمت إعادة ضبط وحذف كافة البيانات بنجاح', {
           icon: <CheckCircle className="h-5 w-5 text-green-500" />,
-          description: navigator.onLine 
+          description: !isAppOffline() 
             ? 'تم حذف جميع البيانات من السحابة والذاكرة المحلية بنجاح' 
             : 'تم مسح البيانات محلياً وسيتم مسح السحابة عند عودة الإنترنت',
         });

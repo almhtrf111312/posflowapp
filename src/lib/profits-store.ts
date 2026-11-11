@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 /**
  * Profits Store - FlowPOS Pro
  * ===========================
@@ -348,7 +349,7 @@ export const clearAllProfitRecords = (): void => {
  * لضمان تطابق صافي الربح والتقارير بين الهاتف والكمبيوتر
  */
 export const syncProfitRecordsFromCloud = async (): Promise<void> => {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+  if (typeof navigator !== 'undefined' && isAppOffline()) return;
   try {
     const { fetchFromSupabase } = await import('./supabase-store');
     interface CloudProfitRow {

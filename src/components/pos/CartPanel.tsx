@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
 import { addExpenseCloud } from '@/lib/cloud/expenses-cloud';
@@ -913,7 +914,7 @@ export function CartPanel({
       }, operationId);
 
       // 🎫 احتساب الفاتورة ضمن حصة الأوفلاين (لا تُصفَّر إلا بمزامنة ناجحة)
-      if (!navigator.onLine) incrementOfflineInvoiceCounter();
+      if (isAppOffline()) incrementOfflineInvoiceCounter();
 
       // ✅ تسجيل النشاط
       if (user) {
@@ -1363,7 +1364,7 @@ export function CartPanel({
       addUniqueOperation('debt_sale_bundle', { localId: operationId, bundle }, operationId);
 
       // 🎫 احتساب الفاتورة ضمن حصة الأوفلاين (لا تُصفَّر إلا بمزامنة ناجحة)
-      if (!navigator.onLine) incrementOfflineInvoiceCounter();
+      if (isAppOffline()) incrementOfflineInvoiceCounter();
 
       // ✅ تسجيل النشاط
       if (user) {

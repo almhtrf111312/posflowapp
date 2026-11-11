@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getDeviceId, getStableDeviceId } from '@/lib/device-fingerprint';
+import { isAppOffline } from '@/hooks/use-network-status';
 import { useAuth } from './use-auth';
 import { secureSet, secureGet, secureRemove, getDeviceKey } from '@/lib/secure-storage';
 
@@ -54,7 +55,7 @@ function loadDeviceCache(): { isDeviceBlocked: boolean; deviceId: string | null;
 export function useDeviceBinding() {
   const { user } = useAuth();
   const cached = loadDeviceCache();
-  const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  const isOffline = isAppOffline();
 
   const [state, setState] = useState<DeviceBindingState>({
     isChecking: cached ? false : true,

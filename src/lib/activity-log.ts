@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 // Activity Log Store - Secure encrypted activity tracking
 import { secureSet, secureGet, secureRemove } from './secure-storage';
 import { supabase } from '@/integrations/supabase/client';
@@ -150,7 +151,7 @@ export function addActivityLog(
   saveActivityLogs(logs);
 
   // رفع صامت في الخلفية لجدول activity_log ليتمكن المالك من مراجعة السجل من أي جهاز
-  if (typeof navigator !== 'undefined' && navigator.onLine) {
+  if (typeof navigator !== 'undefined' && !isAppOffline()) {
     import('./supabase-store').then(async ({ getOwnerIdForInsert }) => {
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) return;

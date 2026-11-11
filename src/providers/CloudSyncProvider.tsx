@@ -7,12 +7,12 @@ import { refundInvoiceCloud, refundInvoicePartialCloud, loadCachedInvoicesSync }
 import { EVENTS, emitEvent, emitAppRefresh } from '@/lib/events';
 import { useRealtimeSync } from '@/hooks/use-realtime-sync';
 import { executePendingCloudClear } from '@/lib/clear-demo-data';
-import { processQueue, getQueueStatus, getFailedOperations, loadQueue } from '@/lib/sync-queue';
+import { processQueue, getQueueStatus, getFailedOperations, loadQueue, configureSyncNetwork } from '@/lib/sync-queue';
 import { processDebtSaleBundleFromQueue } from '@/lib/cloud/debt-sale-handler';
 import { processCashSaleBundleFromQueue } from '@/lib/cloud/cash-sale-handler';
 import { processQuickPurchaseFromQueue, processPurchaseInvoiceFromQueue } from '@/lib/cloud/purchase-queue-processor';
 import { showToast } from '@/lib/toast-config';
-import { useNetworkStatus, checkRealInternetAccess } from '@/hooks/use-network-status';
+import { useNetworkStatus, checkRealInternetAccess, isAppOffline } from '@/hooks/use-network-status';
 import { processGenericQueuedOperation } from '@/lib/cloud/sync-operation-processor';
 import { warmupAllCaches } from '@/lib/cloud/cache-warmup';
 import { isGuestDemoMode } from '@/lib/demo-data';
@@ -155,6 +155,15 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
   // Enable realtime sync for instant updates across devices
   useRealtimeSync();
+
+  // ربط طابور المزامنة بالفحص الفعلي للإنترنت (وليس حالة الجهاز فقط)
+  useEffect(() => {
+    configureSyncNetwork({
+      isOffline: () => isAppOffline(),
+      probe: () => checkRealInternetAccess(4000, { bypassCache: true }),
+    });
+    return () => configureSyncNetwork(null);
+  }, []);
   
   // مراقبة عودة الاتصال بالإنترنت لتشغيل المزامنة التلقائية
   // مع فحص فعلي للإنترنت (وليس فقط الشبكة)
@@ -358,18 +367,17 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     // Verify internet access
     // ✅ في المزامنة الفورية بعد عملية البيع (forceDirect)، لا نحظر المعالجة بفحوصات خارجية بطيئة
     // بل نتصل مباشرة بـ Supabase لمعالجة الطابور، فإذا رد الخادم كان هذا إثباتاً قاطعاً للاتصال
-    if (navigator.onLine) {
-      if (!forceDirect) {
-        const hasInternet = await checkRealInternetAccess(3000);
-        setHasInternetAccess(hasInternet);
-        if (!hasInternet) {
-          console.log('[CloudSync] No real internet access, skipping periodic sync silently');
-          return { success: false, processed: 0, failed: 0 };
-        }
-      }
-    } else {
+    if (isAppOffline()) {
       setHasInternetAccess(false);
       return { success: false, processed: 0, failed: 0 };
+    }
+    if (!forceDirect) {
+      const hasInternet = await checkRealInternetAccess(3000);
+      setHasInternetAccess(hasInternet);
+      if (!hasInternet) {
+        console.log('[CloudSync] No real internet access, skipping periodic sync silently');
+        return { success: false, processed: 0, failed: 0 };
+      }
     }
 
     isSyncingRef.current = true;
@@ -484,7 +492,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     } catch (error) {
       console.error('Manual sync error:', error);
       // ✅ عرض سبب الفشل الحقيقي من الخادم إذا كان الجهاز متصلاً بالشبكة
-      if (navigator.onLine && !forceDirect) {
+      if (!isAppOffline() && !forceDirect) {
         const friendlyError = formatSyncServerError(error);
         showToast.error('فشلت المزامنة', {
           description: friendlyError,

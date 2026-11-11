@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 // Clear all demo/user data from localStorage and IndexedDB
 // This module handles complete data reset locally and on the cloud via RPC reset_user_store_data
 
@@ -164,7 +165,7 @@ export const clearAllUserData = () => {
  */
 export const clearAllDataCompletely = async (): Promise<boolean> => {
   const PENDING_CLOUD_CLEAR_KEY = 'hyperpos_pending_cloud_clear';
-  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  const isOnline = typeof navigator !== 'undefined' ? !isAppOffline() : true;
 
   try {
     if (isOnline) {

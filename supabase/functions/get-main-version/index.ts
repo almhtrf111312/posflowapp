@@ -83,6 +83,10 @@ Deno.serve(async (req) => {
       committedAt: commit?.commit?.committer?.date ?? null,
       notes,
       recentReleases, // ✅ مصفوفة آخر 10 إصدارات رسمية
+      // سجل البناء من version.json: مصدر أسماء الإصدارات الموثوق (changelog قد يتأخر)
+      buildHistory: Array.isArray(v.buildHistory)
+        ? v.buildHistory.slice(0, 100).map((b: any) => ({ versionCode: Number(b.versionCode || 0), versionName: String(b.versionName || '') }))
+        : [],
     });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);

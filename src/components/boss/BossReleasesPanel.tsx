@@ -96,6 +96,7 @@ export function BossReleasesPanel() {
     message?: string | null;
     notes: string[];
     recentReleases?: ReleaseHistoryItem[];
+    buildHistory?: Array<{ versionCode: number; versionName: string }>;
   } | null>(null);
   const [mainError, setMainError] = useState<string | null>(null);
   const loadMainVersion = async () => {
@@ -115,6 +116,22 @@ export function BossReleasesPanel() {
   }, []);
   const CURRENT_VERSION_NAME = mainVersion?.versionName ?? BUNDLED_VERSION_NAME;
   const CURRENT_VERSION_CODE = mainVersion?.versionCode ?? BUNDLED_VERSION_CODE;
+
+  // خريطة رقم البناء → اسم الإصدار: الاسم يُشتق من الرقم حتى لا يتعارض مع رقم البناء المنشور
+  const buildNameByCode = useMemo(() => {
+    const map = new Map<number, string>();
+    const bundledHistory = (typeof __APP_VERSION__ !== 'undefined' && Array.isArray((__APP_VERSION__ as any).buildHistory))
+      ? ((__APP_VERSION__ as any).buildHistory as Array<{ versionCode: number; versionName: string }>)
+      : [];
+    [...bundledHistory, ...(mainVersion?.buildHistory || [])].forEach((b) => {
+      const code = Number(b.versionCode || 0);
+      if (code && b.versionName) map.set(code, String(b.versionName));
+    });
+    return map;
+  }, [mainVersion]);
+  const publishedName = cfg?.latest_version_code
+    ? (buildNameByCode.get(Number(cfg.latest_version_code)) ?? cfg.latest_version_name)
+    : cfg?.latest_version_name;
   
   const hasUnpublishedCommits = useMemo(() => {
     if (!mainVersion) return false;
@@ -284,6 +301,10 @@ export function BossReleasesPanel() {
 
   // 2. النشر الفوري بضغطة زر وتأكيد (1-Click Publish Flow)
   const handlePublishConfirm = async () => {
+    if (!mainVersion) {
+      toast.error('تعذر قراءة أحدث نسخة من main — أعد المحاولة قبل النشر');
+      return;
+    }
     setIsBusy(true);
     try {
       const minCode = releaseType === 'forced' ? (minAllowedCode || CURRENT_VERSION_CODE) : 0;
@@ -356,6 +377,10 @@ export function BossReleasesPanel() {
 
   // 4. حفظ الإعدادات فقط دون تشغيل البناء
   const handleSaveConfigOnly = async () => {
+    if (!mainVersion) {
+      toast.error('تعذر قراءة أحدث نسخة من main — أعد المحاولة قبل الحفظ');
+      return;
+    }
     setIsBusy(true);
     try {
       const minCode = releaseType === 'forced' ? (minAllowedCode || CURRENT_VERSION_CODE) : 0;
@@ -488,7 +513,7 @@ export function BossReleasesPanel() {
               </div>
               <div>
                 <p className="text-muted-foreground">المنشور للمستخدمين</p>
-                <p className="font-bold font-mono" dir="ltr">{cfg?.latest_version_name ? `v${cfg.latest_version_name}` : '—'}</p>
+                <p className="font-bold font-mono" dir="ltr">{publishedName ? `v${publishedName}` : '—'}</p>
                 <p className="text-[10px] text-muted-foreground font-mono">{cfg?.latest_version_code ? `Build ${cfg.latest_version_code}` : ''}</p>
               </div>
             </div>

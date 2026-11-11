@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useUserRole } from '@/hooks/use-user-role';
 import { useLanguage } from '@/hooks/use-language';
@@ -89,7 +90,7 @@ export function ErrorRadarPanel() {
       const localLogs = getErrorRadarLogs();
       
       // 2. إذا كان المستخدم Boss ومتصلاً بالإنترنت، جلب السجلات المركزية من Supabase
-      if (isBoss && typeof navigator !== 'undefined' && navigator.onLine) {
+      if (isBoss && typeof navigator !== 'undefined' && !isAppOffline()) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: remoteData, error } = await (supabase as any)
           .from('error_logs')
@@ -232,7 +233,7 @@ export function ErrorRadarPanel() {
 
   // المزامنة اليدوية مع الخادم
   const handleManualSync = async () => {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    if (typeof navigator !== 'undefined' && isAppOffline()) {
       toast.error('الجهاز غير متصل بالإنترنت حالياً');
       return;
     }

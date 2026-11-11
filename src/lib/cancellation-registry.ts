@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 /**
  * Cancellation Registry - FlowPOS Pro
  * =====================================
@@ -173,7 +174,7 @@ export const reconcileCancelledOperationsWithCloud = async (): Promise<{
     return { checked: 0, refunded: 0, confirmedCancelled: 0, failed: 0 };
   }
 
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+  if (typeof navigator !== 'undefined' && isAppOffline()) {
     return { checked: 0, refunded: 0, confirmedCancelled: 0, failed: 0 };
   }
 

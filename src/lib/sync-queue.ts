@@ -111,6 +111,45 @@ const isTerminalSyncError = (message: string): boolean => {
   ].some(fragment => normalized.includes(fragment));
 };
 
+/** أخطاء الشبكة (لا علاقة لها ببيانات العملية): لا تُحسب كمحاولة فاشلة */
+const NETWORK_ERROR_FRAGMENTS = [
+  'failed to fetch',
+  'networkerror',
+  'network request failed',
+  'network error',
+  'load failed',
+  'fetch failed',
+  'err_internet_disconnected',
+  'err_network',
+  'err_name_not_resolved',
+  'err_connection',
+  'err_timed_out',
+  'the internet connection appears to be offline',
+  'the network connection was lost',
+  'no internet',
+  'timed out',
+  'aborted',
+];
+
+export const isNetworkSyncError = (message: string): boolean => {
+  const normalized = message.toLowerCase();
+  return NETWORK_ERROR_FRAGMENTS.some(fragment => normalized.includes(fragment));
+};
+
+/**
+ * ربط طبقة الشبكة (يُضبط من CloudSyncProvider):
+ * - isOffline: هل الإنترنت الفعلي مقطوع الآن؟
+ * - probe: فحص فعلي متجاوز للكاش، يُستدعى بعد فشل عملية لتمييز "فشل الخادم" عن "انقطاع الإنترنت"
+ */
+interface SyncNetworkHooks {
+  isOffline: () => boolean;
+  probe: () => Promise<boolean>;
+}
+let syncNetworkHooks: SyncNetworkHooks | null = null;
+export const configureSyncNetwork = (hooks: SyncNetworkHooks | null): void => {
+  syncNetworkHooks = hooks;
+};
+
 
 export interface SyncQueueStatus {
   pendingCount: number;
@@ -425,6 +464,12 @@ export const processQueue = async (
     console.log('[SyncQueue] Already processing, skipping...');
     return { processed: 0, failed: 0 };
   }
+
+  // لا توجد إنترنت فعلي: نؤجل الطابور كاملاً دون استهلاك أي محاولة
+  if (syncNetworkHooks?.isOffline()) {
+    console.log('[SyncQueue] Internet unreachable - deferring queue without counting retries');
+    return { processed: 0, failed: 0 };
+  }
   
   isProcessing = true;
   emitEvent(EVENTS.SYNC_QUEUE_UPDATED, getQueueStatus());
@@ -450,6 +495,16 @@ export const processQueue = async (
     });
 
     console.log(`[SyncQueue] Processing ${pending.length} operations...`);
+
+    // إعادة العملية للانتظار دون زيادة retryCount، ثم إيقاف الدفعة لأن الشبكة مقطوعة
+    const deferForNetwork = (operation: QueuedOperation) => {
+      console.warn(`[SyncQueue] Network unavailable - deferring ${operation.id} without counting a retry`);
+      updateOperationStatus(operation.id, 'pending');
+      updateHistoryStatus(operation.id, 'pending', 'بانتظار عودة الإنترنت');
+      if (operation.id === targetOperationId) {
+        targetSuccess = false;
+      }
+    };
     
     for (const operation of pending) {
       // إذا كانت العملية تعتمد على عملية أب ما زالت معلقة في الطابور، نؤجل معالجتها لمنع حدوث خطأ نهائي
@@ -489,6 +544,10 @@ export const processQueue = async (
           }
           console.log(`[SyncQueue] Processed: ${operation.id}`);
         } else {
+          if (syncNetworkHooks && !(await syncNetworkHooks.probe())) {
+            deferForNetwork(operation);
+            break;
+          }
           updateOperationStatus(operation.id, 'failed', 'Processing returned false');
           updateHistoryStatus(operation.id, 'failed', 'Processing returned false');
           failed++;
@@ -498,6 +557,10 @@ export const processQueue = async (
         }
       } catch (error) {
         const errorMessage = extractErrorMessage(error);
+        if (isNetworkSyncError(errorMessage)) {
+          deferForNetwork(operation);
+          break;
+        }
         const terminal = isTerminalSyncError(errorMessage);
         if (terminal) {
           const queue = loadQueue();

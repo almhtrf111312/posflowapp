@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 // Cloud Partners Store - Supabase-backed partners management
 import { 
   fetchFromSupabase, 
@@ -197,7 +198,7 @@ const CACHE_TTL = 30000;
 // Background refresh control
 let bgPartnersRefreshing = false;
 const refreshPartnersInBackground = async () => {
-  if (bgPartnersRefreshing || !navigator.onLine) return;
+  if (bgPartnersRefreshing || isAppOffline()) return;
   if (await isCashierUser()) return;
   bgPartnersRefreshing = true;
   try {
@@ -233,11 +234,11 @@ export const loadPartnersCloud = async (): Promise<Partner[]> => {
   if (local) {
     partnersCache = local;
     cacheTimestamp = Date.now();
-    if (navigator.onLine) refreshPartnersInBackground();
+    if (!isAppOffline()) refreshPartnersInBackground();
     return local;
   }
 
-  if (!navigator.onLine) return [];
+  if (isAppOffline()) return [];
 
   const cloudPartners = await fetchFromSupabase<CloudPartner>('partners', {
     column: 'created_at',
@@ -404,7 +405,7 @@ export const addCapitalWithCashboxCloud = async (
 
     // 1. التنفيذ الذري في السحابة
     let rpcSuccess = false;
-    if (navigator.onLine) {
+    if (!isAppOffline()) {
       try {
         const { data, error } = await sb.rpc('partner_deposit_atomic', {
           _partner_id: partnerId,
@@ -529,7 +530,7 @@ export const withdrawProfitCloud = async (
 
   // 2. Attempt atomic server-side RPC execution
   let rpcSuccess = false;
-  if (navigator.onLine) {
+  if (!isAppOffline()) {
     try {
       const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
         _partner_id: partnerId,
@@ -638,7 +639,7 @@ export const withdrawCapitalCloud = async (
 
   // 2. Attempt atomic server-side RPC execution
   let rpcSuccess = false;
-  if (navigator.onLine) {
+  if (!isAppOffline()) {
     try {
       const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
         _partner_id: partnerId,

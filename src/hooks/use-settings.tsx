@@ -1,3 +1,4 @@
+import { isAppOffline } from '@/hooks/use-network-status';
 /**
  * Flow POS Pro - Fast Stale-While-Revalidate Settings Hook
  * ========================================================
@@ -49,7 +50,7 @@ export function useFastSettings(): UseFastSettingsResult {
     let cancelled = false;
 
     const revalidate = async () => {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (typeof navigator !== 'undefined' && isAppOffline()) return;
       setIsSyncing(true);
       try {
         const cloudSettings = await pullStoreSettingsWithGuard();

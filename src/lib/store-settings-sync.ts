@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
  * Flow POS Pro - Unified Store Settings & Cross-Device Sync Module
  * ==============================================================
@@ -781,7 +781,7 @@ export async function pullStoreSettingsWithGuard(): Promise<UnifiedStoreSettings
   const localSettings = loadUnifiedStoreSettings();
 
   // 🚀 Zero-Wait: إرجاع الإعدادات المحلية فوراً (0ms) وإطلاق استعلام السحابة في الخلفية بهدوء
-  if (typeof navigator !== 'undefined' && !isAppOffline() && !bgSettingsPulling) {
+  if (typeof navigator !== 'undefined' && !isLocalDataMode() && !bgSettingsPulling) {
     bgSettingsPulling = true;
     (async () => {
       try {
@@ -910,7 +910,7 @@ export async function saveUnifiedStoreSettings(
   const cloudPayload = buildCloudStorePayload(merged);
 
   // 4. إذا كان الجهاز غير متصل بالإنترنت: إضافة أو دمج في طابور التزامن فوراً
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     try {
       enqueueStoreSettingsUpdate(cloudPayload);
       console.log('[StoreSettingsSync] Saved offline to consolidated sync queue');

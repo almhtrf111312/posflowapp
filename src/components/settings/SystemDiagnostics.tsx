@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -71,7 +71,7 @@ export function SystemDiagnostics() {
 
   const fetchDiagnostics = async () => {
     // تشخيصات السحابة تحتاج إنترنت: لا ننتظر مهلة شبكة غير موجودة
-    if (isAppOffline()) { setIsLoading(false); return; }
+    if (isLocalDataMode()) { setIsLoading(false); return; }
     setIsLoading(true);
     try {
       const { data: rolesData, error: rolesError } = await supabase

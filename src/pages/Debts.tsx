@@ -73,6 +73,8 @@ import { useLanguage } from '@/hooks/use-language';
 import { useMoney } from '@/hooks/use-money';
 import { processDebtPayment } from '@/lib/unified-transactions';
 import { shareDebt, DebtShareData } from '@/lib/native-share';
+import { useSubscriptionLocked } from '@/hooks/use-subscription-lock';
+import { SUBSCRIPTION_REQUIRED_MESSAGE } from '@/lib/subscription-lock';
 
 interface DebtsProps {
   embedded?: boolean;
@@ -81,6 +83,13 @@ interface DebtsProps {
 }
 
 export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsProps) {
+  // التجربة المجانية: الديون للعرض فقط (لا إضافة ولا تعديل ولا تسديد ولا حذف)
+  const subscriptionLocked = useSubscriptionLocked();
+  const rejectIfLocked = (): boolean => {
+    if (!subscriptionLocked) return false;
+    toast.error(SUBSCRIPTION_REQUIRED_MESSAGE);
+    return true;
+  };
   const { user, profile } = useAuth();
   const { t, language } = useLanguage();
   const m = useMoney();
@@ -159,12 +168,17 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   // Sync embedded add debt dialog
   useEffect(() => {
     if (onAddDebt !== undefined) {
+      if (onAddDebt && rejectIfLocked()) {
+        onAddDebtChange?.(false);
+        return;
+      }
       setShowAddDebtDialog(onAddDebt);
     }
   }, [onAddDebt]);
 
   // Notify parent when dialog closes
   const handleAddDebtDialogChange = (open: boolean) => {
+    if (open && rejectIfLocked()) return;
     setShowAddDebtDialog(open);
     onAddDebtChange?.(open);
   };
@@ -284,6 +298,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   }, [selectedDebt, paymentCurrency, currentRate, m]);
 
   const openPaymentDialog = async (debt: Debt) => {
+    if (rejectIfLocked()) return;
     // ✅ منع تسديد دين مرتبط بفاتورة مستردة
     if (debt.invoiceId && !debt.isCashDebt) {
       try {
@@ -352,6 +367,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   };
 
   const handlePayment = async () => {
+    if (rejectIfLocked()) return;
     if (paymentBusyRef.current || isSubmitting) return;
     if (!selectedDebt || amountUSD <= 0) {
       toast.error(t('debts.enterValidAmount'));
@@ -484,6 +500,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   };
 
   const handleAddCashDebt = async () => {
+    if (rejectIfLocked()) return;
     // ✅ حماية من التكرارات
     if (isSavingRef.current) return;
 
@@ -668,6 +685,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                       <DropdownMenuItem
                         onClick={() => {
                           setSelectedDebt(debt);
+                          if (rejectIfLocked()) return;
                           setShowDeleteDialog(true);
                         }}
                         className="justify-between text-destructive cursor-pointer"

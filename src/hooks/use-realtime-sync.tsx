@@ -6,6 +6,7 @@ import { EVENTS, emitEvent } from '@/lib/events';
 import { getOwnerIdForInsert } from '@/lib/supabase-store';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { pullStoreSettingsWithGuard } from '@/lib/store-settings-sync';
+import { isLocalOnlyMode } from '@/lib/subscription-lock';
 
 const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
 
@@ -53,7 +54,7 @@ export function useRealtimeSync() {
 
   useEffect(() => {
     // In Guest Demo Mode, do not connect to Supabase realtime channels
-    if (isGuestDemoMode()) {
+    if (isGuestDemoMode() || isLocalOnlyMode()) {
       return;
     }
 

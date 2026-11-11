@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 // Cloud Products Store - Supabase-backed products management
 import {
   fetchFromSupabase,
@@ -497,7 +497,7 @@ const loadProductsCloudInternal = async (): Promise<Product[]> => {
   }
 
   // 2. Fast check if offline or dead connection
-  const isOnline = typeof navigator !== 'undefined' ? !isAppOffline() : true;
+  const isOnline = typeof navigator !== 'undefined' ? !isLocalDataMode() : true;
 
   if (!isOnline) {
     const localProducts = await loadFromLocalCache();
@@ -786,7 +786,7 @@ export const clearProductsLocalCache = () => {
 
 // ✅ Refresh products from cloud in background (non-blocking) + purge stale IDB entries
 export const refreshProductsFromCloud = async (): Promise<Product[]> => {
-  if (isGuestDemoMode() || isAppOffline()) return productsCache || [];
+  if (isGuestDemoMode() || isLocalDataMode()) return productsCache || [];
   const userId = getCurrentUserId();
   if (!userId) return productsCache || [];
   cacheTimestamp = 0; // bypass memory TTL
@@ -899,7 +899,7 @@ export const addProductCloud = async (product: Omit<Product, 'id' | 'status'>): 
   const cloudData = toCloudProduct(product);
 
   // === OFFLINE SUPPORT ===
-  if (isAppOffline()) {
+  if (isLocalDataMode()) {
     const tempId = generateProductUUID();
     const userId = getCurrentUserId() || 'offline';
     const now = new Date().toISOString();
@@ -1064,7 +1064,7 @@ export const updateProductCloud = async (id: string, data: Partial<Omit<Product,
   }
 
   // === OFFLINE SUPPORT ===
-  if (isAppOffline()) {
+  if (isLocalDataMode()) {
     if (data.archived === true) {
       removeProductFromLocalCache(id);
     } else if (productsCache) {
@@ -1191,7 +1191,7 @@ export const loadArchivedProductsCloud = async (): Promise<Product[]> => {
   const userId = getCurrentUserId();
   if (!userId) return [];
 
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     return [];
   }
 
@@ -1250,7 +1250,7 @@ export const deleteProductCloud = async (id: string): Promise<boolean> => {
   emitEvent(EVENTS.PRODUCTS_UPDATED, productsCache);
 
   // 2. إذا كان أوفلاين، نضع العملية في طابور المزامنة فوراً
-  if (isAppOffline()) {
+  if (isLocalDataMode()) {
     const { addToQueue } = await import('../sync-queue');
     addToQueue('sale', {
       _operation: 'product_delete',

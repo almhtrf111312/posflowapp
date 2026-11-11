@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 import { useEffect, useState, useCallback } from 'react';
 import { Download, X, Lock, AlertTriangle, Megaphone, Send } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -54,7 +54,7 @@ export function RemoteUpdatesGate() {
   }, [banners]);
 
   const refresh = useCallback(async () => {
-    if (!user?.id || isAppOffline()) return;
+    if (!user?.id || isLocalDataMode()) return;
     try {
       reportClientVersion(user.id).catch(() => {});
       const releaseCfg = await fetchReleaseConfig();

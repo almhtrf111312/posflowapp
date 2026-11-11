@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
  * Sync Recovery - FlowPOS Pro
  * ===========================
@@ -243,7 +243,7 @@ export const discardStuckOperation = async (operationQueueId: string): Promise<D
     );
     if (existingRec && existingRec.status === 'local_cancelled_pending_cloud') {
       // إعادة فحص السحابة
-      if (typeof navigator !== 'undefined' && !isAppOffline()) {
+      if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
         const { reconcileCancelledOperationsWithCloud } = await import('./cancellation-registry');
         await reconcileCancelledOperationsWithCloud();
         const updated = getCancellationRecord(existingRec.operationId);
@@ -439,7 +439,7 @@ export const discardStuckOperation = async (operationQueueId: string): Promise<D
 
     if (isGuestDemoMode()) {
       finalStatus = 'cancelled';
-    } else if (typeof navigator !== 'undefined' && !isAppOffline()) {
+    } else if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       try {
         let query = supabase.from('invoices').select('id, invoice_number, status');
         if (invoiceNumber && operationId && invoiceNumber !== operationId) {

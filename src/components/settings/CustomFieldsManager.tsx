@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, GripVertical, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
   const [fields, setFields] = useState<CustomField[]>(() => loadCustomFields());
 
   useEffect(() => {
-    if (isAppOffline()) return; // نعرض الحقول المحفوظة محلياً
+    if (isLocalDataMode()) return; // نعرض الحقول المحفوظة محلياً
     syncCustomFieldsFromCloud().then((cloudFields) => {
       if (cloudFields && cloudFields.length > 0) {
         setFields(cloudFields);

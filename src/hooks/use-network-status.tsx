@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Network } from '@capacitor/network';
+import { isLocalOnlyMode } from '@/lib/subscription-lock';
 
 const PROBE_CACHE_TTL = 4000; // positive cache (ms)
 const NEGATIVE_PROBE_CACHE_TTL = 1500; // negative cache for fast recovery (ms)
@@ -31,6 +32,14 @@ function publishVerifiedState(offline: boolean) {
 export function isAppOffline(): boolean {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
   return verifiedOffline;
+}
+
+/**
+ * هل يجب قراءة/كتابة البيانات محلياً؟ true عند انقطاع الشبكة، أو في وضع التجربة المحلي.
+ * تُستخدم في طبقات البيانات والمزامنة. بوابات الترخيص وتذكرة الأوفلاين تستخدم isAppOffline (الشبكة فقط).
+ */
+export function isLocalDataMode(): boolean {
+  return isAppOffline() || isLocalOnlyMode();
 }
 
 /** Helper kept for existing callers. */

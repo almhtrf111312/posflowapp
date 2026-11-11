@@ -12,7 +12,9 @@ import { processDebtSaleBundleFromQueue } from '@/lib/cloud/debt-sale-handler';
 import { processCashSaleBundleFromQueue } from '@/lib/cloud/cash-sale-handler';
 import { processQuickPurchaseFromQueue, processPurchaseInvoiceFromQueue } from '@/lib/cloud/purchase-queue-processor';
 import { showToast } from '@/lib/toast-config';
-import { useNetworkStatus, checkRealInternetAccess, isAppOffline } from '@/hooks/use-network-status';
+import { useNetworkStatus, checkRealInternetAccess, isAppOffline, isLocalDataMode } from '@/hooks/use-network-status';
+import { ensureAccountEncryptionKey } from '@/lib/account-encryption-key';
+import { LOCAL_MODE_EVENT, isLocalOnlyMode } from '@/lib/subscription-lock';
 import { processGenericQueuedOperation } from '@/lib/cloud/sync-operation-processor';
 import { warmupAllCaches } from '@/lib/cloud/cache-warmup';
 import { isGuestDemoMode } from '@/lib/demo-data';
@@ -159,11 +161,32 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   // ربط طابور المزامنة بالفحص الفعلي للإنترنت (وليس حالة الجهاز فقط)
   useEffect(() => {
     configureSyncNetwork({
-      isOffline: () => isAppOffline(),
+      isOffline: () => isLocalDataMode(),
       probe: () => checkRealInternetAccess(4000, { bypassCache: true }),
     });
     return () => configureSyncNetwork(null);
   }, []);
+
+  // مفتاح تشفير الحساب: يُضمن عند كل جلسة متصلة (الحساب الجديد يحصل عليه عند التسجيل)
+  useEffect(() => {
+    if (!user || isGuestDemoMode() || isAppOffline()) return;
+    ensureAccountEncryptionKey(user.id).then((ok) => {
+      if (!ok) console.warn('[CloudSync] Encryption key not ensured yet (migration may be pending)');
+    }).catch(() => {});
+  }, [user?.id]);
+
+  // عند انتهاء وضع التجربة المحلي (الاشتراك) تبدأ المزامنة الأولى لكل البيانات المحلية
+  useEffect(() => {
+    if (!user || isGuestDemoMode()) return;
+    const handleModeChange = () => {
+      if (!isLocalOnlyMode()) {
+        console.log('[CloudSync] Local-only mode ended, starting initial sync');
+        setTimeout(() => { syncNowRef.current?.(true); }, 200);
+      }
+    };
+    window.addEventListener(LOCAL_MODE_EVENT, handleModeChange);
+    return () => window.removeEventListener(LOCAL_MODE_EVENT, handleModeChange);
+  }, [user]);
   
   // مراقبة عودة الاتصال بالإنترنت لتشغيل المزامنة التلقائية
   // مع فحص فعلي للإنترنت (وليس فقط الشبكة)
@@ -367,7 +390,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     // Verify internet access
     // ✅ في المزامنة الفورية بعد عملية البيع (forceDirect)، لا نحظر المعالجة بفحوصات خارجية بطيئة
     // بل نتصل مباشرة بـ Supabase لمعالجة الطابور، فإذا رد الخادم كان هذا إثباتاً قاطعاً للاتصال
-    if (isAppOffline()) {
+    if (isLocalDataMode()) {
       setHasInternetAccess(false);
       return { success: false, processed: 0, failed: 0 };
     }

@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 // Cloud Expenses Store - Supabase-backed expenses management
 import { 
   fetchFromSupabase, 
@@ -154,7 +154,7 @@ const fetchFresh_loadExpensesCloud = async (): Promise<Expense[]> => {
   }
 
   // Offline: return local cache
-  if (isAppOffline()) {
+  if (isLocalDataMode()) {
     const local = loadExpensesLocally();
     if (local) {
       expensesCache = local;
@@ -226,7 +226,7 @@ const fetchFresh_loadExpensesCloud = async (): Promise<Expense[]> => {
 
 let bgFetchingExpenses = false;
 const refreshExpensesInBackground = async () => {
-  if (bgFetchingExpenses || (typeof navigator !== 'undefined' && isAppOffline())) return;
+  if (bgFetchingExpenses || (typeof navigator !== 'undefined' && isLocalDataMode())) return;
   bgFetchingExpenses = true;
   try {
     const oldCache = expensesCache || loadExpensesLocally() || [];
@@ -255,7 +255,7 @@ export const loadExpensesCloud = async (): Promise<Expense[]> => {
 
   if (cachedData && cachedData.length > 0) {
     expensesCache = cachedData;
-    if (typeof navigator !== 'undefined' && !isAppOffline()) {
+    if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       if (Date.now() - cacheTimestamp >= CACHE_TTL) {
         void refreshExpensesInBackground();
       }
@@ -263,7 +263,7 @@ export const loadExpensesCloud = async (): Promise<Expense[]> => {
     return cachedData;
   }
 
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     return cachedData || [];
   }
 
@@ -334,7 +334,7 @@ export const addExpenseCloud = async (expenseData: {
   };
 
   // 1. Offline fallback
-  if (isAppOffline()) {
+  if (isLocalDataMode()) {
     return saveToLocalAndQueue();
   }
 
@@ -366,7 +366,7 @@ export const addExpenseCloud = async (expenseData: {
 
 // Delete or reverse expense
 export const deleteExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم'): Promise<boolean> => {
-  if (isAppOffline()) {
+  if (isLocalDataMode()) {
     addToQueue('expense_reverse', {
       id,
       reason,

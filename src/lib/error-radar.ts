@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
  * Flow POS Pro - Error Radar Service
  * رادار الأخطاء المركزي - خدمة تسجيل وتشخيص أخطاء التطبيق مع دعم التخزين والإرسال دون اتصال
@@ -151,7 +151,7 @@ function getDeviceMetadata(): ErrorRadarDeviceMetadata {
   return {
     platform: getPlatform(),
     screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : '0x0',
-    isOnline: typeof navigator !== 'undefined' ? !isAppOffline() : true,
+    isOnline: typeof navigator !== 'undefined' ? !isLocalDataMode() : true,
     language: typeof navigator !== 'undefined' ? (navigator.language || 'ar') : 'ar',
   };
 }
@@ -377,7 +377,7 @@ interface SendResult {
  * لا يتم اعتبار السجل مرسلاً إلا إذا أكد الخادم استلامه بنجاح
  */
 async function sendErrorLogToServer(log: QueuedErrorRadarLog): Promise<SendResult> {
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     return { success: false, serverConfirmed: false, error: 'Network offline' };
   }
 
@@ -404,7 +404,7 @@ async function sendErrorLogToServer(log: QueuedErrorRadarLog): Promise<SendResul
         device_language: log.device?.language || 'ar',
         timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : '',
         screen_resolution: log.device?.screen || '',
-        was_online: typeof navigator !== 'undefined' ? !isAppOffline() : true,
+        was_online: typeof navigator !== 'undefined' ? !isLocalDataMode() : true,
         was_queued_offline: log.syncStatus === 'pending',
         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
         extra_context: {
@@ -455,7 +455,7 @@ export async function flushErrorRadarQueue(): Promise<{
     return { processed: 0, synced: 0, failed: 0 };
   }
 
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     return { processed: 0, synced: 0, failed: 0 };
   }
 
@@ -655,7 +655,7 @@ export function captureError(
     enqueueErrorRadarLog(newLog);
 
     // 3. محاولة إرسال غير معطلة في الخلفية إذا كانت الشبكة متوفرة
-    if (typeof navigator !== 'undefined' && !isAppOffline()) {
+    if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       setTimeout(() => {
         flushErrorRadarQueue().catch(() => {});
       }, 1500);
@@ -698,7 +698,7 @@ export async function markErrorResolved(id: string): Promise<boolean> {
     saveErrorRadarLogs(logs);
 
     // تحديث الخادم صامتاً إذا كان متاحاً
-    if (typeof navigator !== 'undefined' && !isAppOffline()) {
+    if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const query = (supabase as any)
@@ -735,7 +735,7 @@ export async function markErrorUnresolved(id: string): Promise<boolean> {
     target.resolvedAt = undefined;
     saveErrorRadarLogs(logs);
 
-    if (typeof navigator !== 'undefined' && !isAppOffline()) {
+    if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const query = (supabase as any)
@@ -924,13 +924,13 @@ export function initErrorRadar(): () => void {
 
   // فحص دوري خفيف للطابور كل 5 دقائق عند توفر الشبكة
   const periodicQueueCheck = setInterval(() => {
-    if (typeof navigator !== 'undefined' && !isAppOffline()) {
+    if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       flushErrorRadarQueue().catch(() => {});
     }
   }, 5 * 60 * 1000);
 
   // تشغيل أولي للطابور في حال توفر الشبكة
-  if (typeof navigator !== 'undefined' && !isAppOffline()) {
+  if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
     setTimeout(() => {
       flushErrorRadarQueue().catch(() => {});
     }, 4000);

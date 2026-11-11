@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useProductLimits } from '@/hooks/use-product-limits';
@@ -503,7 +503,7 @@ export default function Products() {
     // 2. Step 2: Background refresh / sync from cloud
     try {
       const [cloudProducts, cloudCategories, allWarehouses, allWarehouseStocks] = await Promise.all([
-        !isAppOffline() ? refreshProductsFromCloud() : loadProductsCloud(),
+        !isLocalDataMode() ? refreshProductsFromCloud() : loadProductsCloud(),
         getCategoryNamesCloud(),
         loadWarehousesCloud(),
         fetchAllWarehouseStocksCloud()

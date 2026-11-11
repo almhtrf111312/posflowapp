@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,7 +92,7 @@ export function LicenseManagement() {
 
   const fetchData = async () => {
     // بدون إنترنت: نعرض ما هو محفوظ محلياً فوراً بدل انتظار شبكة غير موجودة
-    if (isAppOffline()) { setIsLoading(false); return; }
+    if (isLocalDataMode()) { setIsLoading(false); return; }
     setIsLoading(true);
     try {
       const { data: codesData, error: codesError } = await supabase

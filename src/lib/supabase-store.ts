@@ -1,4 +1,4 @@
-import { isAppOffline } from '@/hooks/use-network-status';
+import { isLocalDataMode } from '@/hooks/use-network-status';
 // Supabase Store - Cloud sync utilities for all data stores
 import { supabase } from '@/integrations/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -252,7 +252,7 @@ export async function fetchFromSupabase<T = unknown>(
   }
 
   // Fast offline check
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     return [];
   }
 
@@ -627,7 +627,7 @@ export async function fetchIncrementalFromSupabase<T = unknown>(
   if (!userId) return [];
 
   // Fast offline check
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     return [];
   }
 
@@ -688,7 +688,7 @@ export async function fetchStoreSettings(timeoutMs: number = 1500): Promise<Stor
   const ownerId = await getOwnerIdForInsert();
   if (!ownerId) return null;
 
-  if (typeof navigator !== 'undefined' && isAppOffline()) {
+  if (typeof navigator !== 'undefined' && isLocalDataMode()) {
     return null;
   }
 
@@ -792,7 +792,7 @@ export async function saveStoreSettingsDirect(settings: Record<string, unknown>)
 // Save store settings with Offline-First support and Sync Queue
 export async function saveStoreSettings(settings: Record<string, unknown>): Promise<boolean> {
   // If offline, save into sync queue immediately
-  if (isAppOffline()) {
+  if (isLocalDataMode()) {
     try {
       const { enqueueStoreSettingsUpdate } = await import('./sync-queue');
       enqueueStoreSettingsUpdate(settings);

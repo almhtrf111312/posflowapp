@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './use-auth';
 import { recordServerContact, getOfflineStatus, isDataEncrypted, decryptLocalData, checkAndEnforceProtection } from '@/lib/offline-protection';
 import { fetchOfflineLease, getOfflineLeaseStatus, clearOfflineLease } from '@/lib/offline-lease';
+import { setLocalOnlyMode } from '@/lib/subscription-lock';
 import { toast } from '@/lib/sonner-bridge';
 
 export interface LicenseState {
@@ -439,6 +440,12 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     window.addEventListener('flowpos:license-changed', handleLicenseChanged);
     return () => window.removeEventListener('flowpos:license-changed', handleLicenseChanged);
   }, [checkLicense]);
+
+  // وضع التجربة المحلي: التجربة (غير المشتركة) لا ترفع بياناتها إلى السحابة
+  useEffect(() => {
+    if (state.isLoading) return;
+    setLocalOnlyMode(!!state.isTrial && !!state.hasLicense && state.role !== 'boss');
+  }, [state.isLoading, state.isTrial, state.hasLicense, state.role]);
 
   return (
     <LicenseContext.Provider value={{ ...state, checkLicense, activateCode, startTrial }}>

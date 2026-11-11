@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/lib/sonner-bridge';
+import { applyTheme } from '@/hooks/use-theme';
 import { Loader2, Store, Eye, EyeOff, Smartphone, RefreshCw, AlertTriangle, Mail, Sparkles, Send, KeyRound, ShieldCheck, ShieldAlert, CheckCircle2, ArrowRight, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
@@ -83,6 +84,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await injectGuestDemoData();
+      applyTheme('light', 'orange');
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('guest-demo-started'));
       }

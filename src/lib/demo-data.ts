@@ -4,6 +4,7 @@
  */
 
 import { Product } from './products-store';
+import { buildTrialCatalog, buildTrialCategories, applyTrialDisplayDefaults, trialUuid } from './trial-sample-catalog';
 import { Customer } from './customers-store';
 import { Invoice, InvoiceItem, InvoiceStatus } from './invoices-store';
 import { Debt } from './debts-store';
@@ -57,140 +58,8 @@ export const getDemoRemainingTime = (): { hours: number; minutes: number; totalM
 
 const baseTime = Date.now();
 
-export const demoProducts: Product[] = [
-  {
-    id: 'prod_001',
-    name: 'آيفون 15 برو ماكس',
-    barcode: '6941634001001',
-    category: 'هواتف ذكية',
-    costPrice: 950,
-    salePrice: 1100,
-    quantity: 8,
-    minStockLevel: 3,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_002',
-    name: 'سامسونج جالكسي S24 ألترا',
-    barcode: '6941634001002',
-    category: 'هواتف ذكية',
-    costPrice: 820,
-    salePrice: 980,
-    quantity: 12,
-    minStockLevel: 3,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_003',
-    name: 'سماعات AirPods Pro 2',
-    barcode: '6941634001003',
-    category: 'إكسسوارات',
-    costPrice: 180,
-    salePrice: 240,
-    quantity: 25,
-    minStockLevel: 5,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_004',
-    name: 'شاحن سريع 65W',
-    barcode: '6941634001004',
-    category: 'إكسسوارات',
-    costPrice: 15,
-    salePrice: 30,
-    quantity: 45,
-    minStockLevel: 10,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_005',
-    name: 'كفر حماية مغناطيسي',
-    barcode: '6941634001005',
-    category: 'إكسسوارات',
-    costPrice: 5,
-    salePrice: 15,
-    quantity: 80,
-    minStockLevel: 15,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_006',
-    name: 'لاب توب MacBook Air M3',
-    barcode: '6941634001006',
-    category: 'أجهزة كمبيوتر',
-    costPrice: 920,
-    salePrice: 1150,
-    quantity: 5,
-    minStockLevel: 2,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_007',
-    name: 'آيباد برو 12.9 إنش',
-    barcode: '6941634001007',
-    category: 'تابلت',
-    costPrice: 750,
-    salePrice: 920,
-    quantity: 7,
-    minStockLevel: 2,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_008',
-    name: 'ساعة Apple Watch Ultra',
-    barcode: '6941634001008',
-    category: 'ساعات ذكية',
-    costPrice: 620,
-    salePrice: 780,
-    quantity: 6,
-    minStockLevel: 2,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_009',
-    name: 'بنك طاقة أنكر 20000mAh',
-    barcode: '6941634001009',
-    category: 'إكسسوارات',
-    costPrice: 28,
-    salePrice: 48,
-    quantity: 30,
-    minStockLevel: 5,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_010',
-    name: 'كابل شحن Type-C مضفر',
-    barcode: '6941634001010',
-    category: 'إكسسوارات',
-    costPrice: 4,
-    salePrice: 12,
-    quantity: 100,
-    minStockLevel: 20,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_011',
-    name: 'سماعة رأس بلوتوث سوني',
-    barcode: '6941634001011',
-    category: 'إكسسوارات',
-    costPrice: 140,
-    salePrice: 195,
-    quantity: 10,
-    minStockLevel: 3,
-    status: 'in_stock',
-  },
-  {
-    id: 'prod_012',
-    name: 'شاشة حماية زجاجية نانو',
-    barcode: '6941634001012',
-    category: 'إكسسوارات',
-    costPrice: 2,
-    salePrice: 8,
-    quantity: 120,
-    minStockLevel: 25,
-    status: 'in_stock',
-  },
-];
+// نفس كتالوج التجربة: معرّفات UUID صالحة (نقطة البيع ترفض غيرها) وتصنيفات متنوعة
+export const demoProducts: Product[] = buildTrialCatalog();
 
 // ============================================
 // CUSTOMERS
@@ -291,7 +160,7 @@ export const demoInvoices: Invoice[] = [
     customerName: 'أحمد محمد الكريم',
     customerPhone: '0501234567',
     items: [
-      createItem('prod_001', 'آيفون 15 برو ماكس', 1100, 1, 950),
+      createItem(trialUuid(1), 'آيفون 15 برو ماكس', 1100, 1, 950),
     ],
     subtotal: 1100,
     discount: 0,
@@ -314,8 +183,8 @@ export const demoInvoices: Invoice[] = [
     customerName: 'سارة عبدالله العمري',
     customerPhone: '0559876543',
     items: [
-      createItem('prod_003', 'سماعات AirPods Pro 2', 240, 1, 180),
-      createItem('prod_004', 'شاحن سريع 65W', 30, 2, 15),
+      createItem(trialUuid(6), 'سماعات AirPods Pro 2', 240, 1, 180),
+      createItem(trialUuid(5), 'شاحن سريع 65W', 30, 2, 15),
     ],
     subtotal: 300,
     discount: 10,
@@ -336,7 +205,7 @@ export const demoInvoices: Invoice[] = [
     customerName: 'خالد سعود الدوسري',
     customerPhone: '0541112233',
     items: [
-      createItem('prod_001', 'آيفون 15 برو ماكس', 1100, 1, 950),
+      createItem(trialUuid(1), 'آيفون 15 برو ماكس', 1100, 1, 950),
     ],
     subtotal: 1100,
     discount: 0,
@@ -359,7 +228,7 @@ export const demoInvoices: Invoice[] = [
     customerName: 'أحمد محمد الكريم',
     customerPhone: '0501234567',
     items: [
-      createItem('prod_002', 'سامسونج جالكسي S24 ألترا', 980, 1, 820),
+      createItem(trialUuid(2), 'سامسونج جالكسي S24 ألترا', 980, 1, 820),
     ],
     subtotal: 980,
     discount: 0,
@@ -380,7 +249,7 @@ export const demoInvoices: Invoice[] = [
     customerName: 'فاطمة حسن الزهراني',
     customerPhone: '0567778899',
     items: [
-      createItem('prod_003', 'سماعات AirPods Pro 2', 240, 1, 180),
+      createItem(trialUuid(6), 'سماعات AirPods Pro 2', 240, 1, 180),
     ],
     subtotal: 240,
     discount: 0,
@@ -403,8 +272,8 @@ export const demoInvoices: Invoice[] = [
     customerName: 'سارة عبدالله العمري',
     customerPhone: '0559876543',
     items: [
-      createItem('prod_006', 'لاب توب MacBook Air M3', 1150, 1, 920),
-      createItem('prod_005', 'كفر حماية مغناطيسي', 15, 1, 5),
+      createItem(trialUuid(13), 'لاب توب MacBook Air M3', 1150, 1, 920),
+      createItem(trialUuid(7), 'كفر حماية مغناطيسي', 15, 1, 5),
     ],
     subtotal: 1165,
     discount: 5,
@@ -425,7 +294,7 @@ export const demoInvoices: Invoice[] = [
     customerName: 'عمر يوسف الشمري',
     customerPhone: '0533445566',
     items: [
-      createItem('prod_008', 'ساعة Apple Watch Ultra', 780, 1, 620),
+      createItem(trialUuid(12), 'ساعة Apple Watch Ultra', 780, 1, 620),
     ],
     subtotal: 780,
     discount: 0,
@@ -446,8 +315,8 @@ export const demoInvoices: Invoice[] = [
     customerName: 'فاطمة حسن الزهراني',
     customerPhone: '0567778899',
     items: [
-      createItem('prod_007', 'آيباد برو 12.9 إنش', 920, 1, 750),
-      createItem('prod_004', 'شاحن سريع 65W', 30, 1, 15),
+      createItem(trialUuid(14), 'آيباد برو 12.9 إنش', 920, 1, 750),
+      createItem(trialUuid(5), 'شاحن سريع 65W', 30, 1, 15),
     ],
     subtotal: 950,
     discount: 0,
@@ -584,7 +453,7 @@ export const injectGuestDemoData = async (): Promise<void> => {
     enabledCurrencies: { USD: true, TRY: true, SYP: true },
     exchangeRates: { TRY: 34, SYP: 14500 },
     language: 'ar',
-    theme: 'dark',
+    theme: 'light',
     taxEnabled: false,
     taxRate: 0,
     printSettings: {
@@ -640,13 +509,10 @@ export const injectGuestDemoData = async (): Promise<void> => {
   localStorage.setItem('hyperpos_debts_cache', JSON.stringify(demoDebts));
 
   // 8. Categories
-  const demoCategories = [
-    { id: 'cat_01', name: 'هواتف ذكية', createdAt: new Date().toISOString() },
-    { id: 'cat_02', name: 'إكسسوارات', createdAt: new Date().toISOString() },
-    { id: 'cat_03', name: 'أجهزة كمبيوتر', createdAt: new Date().toISOString() },
-    { id: 'cat_04', name: 'تابلت', createdAt: new Date().toISOString() },
-    { id: 'cat_05', name: 'ساعات ذكية', createdAt: new Date().toISOString() },
-  ];
+  const demoCategories = buildTrialCategories();
+  localStorage.setItem('hyperpos_categories_v1', JSON.stringify(demoCategories));
+  applyTrialDisplayDefaults();
+  localStorage.setItem('hp_trial_catalog_version', '2');
   localStorage.setItem('hyperpos_categories_cache', JSON.stringify(demoCategories));
 
   // 9. Cashbox & Capital

@@ -1,6 +1,6 @@
 // كتالوج وضع التجربة: منتجات وتصنيفات نموذجية متنوعة، وشكل العرض الافتراضي (برتقالي + بطاقات مضغوطة).
 // البيانات محلية فقط وتُعاد تعبئتها عند كل إقلاع بعد مسح بيانات التجربة.
-import { getThemeStorageKey } from '@/hooks/use-theme';
+import { getPlatformStoragePrefix } from '@/lib/app-font-config';
 import { getStatus, type Product } from '@/lib/products-store';
 import type { Category } from '@/lib/categories-store';
 
@@ -9,7 +9,7 @@ const LEGACY_THEME_KEY = 'hyperpos_theme_v1';
 const TRIAL_THEME = JSON.stringify({ mode: 'light', color: 'orange', blur: false, transparency: 0, style: 'standard' });
 
 /** نقطة البيع تتحقق من أن معرّف كل صنف UUID صالح (validateCartProducts)، لذلك تُولَّد المعرّفات بصيغة UUID v4 ثابتة */
-const trialUuid = (n: number): string => `5a0e7c10-7e51-4c2a-9b1d-${n.toString(16).padStart(12, '0')}`;
+export const trialUuid = (n: number): string => `5a0e7c10-7e51-4c2a-9b1d-${n.toString(16).padStart(12, '0')}`;
 
 const TRIAL_CATEGORY_NAMES = [
   'هواتف ذكية',
@@ -83,7 +83,7 @@ export function buildTrialCatalog(): Product[] {
 export function applyTrialDisplayDefaults(): boolean {
   let changed = false;
   try {
-    for (const key of [getThemeStorageKey(), LEGACY_THEME_KEY]) {
+    for (const key of [`flowpos_theme_${getPlatformStoragePrefix()}`, LEGACY_THEME_KEY]) {
       if (localStorage.getItem(key) !== TRIAL_THEME) {
         localStorage.setItem(key, TRIAL_THEME);
         changed = true;

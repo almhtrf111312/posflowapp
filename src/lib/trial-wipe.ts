@@ -5,6 +5,7 @@
 import { Capacitor } from '@capacitor/core';
 import { isLocalOnlyMode, isCloudWriteBlocked, LOCAL_MODE_EVENT } from '@/lib/subscription-lock';
 import { saveProducts } from '@/lib/products-store';
+import { isGuestDemoMode } from '@/lib/demo-data';
 import { saveCategories } from '@/lib/categories-store';
 import { buildTrialCatalog, buildTrialCategories, applyTrialDisplayDefaults } from '@/lib/trial-sample-catalog';
 
@@ -199,6 +200,15 @@ async function prepareTrialSession(): Promise<boolean> {
 
 /** يُستدعى عند الإقلاع قبل الرسم: في وضع التجربة تُفحص النافذة وتُحضَّر الجلسة. */
 export async function wipeTrialDataOnBoot(): Promise<void> {
+  // وضع الضيف: جلسة بدأت بالكتالوج القديم تُحدَّث إلى الكتالوج الجديد (المعرّفات القديمة ترفضها نقطة البيع)
+  if (isGuestDemoMode()) {
+    if (localStorage.getItem(CATALOG_VERSION_KEY) !== CATALOG_VERSION) {
+      applyTrialDisplayDefaults();
+      seedTrialLocalStorage();
+      await seedTrialDatabase();
+    }
+    return;
+  }
   if (!isLocalOnlyMode()) return;
   await prepareTrialSession();
 }

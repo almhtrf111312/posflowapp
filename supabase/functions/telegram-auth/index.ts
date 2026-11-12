@@ -86,7 +86,8 @@ function genericOtpResponse(botUsername: string, identifier: string) {
   return new Response(
     JSON.stringify({
       success: true,
-      message: "إذا كان هذا الحساب موجوداً ومربوطاً ببوت تيليغرام فقد أُرسل رمز التحقق إليه. إن لم يصلك خلال دقيقة، افتح البوت وشارك رقم هاتفك ثم أعد المحاولة.",
+      message:
+        "إذا كان هذا الحساب موجوداً ومربوطاً ببوت تيليغرام فقد أُرسل رمز التحقق إليه. إن لم يصلك خلال دقيقة، افتح البوت وشارك رقم هاتفك ثم أعد المحاولة.",
       identifier,
       bot_username: botUsername,
       bot_link: `https://t.me/${botUsername}`,

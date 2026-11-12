@@ -14,6 +14,8 @@ import type { Debt } from '@/lib/cloud/debts-cloud';
 import { exportGenericToExcel, exportGenericToPDF, type ExportOptions } from '@/lib/reports/dataset-builder';
 import { formatReportAmount, formatNumber, cn } from '@/lib/utils';
 import { toLocalDateString, isDateInRange, getTodayLocal } from '@/lib/date-utils';
+import { useNavigate } from 'react-router-dom';
+import { invoicesLink } from '@/lib/report-links';
 import { isSalesInvoice, invoiceNetSales, itemNetRevenue, itemProfit, itemUnitCost } from '@/lib/report-metrics';
 
 type Range = { from: string; to: string };
@@ -149,6 +151,7 @@ const daysBetween = (fromDay: string, toDay: string) =>
   Math.round((new Date(toDay + 'T00:00:00').getTime() - new Date(fromDay + 'T00:00:00').getTime()) / 86400000);
 
 export function ReceivablesAgingReport({ debts }: { debts: Debt[] }) {
+  const navigate = useNavigate();
   const today = getTodayLocal();
   const rows = useMemo(() => debts
     .filter(d => !d.isWrittenOff && Number(d.remainingDebt || 0) > 0)
@@ -209,7 +212,8 @@ export function ReceivablesAgingReport({ debts }: { debts: Debt[] }) {
       {rows.length === 0 ? <Empty icon={<Clock />} text="لا توجد ديون مفتوحة" /> : (
         <Card><CardContent className="p-0 divide-y divide-border/40">
           {rows.map(r => (
-            <div key={r.id} className="flex items-center gap-2 p-2.5">
+            <div key={r.id} className="flex items-center gap-2 p-2.5 cursor-pointer hover:bg-muted/40"
+              onClick={() => navigate(invoicesLink({ payment: 'debt', q: r.customer }))}>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate">{r.customer}</p>
                 <p className="text-[10px] text-muted-foreground">استحقاق {r.dueDay} • {r.bucketLabel}</p>
@@ -230,6 +234,7 @@ export function ReceivablesAgingReport({ debts }: { debts: Debt[] }) {
 /* 3) المرتجعات والخصومات                                             */
 /* ---------------------------------------------------------------- */
 export function ReturnsDiscountsReport({ invoices, dateRange }: { invoices: Invoice[]; dateRange: Range }) {
+  const navigate = useNavigate();
   const [view, setView] = useState<'returns' | 'discounts'>('returns');
 
   const returns = useMemo(() => invoices
@@ -309,10 +314,11 @@ export function ReturnsDiscountsReport({ invoices, dateRange }: { invoices: Invo
       {list.length === 0 ? <Empty icon={<Undo2 />} text={view === 'returns' ? 'لا توجد مرتجعات في هذه الفترة' : 'لا توجد خصومات في هذه الفترة'} /> : (
         <Card><CardContent className="p-0 divide-y divide-border/40">
           {list.map(r => (
-            <div key={r.id} className="flex items-center gap-2 p-2.5">
+            <div key={r.id} className="flex items-center gap-2 p-2.5 cursor-pointer hover:bg-muted/40"
+              onClick={() => navigate(invoicesLink({ invoice: r.id, refunded: view === 'returns' }))}>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate">{r.customer}</p>
-                <p className="text-[10px] text-muted-foreground">{r.day} • {r.cashier}</p>
+                <p className="text-[10px] text-muted-foreground">#{r.id} • {r.day} • {r.cashier}</p>
               </div>
               <p className="text-xs font-bold shrink-0">{formatReportAmount(r.amount)}</p>
             </div>
@@ -327,6 +333,7 @@ export function ReturnsDiscountsReport({ invoices, dateRange }: { invoices: Invo
 /* 4) ملخص الضريبة                                                    */
 /* ---------------------------------------------------------------- */
 export function TaxSummaryReport({ invoices, dateRange }: { invoices: Invoice[]; dateRange: Range }) {
+  const navigate = useNavigate();
   const { byRate, byDay, totals } = useMemo(() => {
     const rateMap = new Map<string, { rate: string; invoices: number; netSales: number; tax: number }>();
     const dayMap = new Map<string, { day: string; invoices: number; netSales: number; tax: number }>();
@@ -401,7 +408,8 @@ export function TaxSummaryReport({ invoices, dateRange }: { invoices: Invoice[];
           <Card><CardContent className="p-0 divide-y divide-border/40">
             <p className="p-2.5 text-xs font-bold">حسب اليوم</p>
             {byDay.map(d => (
-              <div key={d.day} className="flex items-center justify-between p-2.5 text-xs">
+              <div key={d.day} className="flex items-center justify-between p-2.5 text-xs cursor-pointer hover:bg-muted/40"
+                onClick={() => navigate(invoicesLink({ from: d.day, to: d.day }))}>
                 <span>{d.day} • مبيعات {formatReportAmount(d.netSales)}</span>
                 <span className="font-bold">{formatReportAmount(d.tax)}</span>
               </div>

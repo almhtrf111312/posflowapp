@@ -10,6 +10,8 @@ import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
 import { exportGenericToPDF, exportGenericToExcel } from '@/lib/reports/dataset-builder';
 import { toast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
+import { useNavigate } from 'react-router-dom';
+import { invoicesLink, clickableClass } from '@/lib/report-links';
 
 interface Props {
   invoices: Invoice[];
@@ -33,6 +35,7 @@ export function SalesDetailedReport({
   hideHeaderCard = false
 }: Props) {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [scope, setScope] = useState<ScopeMode>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -243,7 +246,7 @@ export function SalesDetailedReport({
               </thead>
               <tbody>
                 {rows.slice(0, 200).map((r, i) => (
-                  <tr key={i} className="border-t border-border/40 hover:bg-muted/30">
+                  <tr key={i} className="border-t border-border/40 hover:bg-muted/30 cursor-pointer" onClick={() => navigate(invoicesLink({ invoice: r.number }))}>
                     <td className="p-2 text-start font-mono">#{r.number}</td>
                     <td className="p-2 text-start text-muted-foreground">{r.date}</td>
                     <td className="p-2 text-start">{r.customer}</td>

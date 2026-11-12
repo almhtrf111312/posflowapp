@@ -68,6 +68,7 @@ import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/exp
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
 import { computeProfitSummary, realizedProfitToDate } from '@/lib/profit-engine';
 import { invoiceNetSales, itemNetRevenue, itemProfit, isSalesInvoice } from '@/lib/report-metrics';
+import { invoicesLink } from '@/lib/report-links';
 import { useUserRole } from '@/hooks/use-user-role';
 import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -372,6 +373,13 @@ function ReportsContent() {
     { id: 'financial', label: t('reports.category.financial'), icon: TrendingUp },
     { id: 'admin', label: t('reports.category.admin'), icon: Activity },
   ], [t]);
+
+  // التقارير التي تعتمد على بطاقات أعلى الصفحة؛ البقية لها بطاقاتها الخاصة داخل التقرير،
+  // فإظهار بطاقات الصفحة معها يكرر الأرقام نفسها (مثل الصيانة والإغلاق اليومي والديون)
+  const SUMMARY_CARD_REPORTS = useMemo(() => new Set([
+    'sales', 'profits', 'inventory', 'products', 'customers', 'partners', 'expenses',
+    'top-products', 'inventory-stock', 'stock-discrepancy',
+  ]), []);
 
   // All available reports categorized and refined
   const allReports: ReportEntry[] = useMemo(() => [
@@ -2555,13 +2563,23 @@ function ReportsContent() {
 
 
         {/* Dynamic Executive Metrics Cards Grid - adapts to activeReport */}
+        {SUMMARY_CARD_REPORTS.has(activeReport) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           {summaryCards.map((card, idx) => {
             const Icon = card.icon;
+            // النقر على البطاقة يفتح القسم المصدر بالفلاتر نفسها (الفواتير بنفس الفترة، المصاريف، العملاء، المنتجات)
+            const cardTarget = (activeReport === 'sales' || activeReport === 'profits')
+              ? invoicesLink({ from: dateRange.from, to: dateRange.to })
+              : activeReport === 'expenses' ? '/expenses'
+              : activeReport === 'customers' ? '/customers'
+              : (activeReport === 'inventory' || activeReport === 'products' || activeReport === 'top-products' || activeReport === 'inventory-stock') ? '/products'
+              : null;
             return (
               <div
                 key={idx}
+                onClick={cardTarget ? () => navigate(cardTarget) : undefined}
                 className={cn(
+                  cardTarget && "cursor-pointer hover:shadow-md active:scale-[0.99]",
                   "relative overflow-hidden rounded-2xl bg-card p-3.5 sm:p-4 shadow-sm flex flex-col justify-between min-h-[8.2rem] transition-[border-color,box-shadow] duration-200 border",
                   idx === 0 ? "border-2 border-primary/40 shadow-sm" : "border border-border/70 hover:border-border"
                 )}
@@ -2593,6 +2611,7 @@ function ReportsContent() {
             );
           })}
         </div>
+        )}
 
         {/* View Mode Segmented Controls — unified capsule style */}
         <div className="bg-muted/60 p-1 rounded-2xl grid grid-cols-3 gap-1 w-full border border-border/40 shadow-xs select-none">

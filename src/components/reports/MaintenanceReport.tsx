@@ -9,6 +9,8 @@ import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
 import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
 import { useLanguage } from '@/hooks/use-language';
+import { useNavigate } from 'react-router-dom';
+import { invoicesLink, clickableClass } from '@/lib/report-links';
 
 interface Props {
   dateRange: { from: string; to: string };
@@ -19,6 +21,9 @@ interface Props {
 
 export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternalExport = false }: Props) {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const go = (extra: { payment?: string; invoice?: string } = {}) =>
+    navigate(invoicesLink({ type: 'maintenance', from: dateRange.from, to: dateRange.to, ...extra }));
 
   const data = useMemo(() => {
     return invoices.filter(inv => {
@@ -121,12 +126,12 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={`bg-card rounded-xl border border-border p-4 ${clickableClass}`} onClick={() => go()} title="عرض فواتير الصيانة">
           <Wrench className="w-5 h-5 text-primary mb-2" />
           <p className="text-2xl font-bold">{stats.count}</p>
           <p className="text-xs text-muted-foreground">{t('reports.maintenanceInvoicesCount') || 'عدد الخدمات'}</p>
         </div>
-        <div className="bg-card rounded-xl border border-border p-4">
+        <div className={`bg-card rounded-xl border border-border p-4 ${clickableClass}`} onClick={() => go()} title="عرض فواتير الصيانة">
           <DollarSign className="w-5 h-5 text-blue-500 mb-2" />
           <p className="text-2xl font-bold">{formatReportAmount(stats.totalRevenue)}</p>
           <p className="text-xs text-muted-foreground">{t('reports.totalRevenue') || 'إجمالي الإيرادات'}</p>
@@ -138,7 +143,11 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
           <CheckCircle className="w-5 h-5 text-amber-500 mb-2" />
-          <p className="text-2xl font-bold">{stats.cashCount} / {stats.debtCount}</p>
+          <p className="text-2xl font-bold">
+            <button type="button" className="hover:underline" onClick={() => go({ payment: 'cash' })}>{stats.cashCount}</button>
+            {' / '}
+            <button type="button" className="hover:underline" onClick={() => go({ payment: 'debt' })}>{stats.debtCount}</button>
+          </p>
           <p className="text-xs text-muted-foreground">{t('reports.cashSales') || 'نقدي'} / {t('reports.creditSales') || 'آجل'}</p>
         </div>
       </div>
@@ -165,7 +174,7 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
               </thead>
               <tbody>
                 {data.map((inv, i) => (
-                  <tr key={inv.id} className="border-t hover:bg-muted/30">
+                  <tr key={inv.id} className="border-t hover:bg-muted/30 cursor-pointer" onClick={() => go({ invoice: inv.id })}>
                     <td className="p-3 text-muted-foreground">{i + 1}</td>
                     <td className="p-3 text-start font-medium">{inv.customerName}</td>
                     <td className="p-3 text-start text-muted-foreground max-w-[14.3rem] truncate">{inv.serviceDescription || '-'}</td>

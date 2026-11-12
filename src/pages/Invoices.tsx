@@ -1,6 +1,6 @@
 import { capsuleOuter, capsuleOuterScroll, capsuleItem, capsuleActive, capsuleIdle } from '@/components/ui/SegmentedCapsule';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FileText,
   Search,
@@ -781,6 +781,24 @@ export default function Invoices() {
     setInvoiceDisplayLimit(INITIAL_INVOICES_LIMIT);
   }, [debouncedSearch, filterType, filterPayment, dateQuickFilter, dateFilter, customDateMode, dateFrom, dateTo, showRefunded]);
 
+  // الوقوف على الفاتورة المطلوبة من التقرير: توسيع العرض حتى تظهر، ثم التمرير إليها وفتحها
+  useEffect(() => {
+    const target = pendingFocusRef.current;
+    if (!target || filteredInvoices.length === 0) return;
+    const idx = filteredInvoices.findIndex(inv => inv.id === target);
+    if (idx < 0) return;
+    pendingFocusRef.current = null;
+    if (idx >= invoiceDisplayLimit) setInvoiceDisplayLimit(idx + 10);
+    setFocusedInvoiceId(target);
+    const found = filteredInvoices[idx];
+    setTimeout(() => {
+      document.querySelector(`[data-invoice-id="${CSS.escape(target)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      handleView(found);
+    }, 350);
+    setTimeout(() => setFocusedInvoiceId(null), 4000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredInvoices]);
+
   const displayedInvoices = useMemo(() => {
     return filteredInvoices.slice(0, invoiceDisplayLimit);
   }, [filteredInvoices, invoiceDisplayLimit]);
@@ -861,6 +879,39 @@ export default function Invoices() {
     setSelectedInvoice(invoice);
     setShowViewDialog(true);
   };
+
+  // 🔗 فتح الفواتير من التقارير: ?type=maintenance&payment=debt&from=YYYY-MM-DD&to=YYYY-MM-DD&refunded=1&invoice=<id>
+  // يطبق الفلاتر نفسها، وإن حُدِّدت فاتورة يوقف عليها (يظهرها ويميّزها ويفتح تفاصيلها)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [focusedInvoiceId, setFocusedInvoiceId] = useState<string | null>(null);
+  const pendingFocusRef = useRef<string | null>(null);
+  useEffect(() => {
+    const type = searchParams.get('type');
+    const payment = searchParams.get('payment');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const refunded = searchParams.get('refunded');
+    const invoiceId = searchParams.get('invoice');
+    const q = searchParams.get('q');
+    if (!type && !payment && !from && !to && !refunded && !invoiceId && !q) return;
+    setActiveMainTab('sales');
+    setSearchQuery(q || '');
+    setFilterType((type as typeof filterType) || 'all');
+    setFilterPayment((payment as typeof filterPayment) || 'all');
+    setShowRefunded(refunded === '1');
+    if (from || to) {
+      setDateQuickFilter('custom');
+      setCustomDateMode('range');
+      setDateFrom(from || '');
+      setDateTo(to || '');
+    } else if (invoiceId || q) {
+      setDateQuickFilter('all');
+    }
+    pendingFocusRef.current = invoiceId;
+    // إزالة المعاملات من الرابط حتى لا تُعاد عند الرجوع أو التحديث
+    setSearchParams(new URLSearchParams(), { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleRefund = (invoice: Invoice) => {
     // فاتورة شُطب دينها: الخسارة سُجّلت ووُزّعت، فلا تُسترد (المرحلة 2)
@@ -2264,9 +2315,11 @@ export default function Invoices() {
                 return (
                   <div
                     key={invoice.id}
+                    data-invoice-id={invoice.id}
                     onClick={() => handleView(invoice)}
                     className={cn(
                       "invoice-card rounded-xl p-3 border shadow-xs relative active:scale-[0.99] transition-[colors,transform] cursor-pointer select-none",
+                      focusedInvoiceId === invoice.id && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                       isFullyRefunded
                         ? "border-rose-500/40 bg-rose-500/5 hover:border-rose-500/60"
                         : "border-border/80 bg-card text-card-foreground hover:border-primary/40"

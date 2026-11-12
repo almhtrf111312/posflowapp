@@ -8,6 +8,8 @@ import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
 import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
 import { useLanguage } from '@/hooks/use-language';
+import { useNavigate } from 'react-router-dom';
+import { invoicesLink, clickableClass } from '@/lib/report-links';
 import { useCurrency, formatInCurrency } from '@/hooks/use-currency';
 
 interface Props {
@@ -17,6 +19,7 @@ interface Props {
 
 export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const { currencyCode, exchangeRate } = useCurrency();
   const isNonUsd = currencyCode !== 'USD';
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -212,7 +215,7 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
               </thead>
               <tbody>
                 {filtered.map(d => (
-                  <tr key={d.id} className="border-t hover:bg-muted/30">
+                  <tr key={d.id} className="border-t hover:bg-muted/30 cursor-pointer" onClick={() => navigate(invoicesLink({ payment: 'debt', q: d.customerName || undefined }))} title="عرض فواتير هذا العميل الآجلة">
                     <td className="p-3 text-start font-medium">{d.customerName}</td>
                     <td className="p-3 text-start text-muted-foreground">{d.customerPhone || '-'}</td>
                     <td className="p-3 text-center">

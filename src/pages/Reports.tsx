@@ -73,8 +73,11 @@ import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } fro
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 const PartnerProfitDetailedReport = lazy(() => import('@/components/reports/PartnerProfitDetailedReport').then(m => ({ default: m.PartnerProfitDetailedReport })));
 const ProfitTrendChart = lazy(() => import('@/components/reports/ProfitTrendChart').then(m => ({ default: m.ProfitTrendChart })));
-const DistributorInventoryReport = lazy(() => import('@/components/reports/DistributorInventoryReport').then(m => ({ default: m.DistributorInventoryReport })));
-const DistributorCustodyValueReport = lazy(() => import('@/components/reports/DistributorCustodyValueReport').then(m => ({ default: m.DistributorCustodyValueReport })));
+const ProductProfitReport = lazy(() => import('@/components/reports/AnalyticsReports').then(m => ({ default: m.ProductProfitReport })));
+const ReceivablesAgingReport = lazy(() => import('@/components/reports/AnalyticsReports').then(m => ({ default: m.ReceivablesAgingReport })));
+const ReturnsDiscountsReport = lazy(() => import('@/components/reports/AnalyticsReports').then(m => ({ default: m.ReturnsDiscountsReport })));
+const TaxSummaryReport = lazy(() => import('@/components/reports/AnalyticsReports').then(m => ({ default: m.TaxSummaryReport })));
+const SlowMovingStockReport = lazy(() => import('@/components/reports/AnalyticsReports').then(m => ({ default: m.SlowMovingStockReport })));
 const PurchaseInvoicesReport = lazy(() => import('@/components/reports/PurchaseInvoicesReport').then(m => ({ default: m.PurchaseInvoicesReport })));
 const DebtsReport = lazy(() => import('@/components/reports/DebtsReport').then(m => ({ default: m.DebtsReport })));
 const CashierPerformanceReport = lazy(() => import('@/components/reports/CashierPerformanceReport').then(m => ({ default: m.CashierPerformanceReport })));
@@ -262,7 +265,7 @@ function ReportsContent() {
       const needPartners = activeReport === 'partners' || activeReport === 'partner-detailed';
       const needCategories = activeReport === 'categories' || (!isSilent && !isSalesTab);
       const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'period-closing' || activeReport === 'profits' || activeReport === 'overview';
-      const needDebts = activeReport === 'debts' || activeReport === 'daily-closing';
+      const needDebts = activeReport === 'debts' || activeReport === 'daily-closing' || activeReport === 'receivables-aging';
       const needPurchases = activeReport === 'purchases';
 
       const results = await Promise.all([
@@ -309,7 +312,7 @@ function ReportsContent() {
     loadProfitLedgerCloud().then(setProfitLedger).catch(() => {});
 
     // جلب جداول النطاق فقط عند تفعيل التبويب المخصص لها
-    if (activeReport === 'debts' || activeReport === 'daily-closing') {
+    if (activeReport === 'debts' || activeReport === 'daily-closing' || activeReport === 'receivables-aging') {
       loadDebtsCloud().then(d => { if (d) setCloudDebts(d); }).catch(() => {});
     }
     if (activeReport === 'purchases') {
@@ -374,44 +377,34 @@ function ReportsContent() {
   const allReports: ReportEntry[] = useMemo(() => [
     { id: 'sales', category: 'sales', label: t('reports.sales'), icon: ShoppingCart, availability: 'ready' },
     { id: 'partner-detailed', category: 'sales', label: t('reports.partnerDetailedReport'), icon: ClipboardList, availability: 'ready' },
-    { id: 'payment-methods', category: 'sales', label: t('reports.paymentMethods'), icon: CreditCard, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
-    { id: 'returns-discounts', category: 'sales', label: t('reports.returnsDiscounts'), icon: Undo2, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
+    { id: 'returns-discounts', category: 'sales', label: t('reports.returnsDiscounts'), icon: Undo2, availability: 'ready' },
 
     ...(!noInventory ? [
       { id: 'inventory', category: 'inventory', label: t('reports.inventoryValueCost'), icon: Package, availability: 'ready' as const },
       { id: 'product-movement', category: 'inventory', label: t('reports.productMovement'), icon: Activity, availability: 'ready' as const },
       { id: 'inventory-stock', category: 'inventory', label: t('reports.inventoryStockDiscrepancy'), icon: PackageSearch, availability: 'ready' as const },
       { id: 'top-products', category: 'inventory', label: t('reports.topProducts'), icon: TrendingUp, availability: 'ready' as const },
-      { id: 'product-profit', category: 'inventory', label: t('reports.productProfitability'), icon: DollarSign, availability: 'needs-data' as const, unavailableReasonKey: 'reports.unsupportedDataReason' },
-      { id: 'slow-moving-stock', category: 'inventory', label: t('reports.slowMovingStock'), icon: AlertTriangle, availability: 'needs-data' as const, unavailableReasonKey: 'reports.unsupportedDataReason' },
+      { id: 'product-profit', category: 'inventory', label: t('reports.productProfitability'), icon: DollarSign, availability: 'ready' as const },
+      { id: 'slow-moving-stock', category: 'inventory', label: t('reports.slowMovingStock'), icon: AlertTriangle, availability: 'ready' as const },
     ] : []),
 
     { id: 'purchases', category: 'purchases', label: t('reports.purchasesInvoices'), icon: FileText, availability: 'ready' },
     { id: 'expenses', category: 'purchases', label: t('reports.expenses'), icon: Receipt, availability: 'ready' },
-    { id: 'supplier-payables', category: 'purchases', label: t('reports.supplierPayables'), icon: FileText, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
 
     { id: 'debts', category: 'debts', label: t('reports.debtsDeferredSale'), icon: Banknote, availability: 'ready' },
     { id: 'customers', category: 'debts', label: t('reports.customers'), icon: Users, availability: 'ready' },
     { id: 'partners', category: 'debts', label: t('reports.partners'), icon: UsersRound, availability: 'ready' },
     { id: 'debt-writeoffs', category: 'debts', label: t('reports.debtWriteoffs'), icon: Undo2, availability: 'ready' },
-    { id: 'receivables-aging', category: 'debts', label: t('reports.receivablesAging'), icon: Clock, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
+    { id: 'receivables-aging', category: 'debts', label: t('reports.receivablesAging'), icon: Clock, availability: 'ready' },
 
     { id: 'profits', category: 'financial', label: t('reports.profitLoss'), icon: TrendingUp, availability: 'ready' },
-    { id: 'cash-flow', category: 'financial', label: t('reports.cashFlow'), icon: ArrowDownUp, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
-    { id: 'tax-summary', category: 'financial', label: t('reports.taxSummary'), icon: Receipt, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
-    { id: 'period-comparison', category: 'financial', label: t('reports.periodComparison'), icon: GitCompare, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
-    { id: 'balance-sheet', category: 'financial', label: t('reports.balanceSheet'), icon: Scale, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
-    { id: 'trial-balance', category: 'financial', label: t('reports.trialBalance'), icon: BookOpen, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
+    { id: 'tax-summary', category: 'financial', label: t('reports.taxSummary'), icon: Receipt, availability: 'ready' },
 
     { id: 'daily-closing', category: 'admin', label: t('reports.dailyClosing'), icon: Calendar, availability: 'ready' },
     { id: 'period-closing', category: 'admin', label: t('reports.periodClosing'), icon: Lock, availability: 'ready' },
     { id: 'cashier-performance', category: 'admin', label: t('reports.cashierPerformance'), icon: Users, availability: 'ready' },
     ...(visibleSections.maintenance ? [{ id: 'maintenance', category: 'admin', label: t('reports.maintenanceServices'), icon: ClipboardList, availability: 'ready' as const }] : []),
     ...(storeType === 'bookstore' ? [{ id: 'library', category: 'admin', label: t('reports.libraryReport'), icon: BookOpen, availability: 'ready' as const }] : []),
-    ...(isDistributorStore ? [
-      { id: 'distributor-inventory', category: 'admin', label: t('reports.distributorInventory'), icon: Truck, availability: 'ready' as const },
-      { id: 'custody-value', category: 'admin', label: t('reports.custodyValue'), icon: Wallet, availability: 'ready' as const },
-    ] : []),
   ], [noInventory, visibleSections.maintenance, storeType, isDistributorStore, t]);
 
   const visibleReports = useMemo(() => {
@@ -2249,6 +2242,8 @@ function ReportsContent() {
         { id: 'profits', name: t('reports.profitLoss'), icon: TrendingUp, bg: 'bg-green-100/70 dark:bg-green-950/60 text-green-600' },
         { id: 'partner-detailed', name: t('reports.partnerDetailedReport'), icon: ClipboardList, bg: 'bg-blue-100/70 dark:bg-blue-950/60 text-blue-600' },
         { id: 'expenses', name: t('reports.expenses'), icon: Receipt, bg: 'bg-rose-100/70 dark:bg-rose-950/60 text-rose-600' },
+        { id: 'returns-discounts', name: t('reports.returnsDiscounts'), icon: Undo2, bg: 'bg-orange-100/70 dark:bg-orange-950/60 text-orange-600' },
+        { id: 'tax-summary', name: t('reports.taxSummary'), icon: Receipt, bg: 'bg-slate-100/70 dark:bg-slate-900/60 text-slate-600' },
       ]
     },
     {
@@ -2259,6 +2254,8 @@ function ReportsContent() {
           { id: 'inventory', name: t('reports.inventoryValueCost'), icon: Package, bg: 'bg-orange-100/70 dark:bg-orange-950/60 text-orange-600' },
           { id: 'product-movement', name: t('reports.productMovement'), icon: RefreshCw, bg: 'bg-purple-100/70 dark:bg-purple-950/60 text-purple-600' },
           { id: 'inventory-stock', name: t('reports.inventoryStockDiscrepancy'), icon: ClipboardCheck, bg: 'bg-cyan-100/70 dark:bg-cyan-950/60 text-cyan-600' },
+          { id: 'product-profit', name: t('reports.productProfitability'), icon: DollarSign, bg: 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-600' },
+          { id: 'slow-moving-stock', name: t('reports.slowMovingStock'), icon: AlertTriangle, bg: 'bg-amber-100/70 dark:bg-amber-950/60 text-amber-600' },
         ] : []),
         { id: 'purchases', name: t('reports.purchasesInvoices'), icon: FileText, bg: 'bg-sky-100/70 dark:bg-sky-950/60 text-sky-600' },
       ]
@@ -2270,6 +2267,7 @@ function ReportsContent() {
         { id: 'customers', name: t('reports.customers'), icon: Users, bg: 'bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-600' },
         { id: 'partners', name: t('reports.partners'), icon: UsersRound, bg: 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-600' },
         { id: 'debt-writeoffs', name: t('reports.debtWriteoffs'), icon: Undo2, bg: 'bg-rose-100/70 dark:bg-rose-950/60 text-rose-600' },
+        { id: 'receivables-aging', name: t('reports.receivablesAging'), icon: Clock, bg: 'bg-red-100/70 dark:bg-red-950/60 text-red-600' },
       ]
     },
     {
@@ -2280,10 +2278,6 @@ function ReportsContent() {
         { id: 'cashier-performance', name: t('reports.cashierPerformance'), icon: UserCheck, bg: 'bg-teal-100/70 dark:bg-teal-950/60 text-teal-600' },
         ...(visibleSections.maintenance ? [{ id: 'maintenance', name: t('reports.maintenanceServices'), icon: ClipboardList, bg: 'bg-violet-100/70 dark:bg-violet-950/60 text-violet-600' }] : []),
         ...(storeType === 'bookstore' ? [{ id: 'library', name: t('reports.libraryReport'), icon: BookOpen, bg: 'bg-blue-100/70 dark:bg-blue-950/60 text-blue-600' }] : []),
-        ...(isDistributorStore ? [
-          { id: 'distributor-inventory', name: t('reports.distributorInventory'), icon: Truck, bg: 'bg-amber-100/70 dark:bg-amber-950/60 text-amber-600' },
-          { id: 'custody-value', name: t('reports.custodyValue'), icon: Wallet, bg: 'bg-purple-100/70 dark:bg-purple-950/60 text-purple-600' },
-        ] : []),
       ]
     }
   ], [t, noInventory, visibleSections.maintenance, storeType, isDistributorStore]);
@@ -3481,15 +3475,30 @@ function ReportsContent() {
           </Suspense>
         )}
 
-        {/* Distributor Reports */}
-        {activeReport === 'distributor-inventory' && (
+        {/* تقارير تحليلية مبنية من الفواتير والمنتجات والديون */}
+        {activeReport === 'product-profit' && (
           <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
-            <DistributorInventoryReport />
+            <ProductProfitReport invoices={cloudInvoices} products={cloudProducts} dateRange={dateRange} />
           </Suspense>
         )}
-        {activeReport === 'custody-value' && (
+        {activeReport === 'slow-moving-stock' && (
           <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
-            <DistributorCustodyValueReport />
+            <SlowMovingStockReport invoices={cloudInvoices} products={cloudProducts} dateRange={dateRange} />
+          </Suspense>
+        )}
+        {activeReport === 'returns-discounts' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <ReturnsDiscountsReport invoices={cloudInvoices} dateRange={dateRange} />
+          </Suspense>
+        )}
+        {activeReport === 'tax-summary' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <TaxSummaryReport invoices={cloudInvoices} dateRange={dateRange} />
+          </Suspense>
+        )}
+        {activeReport === 'receivables-aging' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <ReceivablesAgingReport debts={cloudDebts} />
           </Suspense>
         )}
 

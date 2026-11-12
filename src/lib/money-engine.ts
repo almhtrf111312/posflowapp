@@ -525,6 +525,8 @@ export function getSavedInputCurrency(fieldKey: string, fallbackCode?: string): 
   return normalizeCurrencyCode(fallbackCode || state.activeCode);
 }
 
+let inputPrefsSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
 export function saveInputCurrencyPref(fieldKey: string, code: string): void {
   if (!fieldKey || typeof window === 'undefined') return;
   try {
@@ -535,6 +537,11 @@ export function saveInputCurrencyPref(fieldKey: string, code: string): void {
     if (cachedState) {
       cachedState = { ...cachedState, inputPrefs: nextPrefs, version: ++stateVersion };
     }
+    // مزامنة سحابية مؤجلة (تجمع التغييرات المتتالية في حفظ واحد)
+    if (inputPrefsSyncTimer) clearTimeout(inputPrefsSyncTimer);
+    inputPrefsSyncTimer = setTimeout(() => {
+      void import('./store-settings-sync').then(m => m.saveUnifiedStoreSettings({})).catch(() => {});
+    }, 4000);
   } catch {
     // تجاهل بصمت
   }

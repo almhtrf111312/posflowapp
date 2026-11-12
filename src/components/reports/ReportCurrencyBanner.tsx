@@ -38,6 +38,8 @@ export function ReportCurrencyBanner() {
     }
     refreshMoneyState();
     window.dispatchEvent(new CustomEvent(EVENTS.SETTINGS_UPDATED));
+    // حفظ اختيار عملة التقارير سحابياً مع باقي إعدادات المتجر
+    void import('@/lib/store-settings-sync').then(m => m.saveUnifiedStoreSettings({})).catch(() => {});
   };
 
   return (

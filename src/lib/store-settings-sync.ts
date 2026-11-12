@@ -698,6 +698,13 @@ export function buildCloudStorePayload(
   if (settings.productFieldsConfig) {
     mergedSync.productFieldsConfig = settings.productFieldsConfig;
   }
+  // تفضيلات كانت محلية فقط: عملة عرض التقارير وعملة الإدخال لكل حقل مالي
+  try {
+    const reportCurrency = localStorage.getItem('hyperpos_report_currency');
+    if (reportCurrency) mergedSync.reportCurrency = reportCurrency;
+    const rawPrefs = localStorage.getItem('hyperpos_money_input_prefs_v1');
+    if (rawPrefs) mergedSync.moneyInputPrefs = JSON.parse(rawPrefs);
+  } catch { /* ignore */ }
   if (Array.isArray(settings.customFields)) {
     mergedSync.customFields = settings.customFields;
   }
@@ -729,6 +736,16 @@ export function buildCloudStorePayload(
 
 export const applyCloudStoreSettings = (cloudSettings: any) => {
   if (typeof window === 'undefined' || !cloudSettings) return;
+  // استعادة عملة عرض التقارير وتفضيلات عملة الإدخال المحفوظة سحابياً
+  try {
+    const sync = cloudSettings?.sync_settings || {};
+    if (typeof sync.reportCurrency === 'string' && sync.reportCurrency) {
+      localStorage.setItem('hyperpos_report_currency', sync.reportCurrency);
+    }
+    if (sync.moneyInputPrefs && typeof sync.moneyInputPrefs === 'object') {
+      localStorage.setItem('hyperpos_money_input_prefs_v1', JSON.stringify(sync.moneyInputPrefs));
+    }
+  } catch { /* ignore */ }
   // كل منصة تستعيد ملفها فقط؛ لا يتغير حجم الهاتف من حفظ إعدادات الكمبيوتر.
   const profile = cloudSettings?.sync_settings?.appearanceProfiles?.[getPlatformStoragePrefix()];
   if (profile) {

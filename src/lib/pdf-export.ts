@@ -43,6 +43,8 @@ export interface PDFExportOptions {
   fileName?: string;
   columnStyles?: Record<number | string, any>;
   orientation?: 'portrait' | 'landscape';
+  /** القيم المالية بالدولار: تُحوَّل لعملة التقرير بسعر الصرف قبل الطباعة */
+  amountsInUsd?: boolean;
 }
 
 // Global flag to track if Arabic font is available
@@ -164,6 +166,7 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
     fileName = 'export.pdf',
     columnStyles,
     orientation = 'portrait',
+    amountsInUsd = false,
   } = options;
 
   const reportCurr = getReportCurrency();
@@ -368,7 +371,7 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
       doc.setFontSize(10.5);
       doc.setTextColor(15, 23, 42); // #0F172A
       doc.setFont(fontName, 'normal');
-      const valRaw = typeof item.value === 'number' ? item.value.toLocaleString('en-US') : String(item.value);
+      const valRaw = typeof item.value === 'number' ? item.value.toLocaleString('en-US', { maximumFractionDigits: 2 }) : String(item.value);
       const valStr = processRTL(valRaw);
       doc.text(valStr, cardX + cardWidth / 2, yPosition + 12, { align: 'center' });
     });
@@ -383,17 +386,21 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
   const effectiveColumns = isRTL ? [...columns].reverse() : [...columns];
 
   const headers = effectiveColumns.map(col => processRTL(col.header));
+  // تحويل المبلغ لعملة التقرير (إن كانت البيانات بالدولار) وتنسيقه بمنازل العملة
+  const formatMoney = (value: number) =>
+    (amountsInUsd ? value * (currencySnapshot.rate || 1) : value).toLocaleString('en-US', {
+      minimumFractionDigits: currencySnapshot.decimals,
+      maximumFractionDigits: currencySnapshot.decimals,
+    });
+  const formatPlain = (value: number) => value.toLocaleString('en-US', { maximumFractionDigits: 3 });
   const rows = data.map(item =>
     effectiveColumns.map(col => {
       const value = item[col.key];
       if (typeof value === 'number') {
         if (col.kind === 'money') {
-          return value.toLocaleString('en-US', {
-            minimumFractionDigits: currencySnapshot.decimals,
-            maximumFractionDigits: currencySnapshot.decimals,
-          });
+          return formatMoney(value);
         }
-        return value.toLocaleString('en-US');
+        return formatPlain(value);
       }
       return processRTL(String(value ?? ''));
     })
@@ -405,7 +412,7 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
       if (totals[col.key] !== undefined) {
         const value = totals[col.key];
         if (typeof value === 'number') {
-          return value.toLocaleString('en-US');
+          return col.kind === 'money' ? formatMoney(value) : formatPlain(value);
         }
         return processRTL(String(value));
       }
@@ -479,6 +486,14 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
         cellData.cell.styles.fontStyle = arabicFontLoaded ? 'normal' : 'bold';
       }
 
+      // المبالغ السالبة (خسارة) بالأحمر
+      if (cellData.section === 'body') {
+        const col = effectiveColumns[cellData.column.index];
+        if (col?.kind === 'money' && String(cellData.cell.raw ?? '').trim().startsWith('-')) {
+          cellData.cell.styles.textColor = [220, 38, 38];
+        }
+      }
+
       if (isRTL) {
         const rawVal = cellData.cell.raw;
         const textVal = String(rawVal ?? '').trim();
@@ -546,7 +561,7 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
 
         doc.setTextColor(15, 23, 42);
         const valueText = typeof item.value === 'number'
-          ? item.value.toLocaleString('en-US')
+          ? item.value.toLocaleString('en-US', { maximumFractionDigits: 2 })
           : String(item.value);
         doc.text(processRTL(valueText), summaryBoxX + 6, summaryY + 1, { align: 'left' });
       } else {
@@ -555,7 +570,7 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
 
         doc.setTextColor(15, 23, 42);
         const valueText = typeof item.value === 'number'
-          ? item.value.toLocaleString('en-US')
+          ? item.value.toLocaleString('en-US', { maximumFractionDigits: 2 })
           : String(item.value);
         doc.text(valueText, summaryBoxX + summaryBoxWidth - 6, summaryY + 1, { align: 'right' });
       }

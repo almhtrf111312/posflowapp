@@ -4,6 +4,8 @@ import { exportToPDF } from '@/lib/pdf-export';
 export interface ColumnDef {
   key: string;
   label: string;
+  /** money: مبلغ بالدولار يُحوَّل لعملة التقرير؛ quantity: كمية */
+  kind?: 'money' | 'quantity' | 'percent' | 'date' | 'text';
 }
 
 export interface ExportOptions {
@@ -22,7 +24,9 @@ export async function exportGenericToPDF(opts: ExportOptions) {
   await exportToPDF({
     title: opts.title,
     subtitle: opts.subtitle,
-    columns: opts.columns.map(c => ({ header: c.label, key: c.key })),
+    columns: opts.columns.map(c => ({ header: c.label, key: c.key, kind: c.kind })),
+    // التقارير العامة تمرّر المبالغ بالدولار كما هي في الذاكرة
+    amountsInUsd: true,
     data: opts.rows,
     totals: opts.totals,
     summary: opts.summary,
@@ -38,7 +42,9 @@ export async function exportGenericToExcel(opts: ExportOptions) {
     fileName: opts.fileName || `${opts.title}.xlsx`,
     title: opts.title,
     subtitle: opts.subtitle,
-    columns: opts.columns.map(c => ({ header: c.label, key: c.key })),
+    columns: opts.columns.map(c => ({ header: c.label, key: c.key, kind: c.kind })),
+    // التقارير العامة تمرّر المبالغ بالدولار كما هي في الذاكرة
+    amountsInUsd: true,
     data: opts.rows,
     totals: opts.totals,
     summary: opts.summary,

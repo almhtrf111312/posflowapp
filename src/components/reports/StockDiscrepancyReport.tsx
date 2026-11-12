@@ -18,10 +18,10 @@ interface Props {
 const columns = [
   { key: 'product', label: 'المنتج' },
   { key: 'warehouse', label: 'الموقع' },
-  { key: 'expected', label: 'المتوقع' },
-  { key: 'actual', label: 'الفعلي' },
-  { key: 'variance', label: 'الفرق' },
-  { key: 'varianceValue', label: 'قيمة الفرق' },
+  { key: 'expected', label: 'المتوقع', kind: 'quantity' as const },
+  { key: 'actual', label: 'الفعلي', kind: 'quantity' as const },
+  { key: 'variance', label: 'الفرق', kind: 'quantity' as const },
+  { key: 'varianceValue', label: 'قيمة الفرق', kind: 'money' as const },
   { key: 'lastMovement', label: 'آخر حركة' },
 ];
 

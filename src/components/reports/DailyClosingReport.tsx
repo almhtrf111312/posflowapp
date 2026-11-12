@@ -134,11 +134,12 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
     ];
 
     await exportToExcel({
+      amountsInUsd: true,
       sheetName: t('reports.dailyClosing') || 'الإغلاق اليومي',
       fileName: `daily_closing_${selectedDate}.xlsx`,
       columns: [
         { header: t('reports.itemLabel') || 'البند', key: 'item', width: 25 },
-        { header: t('reports.amountLabel') || 'المبلغ', key: 'amount', width: 15 },
+        { header: t('reports.amountLabel') || 'المبلغ', key: 'amount', width: 15, kind: 'money' as const },
       ],
       data: items,
       title: t('reports.dailyClosingReport') || 'تقرير الإغلاق اليومي',
@@ -147,7 +148,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
       summary: [
         { label: t('reports.totalInvoices') || 'عدد الفواتير', value: data.invoiceCount },
         { label: t('reports.expensesCount') || 'عدد المصاريف', value: data.expenseCount },
-        { label: t('reports.netProfit') || 'صافي الربح', value: data.netProfit },
+        { label: t('reports.netProfit') || 'صافي الربح', value: formatReportAmount(data.netProfit) },
       ],
     });
     toast.success(t('reports.exportSuccessExcel') || 'تم تصدير Excel بنجاح');
@@ -168,17 +169,18 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
     ];
 
     await exportToPDF({
+      amountsInUsd: true,
       title: t('reports.dailyClosingReport') || 'تقرير الإغلاق اليومي',
       reportType: t('reports.dailyReport') || 'تقرير يومي',
       subtitle: `${t('common.date') || 'التاريخ'}: ${selectedDate}`,
       columns: [
         { header: t('reports.itemLabel') || 'البند', key: 'item' },
-        { header: t('reports.amountLabel') || 'المبلغ', key: 'amount' },
+        { header: t('reports.amountLabel') || 'المبلغ', key: 'amount', kind: 'money' as const },
       ],
       data: items,
       summary: [
         { label: t('reports.totalInvoices') || 'عدد الفواتير', value: data.invoiceCount },
-        { label: t('reports.netProfit') || 'صافي الربح', value: data.netProfit },
+        { label: t('reports.netProfit') || 'صافي الربح', value: formatReportAmount(data.netProfit) },
       ],
       fileName: `daily_closing_${selectedDate}.pdf`,
     });

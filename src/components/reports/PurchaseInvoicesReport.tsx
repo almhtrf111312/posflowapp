@@ -44,6 +44,7 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
   const handleExportExcel = async () => {
     if (filtered.length === 0) { toast.error('لا توجد بيانات للتصدير'); return; }
     await exportToExcel({
+      amountsInUsd: true,
       sheetName: 'فواتير المشتريات',
       fileName: `فواتير_مشتريات_${dateRange.from}_${dateRange.to}.xlsx`,
       columns: [
@@ -51,10 +52,10 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
         { header: 'المورد', key: 'supplier_name', width: 20 },
         { header: 'الشركة', key: 'supplier_company', width: 20 },
         { header: 'التاريخ', key: 'invoice_date', width: 12 },
-        { header: 'عدد الأصناف', key: 'actual_items_count', width: 12 },
-        { header: 'الكمية', key: 'actual_total_quantity', width: 12 },
-        { header: 'الإجمالي الفعلي', key: 'actual_grand_total', width: 15 },
-        { header: 'الإجمالي المتوقع', key: 'expected_grand_total', width: 15 },
+        { header: 'عدد الأصناف', key: 'actual_items_count', width: 12, kind: 'quantity' as const },
+        { header: 'الكمية', key: 'actual_total_quantity', width: 12, kind: 'quantity' as const },
+        { header: 'الإجمالي الفعلي', key: 'actual_grand_total', width: 15, kind: 'money' as const },
+        { header: 'الإجمالي المتوقع', key: 'expected_grand_total', width: 15, kind: 'money' as const },
         { header: 'الحالة', key: 'status_label', width: 12 },
       ],
       data: filtered.map(inv => ({
@@ -68,7 +69,7 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
       summary: [
         { label: 'عدد الفواتير', value: stats.count },
-        { label: 'الإجمالي الفعلي', value: stats.total },
+        { label: 'الإجمالي الفعلي', value: formatReportAmount(stats.total) },
         { label: 'الإجمالي المتوقع', value: stats.expected },
         { label: 'فواتير مؤكدة', value: stats.finalized },
         { label: 'مسودات', value: stats.draft },
@@ -80,6 +81,7 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
   const handleExportPDF = async () => {
     if (filtered.length === 0) { toast.error('لا توجد بيانات للتصدير'); return; }
     await exportToPDF({
+      amountsInUsd: true,
       title: 'تقرير فواتير المشتريات',
       reportType: 'تقرير المشتريات',
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
@@ -87,8 +89,8 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
         { header: 'رقم الفاتورة', key: 'invoice_number' },
         { header: 'المورد', key: 'supplier_name' },
         { header: 'التاريخ', key: 'invoice_date' },
-        { header: 'الأصناف', key: 'actual_items_count' },
-        { header: 'الإجمالي', key: 'actual_grand_total' },
+        { header: 'الأصناف', key: 'actual_items_count', kind: 'quantity' as const },
+        { header: 'الإجمالي', key: 'actual_grand_total', kind: 'money' as const },
         { header: 'الحالة', key: 'status_label' },
       ],
       data: filtered.map(inv => ({
@@ -98,7 +100,7 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
       totals: { actual_grand_total: stats.total },
       summary: [
         { label: 'عدد الفواتير', value: stats.count },
-        { label: 'الإجمالي الفعلي', value: stats.total },
+        { label: 'الإجمالي الفعلي', value: formatReportAmount(stats.total) },
         { label: 'فواتير مؤكدة', value: stats.finalized },
       ],
       fileName: `فواتير_مشتريات_${dateRange.from}_${dateRange.to}.pdf`,

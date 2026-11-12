@@ -69,16 +69,17 @@ export function CashierPerformanceReport({
   const handleExportExcel = async () => {
     if (data.length === 0) { toast.error('لا توجد بيانات'); return; }
     await exportToExcel({
+      amountsInUsd: true,
       sheetName: 'أداء الكاشير',
       fileName: `أداء_الكاشير_${dateRange.from}_${dateRange.to}.xlsx`,
       columns: [
         { header: 'الكاشير', key: 'name', width: 20 },
-        { header: 'عدد الفواتير', key: 'invoiceCount', width: 12 },
-        { header: 'إجمالي المبيعات', key: 'totalSales', width: 15 },
-        { header: 'الربح المحقق', key: 'totalProfit', width: 15 },
-        { header: 'متوسط الفاتورة', key: 'avgInvoice', width: 15 },
-        { header: 'مبيعات نقدية', key: 'cashSales', width: 15 },
-        { header: 'مبيعات آجلة', key: 'debtSales', width: 15 },
+        { header: 'عدد الفواتير', key: 'invoiceCount', width: 12, kind: 'quantity' as const },
+        { header: 'إجمالي المبيعات', key: 'totalSales', width: 15, kind: 'money' as const },
+        { header: 'الربح المحقق', key: 'totalProfit', width: 15, kind: 'money' as const },
+        { header: 'متوسط الفاتورة', key: 'avgInvoice', width: 15, kind: 'money' as const },
+        { header: 'مبيعات نقدية', key: 'cashSales', width: 15, kind: 'money' as const },
+        { header: 'مبيعات آجلة', key: 'debtSales', width: 15, kind: 'money' as const },
       ],
       data: data.map(c => ({
         ...c,
@@ -90,8 +91,8 @@ export function CashierPerformanceReport({
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
       summary: [
         { label: 'عدد الكاشيرات', value: data.length },
-        { label: 'إجمالي المبيعات', value: totalSales },
-        { label: 'الأرباح المحققة', value: totalProfit },
+        { label: 'إجمالي المبيعات', value: formatReportAmount(totalSales) },
+        { label: 'الأرباح المحققة', value: formatReportAmount(totalProfit) },
         { label: 'إجمالي الفواتير', value: totalInvoices },
       ],
     });
@@ -101,15 +102,16 @@ export function CashierPerformanceReport({
   const handleExportPDF = async () => {
     if (data.length === 0) { toast.error('لا توجد بيانات'); return; }
     await exportToPDF({
+      amountsInUsd: true,
       title: 'تقرير أداء الكاشير',
       reportType: 'تقرير الأداء',
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
       columns: [
         { header: 'الكاشير', key: 'name' },
-        { header: 'الفواتير', key: 'invoiceCount' },
-        { header: 'المبيعات', key: 'totalSales' },
-        { header: 'الربح', key: 'totalProfit' },
-        { header: 'متوسط الفاتورة', key: 'avgInvoice' },
+        { header: 'الفواتير', key: 'invoiceCount', kind: 'quantity' as const },
+        { header: 'المبيعات', key: 'totalSales', kind: 'money' as const },
+        { header: 'الربح', key: 'totalProfit', kind: 'money' as const },
+        { header: 'متوسط الفاتورة', key: 'avgInvoice', kind: 'money' as const },
       ],
       data: data.map(c => ({
         ...c,
@@ -118,8 +120,8 @@ export function CashierPerformanceReport({
       totals: { totalSales, totalProfit, invoiceCount: totalInvoices },
       summary: [
         { label: 'عدد الكاشيرات', value: data.length },
-        { label: 'إجمالي المبيعات', value: totalSales },
-        { label: 'الأرباح المحققة', value: totalProfit },
+        { label: 'إجمالي المبيعات', value: formatReportAmount(totalSales) },
+        { label: 'الأرباح المحققة', value: formatReportAmount(totalProfit) },
       ],
       fileName: `أداء_الكاشير_${dateRange.from}_${dateRange.to}.pdf`,
       orientation: 'landscape',

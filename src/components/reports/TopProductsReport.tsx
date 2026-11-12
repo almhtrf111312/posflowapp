@@ -67,10 +67,10 @@ export function TopProductsReport({ dateRange }: Props) {
       subtitle: `${dateRange.from} ${t('reports.to') || 'إلى'} ${dateRange.to}`,
       columns: [
         { key: 'name', label: t('products.productName') || 'المنتج' },
-        { key: 'qty', label: t('reports.quantityLabel') || 'الكمية' },
-        { key: 'revenue', label: t('reports.revenueLabel') || 'الإيراد' },
-        { key: 'cost', label: t('reports.costLabel') || 'التكلفة' },
-        { key: 'profit', label: t('reports.profitLabel') || 'الربح' },
+        { key: 'qty', label: t('reports.quantityLabel') || 'الكمية', kind: 'quantity' as const },
+        { key: 'revenue', label: t('reports.revenueLabel') || 'الإيراد', kind: 'money' as const },
+        { key: 'cost', label: t('reports.costLabel') || 'التكلفة', kind: 'money' as const },
+        { key: 'profit', label: t('reports.profitLabel') || 'الربح', kind: 'money' as const },
         { key: 'margin', label: t('reports.marginLabel') || 'الهامش %' },
       ],
       rows: ranking.map(r => ({

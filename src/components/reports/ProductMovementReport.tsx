@@ -154,9 +154,9 @@ export function ProductMovementReport({ dateRange }: Props) {
       columns: [
         { key: 'date', label: 'التاريخ' },
         { key: 'typeLabel', label: 'النوع' },
-        { key: 'qty', label: 'الكمية' },
-        { key: 'unitPrice', label: 'السعر' },
-        { key: 'total', label: 'الإجمالي' },
+        { key: 'qty', label: 'الكمية', kind: 'quantity' as const },
+        { key: 'unitPrice', label: 'السعر', kind: 'money' as const },
+        { key: 'total', label: 'الإجمالي', kind: 'money' as const },
         { key: 'reference', label: 'المرجع' },
       ],
       rows: movements.map(m => ({
@@ -176,9 +176,9 @@ export function ProductMovementReport({ dateRange }: Props) {
       columns: [
         { key: 'date', label: 'التاريخ' },
         { key: 'typeLabel', label: 'النوع' },
-        { key: 'qty', label: 'الكمية' },
-        { key: 'unitPrice', label: 'السعر' },
-        { key: 'total', label: 'الإجمالي' },
+        { key: 'qty', label: 'الكمية', kind: 'quantity' as const },
+        { key: 'unitPrice', label: 'السعر', kind: 'money' as const },
+        { key: 'total', label: 'الإجمالي', kind: 'money' as const },
         { key: 'reference', label: 'المرجع' },
         { key: 'cashier', label: 'الكاشير' },
       ],

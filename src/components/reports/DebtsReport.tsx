@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FileText, Download, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, formatReportAmount } from '@/lib/utils';
 import { loadDebtsCloud, Debt } from '@/lib/cloud/debts-cloud';
 import { exportToExcel } from '@/lib/excel-export';
 import { exportToPDF } from '@/lib/pdf-export';
@@ -73,14 +73,15 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
   const handleExportExcel = async () => {
     if (filtered.length === 0) { toast.error('لا توجد بيانات للتصدير'); return; }
     await exportToExcel({
+      amountsInUsd: true,
       sheetName: 'البيع المؤجل',
       fileName: `تقرير_ديون_${dateRange.from}_${dateRange.to}.xlsx`,
       columns: [
         { header: 'العميل', key: 'customerName', width: 20 },
         { header: 'الهاتف', key: 'customerPhone', width: 15 },
-        { header: 'إجمالي الدين', key: 'totalDebt', width: 14 },
-        { header: 'المدفوع', key: 'totalPaid', width: 14 },
-        { header: 'المتبقي', key: 'remainingDebt', width: 14 },
+        { header: 'إجمالي الدين', key: 'totalDebt', width: 14, kind: 'money' as const },
+        { header: 'المدفوع', key: 'totalPaid', width: 14, kind: 'money' as const },
+        { header: 'المتبقي', key: 'remainingDebt', width: 14, kind: 'money' as const },
         { header: 'تاريخ الاستحقاق', key: 'dueDate', width: 15 },
         { header: 'الحالة', key: 'status_label', width: 12 },
         { header: 'التاريخ', key: 'date', width: 12 },
@@ -101,9 +102,9 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
       summary: [
         { label: 'عدد الديون', value: stats.count },
-        { label: 'إجمالي الديون', value: stats.totalDebt },
-        { label: 'المدفوع', value: stats.totalPaid },
-        { label: 'المتبقي', value: stats.totalRemaining },
+        { label: 'إجمالي الديون', value: formatReportAmount(stats.totalDebt) },
+        { label: 'المدفوع', value: formatReportAmount(stats.totalPaid) },
+        { label: 'المتبقي', value: formatReportAmount(stats.totalRemaining) },
       ],
     });
     toast.success('تم تصدير Excel بنجاح');
@@ -112,15 +113,16 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
   const handleExportPDF = async () => {
     if (filtered.length === 0) { toast.error('لا توجد بيانات للتصدير'); return; }
     await exportToPDF({
+      amountsInUsd: true,
       title: 'تقرير الديون - البيع المؤجل',
       reportType: 'تقرير الديون - البيع المؤجل',
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
       columns: [
         { header: 'العميل', key: 'customerName' },
         { header: 'الهاتف', key: 'customerPhone' },
-        { header: 'إجمالي الدين', key: 'totalDebt' },
-        { header: 'المدفوع', key: 'totalPaid' },
-        { header: 'المتبقي', key: 'remainingDebt' },
+        { header: 'إجمالي الدين', key: 'totalDebt', kind: 'money' as const },
+        { header: 'المدفوع', key: 'totalPaid', kind: 'money' as const },
+        { header: 'المتبقي', key: 'remainingDebt', kind: 'money' as const },
         { header: 'تاريخ الاستحقاق', key: 'dueDate' },
         { header: 'الحالة', key: 'status_label' },
       ],
@@ -135,9 +137,9 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
       })),
       totals: { totalDebt: stats.totalDebt, totalPaid: stats.totalPaid, remainingDebt: stats.totalRemaining },
       summary: [
-        { label: 'إجمالي الديون', value: stats.totalDebt },
-        { label: 'إجمالي المسدد', value: stats.totalPaid },
-        { label: 'المتبقي للتحصيل', value: stats.totalRemaining },
+        { label: 'إجمالي الديون', value: formatReportAmount(stats.totalDebt) },
+        { label: 'إجمالي المسدد', value: formatReportAmount(stats.totalPaid) },
+        { label: 'المتبقي للتحصيل', value: formatReportAmount(stats.totalRemaining) },
         { label: 'عدد الديون', value: stats.count },
       ],
       fileName: `تقرير_ديون_${dateRange.from}_${dateRange.to}.pdf`,

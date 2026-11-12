@@ -40,6 +40,11 @@ export interface ExcelExportOptions {
   storeAddress?: string;
   reportType?: string;
   summary?: { label: string; value: string | number }[];
+  /**
+   * القيم المالية في البيانات والإجماليات مخزنة بالدولار (عملة الأساس):
+   * تُحوَّل لعملة التقرير بسعر الصرف قبل الكتابة. التقارير التي تحوّل بنفسها تتركها false.
+   */
+  amountsInUsd?: boolean;
 }
 
 // Format date in local timezone
@@ -147,6 +152,7 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
     storeAddress,
     reportType,
     summary,
+    amountsInUsd = false,
   } = options;
 
   const reportCurr = getReportCurrency();
@@ -226,13 +232,18 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
       ? '#,##0.000'
       : '#,##0.00';
 
+  // تحويل المبلغ لعملة التقرير (إن كانت البيانات بالدولار) ثم تقريبه حسب منازل العملة
+  const toMoney = (val: number) =>
+    roundForCurrency(amountsInUsd ? val * (currencySnapshot.rate || 1) : val, currencySnapshot.code);
+  const headerRowNumber = headerRow.number;
+
   // معالجة صفوف البيانات بدقة
   data.forEach((item, index) => {
     const row = columns.map(col => {
       const val = item[col.key];
       if (typeof val === 'number') {
         if (col.kind === 'money') {
-          return roundForCurrency(val, currencySnapshot.code);
+          return toMoney(val);
         }
         return val;
       }
@@ -253,6 +264,13 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
       if (col.kind === 'money') {
         cell.numFmt = numFmt;
         cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        // المبالغ السالبة (خسارة) بالأحمر
+        if (typeof cell.value === 'number' && cell.value < 0) {
+          cell.font = { name: 'Segoe UI', size: 11, color: { argb: 'FFDC2626' } };
+        }
+      } else if (col.kind === 'quantity' && typeof cell.value === 'number') {
+        cell.numFmt = '#,##0.###';
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
       } else if (typeof cell.value === 'number') {
         cell.alignment = { horizontal: 'left', vertical: 'middle' };
       } else {
@@ -265,7 +283,10 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
   if (totals) {
     ws.addRow([]);
     const totalsRowValues = columns.map(col => {
-      if (totals[col.key] !== undefined) return totals[col.key];
+      if (totals[col.key] !== undefined) {
+        const v = totals[col.key];
+        return col.kind === 'money' && typeof v === 'number' ? toMoney(v) : v;
+      }
       if (col.key === columns[0].key) return 'الإجمالي الكلي';
       return '';
     });
@@ -301,10 +322,26 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
     });
   }
 
-  // Set column widths
+  // تثبيت صف العناوين أثناء التمرير، وإضافة فلاتر على الأعمدة
+  ws.views = [{ rightToLeft: true, state: 'frozen', ySplit: headerRowNumber } as any];
+  if (data.length > 0) {
+    ws.autoFilter = {
+      from: { row: headerRowNumber, column: 1 },
+      to: { row: headerRowNumber + data.length, column: columns.length },
+    };
+  }
+
+  // عرض الأعمدة: المحدد يدوياً، وإلا حسب أطول قيمة (بين 10 و 45)
   columns.forEach((col, i) => {
     const wsCol = ws.getColumn(i + 1);
-    wsCol.width = col.width || 15;
+    if (col.width) { wsCol.width = col.width; return; }
+    let longest = String(col.header ?? '').length;
+    data.slice(0, 500).forEach(item => {
+      const v = item[col.key];
+      const len = typeof v === 'number' ? v.toLocaleString('en-US').length : String(v ?? '').length;
+      if (len > longest) longest = len;
+    });
+    wsCol.width = Math.min(45, Math.max(10, longest + 3));
   });
 
   // Generate and download/share file based on platform

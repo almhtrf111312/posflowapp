@@ -1388,7 +1388,7 @@ function ReportsContent() {
           const name = inv.cashierName || 'كاشير عام';
           const cur = cMap.get(name) || { count: 0, total: 0, profit: 0 };
           cur.count += 1;
-          cur.total += inv.total || 0;
+          cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
           cur.profit += realizedProfitToDate(inv);
           cMap.set(name, cur);
         });
@@ -1695,7 +1695,7 @@ function ReportsContent() {
             const name = inv.cashierName || 'كاشير عام';
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
-            cur.total += inv.total || 0;
+            cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
             cur.profit += realizedProfitToDate(inv);
             cashierMap.set(name, cur);
           });
@@ -2009,7 +2009,7 @@ function ReportsContent() {
             const name = inv.cashierName || 'كاشير عام';
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
-            cur.total += inv.total || 0;
+            cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
             cur.profit += realizedProfitToDate(inv);
             cashierMap.set(name, cur);
           });

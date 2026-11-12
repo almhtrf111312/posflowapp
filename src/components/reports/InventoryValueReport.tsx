@@ -58,7 +58,7 @@ export function InventoryValueReport({ dateRange, displayMode = 'chart' }: Inven
       subtitle: `${dateRange.from} ${t('reports.to') || 'إلى'} ${dateRange.to}`,
       columns: [
         { key: 'name', label: t('products.category') || 'التصنيف' },
-        { key: 'value', label: t('reports.custodyValue') || 'قيمة العهدة (تكلفة)' },
+        { key: 'value', label: 'قيمة المخزون (تكلفة)', kind: 'money' as const },
       ],
       rows: byCategory,
       summary: [

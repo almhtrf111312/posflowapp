@@ -39,14 +39,15 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
   const handleExportExcel = async () => {
     if (data.length === 0) { toast.error('لا توجد بيانات'); return; }
     await exportToExcel({
+      amountsInUsd: true,
       sheetName: 'خدمات الصيانة',
       fileName: `صيانة_${dateRange.from}_${dateRange.to}.xlsx`,
       columns: [
         { header: 'العميل', key: 'customerName', width: 20 },
         { header: 'الوصف', key: 'serviceDescription', width: 30 },
-        { header: 'سعر الخدمة', key: 'total', width: 12 },
-        { header: 'تكلفة القطع', key: 'partsCost', width: 12 },
-        { header: 'الربح', key: 'profit', width: 12 },
+        { header: 'سعر الخدمة', key: 'total', width: 12, kind: 'money' as const },
+        { header: 'تكلفة القطع', key: 'partsCost', width: 12, kind: 'money' as const },
+        { header: 'الربح', key: 'profit', width: 12, kind: 'money' as const },
         { header: 'نوع الدفع', key: 'paymentLabel', width: 12 },
         { header: 'التاريخ', key: 'date', width: 12 },
       ],
@@ -65,9 +66,9 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
       summary: [
         { label: 'عدد الخدمات', value: stats.count },
-        { label: 'إجمالي الإيرادات', value: stats.totalRevenue },
-        { label: 'تكلفة القطع', value: stats.totalPartsCost },
-        { label: 'الربح المحقق', value: stats.totalProfit },
+        { label: 'إجمالي الإيرادات', value: formatReportAmount(stats.totalRevenue) },
+        { label: 'تكلفة القطع', value: formatReportAmount(stats.totalPartsCost) },
+        { label: 'الربح المحقق', value: formatReportAmount(stats.totalProfit) },
       ],
     });
     toast.success('تم تصدير Excel بنجاح');
@@ -76,15 +77,16 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
   const handleExportPDF = async () => {
     if (data.length === 0) { toast.error('لا توجد بيانات'); return; }
     await exportToPDF({
+      amountsInUsd: true,
       title: 'تقرير خدمات الصيانة',
       reportType: 'تقرير الصيانة',
       subtitle: `من ${dateRange.from} إلى ${dateRange.to}`,
       columns: [
         { header: 'العميل', key: 'customerName' },
         { header: 'الوصف', key: 'serviceDescription' },
-        { header: 'الإيراد', key: 'total' },
-        { header: 'التكلفة', key: 'partsCost' },
-        { header: 'الربح', key: 'profit' },
+        { header: 'الإيراد', key: 'total', kind: 'money' as const },
+        { header: 'التكلفة', key: 'partsCost', kind: 'money' as const },
+        { header: 'الربح', key: 'profit', kind: 'money' as const },
         { header: 'الدفع', key: 'paymentLabel' },
       ],
       data: data.map(inv => ({
@@ -98,8 +100,8 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
       totals: { total: stats.totalRevenue, profit: stats.totalProfit },
       summary: [
         { label: 'عدد الخدمات', value: stats.count },
-        { label: 'إجمالي الإيرادات', value: stats.totalRevenue },
-        { label: 'الربح المحقق', value: stats.totalProfit },
+        { label: 'إجمالي الإيرادات', value: formatReportAmount(stats.totalRevenue) },
+        { label: 'الربح المحقق', value: formatReportAmount(stats.totalProfit) },
       ],
       fileName: `صيانة_${dateRange.from}_${dateRange.to}.pdf`,
       orientation: 'landscape',

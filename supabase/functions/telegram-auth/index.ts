@@ -239,8 +239,10 @@ serve(async (req) => {
         const contact = message.contact;
         console.log(`[TelegramAuth] Contact received from chat ${chatId}`);
 
-        // 1. CRITICAL SECURITY CHECK: contact.user_id must equal message.from.id
-        if (contact.user_id && fromId && contact.user_id !== fromId) {
+        // 1. CRITICAL SECURITY CHECK: contact.user_id must exist AND equal message.from.id.
+        // جهة اتصال محوَّلة أو مكتوبة يدوياً لا تحمل user_id: كانت تمر وتربط محادثة المهاجم
+        // بحساب الضحية ثم تُرسل له رموز الاستعادة (استيلاء على الحساب). نرفضها الآن.
+        if (!contact.user_id || !fromId || contact.user_id !== fromId) {
           console.warn(`[TelegramAuth] Security alert: contact.user_id (${contact.user_id}) !== fromId (${fromId})`);
           await sendTelegramMessage(
             botToken,

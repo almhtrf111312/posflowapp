@@ -182,6 +182,8 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
       sessionStorage.removeItem(PRINTER_FLOW_FLAG);
       if (res.enabled) {
         await refreshReadiness();
+      } else if (res.openedSettings) {
+        setError(L(isRTL, 'فُتحت إعدادات البلوتوث: شغّله ثم ارجع واضغط «تحقق مرة ثانية».', 'Bluetooth settings opened: turn it on, come back and tap "Check again".'));
       } else {
         setError(describePrinterError(new Error('BT_OFF')));
       }

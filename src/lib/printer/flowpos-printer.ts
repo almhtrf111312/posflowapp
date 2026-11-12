@@ -18,7 +18,7 @@ export interface PrinterState {
 export interface FlowPosPrinterPlugin {
   getState(): Promise<PrinterState>;
   requestPermissions(): Promise<{ hasPermissions: boolean; hasLocation: boolean }>;
-  enableBluetooth(): Promise<{ enabled: boolean }>;
+  enableBluetooth(): Promise<{ enabled: boolean; openedSettings?: boolean }>;
   listPaired(): Promise<{ devices: PrinterDevice[] }>;
   discover(options?: { durationMs?: number }): Promise<{ devices: PrinterDevice[] }>;
   stopDiscovery(): Promise<void>;

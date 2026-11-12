@@ -9,7 +9,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ActivityNotFoundException;
 import android.content.pm.PackageManager;
+import android.provider.Settings;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -188,20 +190,76 @@ public class FlowPosPrinterPlugin extends Plugin {
             call.reject("NO_BLUETOOTH", "NO_BLUETOOTH");
             return;
         }
-        if (a.isEnabled()) {
+        if (safeIsEnabled(a)) {
             JSObject r = new JSObject();
             r.put("enabled", true);
             call.resolve(r);
             return;
         }
-        startActivityForResult(call, new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), "enableResult");
+        // Android 12+: طلب تشغيل البلوتوث بدون صلاحية BLUETOOTH_CONNECT يرمي SecurityException
+        // ويُغلق التطبيق كله (ظهر على أجهزة Honor). نطلب الصلاحية أولاً ثم نكمل.
+        if (!hasBtPermissions()) {
+            requestPermissionForAlias("bluetooth", call, "enableAfterPermission");
+            return;
+        }
+        launchEnable(call);
+    }
+
+    @PermissionCallback
+    private void enableAfterPermission(PluginCall call) {
+        if (!hasBtPermissions()) {
+            call.reject("NO_PERMISSION", "NO_PERMISSION");
+            return;
+        }
+        BluetoothAdapter a = adapter();
+        if (a != null && safeIsEnabled(a)) {
+            JSObject r = new JSObject();
+            r.put("enabled", true);
+            call.resolve(r);
+            return;
+        }
+        launchEnable(call);
+    }
+
+    private void launchEnable(PluginCall call) {
+        try {
+            startActivityForResult(call, new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), "enableResult");
+        } catch (SecurityException | ActivityNotFoundException e) {
+            // بعض الأجهزة تمنع نافذة التشغيل المباشر: نفتح إعدادات البلوتوث بدل إغلاق التطبيق
+            openBluetoothSettings(call);
+        } catch (Exception e) {
+            openBluetoothSettings(call);
+        }
+    }
+
+    private void openBluetoothSettings(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("enabled", false);
+        try {
+            Intent i = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+            r.put("openedSettings", true);
+        } catch (Exception ignored) {
+            r.put("openedSettings", false);
+        }
+        call.resolve(r);
+    }
+
+    private boolean safeIsEnabled(BluetoothAdapter a) {
+        try {
+            return a.isEnabled();
+        } catch (SecurityException e) {
+            return false;
+        }
     }
 
     @ActivityCallback
     private void enableResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
         BluetoothAdapter a = adapter();
         JSObject r = new JSObject();
-        r.put("enabled", a != null && a.isEnabled());
+        r.put("enabled", a != null && safeIsEnabled(a));
         call.resolve(r);
     }
 

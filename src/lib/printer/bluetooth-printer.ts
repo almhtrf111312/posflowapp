@@ -9,8 +9,9 @@ export async function checkReadiness(): Promise<{ ok: true; reason?: undefined }
   try {
     const s = await FlowPosPrinter.getState();
     if (!s.supported) return { ok: false, reason: 'NO_BLUETOOTH' };
-    if (!s.enabled) return { ok: false, reason: 'BT_OFF' };
+    // الصلاحية أولاً: زر «تشغيل البلوتوث» بدون صلاحية كان يُغلق التطبيق على Android 12+
     if (!s.hasPermissions) return { ok: false, reason: 'NO_PERMISSION' };
+    if (!s.enabled) return { ok: false, reason: 'BT_OFF' };
     if (s.needsLocation && !s.hasLocation) return { ok: false, reason: 'NO_LOCATION' };
     return { ok: true };
   } catch {

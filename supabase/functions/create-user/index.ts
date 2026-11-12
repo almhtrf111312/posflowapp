@@ -109,7 +109,8 @@ Deno.serve(async (req) => {
       if (existingProfile) {
         return new Response(
           JSON.stringify({ 
-            error: `رقم الهاتف (${normalizedPhone}) مسجل بالفعل باسم المستخدم (${existingProfile.full_name || 'حساب آخر'}) ولا يمكن تكراره أو الاستيلاء عليه.` 
+            // لا نكشف اسم صاحب الرقم لمن ينشئ الحساب
+            error: `رقم الهاتف (${normalizedPhone}) مسجل بالفعل لحساب آخر ولا يمكن تكراره.` 
           }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

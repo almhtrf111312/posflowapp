@@ -492,7 +492,7 @@ const PageFallback = () => {
     <>
       <AppLockOverlay />
       <MandatoryPinSetupModal />
-      <div id="app-main-layout" inert={shouldBeInert ? '' : undefined} className="contents">
+      <div id="app-main-layout" {...({ inert: shouldBeInert ? '' : undefined } as Record<string, unknown>)} className="contents">
         {isDebugClick && <ClickProbe />}
       <ExitConfirmDialog />
       <Suspense fallback={<PageFallback />}>

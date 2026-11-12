@@ -146,6 +146,7 @@ interface CashierInfo {
 interface Owner {
   user_id: string;
   email: string | null;
+  store_name?: string | null;
   role: string;
   role_created_at: string;
   is_active: boolean;

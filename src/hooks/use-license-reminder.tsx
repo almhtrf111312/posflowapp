@@ -37,7 +37,7 @@ export function useLicenseReminder() {
       const title = remaining <= 0 ? '⚠️ انتهى اشتراكك' : `⚠️ تنبيه: يتبقى ${remaining} يوماً على انتهاء اشتراكك`;
       showToast.warning(title, {
         description: 'انقر هنا لتجديد الاشتراك واختيار باقتك المفضلة',
-        action: {
+        primaryAction: {
           label: 'تجديد الآن',
           onClick: () => navigate('/renew'),
         }

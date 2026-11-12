@@ -71,7 +71,7 @@ async function fetchAllRows(table: string, columns: string): Promise<Record<stri
     const from = page * PAGE_SIZE;
     const { data, error } = await sb.from(table).select(columns).range(from, from + PAGE_SIZE - 1);
     if (error) throw error;
-    const batch = (data ?? []) as Record<string, unknown>[];
+    const batch = (data ?? []) as unknown as Record<string, unknown>[];
     rows.push(...batch);
     if (batch.length < PAGE_SIZE) break;
   }

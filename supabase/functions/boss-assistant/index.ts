@@ -12,12 +12,7 @@ const corsHeaders = {
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10 MB
 
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const ALLOWED_AUDIO_TYPES = new Set([
   "audio/webm",
@@ -46,10 +41,10 @@ serve(async (req) => {
     // 1. Strict Authentication: Verify caller JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "غير مصرح: يرجى تسجيل الدخول أولاً للوصول إلى المساعد" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "غير مصرح: يرجى تسجيل الدخول أولاً للوصول إلى المساعد" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -57,10 +52,10 @@ serve(async (req) => {
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
       console.error("[BossAssistant] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-      return new Response(
-        JSON.stringify({ error: "خطأ في تهيئة خادم Supabase الداخلي" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "خطأ في تهيئة خادم Supabase الداخلي" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -70,10 +65,10 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await serviceClient.auth.getUser(token);
     if (userError || !userData?.user) {
-      return new Response(
-        JSON.stringify({ error: "غير مصرح: جلسة المستخدم غير صالحة أو منتهية" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "غير مصرح: جلسة المستخدم غير صالحة أو منتهية" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const callerUserId = userData.user.id;
@@ -88,7 +83,7 @@ serve(async (req) => {
     if (roleError || roleData?.role !== "boss") {
       return new Response(
         JSON.stringify({ error: "محظور: هذه الميزة مخصصة ومحصورة حصرياً لمالك ومطور النظام (Boss)" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -101,7 +96,7 @@ serve(async (req) => {
         JSON.stringify({
           error: "مفتاح LOVABLE_API_KEY غير مهيأ في بيئة الخادم. يرجى التأكد من ضبطه في إعدادات المنصة.",
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -139,14 +134,10 @@ serve(async (req) => {
       }
 
       // Fetch registered users count
-      const { count: usersCount } = await serviceClient
-        .from("profiles")
-        .select("*", { count: "exact", head: true });
+      const { count: usersCount } = await serviceClient.from("profiles").select("*", { count: "exact", head: true });
 
       // Fetch roles breakdown
-      const { data: roles } = await serviceClient
-        .from("user_roles")
-        .select("role");
+      const { data: roles } = await serviceClient.from("user_roles").select("role");
 
       const adminsCount = roles?.filter((r) => r.role === "admin").length || 0;
       const cashiersCount = roles?.filter((r) => r.role === "cashier").length || 0;
@@ -197,10 +188,10 @@ ${errorsSummary}
     const { messages, image, images, audio } = reqBody;
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "لم يتم تقديم أي رسائل في الطلب" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "لم يتم تقديم أي رسائل في الطلب" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Validate and process image attachments
@@ -219,23 +210,23 @@ ${errorsSummary}
     for (const rawImg of rawImages) {
       const parsed = parseDataUrl(rawImg);
       if (!parsed) {
-        return new Response(
-          JSON.stringify({ error: "صيغة بيانات الصورة المرفقة غير صالحة" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "صيغة بيانات الصورة المرفقة غير صالحة" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       if (!ALLOWED_IMAGE_TYPES.has(parsed.mimeType)) {
         return new Response(
           JSON.stringify({ error: `نوع الصورة (${parsed.mimeType}) غير مدعوم. الصيغ المدعومة: JPEG, PNG, WebP, GIF` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       const approxBytes = (parsed.base64.length * 3) / 4;
       if (approxBytes > MAX_IMAGE_BYTES) {
-        return new Response(
-          JSON.stringify({ error: "حجم الصورة يتجاوز الحد الأقصى المسموح (5 ميجابايت)" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "حجم الصورة يتجاوز الحد الأقصى المسموح (5 ميجابايت)" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
       validatedImageParts.push(parsed);
     }
@@ -260,19 +251,19 @@ ${errorsSummary}
           if (ALLOWED_AUDIO_TYPES.has(cleanMime)) {
             mime = cleanMime;
           } else {
-            return new Response(
-              JSON.stringify({ error: `نوع الملف الصوتي (${mime}) غير مدعوم.` }),
-              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+            return new Response(JSON.stringify({ error: `نوع الملف الصوتي (${mime}) غير مدعوم.` }), {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
           }
         }
 
         const approxBytes = (b64.length * 3) / 4;
         if (approxBytes > MAX_AUDIO_BYTES) {
-          return new Response(
-            JSON.stringify({ error: "حجم الملف الصوتي يتجاوز الحد الأقصى المسموح (10 ميجابايت)" }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+          return new Response(JSON.stringify({ error: "حجم الملف الصوتي يتجاوز الحد الأقصى المسموح (10 ميجابايت)" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
         }
 
         validatedAudioPart = { mimeType: mime, base64: b64 };
@@ -301,9 +292,7 @@ ${systemContext}`;
     const formattedMessages: Array<{
       role: "system" | "user" | "assistant";
       content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
-    }> = [
-      { role: "system", content: systemPrompt },
-    ];
+    }> = [{ role: "system", content: systemPrompt }];
 
     // 🛡️ لا نقبل دور "assistant" من الطلب: كل ما قبل آخر رسالة مستخدم يُمرَّر كنص اقتباس للسياق فقط
     const lastUserIndex = messages.map((m: any) => m?.role).lastIndexOf("user");
@@ -378,7 +367,7 @@ ${systemContext}`;
     const gatewayEndpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
     console.log(
-      `[BossAssistant] Calling Lovable AI Gateway (model: google/gemini-2.5-flash, images: ${validatedImageParts.length}, audio: ${Boolean(validatedAudioPart)})`
+      `[BossAssistant] Calling Lovable AI Gateway (model: google/gemini-2.5-flash, images: ${validatedImageParts.length}, audio: ${Boolean(validatedAudioPart)})`,
     );
 
     const gatewayRes = await fetch(gatewayEndpoint, {
@@ -398,31 +387,37 @@ ${systemContext}`;
       if (gatewayRes.status === 429) {
         return new Response(
           JSON.stringify({ error: "تم تجاوز حد الطلبات المسموح به مؤقتاً، يرجى المحاولة بعد قليل." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       if (gatewayRes.status === 402) {
         return new Response(
           JSON.stringify({ error: "يرجى إضافة رصيد للمتابعة في بوابة الذكاء الاصطناعي (Lovable AI Gateway)." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       if (gatewayRes.status === 403) {
         const errText = await gatewayRes.text();
         console.error("[BossAssistant] Lovable AI Gateway 403 Forbidden:", errText);
-        let forbiddenMsg = "بوابة الذكاء الاصطناعي معطلة في مساحة العمل. يرجى تفعيل موصل الذكاء الاصطناعي (AI Connector) من قائمة Connectors في المنصة ثم إعادة المحاولة.";
+        let forbiddenMsg =
+          "بوابة الذكاء الاصطناعي معطلة في مساحة العمل. يرجى تفعيل موصل الذكاء الاصطناعي (AI Connector) من قائمة Connectors في المنصة ثم إعادة المحاولة.";
         try {
           const parsed = JSON.parse(errText);
-          if (parsed.title?.includes("disabled") || parsed.message?.includes("disabled") || parsed.detail?.includes("disabled")) {
-            forbiddenMsg = "بوابة الذكاء الاصطناعي معطلة في مساحة العمل. يرجى تفعيل موصل الذكاء الاصطناعي (AI Connector) من قائمة Connectors في المنصة ثم إعادة المحاولة.";
+          if (
+            parsed.title?.includes("disabled") ||
+            parsed.message?.includes("disabled") ||
+            parsed.detail?.includes("disabled")
+          ) {
+            forbiddenMsg =
+              "بوابة الذكاء الاصطناعي معطلة في مساحة العمل. يرجى تفعيل موصل الذكاء الاصطناعي (AI Connector) من قائمة Connectors في المنصة ثم إعادة المحاولة.";
           } else if (parsed.title || parsed.message || parsed.detail) {
             forbiddenMsg = parsed.title || parsed.message || parsed.detail;
           }
         } catch {}
-        return new Response(
-          JSON.stringify({ error: forbiddenMsg }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: forbiddenMsg }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const errText = await gatewayRes.text();
@@ -445,13 +440,10 @@ ${systemContext}`;
 
       console.error("[BossAssistant] Lovable AI Gateway Error:", gatewayRes.status, errText);
 
-      return new Response(
-        JSON.stringify({ error: cleanErrorMessage }),
-        {
-          status: gatewayRes.status >= 400 && gatewayRes.status < 500 ? gatewayRes.status : 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ error: cleanErrorMessage }), {
+        status: gatewayRes.status >= 400 && gatewayRes.status < 500 ? gatewayRes.status : 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 9. Forward SSE Stream Directly to Client
@@ -460,15 +452,15 @@ ${systemContext}`;
         ...corsHeaders,
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
       },
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("[BossAssistant] Unhandled error:", errorMsg);
-    return new Response(
-      JSON.stringify({ error: `حدث خطأ أثناء معالجة الطلب: ${errorMsg}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: `حدث خطأ أثناء معالجة الطلب: ${errorMsg}` }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

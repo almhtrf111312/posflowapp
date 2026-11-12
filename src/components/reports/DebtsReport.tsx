@@ -41,14 +41,18 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
     const totalPaid = filtered.reduce((s, d) => s + d.totalPaid, 0);
     const totalRemaining = filtered.reduce((s, d) => s + d.remainingDebt, 0);
     const overdue = filtered.filter(d => d.status === 'overdue').length;
-    const fullyPaid = filtered.filter(d => d.status === 'fully_paid').length;
+    // الدين المشطوب لا يُحسب «مسدداً»: له عدّاد ومبلغ مستقلان
+    const writtenOff = filtered.filter(d => d.isWrittenOff).length;
+    const writtenOffAmount = filtered.reduce((s, d) => s + (d.isWrittenOff ? (d.writtenOffAmount || 0) : 0), 0);
+    const fullyPaid = filtered.filter(d => d.status === 'fully_paid' && !d.isWrittenOff).length;
     const partial = filtered.filter(d => d.status === 'partially_paid').length;
     const due = filtered.filter(d => d.status === 'due').length;
-    return { totalDebt, totalPaid, totalRemaining, overdue, fullyPaid, partial, due, count: filtered.length };
+    return { totalDebt, totalPaid, totalRemaining, overdue, fullyPaid, partial, due, writtenOff, writtenOffAmount, count: filtered.length };
   }, [filtered]);
 
   const statusLabel = (s: string) => {
     switch (s) {
+      case 'written_off': return 'مشطوب';
       case 'fully_paid': return 'مسدد';
       case 'partially_paid': return 'مسدد جزئياً';
       case 'overdue': return 'متأخر';
@@ -58,6 +62,7 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
 
   const statusColor = (s: string) => {
     switch (s) {
+      case 'written_off': return 'bg-muted text-muted-foreground';
       case 'fully_paid': return 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400';
       case 'partially_paid': return 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400';
       case 'overdue': return 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400';
@@ -87,7 +92,7 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
         totalPaid: d.totalPaid || 0,
         remainingDebt: d.remainingDebt ?? Math.max(0, (d.totalDebt || 0) - (d.totalPaid || 0)),
         dueDate: d.dueDate || '-',
-        status_label: statusLabel(d.status),
+        status_label: statusLabel(d.isWrittenOff ? 'written_off' : d.status),
         date: toLocalDateString(d.createdAt || ''),
       })),
       totals: { totalDebt: stats.totalDebt, totalPaid: stats.totalPaid, remainingDebt: stats.totalRemaining },
@@ -126,7 +131,7 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
         totalPaid: d.totalPaid || 0,
         remainingDebt: d.remainingDebt ?? Math.max(0, (d.totalDebt || 0) - (d.totalPaid || 0)),
         dueDate: d.dueDate || '-',
-        status_label: statusLabel(d.status),
+        status_label: statusLabel(d.isWrittenOff ? 'written_off' : d.status),
       })),
       totals: { totalDebt: stats.totalDebt, totalPaid: stats.totalPaid, remainingDebt: stats.totalRemaining },
       summary: [
@@ -160,6 +165,9 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
             {isNonUsd && <p className="text-[11px] text-muted-foreground font-mono">{formatInCurrency(stats.totalRemaining, currencyCode, exchangeRate).usdEquivalent}</p>}
           </div>
           <p className="text-xs text-muted-foreground">{t('debts.remaining') || 'الديون المتبقية'}</p>
+          {stats.writtenOff > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-1">مشطوب ({stats.writtenOff}): {formatInCurrency(stats.writtenOffAmount, currencyCode, exchangeRate).formatted}</p>
+          )}
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
           <CheckCircle className="w-5 h-5 text-green-500 mb-2" />
@@ -218,8 +226,8 @@ export function DebtsReport({ dateRange, hideInternalExport = false }: Props) {
                       {isNonUsd && <div className="text-[10px] text-muted-foreground font-mono">{formatInCurrency(d.remainingDebt, currencyCode, exchangeRate).usdEquivalent}</div>}
                     </td>
                     <td className="p-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(d.status)}`}>
-                        {statusLabel(d.status)}
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(d.isWrittenOff ? 'written_off' : d.status)}`}>
+                        {statusLabel(d.isWrittenOff ? 'written_off' : d.status)}
                       </span>
                     </td>
                     <td className="p-3 text-center text-muted-foreground">{d.createdAt?.split('T')[0]}</td>

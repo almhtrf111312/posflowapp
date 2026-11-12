@@ -67,6 +67,7 @@ import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/clou
 import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
 import { computeProfitSummary, realizedProfitToDate } from '@/lib/profit-engine';
+import { invoiceNetSales, itemNetRevenue, itemProfit, isSalesInvoice } from '@/lib/report-metrics';
 import { useUserRole } from '@/hooks/use-user-role';
 import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -616,21 +617,11 @@ function ReportsContent() {
           const key = item.id || item.name;
           if (!productSalesMap[key]) productSalesMap[key] = { name: item.name, sales: 0, revenue: 0, profit: 0 };
           const qty = Number(item.quantity || 1);
-          const itemTotal = Number(item.total || (Number(item.price || 0) * qty));
-          productSalesMap[key].sales += qty;
-          productSalesMap[key].revenue += itemTotal;
           const catalogProduct = cloudProducts.find(p => p.id === item.id || (p.barcode && p.barcode === (item as any).barcode) || p.name === item.name);
-          const actualCost = item.costPrice !== undefined && item.costPrice !== null
-            ? Number(item.costPrice)
-            : (catalogProduct?.costPrice !== undefined && catalogProduct?.costPrice !== null ? Number(catalogProduct.costPrice) : 0);
-          const price = Number(item.price || 0);
-          const taxRate = Number(inv.taxRate || 0);
-          const isInclusive = inv.taxMode === 'inclusive' || (inv as any).tax_inclusive;
-          const netPrice = (isInclusive && taxRate > 0) ? price / (1 + taxRate / 100) : price;
-          const itemProfit = (item.profit !== undefined && item.profit !== null && Number(item.profit) > 0)
-            ? Number(item.profit)
-            : Math.max(0, (netPrice - actualCost) * qty);
-          productSalesMap[key].profit += itemProfit;
+          // الإيراد بدون الضريبة، والتكلفة لحظة البيع، والخسارة تظهر بقيمتها السالبة
+          productSalesMap[key].sales += qty;
+          productSalesMap[key].revenue += itemNetRevenue(item, inv);
+          productSalesMap[key].profit += itemProfit(item, inv, catalogProduct?.costPrice);
         });
       }
     });
@@ -643,7 +634,7 @@ function ReportsContent() {
       const name = inv.customerName || t('reports.cashCustomer');
       if (!customerPurchasesMap[name]) customerPurchasesMap[name] = { name, orders: 0, total: 0 };
       customerPurchasesMap[name].orders += 1;
-      customerPurchasesMap[name].total += Number(inv.total || 0);
+      customerPurchasesMap[name].total += invoiceNetSales(inv);
     });
 
     const allCustomers = Object.values(customerPurchasesMap).sort((a, b) => b.total - a.total);
@@ -800,11 +791,10 @@ function ReportsContent() {
       return cloudInvoices
         .filter(inv => {
           const invDate = toLocalDateString(inv.createdAt);
-          return (inv.type === 'sale' || inv.type === 'maintenance') &&
-            isValidActiveInvoice(inv) &&
-            isDateInRange(invDate, prevFromStr, prevToStr);
+          // نفس قاعدة الفترة الحالية: بدون ضريبة، والمعدومة ضمن المبيعات
+          return isSalesInvoice(inv) && isDateInRange(invDate, prevFromStr, prevToStr);
         })
-        .reduce((sum, inv) => sum + inv.total, 0);
+        .reduce((sum, inv) => sum + invoiceNetSales(inv), 0);
     } catch {
       return 0;
     }
@@ -948,7 +938,7 @@ function ReportsContent() {
           {
             icon: TrendingUp,
             value: formatReportAmount(grossProfit),
-            label: 'مجمل الربح (إجمالي)',
+            label: isRTL ? 'الربح المحقق' : 'Realized profit',
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
             subtext: `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,
@@ -1500,7 +1490,7 @@ function ReportsContent() {
           {
             icon: TrendingUp,
             value: formatReportAmount(grossProfit),
-            label: 'مجمل الربح (إجمالي)',
+            label: isRTL ? 'الربح المحقق' : 'Realized profit',
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
             subtext: `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,

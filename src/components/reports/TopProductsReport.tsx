@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { loadInvoicesCloud, type Invoice } from '@/lib/cloud/invoices-cloud';
 import { loadProductsLocalFirst, type Product } from '@/lib/cloud/products-cloud';
+import { isSalesInvoice, itemNetRevenue, itemProfit, itemUnitCost } from '@/lib/report-metrics';
 import { exportGenericToExcel, exportGenericToPDF } from '@/lib/reports/dataset-builder';
 import { formatReportAmount, formatNumber, cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
@@ -40,16 +41,18 @@ export function TopProductsReport({ dateRange }: Props) {
     invoices.forEach(inv => {
       const ts = new Date(inv.createdAt).getTime();
       if (ts < fromTs || ts > toTs) return;
-      if (inv.status === 'cancelled' || inv.status === 'refunded') return;
+      // بيع/صيانة فقط، بدون الضريبة، وبتكلفة البند لحظة البيع
+      if (!isSalesInvoice(inv)) return;
       inv.items.forEach(it => {
         const p = products.find(x => x.id === it.id);
-        const cost = (p?.costPrice || 0) * it.quantity;
-        const revenue = it.price * it.quantity;
+        const cost = itemUnitCost(it, p?.costPrice) * it.quantity;
+        const revenue = itemNetRevenue(it, inv);
+        const profit = itemProfit(it, inv, p?.costPrice);
         const cur = map.get(it.id) || { id: it.id, name: it.name, qty: 0, revenue: 0, cost: 0, profit: 0 };
         cur.qty += it.quantity;
         cur.revenue += revenue;
         cur.cost += cost;
-        cur.profit += revenue - cost;
+        cur.profit += profit;
         map.set(it.id, cur);
       });
     });

@@ -3,7 +3,8 @@ import { realizedProfitToDate } from '@/lib/profit-engine';
 import { FileText, Download, Users, DollarSign, TrendingUp, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatReportAmount, formatNumber } from '@/lib/utils';
-import { Invoice, isValidActiveInvoice } from '@/lib/cloud/invoices-cloud';
+import { Invoice } from '@/lib/cloud/invoices-cloud';
+import { isSalesInvoice, invoiceNetSales } from '@/lib/report-metrics';
 import { exportToExcel } from '@/lib/excel-export';
 import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
@@ -31,8 +32,8 @@ export function CashierPerformanceReport({
     const filtered = invoices.filter(inv => {
       const d = toLocalDateString(inv.createdAt);
       if (!isDateInRange(d, dateRange.from, dateRange.to)) return false;
-      if (!isValidActiveInvoice(inv)) return false;
-      if (inv.type !== 'sale' && inv.type !== 'maintenance') return false;
+      // نفس قاعدة المبيعات الموحّدة: المعدومة ضمن المبيعات، المستردة والملغاة لا
+      if (!isSalesInvoice(inv)) return false;
       return true;
     });
 
@@ -51,10 +52,11 @@ export function CashierPerformanceReport({
         cashierMap[name] = { name, invoiceCount: 0, totalSales: 0, totalProfit: 0, cashSales: 0, debtSales: 0 };
       }
       cashierMap[name].invoiceCount += 1;
-      cashierMap[name].totalSales += inv.total;
+      const net = invoiceNetSales(inv);
+      cashierMap[name].totalSales += net;
       cashierMap[name].totalProfit += realizedProfitToDate(inv);
-      if (inv.paymentType === 'cash') cashierMap[name].cashSales += inv.total;
-      else cashierMap[name].debtSales += inv.total;
+      if (inv.paymentType === 'cash') cashierMap[name].cashSales += net;
+      else cashierMap[name].debtSales += net;
     });
 
     return Object.values(cashierMap).sort((a, b) => b.totalSales - a.totalSales);

@@ -5,6 +5,7 @@ import { EntityPicker } from './EntityPicker';
 import { Card, CardContent } from '@/components/ui/card';
 import { loadProductsLocalFirst, refreshProductsFromCloud, type Product } from '@/lib/cloud/products-cloud';
 import { loadInvoicesCloud, type Invoice } from '@/lib/cloud/invoices-cloud';
+import { itemUnitCost } from '@/lib/report-metrics';
 import { listStockDamages, type StockDamage } from '@/lib/cloud/stock-damages-cloud';
 import { formatReportAmount, formatNumber, cn } from '@/lib/utils';
 import { exportGenericToExcel, exportGenericToPDF } from '@/lib/reports/dataset-builder';
@@ -19,6 +20,8 @@ interface MovementRow {
   total: number;
   reference: string;
   cashier?: string;
+  /** تكلفة الوحدة لحظة البيع (لحساب الربح دون إعادة كتابة التاريخ) */
+  unitCost?: number;
 }
 
 interface Props {
@@ -96,18 +99,23 @@ export function ProductMovementReport({ dateRange }: Props) {
       const ts = new Date(inv.createdAt).getTime();
       if (ts < fromTs || ts > toTs) return;
       if (inv.status === 'cancelled') return;
+      if (inv.type && inv.type !== 'sale' && inv.type !== 'maintenance') return;
       inv.items.forEach(it => {
         if (it.id !== product.id) return;
-        const isRefund = inv.status === 'refunded';
-        rows.push({
-          date: inv.createdAt,
-          type: isRefund ? 'refund' : 'sale',
+        const unitCost = itemUnitCost(it, product.costPrice);
+        const base = {
           qty: it.quantity,
           unitPrice: it.price,
           total: it.quantity * it.price,
           reference: `فاتورة ${inv.id.slice(0, 8)}`,
           cashier: inv.cashierName || undefined,
-        });
+          unitCost,
+        };
+        // الفاتورة المستردة: تُسجَّل كبيع ثم استرداد، فيتعادل أثرها على الرصيد والربح
+        rows.push({ ...base, date: inv.createdAt, type: 'sale' });
+        if (inv.status === 'refunded') {
+          rows.push({ ...base, date: inv.updatedAt || inv.createdAt, type: 'refund' });
+        }
       });
     });
 
@@ -132,13 +140,9 @@ export function ProductMovementReport({ dateRange }: Props) {
     const outgoing = movements.filter(m => m.type === 'sale').reduce((s, m) => s + m.qty, 0);
     const refunded = movements.filter(m => m.type === 'refund').reduce((s, m) => s + m.qty, 0);
     const damaged = movements.filter(m => m.type === 'damage').reduce((s, m) => s + m.qty, 0);
-    const profit = movements.filter(m => m.type === 'sale').reduce((s, m) => {
-      const cost = Number(product?.costPrice || 0);
-      return s + (m.unitPrice - cost) * m.qty;
-    }, 0) - movements.filter(m => m.type === 'refund').reduce((s, m) => {
-      const cost = Number(product?.costPrice || 0);
-      return s + (m.unitPrice - cost) * m.qty;
-    }, 0);
+    const unitCostOf = (m: MovementRow) => m.unitCost ?? Number(product?.costPrice || 0);
+    const profit = movements.filter(m => m.type === 'sale').reduce((s, m) => s + (m.unitPrice - unitCostOf(m)) * m.qty, 0)
+      - movements.filter(m => m.type === 'refund').reduce((s, m) => s + (m.unitPrice - unitCostOf(m)) * m.qty, 0);
     return { incoming, outgoing, refunded, damaged, net: incoming - outgoing + refunded - damaged, profit };
   }, [movements, product]);
 

@@ -62,6 +62,10 @@ export interface Debt {
   isCashDebt?: boolean;
   cashierId?: string;
   cashierName?: string;
+  /** دين مشطوب كمعدوم: الحالة تُعرض «مسدد» لإغلاقه، وهذا الحقل يميّزه في التقارير */
+  isWrittenOff?: boolean;
+  /** المبلغ الذي شُطب (المتبقي لحظة الشطب) */
+  writtenOffAmount?: number;
 }
 
 // Cache for cashier names
@@ -90,6 +94,8 @@ function toDebt(cloud: CloudDebt & { cashier_name?: string }): Debt {
     totalDebt: Number(cloud.total_debt) || 0,
     totalPaid: Number(cloud.total_paid) || 0,
     remainingDebt: isClosed ? 0 : (Number(cloud.remaining_debt) || 0),
+    isWrittenOff: (cloud.status as string) === 'written_off',
+    writtenOffAmount: (cloud.status as string) === 'written_off' ? (Number(cloud.remaining_debt) || 0) : 0,
     dueDate: cloud.due_date || '',
     status,
     notes: cloud.notes || undefined,

@@ -1,3 +1,4 @@
+import { sanitizePrintHtml, escapeHtml, safeImageSrc } from './print-sanitize';
 /**
  * Native Print Utility for Capacitor/Android
  * ============================================
@@ -164,34 +165,34 @@ export function generateReceiptHTML(invoice: PrintableInvoice): string {
 
   const itemsHTML = invoice.items.map(item => `
     <tr>
-      <td style="text-align: right; padding: 4px 0; font-size: 12px;">${item.name}</td>
+      <td style="text-align: right; padding: 4px 0; font-size: 12px;">${escapeHtml(item.name)}</td>
       <td style="text-align: center; padding: 4px 0; font-size: 12px;">${item.quantity}</td>
       <td style="text-align: left; padding: 4px 0; font-size: 12px;">${formatCurrency(item.total, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}</td>
     </tr>
   `).join('');
 
   const logoHTML = printSettings.showLogo !== false && store.logo
-    ? `<img src="${store.logo}" alt="Logo" style="max-width: 80px; max-height: 80px; margin-bottom: 8px;" />`
+    ? `<img src="${safeImageSrc(store.logo)}" alt="Logo" style="max-width: 80px; max-height: 80px; margin-bottom: 8px;" />`
     : '';
 
   const storeNameHTML = printSettings.showStoreName !== false && store.name
-    ? `<div class="store-name">${store.name}</div>`
+    ? `<div class="store-name">${escapeHtml(store.name)}</div>`
     : '';
 
   const addressHTML = printSettings.showAddress !== false && store.address
-    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">${store.address}</p>`
+    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">${escapeHtml(store.address)}</p>`
     : '';
 
   const phoneHTML = printSettings.showPhone !== false && store.phone
-    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">📞 ${store.phone}</p>`
+    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">📞 ${escapeHtml(store.phone)}</p>`
     : '';
 
   const emailHTML = printSettings.showEmail !== false && store.email
-    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">✉️ ${store.email}</p>`
+    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">✉️ ${escapeHtml(store.email)}</p>`
     : '';
 
   const welcomeHTML = printSettings.welcomeMessage
-    ? `<p style="margin: 6px 0 2px; font-size: 12px; color: #334155; font-weight: 500;">${printSettings.welcomeMessage}</p>`
+    ? `<p style="margin: 6px 0 2px; font-size: 12px; color: #334155; font-weight: 500;">${escapeHtml(printSettings.welcomeMessage)}</p>`
     : '';
 
   return `
@@ -321,15 +322,15 @@ export function generateReceiptHTML(invoice: PrintableInvoice): string {
 
     ${(printSettings.showInvoiceNumber !== false || printSettings.showDateTime !== false) ? `
       <div class="invoice-info">
-        ${printSettings.showInvoiceNumber !== false ? `<span>فاتورة: ${invoice.id}</span>` : '<span></span>'}
-        ${printSettings.showDateTime !== false ? `<span>${invoice.date}${invoice.time ? ' ' + invoice.time : ''}</span>` : '<span></span>'}
+        ${printSettings.showInvoiceNumber !== false ? `<span>فاتورة: ${escapeHtml(invoice.id)}</span>` : '<span></span>'}
+        ${printSettings.showDateTime !== false ? `<span>${escapeHtml(invoice.date)}${invoice.time ? ' ' + escapeHtml(invoice.time) : ''}</span>` : '<span></span>'}
       </div>
     ` : ''}
 
     <div class="customer-info">
-      <strong>العميل:</strong> ${invoice.customerName || 'عميل نقدي'}
-      ${invoice.customerPhone ? `<br/>الهاتف: ${invoice.customerPhone}` : ''}
-      ${(printSettings.showCashierName !== false && invoice.cashierName) ? `<br/><span>الكاشير: ${invoice.cashierName}</span>` : ''}
+      <strong>العميل:</strong> ${escapeHtml(invoice.customerName || 'عميل نقدي')}
+      ${invoice.customerPhone ? `<br/>الهاتف: ${escapeHtml(invoice.customerPhone)}` : ''}
+      ${(printSettings.showCashierName !== false && invoice.cashierName) ? `<br/><span>الكاشير: ${escapeHtml(invoice.cashierName)}</span>` : ''}
     </div>
 
     <table class="items-table">
@@ -400,7 +401,7 @@ export function generateReceiptHTML(invoice: PrintableInvoice): string {
           for (const curr of enabledList) {
             if (curr.code === invCode || !curr.enabled || curr.code === 'USD') continue;
             const altAmount = fromUsd(baseUSD, curr.code);
-            parts.push(`${curr.name}: ${formatAmount(altAmount, curr.code)} ${curr.symbol}`);
+            parts.push(`${escapeHtml(curr.name)}: ${formatAmount(altAmount, curr.code)} ${escapeHtml(curr.symbol)}`);
           }
 
           if (parts.length === 0) return '';
@@ -416,14 +417,14 @@ export function generateReceiptHTML(invoice: PrintableInvoice): string {
       })()}
 
       <div style="text-align: center; margin-top: 8px;">
-        <span class="payment-badge ${invoice.paymentType}">
+        <span class="payment-badge ${invoice.paymentType === 'cash' ? 'cash' : 'debt'}">
           ${invoice.paymentType === 'cash' ? '💵 نقدي' : '📋 آجل'}
         </span>
       </div>
     </div>
 
     <div class="footer">
-      ${printSettings.footer}
+      ${escapeHtml(printSettings.footer)}
       <br/>
       <small style="color: #999;">FlowPOS Pro</small>
       ${isGuestDemoMode() ? `
@@ -651,7 +652,8 @@ export function invoiceToReceiptLines(invoice: PrintableInvoice): ReceiptLine[] 
   return lines;
 }
 
-export async function printHTML(htmlContent: string): Promise<boolean> {
+export async function printHTML(rawHtml: string): Promise<boolean> {
+  const htmlContent = sanitizePrintHtml(rawHtml);
   const printerConfig = getStoredPrinterConfig();
 
   // على أندرويد بلوتوث: لا نسقط بصمت على طابعة النظام، وننبه المستخدم
@@ -686,7 +688,8 @@ export async function printHTML(htmlContent: string): Promise<boolean> {
 /**
  * طباعة على المتصفح والـ PC عبر iframe
  */
-function printOnWeb(htmlContent: string): boolean {
+function printOnWeb(rawHtml: string): boolean {
+  const htmlContent = sanitizePrintHtml(rawHtml);
   try {
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';

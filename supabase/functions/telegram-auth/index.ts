@@ -81,6 +81,20 @@ function formatAuthPasswordError(errorMsg: string): string {
   return `فشل تحديث كلمة المرور: ${errorMsg}`;
 }
 
+// رد موحّد لطلب رمز الاستعادة: لا يكشف هل الحساب موجود أو مربوط بتيليجرام (منع تعداد الحسابات)
+function genericOtpResponse(botUsername: string, identifier: string) {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      message: "إذا كان هذا الحساب موجوداً ومربوطاً ببوت تيليغرام فقد أُرسل رمز التحقق إليه. إن لم يصلك خلال دقيقة، افتح البوت وشارك رقم هاتفك ثم أعد المحاولة.",
+      identifier,
+      bot_username: botUsername,
+      bot_link: `https://t.me/${botUsername}`,
+    }),
+    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -401,10 +415,7 @@ serve(async (req) => {
       }
 
       if (!targetUserId) {
-        return new Response(JSON.stringify({ error: "لم يتم العثور على أي حساب مسجل بهذا البريد أو الهاتف" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return genericOtpResponse(botUsername, identifier);
       }
 
       // If telegramChatId wasn't found in profile, check user_metadata
@@ -420,17 +431,9 @@ serve(async (req) => {
         } catch {}
       }
 
-      // If still not linked to Telegram
+      // If still not linked to Telegram: نفس الرد الموحّد
       if (!telegramChatId) {
-        return new Response(
-          JSON.stringify({
-            error: "حسابك غير مربوط ببوت تيليغرام حتى الآن. يرجى فتح البوت أولاً ومشاركة رقم هاتفك للربط.",
-            not_linked: true,
-            bot_username: botUsername,
-            bot_link: `https://t.me/${botUsername}`,
-          }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return genericOtpResponse(botUsername, identifier);
       }
 
       // Generate 6-digit OTP code
@@ -469,14 +472,7 @@ serve(async (req) => {
       const tgResult = await sendTelegramMessage(botToken, telegramChatId, otpMessage);
       console.log(`[TelegramAuth] OTP sent to Telegram chat ${telegramChatId}, result:`, tgResult?.ok);
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: "تم إرسال رمز التحقق إلى حسابك في تيليغرام بنجاح",
-          identifier,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return genericOtpResponse(botUsername, identifier);
     }
 
     // --- Action: verify_and_reset ---
@@ -532,8 +528,9 @@ serve(async (req) => {
       }
 
       if (!targetUserId) {
-        return new Response(JSON.stringify({ error: "الحساب غير موجود أو تم تغييره" }), {
-          status: 404,
+        // لا نكشف عدم وجود الحساب
+        return new Response(JSON.stringify({ error: "رمز التحقق غير صحيح أو انتهت صلاحيته" }), {
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

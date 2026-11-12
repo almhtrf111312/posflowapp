@@ -203,7 +203,9 @@ export default function Login() {
         return;
       }
 
-      toast.success(resData?.message || 'تم إرسال رمز التحقق إلى تيليغرام بنجاح');
+      // الرد موحّد (لا يكشف وجود الحساب): نعرض رابط البوت دائماً لمن لم يربط حسابه بعد
+      if (resData?.bot_link) setTgBotLink(resData.bot_link);
+      toast.success(resData?.message || 'تم إرسال رمز التحقق إلى تيليغرام بنجاح', { duration: 7000 });
       setTelegramStep(2);
     } catch (err: any) {
       console.error('Request Telegram OTP error:', err);
@@ -747,7 +749,7 @@ export default function Login() {
               <div className="space-y-3.5">
                 <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-2xl text-xs space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sky-700 dark:text-sky-300">تم إرسال الرمز إلى تيليغرام</span>
+                    <span className="font-semibold text-sky-700 dark:text-sky-300">إذا كان الحساب مربوطاً بالبوت فقد أُرسل الرمز</span>
                     <button
                       type="button"
                       onClick={() => setTelegramStep(1)}
@@ -759,6 +761,13 @@ export default function Login() {
                   <p className="text-[11px] text-muted-foreground">
                     راجع محادثة البوت وأدخل الرمز المكون من 6 أرقام هنا.
                   </p>
+                  {tgBotLink && (
+                    <p className="text-[11px] text-muted-foreground">
+                      لم يصلك الرمز؟ افتح{' '}
+                      <a href={tgBotLink} target="_blank" rel="noopener noreferrer" className="text-sky-600 underline">البوت</a>
+                      {' '}واضغط /start ثم «مشاركة رقم الهاتف للتحقق»، وبعدها اطلب الرمز مجدداً.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

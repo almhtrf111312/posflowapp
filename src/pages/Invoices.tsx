@@ -1846,7 +1846,7 @@ export default function Invoices() {
             الإجمالي: ${formatCurrency(printFinancials.displayTotal, printFinancials.symbol, printFinancials.decimals, printFinancials.code, printFinancials.name)}
             ${printFinancials.code !== 'USD' ? `<div style="font-size: 11px; font-weight: normal; color: #555; margin-top: 3px; font-family: monospace;" dir="ltr">(ما يعادل بالدولار: ${currencySymbols?.USD || '$'}${formatNumber(invoice.total || 0, 2)})</div>` : ''}
           </div>
-          <div class="footer">${footer}</div>
+          <div class="footer">${escapeHtml(footer)}</div>
         </body>
       </html>
     `;

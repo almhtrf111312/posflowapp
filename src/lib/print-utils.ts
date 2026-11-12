@@ -1,3 +1,4 @@
+import { sanitizePrintHtml } from './print-sanitize';
 // Print utilities for HyperPOS
 // Uses hidden iframe approach for better Android/WebView compatibility
 
@@ -94,7 +95,9 @@ export function getPrintSettings(): PrintSettings {
  * طباعة محتوى HTML باستخدام iframe مخفي
  * يعمل على المتصفحات وCapacitor WebView
  */
-export function printHTML(htmlContent: string): void {
+export function printHTML(rawHtml: string): void {
+  // حماية من حقن السكربتات في نصوص الفاتورة (أسماء المنتجات، التذييل...)
+  const htmlContent = sanitizePrintHtml(rawHtml);
   // على Capacitor/Android استخدم native-print
   if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
     import('./native-print').then(mod => mod.printHTML(htmlContent));

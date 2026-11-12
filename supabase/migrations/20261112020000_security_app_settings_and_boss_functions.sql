@@ -85,8 +85,7 @@ BEGIN
         'boss_change_user_password',
         'boss_hard_delete_user',
         'boss_revoke_user_license',
-        'boss_reactivate_user_license',
-        'clean_old_error_logs'
+        'boss_reactivate_user_license'
       )
   LOOP
     EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon', r.sig);

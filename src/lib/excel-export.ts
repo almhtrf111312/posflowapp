@@ -341,7 +341,7 @@ export const exportInvoicesToExcel = async (
     { header: 'العميل', key: 'customerName', width: 20 },
     { header: `الإجمالي (${reportCurr.symbol})`, key: 'total', width: 14 },
     { header: `الخصم (${reportCurr.symbol})`, key: 'discount', width: 12 },
-    { header: `صافي الربح (${reportCurr.symbol})`, key: 'profit', width: 14 },
+    { header: `الربح المحقق (${reportCurr.symbol})`, key: 'profit', width: 14 },
     { header: 'نسبة الربح %', key: 'profitMargin', width: 12 },
     { header: 'نوع الدفع', key: 'paymentType', width: 10 },
     { header: 'الكاشير', key: 'cashierName', width: 15 },

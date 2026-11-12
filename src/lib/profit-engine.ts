@@ -251,6 +251,33 @@ export function buildInvoiceProfitTimeline(
   };
 }
 
+/**
+ * Profit realized on one invoice up to now, for invoice lists (detailed sales,
+ * cashier performance, maintenance, exports): the full profit of a cash invoice,
+ * and only the collected share of a credit invoice. The uncollected share is
+ * pending (or cancelled once the debt is written off) and is never counted.
+ */
+export function realizedProfitToDate(invoice: {
+  status?: string;
+  type?: string;
+  paymentType?: string;
+  total?: number;
+  profit?: number;
+  debtPaid?: number;
+}): number {
+  if (invoice.status === 'refunded' || invoice.status === 'cancelled') return 0;
+  const timeline = buildInvoiceProfitTimeline({
+    id: '',
+    status: invoice.status,
+    paymentType: invoice.paymentType,
+    total: num(invoice.total),
+    profit: num(invoice.profit),
+    debtPaid: num(invoice.debtPaid),
+    createdAt: '',
+  });
+  return round8(timeline.saleDayProfit);
+}
+
 export function computeProfitSummary(input: ProfitEngineInput): ProfitSummary {
   const dayOf = input.dayOf ?? defaultDayOf;
   const range = input.range;

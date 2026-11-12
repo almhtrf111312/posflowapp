@@ -630,7 +630,7 @@ export const exportInvoicesToPDF = async (
     { header: 'العميل', key: 'customerName' },
     { header: `الإجمالي (${reportCurr.symbol})`, key: 'total' },
     { header: `الخصم (${reportCurr.symbol})`, key: 'discount' },
-    { header: `صافي الربح (${reportCurr.symbol})`, key: 'profit' },
+    { header: `الربح المحقق (${reportCurr.symbol})`, key: 'profit' },
     { header: 'نسبة الربح %', key: 'profitMargin' },
     { header: 'نوع الدفع', key: 'paymentType' },
     { header: 'الكاشير', key: 'cashierName' },

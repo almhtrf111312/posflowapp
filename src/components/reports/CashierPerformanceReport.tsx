@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { realizedProfitToDate } from '@/lib/profit-engine';
 import { FileText, Download, Users, DollarSign, TrendingUp, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatReportAmount, formatNumber } from '@/lib/utils';
@@ -51,7 +52,7 @@ export function CashierPerformanceReport({
       }
       cashierMap[name].invoiceCount += 1;
       cashierMap[name].totalSales += inv.total;
-      cashierMap[name].totalProfit += inv.profit || 0;
+      cashierMap[name].totalProfit += realizedProfitToDate(inv);
       if (inv.paymentType === 'cash') cashierMap[name].cashSales += inv.total;
       else cashierMap[name].debtSales += inv.total;
     });
@@ -72,7 +73,7 @@ export function CashierPerformanceReport({
         { header: 'الكاشير', key: 'name', width: 20 },
         { header: 'عدد الفواتير', key: 'invoiceCount', width: 12 },
         { header: 'إجمالي المبيعات', key: 'totalSales', width: 15 },
-        { header: 'إجمالي الربح', key: 'totalProfit', width: 15 },
+        { header: 'الربح المحقق', key: 'totalProfit', width: 15 },
         { header: 'متوسط الفاتورة', key: 'avgInvoice', width: 15 },
         { header: 'مبيعات نقدية', key: 'cashSales', width: 15 },
         { header: 'مبيعات آجلة', key: 'debtSales', width: 15 },
@@ -88,7 +89,7 @@ export function CashierPerformanceReport({
       summary: [
         { label: 'عدد الكاشيرات', value: data.length },
         { label: 'إجمالي المبيعات', value: totalSales },
-        { label: 'إجمالي الأرباح', value: totalProfit },
+        { label: 'الأرباح المحققة', value: totalProfit },
         { label: 'إجمالي الفواتير', value: totalInvoices },
       ],
     });
@@ -116,7 +117,7 @@ export function CashierPerformanceReport({
       summary: [
         { label: 'عدد الكاشيرات', value: data.length },
         { label: 'إجمالي المبيعات', value: totalSales },
-        { label: 'إجمالي الأرباح', value: totalProfit },
+        { label: 'الأرباح المحققة', value: totalProfit },
       ],
       fileName: `أداء_الكاشير_${dateRange.from}_${dateRange.to}.pdf`,
       orientation: 'landscape',

@@ -18,8 +18,10 @@
 --   2) أعمدة توثيق الخسارة في debt_writeoffs.
 --   3) writeoff_debt_atomic: تحسب خسارة الدين المعدوم وتحمّلها للشركاء بنسبهم
 --      (شريك الصنف أولاً ثم الباقي على الشركاء العامين، والباقي على المالك) وتوثّقها.
+--      الدين النقدي بلا فاتورة لا يتحمل الشركاء من خسارته شيئاً: كلها على المالك (قرار المالك).
 --   4) close_accounting_period_atomic: تحسب الإقفال بالتعريف الموحّد وتخزّن
 --      الربح المحقق والمعلّق وخسارة الديون المعدومة. الإقفالات السابقة لا تُعدَّل.
+--   5) حارسان: الدين المشطوب لا يقبل دفعات، والفاتورة المشطوب دينها لا تُسترد ولا تُعدَّل مبالغها.
 --
 -- لا يغيّر أرصدة أي شريك عند التطبيق، ولا يعدّل أي إقفال أو شطب سابق سوى تعبئة
 -- عمودي التوثيق الجديدين (loss_amount / pending_profit_cancelled) للشطوبات القديمة.
@@ -254,13 +256,12 @@ BEGIN
   -- 5) المرحلة 2: تحميل خسارة الدين المعدوم للشركاء بنسبهم
   --    الخسارة تُقسَّم على الأصناف بنسبة تكلفة كل صنف في الفاتورة؛ شريك الصنف يتحمل
   --    نسبته من خسارة صنفه، ثم يتحمل الشركاء العامون نسبهم من الباقي، والباقي على المالك.
-  IF _loss > 0 THEN
-    IF _has_inv THEN
-      SELECT COALESCE(SUM(COALESCE(ii.cost_price, 0) * COALESCE(ii.quantity, 0)), 0)
-        INTO _total_cost
-        FROM public.invoice_items ii
-       WHERE ii.invoice_id = _inv_id;
-    END IF;
+  --    الدين النقدي بلا فاتورة (أو دين فُقدت فاتورته): لا يتحمل الشركاء منه شيئاً، كله على المالك.
+  IF _loss > 0 AND _has_inv THEN
+    SELECT COALESCE(SUM(COALESCE(ii.cost_price, 0) * COALESCE(ii.quantity, 0)), 0)
+      INTO _total_cost
+      FROM public.invoice_items ii
+     WHERE ii.invoice_id = _inv_id;
 
     FOR _cat IN
       SELECT c.category_name, c.cat_cost
@@ -269,21 +270,21 @@ BEGIN
                  SUM(COALESCE(ii.cost_price, 0) * COALESCE(ii.quantity, 0)) AS cat_cost
             FROM public.invoice_items ii
             LEFT JOIN public.products p ON p.id = ii.product_id AND p.user_id = _owner
-           WHERE _has_inv AND _total_cost > 0 AND ii.invoice_id = _inv_id
+           WHERE _total_cost > 0 AND ii.invoice_id = _inv_id
            GROUP BY COALESCE(NULLIF(trim(p.category), ''), 'عام')
           HAVING SUM(COALESCE(ii.cost_price, 0) * COALESCE(ii.quantity, 0)) > 0
           UNION ALL
-          -- دين نقدي بلا فاتورة أو فاتورة بلا تكلفة: الخسارة كلها في خانة واحدة
-          SELECT 'عام'::text, 1::numeric WHERE NOT (_has_inv AND _total_cost > 0)
+          -- فاتورة بلا تكلفة مسجلة (خدمات مثلاً): الخسارة كلها في خانة واحدة
+          SELECT 'عام'::text, 1::numeric WHERE NOT (_total_cost > 0)
         ) c
     LOOP
-      _cat_loss := CASE WHEN _has_inv AND _total_cost > 0
+      _cat_loss := CASE WHEN _total_cost > 0
                         THEN round(_loss * _cat.cat_cost / _total_cost, 8)
                         ELSE _loss END;
       _remaining_loss := _cat_loss;
 
-      -- أ) شركاء هذا الصنف بعينه (فقط حين توجد فاتورة)
-      IF _has_inv THEN
+      -- أ) شركاء هذا الصنف بعينه
+      BEGIN
         FOR _partner IN
           SELECT * FROM public.partners
            WHERE user_id = _owner
@@ -328,7 +329,7 @@ BEGIN
             END IF;
           END IF;
         END LOOP;
-      END IF;
+      END;
 
       -- ب) الشركاء العامون على ما تبقى من خسارة الصنف
       IF _remaining_loss > 0 THEN
@@ -645,6 +646,60 @@ $function$;
 REVOKE ALL ON FUNCTION public.close_accounting_period_atomic(date, date, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.close_accounting_period_atomic(date, date, text) TO authenticated, service_role;
 
+-- ---------------------------------------------------------------------------
+-- 5) حارسا الشطب: ما شُطب لا يُفتح من جديد
+-- ---------------------------------------------------------------------------
+-- بعد الشطب تكون الخسارة قد سُجّلت ووُزّعت. دفعة لاحقة أو استرداد لاحق كانا يغيّران
+-- الأرصدة دون عكس تلك الخسارة. من محرر SQL (بلا مستخدم) يبقى التصحيح الإداري ممكناً.
+CREATE OR REPLACE FUNCTION public.guard_written_off_debt()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF auth.uid() IS NOT NULL
+     AND (NEW.status IS DISTINCT FROM OLD.status
+          OR NEW.total_paid IS DISTINCT FROM OLD.total_paid
+          OR NEW.remaining_debt IS DISTINCT FROM OLD.remaining_debt
+          OR NEW.total_debt IS DISTINCT FROM OLD.total_debt) THEN
+    RAISE EXCEPTION 'هذا الدين مشطوب ولا يقبل دفعات أو تعديلات' USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS c_guard_written_off_debt ON public.debts;
+CREATE TRIGGER c_guard_written_off_debt
+  BEFORE UPDATE ON public.debts
+  FOR EACH ROW WHEN (OLD.status = 'written_off')
+  EXECUTE FUNCTION public.guard_written_off_debt();
+
+CREATE OR REPLACE FUNCTION public.guard_written_off_invoice()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF auth.uid() IS NOT NULL
+     AND (NEW.status IS DISTINCT FROM OLD.status
+          OR NEW.total IS DISTINCT FROM OLD.total
+          OR NEW.profit IS DISTINCT FROM OLD.profit
+          OR NEW.debt_paid IS DISTINCT FROM OLD.debt_paid
+          OR NEW.debt_remaining IS DISTINCT FROM OLD.debt_remaining) THEN
+    RAISE EXCEPTION 'هذه الفاتورة دينها مشطوب ولا يمكن استردادها أو تعديل مبالغها' USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS d_guard_written_off_invoice ON public.invoices;
+CREATE TRIGGER d_guard_written_off_invoice
+  BEFORE UPDATE ON public.invoices
+  FOR EACH ROW WHEN (OLD.status = 'written_off')
+  EXECUTE FUNCTION public.guard_written_off_invoice();
+
 COMMIT;
 
 -- ---------------------------------------------------------------------------
@@ -662,4 +717,8 @@ SELECT
   position('loss_amount' in pg_get_functiondef('public.writeoff_debt_atomic(uuid,text,text)'::regprocedure)) > 0 AS writeoff_computes_loss,
   to_regprocedure('public.close_accounting_period_atomic(date,date)') IS NULL AS old_close_removed,
   position('realized_profit' in pg_get_functiondef('public.close_accounting_period_atomic(date,date,text)'::regprocedure)) > 0 AS close_uses_unified_profit,
-  NOT has_function_privilege('anon', 'public.close_accounting_period_atomic(date,date,text)', 'EXECUTE') AS close_blocked_for_anon;
+  NOT has_function_privilege('anon', 'public.close_accounting_period_atomic(date,date,text)', 'EXECUTE') AS close_blocked_for_anon,
+  EXISTS (SELECT 1 FROM pg_trigger
+           WHERE tgrelid = 'public.debts'::regclass AND tgname = 'c_guard_written_off_debt' AND NOT tgisinternal) AS written_off_debt_guard,
+  EXISTS (SELECT 1 FROM pg_trigger
+           WHERE tgrelid = 'public.invoices'::regclass AND tgname = 'd_guard_written_off_invoice' AND NOT tgisinternal) AS written_off_invoice_guard;

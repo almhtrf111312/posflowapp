@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { realizedProfitToDate } from '@/lib/profit-engine';
 import { FileText, Download, Wrench, DollarSign, TrendingUp, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatReportAmount } from '@/lib/utils';
@@ -28,7 +29,7 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
 
   const stats = useMemo(() => {
     const totalRevenue = data.reduce((s, i) => s + i.total, 0);
-    const totalProfit = data.reduce((s, i) => s + (i.profit || 0), 0);
+    const totalProfit = data.reduce((s, i) => s + realizedProfitToDate(i), 0);
     const totalPartsCost = data.reduce((s, i) => s + (i.partsCost || 0), 0);
     const cashCount = data.filter(i => i.paymentType === 'cash').length;
     const debtCount = data.filter(i => i.paymentType === 'debt').length;
@@ -54,7 +55,7 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
         serviceDescription: inv.serviceDescription || '-',
         total: inv.total,
         partsCost: inv.partsCost || 0,
-        profit: inv.profit || 0,
+        profit: realizedProfitToDate(inv),
         paymentLabel: inv.paymentType === 'cash' ? 'نقدي' : 'آجل',
         date: toLocalDateString(inv.createdAt),
       })),
@@ -66,7 +67,7 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
         { label: 'عدد الخدمات', value: stats.count },
         { label: 'إجمالي الإيرادات', value: stats.totalRevenue },
         { label: 'تكلفة القطع', value: stats.totalPartsCost },
-        { label: 'صافي الربح', value: stats.totalProfit },
+        { label: 'الربح المحقق', value: stats.totalProfit },
       ],
     });
     toast.success('تم تصدير Excel بنجاح');
@@ -91,14 +92,14 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
         serviceDescription: inv.serviceDescription || '-',
         total: inv.total,
         partsCost: inv.partsCost || 0,
-        profit: inv.profit || 0,
+        profit: realizedProfitToDate(inv),
         paymentLabel: inv.paymentType === 'cash' ? 'نقدي' : 'آجل',
       })),
       totals: { total: stats.totalRevenue, profit: stats.totalProfit },
       summary: [
         { label: 'عدد الخدمات', value: stats.count },
         { label: 'إجمالي الإيرادات', value: stats.totalRevenue },
-        { label: 'صافي الربح', value: stats.totalProfit },
+        { label: 'الربح المحقق', value: stats.totalProfit },
       ],
       fileName: `صيانة_${dateRange.from}_${dateRange.to}.pdf`,
       orientation: 'landscape',
@@ -168,7 +169,7 @@ export function MaintenanceReport({ dateRange, invoices, isLoading, hideInternal
                     <td className="p-3 text-start text-muted-foreground max-w-[14.3rem] truncate">{inv.serviceDescription || '-'}</td>
                     <td className="p-3 text-center">{formatReportAmount(inv.total)}</td>
                     <td className="p-3 text-center text-red-500">{formatReportAmount(inv.partsCost || 0)}</td>
-                    <td className="p-3 text-center text-green-600 font-medium">{formatReportAmount(inv.profit || 0)}</td>
+                    <td className="p-3 text-center text-green-600 font-medium">{formatReportAmount(realizedProfitToDate(inv))}</td>
                     <td className="p-3 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-xs ${inv.paymentType === 'cash' ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
                         {inv.paymentType === 'cash' ? 'نقدي' : 'آجل'}

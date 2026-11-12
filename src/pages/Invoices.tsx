@@ -863,6 +863,13 @@ export default function Invoices() {
   };
 
   const handleRefund = (invoice: Invoice) => {
+    // فاتورة شُطب دينها: الخسارة سُجّلت ووُزّعت، فلا تُسترد (المرحلة 2)
+    if (invoice.status === 'written_off') {
+      toast.warning(language === 'en'
+        ? 'This invoice\'s debt was written off; it cannot be refunded'
+        : 'هذه الفاتورة دينها مشطوب ولا يمكن استردادها');
+      return;
+    }
     // ✅ منع الاسترداد المزدوج من الواجهة
     if (invoice.status === 'refunded') {
       toast.warning(
@@ -1328,6 +1335,12 @@ export default function Invoices() {
 
   // فتح نافذة تسديد الدفعة مباشرة داخل صفحة الفواتير
   const handlePayDebt = async (invoice: Invoice) => {
+    if (invoice.status === 'written_off') {
+      toast.warning(language === 'en'
+        ? 'This debt was written off; it cannot take payments'
+        : 'هذا الدين مشطوب ولا يقبل دفعات');
+      return;
+    }
     if (invoice.status === 'refunded') {
       toast.warning('⚠️ هذا الدين مرتبط بفاتورة مستردة. لا يمكن تسديد هذا الدين.');
       return;

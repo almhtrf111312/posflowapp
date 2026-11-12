@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { realizedProfitToDate } from '../profit-engine';
 import { getPendingOperations, addToQueue } from '../sync-queue';
 // Cloud Invoices Store - Supabase-backed invoices management
 import {
@@ -1322,7 +1323,8 @@ export const getInvoiceStatsCloud = async () => {
     pendingDebts: activeInvoices.filter(inv =>
       inv.paymentType === 'debt' && inv.status === 'pending'
     ).length,
-    totalProfit: activeInvoices.reduce((sum, inv) => sum + (inv.profit || 0), 0),
+    // الربح المحقق حتى الآن (تعريف الربح الموحّد): النقدي كاملاً، والآجل بنسبة ما حُصّل منه
+    totalProfit: activeInvoices.reduce((sum, inv) => sum + realizedProfitToDate(inv), 0),
   };
 };
 

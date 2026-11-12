@@ -66,7 +66,7 @@ import { loadPartnersCloud, loadPartnersLocally, Partner } from '@/lib/cloud/par
 import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/cloud/categories-cloud';
 import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
-import { computeProfitSummary } from '@/lib/profit-engine';
+import { computeProfitSummary, realizedProfitToDate } from '@/lib/profit-engine';
 import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 const PartnerProfitDetailedReport = lazy(() => import('@/components/reports/PartnerProfitDetailedReport').then(m => ({ default: m.PartnerProfitDetailedReport })));
@@ -1393,7 +1393,7 @@ function ReportsContent() {
           const cur = cMap.get(name) || { count: 0, total: 0, profit: 0 };
           cur.count += 1;
           cur.total += inv.total || 0;
-          cur.profit += inv.profit || 0;
+          cur.profit += realizedProfitToDate(inv);
           cMap.set(name, cur);
         });
         const sorted = Array.from(cMap.entries()).sort((a, b) => b[1].total - a[1].total);
@@ -1442,7 +1442,7 @@ function ReportsContent() {
       case 'maintenance': {
         const maintInvs = cloudInvoices.filter(inv => inv.type === 'maintenance' && isValidActiveInvoice(inv) && isDateInRange(toLocalDateString(inv.createdAt), dateRange.from, dateRange.to));
         const mTot = maintInvs.reduce((s, inv) => s + inv.total, 0);
-        const mProf = maintInvs.reduce((s, inv) => s + (inv.profit || 0), 0);
+        const mProf = maintInvs.reduce((s, inv) => s + realizedProfitToDate(inv), 0);
         const mCount = maintInvs.length;
         const mAvg = mCount > 0 ? mTot / mCount : 0;
         return [
@@ -1547,7 +1547,7 @@ function ReportsContent() {
           if (filteredInvoices.length === 0) { toast.error(t('reports.noDataToExport')); return; }
           await exportInvoicesToPDF(filteredInvoices.map(inv => ({
             id: inv.id, customerName: inv.customerName || 'عميل نقدي', total: inv.total,
-            discount: inv.discount || 0, profit: inv.profit || 0, paymentType: inv.paymentType,
+            discount: inv.discount || 0, profit: realizedProfitToDate(inv), paymentType: inv.paymentType,
             type: inv.type, createdAt: inv.createdAt, cashierName: inv.cashierName || '-',
           })), storeInfo, { start: dateRange.from, end: dateRange.to }, currentSummary);
           break;
@@ -1700,7 +1700,7 @@ function ReportsContent() {
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
             cur.total += inv.total || 0;
-            cur.profit += inv.profit || 0;
+            cur.profit += realizedProfitToDate(inv);
             cashierMap.set(name, cur);
           });
           await exportToPDF({
@@ -1751,7 +1751,7 @@ function ReportsContent() {
               customer: inv.customerName || 'عميل نقدي',
               date: toLocalDateString(inv.createdAt),
               total: formatReportAmount(inv.total),
-              profit: formatReportAmount(inv.profit || 0),
+              profit: formatReportAmount(realizedProfitToDate(inv)),
               payment: inv.paymentType,
             })),
             fileName: `maintenance-report-${dateRange.from}.pdf`,
@@ -1873,7 +1873,7 @@ function ReportsContent() {
           if (filteredInvoices.length === 0) { toast.error(t('reports.noDataToExport')); return; }
           await exportInvoicesToExcel(filteredInvoices.map(inv => ({
             id: inv.id, customerName: inv.customerName || 'عميل نقدي', total: inv.total,
-            profit: inv.profit, paymentType: inv.paymentType, type: inv.type,
+            profit: realizedProfitToDate(inv), paymentType: inv.paymentType, type: inv.type,
             createdAt: inv.createdAt, cashierName: inv.cashierName || '-',
           })), { start: dateRange.from, end: dateRange.to }, currentSummary);
           break;
@@ -2014,7 +2014,7 @@ function ReportsContent() {
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
             cur.total += inv.total || 0;
-            cur.profit += inv.profit || 0;
+            cur.profit += realizedProfitToDate(inv);
             cashierMap.set(name, cur);
           });
           await exportToExcel({
@@ -2059,7 +2059,7 @@ function ReportsContent() {
               customer: inv.customerName || 'عميل نقدي',
               date: toLocalDateString(inv.createdAt),
               total: inv.total,
-              profit: inv.profit || 0,
+              profit: realizedProfitToDate(inv),
               payment: inv.paymentType,
             })),
             fileName: `maintenance-${dateRange.from}.xlsx`,

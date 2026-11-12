@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { realizedProfitToDate } from '@/lib/profit-engine';
 import { ShoppingCart, Receipt, TrendingUp, Users } from 'lucide-react';
 import { ReportShell } from './ReportShell';
 import { EntityPicker, PickableEntity } from './EntityPicker';
@@ -98,7 +99,7 @@ export function SalesDetailedReport({
 
   const stats = useMemo(() => {
     const totalSales = scoped.reduce((s, i) => s + i.total, 0);
-    const totalProfit = scoped.reduce((s, i) => s + (i.profit || 0), 0);
+    const totalProfit = scoped.reduce((s, i) => s + realizedProfitToDate(i), 0);
     const totalDiscount = scoped.reduce((s, i) => s + (i.discount || 0), 0);
     const cashTotal = scoped.filter(i => i.paymentType === 'cash').reduce((s, i) => s + i.total, 0);
     const debtTotal = scoped.filter(i => i.paymentType === 'debt').reduce((s, i) => s + i.total, 0);
@@ -117,7 +118,7 @@ export function SalesDetailedReport({
       payment: inv.paymentType === 'cash' ? 'نقدي' : 'آجل',
       items: inv.items?.length || 0,
       discount: inv.discount || 0,
-      profit: inv.profit || 0,
+      profit: realizedProfitToDate(inv),
       total: inv.total,
     })), [scoped]);
 
@@ -203,7 +204,7 @@ export function SalesDetailedReport({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Kpi icon={<Receipt className="w-4 h-4" />} label="الفواتير" value={formatNumber(stats.count)} color="text-blue-500" />
         <Kpi icon={<TrendingUp className="w-4 h-4" />} label="المبيعات" value={formatReportAmount(stats.totalSales)} color="text-emerald-500" />
-        <Kpi icon={<TrendingUp className="w-4 h-4" />} label="الأرباح" value={formatReportAmount(stats.totalProfit)} color="text-green-500" />
+        <Kpi icon={<TrendingUp className="w-4 h-4" />} label="الأرباح المحققة" value={formatReportAmount(stats.totalProfit)} color="text-green-500" />
         <Kpi icon={<Users className="w-4 h-4" />} label="متوسط الفاتورة" value={formatReportAmount(stats.avg)} color="text-violet-500" />
       </div>
 

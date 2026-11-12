@@ -58,10 +58,10 @@ SELECT set_config('request.jwt.claim.sub','eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
 SELECT jsonb_pretty(public.writeoff_debt_atomic('d0000000-0000-0000-0000-000000000002','تعثر','op-wo-000001'));
 \echo '== W3 repeat is a no-op (already_written_off)'
 SELECT public.writeoff_debt_atomic('d0000000-0000-0000-0000-000000000002','تعثر','op-wo-000001');
-\echo '== W4 cash loan 15, no invoice: loss 15, general partner 4.5, owner 10.5'
+\echo '== W4 cash loan 15, no invoice: loss 15, partners 0, owner 15 (owner decision)'
 SELECT public.writeoff_debt_atomic('d0000000-0000-0000-0000-000000000003','قرض','op-wo-000002') - 'partner_impact';
 RESET ROLE;
-\echo '== W5 partners after: phones 100-20=80 pending 0; general 100-6-6-4.5=83.5 pending 1 (other invoice kept)'
+\echo '== W5 partners after: phones 100-20=80 pending 0; general 100-6-6=88 pending 1 (other invoice kept)'
 SELECT name, confirmed_profit, current_balance, total_profit_earned, pending_profit, jsonb_array_length(profit_history) AS hist FROM partners WHERE user_id='eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' ORDER BY name;
 \echo '== W6 write-off records, invoice status, customer balance'
 SELECT amount, loss_amount, pending_profit_cancelled, capital_impact, jsonb_array_length(partner_impact), notes FROM debt_writeoffs WHERE user_id='eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' ORDER BY amount DESC;
@@ -72,6 +72,17 @@ UPDATE debt_writeoffs SET written_off_at = '2026-03-03 16:00+00' WHERE user_id='
 UPDATE debt_writeoffs SET written_off_at = '2026-04-10 16:00+00' WHERE user_id='eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' AND notes IS NULL;
 
 SET ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',false);
+\echo '== G1 payment on a written-off debt is refused (direct update, as any RPC would do)'
+UPDATE debts SET total_paid = 10, remaining_debt = 70, status = 'partially_paid' WHERE id='d0000000-0000-0000-0000-000000000002';
+\echo '== G2 refund / amount change on a written-off invoice is refused; a note edit is allowed (UPDATE 1)'
+UPDATE invoices SET status = 'refunded' WHERE invoice_number='P2-D2';
+UPDATE invoices SET profit = 0 WHERE invoice_number='P2-D2';
+UPDATE invoices SET notes = 'ملاحظة' WHERE invoice_number='P2-D2';
+\echo '== G3 open debts and other invoices are not affected (UPDATE 1 each)'
+UPDATE debts SET notes = 'x' WHERE id='d0000000-0000-0000-0000-000000000001';
+UPDATE invoices SET notes = 'x' WHERE invoice_number='P2-D1';
+SELECT status, total_paid FROM debts WHERE id='d0000000-0000-0000-0000-000000000002';
 \echo '== P1 cashier close (expect owner only); bad timezone; future period'
 SELECT set_config('request.jwt.claim.sub','ffffffff-ffff-ffff-ffff-ffffffffffff',false);
 SELECT public.close_accounting_period_atomic('2026-03-01','2026-03-03');

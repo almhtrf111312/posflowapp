@@ -1,6 +1,7 @@
 import {
   buildInvoiceProfitTimeline,
   computeProfitSummary,
+  realizedProfitToDate,
   type ProfitInvoiceInput,
 } from '../profit-engine';
 
@@ -228,4 +229,12 @@ test('report filters drop the invoice and its write-off together', () => {
   });
   assertEqual(s.sales, 100, 'sales');
   assertEqual(s.badDebtLoss, 0, 'no loss from a filtered-out invoice');
+});
+
+test('realized profit to date for invoice lists', () => {
+  assertEqual(realizedProfitToDate(inv()), 30, 'cash invoice');
+  assertEqual(realizedProfitToDate(inv({ paymentType: 'debt', status: 'pending', debtPaid: 40 })), 12, 'partly paid credit');
+  assertEqual(realizedProfitToDate(inv({ paymentType: 'debt', status: 'paid', debtPaid: 0 })), 30, 'credit marked paid');
+  assertEqual(realizedProfitToDate(inv({ paymentType: 'debt', status: 'written_off', debtPaid: 60 })), 18, 'written off after 60 collected');
+  assertEqual(realizedProfitToDate(inv({ status: 'refunded' })), 0, 'refunded');
 });

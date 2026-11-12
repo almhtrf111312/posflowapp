@@ -113,6 +113,8 @@ const isTerminalSyncError = (message: string): boolean => {
     'ليست لديك صلاحية الاسترداد',
     'مخصص لمالك المتجر فقط',
     'بصلاحية مالك المتجر فقط',
+    // دين أو فاتورة مشطوبة (المرحلة 2): الخادم يرفض أي دفعة أو استرداد عليها نهائياً
+    'مشطوب',
   ].some(fragment => normalized.includes(fragment));
 };
 

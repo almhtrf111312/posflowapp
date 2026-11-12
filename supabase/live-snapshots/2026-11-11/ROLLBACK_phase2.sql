@@ -1,7 +1,7 @@
 -- ============================================================================
 -- الرجوع عن المرحلة 2 (تعريف الربح الموحّد)
 -- ----------------------------------------------------------------------------
--- يعيد دالتي شطب الدين وإقفال الفترة إلى نسختي المرحلة 1 ويحذف مشغّل paid_at_sale.
+-- يعيد دالتي شطب الدين وإقفال الفترة إلى نسختي المرحلة 1 ويحذف مشغّل paid_at_sale وحارسَي الشطب.
 -- الأعمدة الجديدة تبقى (لا ضرر منها ولا تُفقد بياناتها):
 --   invoices.paid_at_sale، debt_writeoffs.loss_amount / pending_profit_cancelled،
 --   accounting_period_closures.realized_profit / pending_profit / bad_debt_loss / closing_timezone.
@@ -13,6 +13,11 @@ BEGIN;
 
 DROP TRIGGER IF EXISTS c_set_invoice_paid_at_sale ON public.invoices;
 DROP FUNCTION IF EXISTS public.set_invoice_paid_at_sale();
+
+DROP TRIGGER IF EXISTS c_guard_written_off_debt ON public.debts;
+DROP FUNCTION IF EXISTS public.guard_written_off_debt();
+DROP TRIGGER IF EXISTS d_guard_written_off_invoice ON public.invoices;
+DROP FUNCTION IF EXISTS public.guard_written_off_invoice();
 
 CREATE OR REPLACE FUNCTION public.writeoff_debt_atomic(_debt_id uuid, _reason text, _operation_id text)
  RETURNS jsonb
@@ -262,4 +267,5 @@ SELECT
   to_regprocedure('public.close_accounting_period_atomic(date,date)') IS NOT NULL AS old_close_restored,
   to_regprocedure('public.close_accounting_period_atomic(date,date,text)') IS NULL AS new_close_removed,
   position('loss_amount' in pg_get_functiondef('public.writeoff_debt_atomic(uuid,text,text)'::regprocedure)) = 0 AS writeoff_restored,
-  NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.invoices'::regclass AND tgname = 'c_set_invoice_paid_at_sale') AS trigger_removed;
+  NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.invoices'::regclass AND tgname IN ('c_set_invoice_paid_at_sale', 'd_guard_written_off_invoice')) AS invoice_triggers_removed,
+  NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.debts'::regclass AND tgname = 'c_guard_written_off_debt') AS debt_guard_removed;

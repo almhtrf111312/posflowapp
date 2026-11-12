@@ -102,7 +102,9 @@ export default defineConfig(({ mode }) => ({
         dir: 'rtl',
         lang: 'ar',
         icons: [
-          { src: '/app-icon.png', sizes: '512x512', type: 'image/png' },
+          { src: '/app-icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/app-icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/app-icon-1024.png', sizes: '1024x1024', type: 'image/png' },
         ],
       },
     }),

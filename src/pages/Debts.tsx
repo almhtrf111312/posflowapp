@@ -16,6 +16,7 @@ import {
   User,
   Share2,
   Trash2,
+  FileX2,
   MoreVertical
 } from 'lucide-react';
 import { cn, formatNumber, formatCurrency, formatMoney, formatDateTime } from '@/lib/utils';
@@ -57,6 +58,10 @@ import { getInvoiceByIdCloud, InvoiceItem } from '@/lib/cloud/invoices-cloud';
 import { confirmPendingProfit } from '@/lib/partners-store';
 import { updateCustomerStatsCloud } from '@/lib/cloud/customers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
+import { useUserRole } from '@/hooks/use-user-role';
+import { invalidateProfitLedgerCache } from '@/lib/cloud/profit-ledger-cloud';
+import { writeOffDebtNowCloud } from '@/lib/cloud/accounting-admin-cloud';
+import { invalidatePartnersCache } from '@/lib/cloud/partners-cloud';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,12 +110,18 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showAddDebtDialog, setShowAddDebtDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // شطب الدين كدين معدوم: لمالك المتجر فقط (والخادم يتحقق أيضاً)
+  const [showWriteoffDialog, setShowWriteoffDialog] = useState(false);
+  const [writeoffReason, setWriteoffReason] = useState('');
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
   const paymentBusyRef = useRef(false);
   const paymentOpIdRef = useRef(`debtpay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const autoOpenProcessedRef = useRef<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const deleteGuard = useActionGuard();
+  const writeoffGuard = useActionGuard();
+  const { isAdmin: isStoreOwnerRole, isBoss: isBossRole } = useUserRole();
+  const canWriteOffDebts = isStoreOwnerRole || isBossRole;
   const isSavingRef = useRef(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentCurrency, setPaymentCurrency] = useState<string>(() => loadDefaultCurrencyCode());
@@ -682,6 +693,20 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                         <Share2 className="w-4 h-4 text-muted-foreground" />
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
+                      {canWriteOffDebts && debt.remainingDebt > 0 && (debt.status as string) !== 'written_off' && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedDebt(debt);
+                            if (rejectIfLocked()) return;
+                            setWriteoffReason('');
+                            setShowWriteoffDialog(true);
+                          }}
+                          className="justify-between text-amber-600 cursor-pointer"
+                        >
+                          <span>شطب كدين معدوم</span>
+                          <FileX2 className="w-4 h-4 text-amber-600" />
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => {
                           setSelectedDebt(debt);
@@ -1158,6 +1183,73 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
+      {/* شطب الدين كدين معدوم (لمالك المتجر) */}
+      <AlertDialog open={showWriteoffDialog} onOpenChange={setShowWriteoffDialog}>
+        <AlertDialogContent className="max-w-md w-[95vw] rounded-3xl p-5 border border-border shadow-2xl modal-dot-expand bg-card">
+          <AlertDialogHeader className="text-right">
+            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <FileX2 className="w-4 h-4" />
+              </div>
+              <span>شطب الدين كدين معدوم</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-muted-foreground pt-2 leading-relaxed">
+              {selectedDebt && (
+                <>
+                  سيُشطب المتبقي من دين <strong>{selectedDebt.customerName}</strong> وقيمته <strong className="font-mono text-destructive">{formatCurrency(selectedDebt.remainingDebt)}</strong>.
+                  <br />
+                  يُلغى ربحه المعلّق وتُسجَّل الخسارة في سجل الديون المشطوبة. إن كان الدين من فاتورة توزَّع خسارته على الشركاء بنسبهم، وإن كان ديناً نقدياً فكلها على المالك.
+                  <span className="text-destructive font-medium mt-1 block">بعد الشطب لا يقبل الدين دفعات ولا تُسترد فاتورته، ولا يمكن التراجع.</span>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={writeoffReason}
+            onChange={(e) => setWriteoffReason(e.target.value)}
+            placeholder="سبب الشطب (إلزامي)"
+            maxLength={200}
+            className="h-9 text-xs"
+          />
+          <AlertDialogFooter className="flex gap-2 pt-3">
+            <AlertDialogCancel disabled={writeoffGuard.isRunning} className="flex-1 h-9 rounded-xl text-xs">{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={writeoffGuard.isRunning || writeoffReason.trim().length < 3}
+              className="flex-1 h-9 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-600/90 text-white"
+              onClick={() => writeoffGuard.run(async () => {
+                if (!selectedDebt) return;
+                const debtSnapshot = selectedDebt;
+                const reason = writeoffReason.trim();
+                const toastId = `writeoff-debt-${debtSnapshot.id}`;
+                setShowWriteoffDialog(false);
+                setSelectedDebt(null);
+                toast.loading('جاري شطب الدين...', { id: toastId });
+                try {
+                  // يُنفَّذ على الخادم مباشرة ولا يوضع في طابور: الخسارة وحصص الشركاء تُحسب هناك لحظتها
+                  const outcome = await writeOffDebtNowCloud(debtSnapshot.id, reason);
+                  if (outcome.ok) {
+                    invalidateProfitLedgerCache();
+                    invalidateDebtsCache();
+                    invalidatePartnersCache();
+                    emitEvent(EVENTS.DEBTS_UPDATED, null);
+                    emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
+                    emitEvent(EVENTS.PARTNERS_UPDATED, null);
+                    toast.success('تم شطب الدين وتسجيله في سجل الديون المشطوبة', { id: toastId });
+                    setDebts(await loadDebtsCloud());
+                  } else {
+                    toast.error(outcome.message, { id: toastId, duration: 9000 });
+                  }
+                } catch (error) {
+                  console.error('Write-off debt error:', error);
+                  toast.error(error instanceof Error && error.message ? error.message : 'تعذّر شطب الدين', { id: toastId, duration: 8000 });
+                }
+              })}
+            >
+              {writeoffGuard.isRunning ? 'جاري الشطب...' : 'شطب الدين'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="max-w-md w-[95vw] rounded-3xl p-5 border border-border shadow-2xl modal-dot-expand bg-card">
           <AlertDialogHeader className="text-right">

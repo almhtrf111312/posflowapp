@@ -217,6 +217,8 @@ const ar = {
   'reports.purchasesInvoices': 'فواتير المشتريات',
   'reports.debtsDeferredSale': 'الديون والبيع المؤجل',
   'reports.dailyClosing': 'الإغلاق اليومي',
+  'reports.periodClosing': 'إقفال الفترة',
+  'reports.debtWriteoffs': 'سجل الديون المشطوبة',
   'reports.cashierPerformance': 'أداء الكاشير',
   'reports.maintenanceServices': 'خدمات الصيانة',
   'reports.libraryReport': 'تقرير المكتبة',

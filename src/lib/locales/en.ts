@@ -130,6 +130,8 @@ const en: TranslationDict = {
   'reports.purchasesInvoices': 'Purchase Invoices',
   'reports.debtsDeferredSale': 'Debts & Credit Sales',
   'reports.dailyClosing': 'Daily Closing',
+  'reports.periodClosing': 'Period Closing',
+  'reports.debtWriteoffs': 'Debt Write-off Log',
   'reports.cashierPerformance': 'Cashier Performance',
   'reports.maintenanceServices': 'Maintenance Services',
   'reports.libraryReport': 'Library Report',

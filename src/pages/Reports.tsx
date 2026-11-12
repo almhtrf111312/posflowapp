@@ -67,6 +67,7 @@ import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/clou
 import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
 import { computeProfitSummary, realizedProfitToDate } from '@/lib/profit-engine';
+import { useUserRole } from '@/hooks/use-user-role';
 import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 const PartnerProfitDetailedReport = lazy(() => import('@/components/reports/PartnerProfitDetailedReport').then(m => ({ default: m.PartnerProfitDetailedReport })));
@@ -78,6 +79,8 @@ const DebtsReport = lazy(() => import('@/components/reports/DebtsReport').then(m
 const CashierPerformanceReport = lazy(() => import('@/components/reports/CashierPerformanceReport').then(m => ({ default: m.CashierPerformanceReport })));
 const MaintenanceReport = lazy(() => import('@/components/reports/MaintenanceReport').then(m => ({ default: m.MaintenanceReport })));
 const DailyClosingReport = lazy(() => import('@/components/reports/DailyClosingReport').then(m => ({ default: m.DailyClosingReport })));
+const PeriodClosingPanel = lazy(() => import('@/components/reports/PeriodClosingPanel').then(m => ({ default: m.PeriodClosingPanel })));
+const DebtWriteoffsReport = lazy(() => import('@/components/reports/DebtWriteoffsReport').then(m => ({ default: m.DebtWriteoffsReport })));
 const LibraryReport = lazy(() => import('@/components/reports/LibraryReport').then(m => ({ default: m.LibraryReport })));
 import { downloadJSON } from '@/lib/file-download';
 import { loadPurchaseInvoicesCloud, loadPurchaseInvoicesLocally } from '@/lib/cloud/purchase-invoices-cloud';
@@ -141,6 +144,7 @@ function ReportsContent() {
   const navigate = useNavigate();
   const { isActive: isPageActive } = usePageActivity();
   const { t, isRTL } = useLanguage();
+  const { isAdmin: isStoreOwnerRole, isBoss: isBossRole } = useUserRole();
   const [searchParams] = useSearchParams();
   const storeType = getCurrentStoreType();
   const noInventory = isNoInventoryMode();
@@ -256,7 +260,7 @@ function ReportsContent() {
       const needCustomers = activeReport === 'customers' || (!isSalesTab && !isSilent);
       const needPartners = activeReport === 'partners' || activeReport === 'partner-detailed';
       const needCategories = activeReport === 'categories' || (!isSilent && !isSalesTab);
-      const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'profits' || activeReport === 'overview';
+      const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'period-closing' || activeReport === 'profits' || activeReport === 'overview';
       const needDebts = activeReport === 'debts' || activeReport === 'daily-closing';
       const needPurchases = activeReport === 'purchases';
 
@@ -313,7 +317,7 @@ function ReportsContent() {
     if (activeReport === 'partners' || activeReport === 'partner-detailed') {
       loadPartnersCloud().then(p => { if (p) setCloudPartners(p); }).catch(() => {});
     }
-    if (activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'profits' || activeReport === 'overview') {
+    if (activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'period-closing' || activeReport === 'profits' || activeReport === 'overview') {
       loadExpensesCloud().then(e => { if (e) setCloudExpenses(e); }).catch(() => {});
     }
     if (activeReport === 'customers') {
@@ -388,6 +392,7 @@ function ReportsContent() {
     { id: 'debts', category: 'debts', label: t('reports.debtsDeferredSale'), icon: Banknote, availability: 'ready' },
     { id: 'customers', category: 'debts', label: t('reports.customers'), icon: Users, availability: 'ready' },
     { id: 'partners', category: 'debts', label: t('reports.partners'), icon: UsersRound, availability: 'ready' },
+    { id: 'debt-writeoffs', category: 'debts', label: t('reports.debtWriteoffs'), icon: Undo2, availability: 'ready' },
     { id: 'receivables-aging', category: 'debts', label: t('reports.receivablesAging'), icon: Clock, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
 
     { id: 'profits', category: 'financial', label: t('reports.profitLoss'), icon: TrendingUp, availability: 'ready' },
@@ -398,6 +403,7 @@ function ReportsContent() {
     { id: 'trial-balance', category: 'financial', label: t('reports.trialBalance'), icon: BookOpen, availability: 'needs-data', unavailableReasonKey: 'reports.unsupportedDataReason' },
 
     { id: 'daily-closing', category: 'admin', label: t('reports.dailyClosing'), icon: Calendar, availability: 'ready' },
+    { id: 'period-closing', category: 'admin', label: t('reports.periodClosing'), icon: Lock, availability: 'ready' },
     { id: 'cashier-performance', category: 'admin', label: t('reports.cashierPerformance'), icon: Users, availability: 'ready' },
     ...(visibleSections.maintenance ? [{ id: 'maintenance', category: 'admin', label: t('reports.maintenanceServices'), icon: ClipboardList, availability: 'ready' as const }] : []),
     ...(storeType === 'bookstore' ? [{ id: 'library', category: 'admin', label: t('reports.libraryReport'), icon: BookOpen, availability: 'ready' as const }] : []),
@@ -2273,12 +2279,14 @@ function ReportsContent() {
         { id: 'debts', name: t('reports.debtsDeferredSale'), icon: Banknote, bg: 'bg-red-100/70 dark:bg-red-950/60 text-red-600' },
         { id: 'customers', name: t('reports.customers'), icon: Users, bg: 'bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-600' },
         { id: 'partners', name: t('reports.partners'), icon: UsersRound, bg: 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-600' },
+        { id: 'debt-writeoffs', name: t('reports.debtWriteoffs'), icon: Undo2, bg: 'bg-rose-100/70 dark:bg-rose-950/60 text-rose-600' },
       ]
     },
     {
       category: t('reports.category.admin') || 'الصندوق والعمليات',
       items: [
         { id: 'daily-closing', name: t('reports.dailyClosing'), icon: Lock, bg: 'bg-pink-100/70 dark:bg-pink-950/60 text-pink-600' },
+        { id: 'period-closing', name: t('reports.periodClosing'), icon: Lock, bg: 'bg-slate-100/70 dark:bg-slate-900/60 text-slate-600' },
         { id: 'cashier-performance', name: t('reports.cashierPerformance'), icon: UserCheck, bg: 'bg-teal-100/70 dark:bg-teal-950/60 text-teal-600' },
         ...(visibleSections.maintenance ? [{ id: 'maintenance', name: t('reports.maintenanceServices'), icon: ClipboardList, bg: 'bg-violet-100/70 dark:bg-violet-950/60 text-violet-600' }] : []),
         ...(storeType === 'bookstore' ? [{ id: 'library', name: t('reports.libraryReport'), icon: BookOpen, bg: 'bg-blue-100/70 dark:bg-blue-950/60 text-blue-600' }] : []),
@@ -3296,6 +3304,20 @@ function ReportsContent() {
         {activeReport === 'daily-closing' && (
           <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
             <DailyClosingReport invoices={cloudInvoices} expenses={cloudExpenses} debts={cloudDebts} isLoading={isLoading} dateRange={dateRange} hideInternalExport={true} profitLedger={profitLedger} />
+          </Suspense>
+        )}
+
+        {/* إقفال الفترة المحاسبية (لمالك المتجر) */}
+        {activeReport === 'period-closing' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <PeriodClosingPanel invoices={cloudInvoices} expenses={cloudExpenses} profitLedger={profitLedger} canClose={isStoreOwnerRole || isBossRole} />
+          </Suspense>
+        )}
+
+        {/* سجل الديون المشطوبة */}
+        {activeReport === 'debt-writeoffs' && (
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
+            <DebtWriteoffsReport dateRange={dateRange} />
           </Suspense>
         )}
 

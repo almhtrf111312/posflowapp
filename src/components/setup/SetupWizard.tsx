@@ -54,6 +54,7 @@ import { savePartnersCloud } from '@/lib/cloud/partners-cloud';
 import { APP_FONTS, AppFontId, getStoredAppFont, setStoredAppFont } from '@/lib/app-font-config';
 import { UI_SCALE_OPTIONS, UIScaleId, getStoredUIScale, setStoredUIScale } from '@/lib/ui-scale-config';
 import { emitEvent, EVENTS } from '@/lib/events';
+import { getDefaultFieldsByStoreType, saveProductFieldsConfig, type StoreType } from '@/lib/product-fields-config';
 import { saveStoreSettings, getCurrentUserId, getCurrentUserName } from '@/lib/supabase-store';
 import { getDefaultCategories } from '@/lib/store-type-config';
 import { saveCategories, loadCategories, Category } from '@/lib/categories-store';
@@ -440,6 +441,9 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
       localStorage.setItem(STORE_TYPE_KEY, storeType);
+      // تفعيل حقول المنتجات الخاصة بنوع المتجر تلقائياً (مقاس/لون للملابس، صلاحية للأغذية، IMEI للهواتف...)
+      // وحفظها للمتجر حتى لا تبقى إعدادات حقول قديمة على الجهاز
+      saveProductFieldsConfig(getDefaultFieldsByStoreType(storeType as StoreType)).catch(() => {});
       let prevTax: Record<string, any> = {};
       try {
         const rawTax = localStorage.getItem(TAX_KEY);

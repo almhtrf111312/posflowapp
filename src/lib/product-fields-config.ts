@@ -6,6 +6,8 @@ export interface ProductFieldsConfig {
   expiryDate: boolean;
   batchNumber: boolean;
   serialNumber: boolean;
+  /** رقم IMEI للهواتف، منفصل عن الرقم التسلسلي */
+  imei: boolean;
   warranty: boolean;
   wholesalePrice: boolean;
   sizeColor: boolean;
@@ -25,49 +27,49 @@ export const getDefaultFieldsByStoreType = (storeType: StoreType): ProductFields
   switch (storeType) {
     case 'phones':
       return {
-        expiryDate: false, batchNumber: false, serialNumber: true, warranty: true,
+        expiryDate: false, batchNumber: false, serialNumber: true, imei: true, warranty: true,
         wholesalePrice: true, sizeColor: false, minStockLevel: true,
         weight: false, fabricType: false, tableNumber: false, orderNotes: false, author: false, publisher: false,
       };
     case 'repair':
       return {
-        expiryDate: false, batchNumber: false, serialNumber: false, warranty: false,
+        expiryDate: false, batchNumber: false, serialNumber: false, imei: false, warranty: false,
         wholesalePrice: false, sizeColor: false, minStockLevel: false,
         weight: false, fabricType: false, tableNumber: false, orderNotes: false, author: false, publisher: false,
       };
     case 'grocery':
       return {
-        expiryDate: true, batchNumber: false, serialNumber: false, warranty: false,
+        expiryDate: true, batchNumber: false, serialNumber: false, imei: false, warranty: false,
         wholesalePrice: true, sizeColor: false, minStockLevel: true,
         weight: true, fabricType: false, tableNumber: false, orderNotes: false, author: false, publisher: false,
       };
     case 'pharmacy':
       return {
-        expiryDate: true, batchNumber: true, serialNumber: false, warranty: false,
+        expiryDate: true, batchNumber: true, serialNumber: false, imei: false, warranty: false,
         wholesalePrice: true, sizeColor: false, minStockLevel: true,
         weight: false, fabricType: false, tableNumber: false, orderNotes: false, author: false, publisher: false,
       };
     case 'clothing':
       return {
-        expiryDate: false, batchNumber: false, serialNumber: false, warranty: false,
+        expiryDate: false, batchNumber: false, serialNumber: false, imei: false, warranty: false,
         wholesalePrice: true, sizeColor: true, minStockLevel: true,
         weight: false, fabricType: true, tableNumber: false, orderNotes: false, author: false, publisher: false,
       };
     case 'bakery':
       return {
-        expiryDate: false, batchNumber: false, serialNumber: false, warranty: false,
+        expiryDate: true, batchNumber: false, serialNumber: false, imei: false, warranty: false,
         wholesalePrice: true, sizeColor: false, minStockLevel: false,
         weight: false, fabricType: false, tableNumber: false, orderNotes: false, author: false, publisher: false,
       };
     case 'restaurant':
       return {
-        expiryDate: false, batchNumber: false, serialNumber: false, warranty: false,
+        expiryDate: false, batchNumber: false, serialNumber: false, imei: false, warranty: false,
         wholesalePrice: false, sizeColor: false, minStockLevel: true,
         weight: false, fabricType: false, tableNumber: true, orderNotes: true, author: false, publisher: false,
       };
     case 'bookstore':
       return {
-        expiryDate: false, batchNumber: false, serialNumber: true, warranty: false,
+        expiryDate: false, batchNumber: false, serialNumber: true, imei: false, warranty: false,
         wholesalePrice: true, sizeColor: false, minStockLevel: true,
         weight: false, fabricType: false, tableNumber: false, orderNotes: false, author: true, publisher: true,
       };
@@ -75,7 +77,7 @@ export const getDefaultFieldsByStoreType = (storeType: StoreType): ProductFields
     case 'custom':
     default:
       return {
-        expiryDate: false, batchNumber: false, serialNumber: false, warranty: false,
+        expiryDate: false, batchNumber: false, serialNumber: false, imei: false, warranty: false,
         wholesalePrice: false, sizeColor: false, minStockLevel: false,
         weight: false, fabricType: false, tableNumber: false, orderNotes: false, author: false, publisher: false,
       };
@@ -85,11 +87,21 @@ export const getDefaultFieldsByStoreType = (storeType: StoreType): ProductFields
 const PRODUCT_FIELDS_STORAGE_KEY = 'hyperpos_product_fields_v1';
 
 // Load user-defined field configuration from localStorage (for instant access)
+const currentStoreType = (): StoreType => {
+  try {
+    const raw = localStorage.getItem('hyperpos_settings_v1');
+    if (raw) return (JSON.parse(raw).storeSettings?.type || 'general') as StoreType;
+  } catch { /* ignore */ }
+  return 'general';
+};
+
 export const loadProductFieldsConfig = (): ProductFieldsConfig | null => {
   try {
     const stored = localStorage.getItem(PRODUCT_FIELDS_STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      // الحقول المضافة حديثاً (مثل IMEI) غير موجودة في الإعدادات المحفوظة سابقاً:
+      // تأخذ القيمة الافتراضية لنوع المتجر بدل أن تبقى معطلة
+      return { ...getDefaultFieldsByStoreType(currentStoreType()), ...JSON.parse(stored) };
     }
   } catch (error) {
     console.error('Failed to load product fields config:', error);
@@ -173,7 +185,11 @@ export const FIELD_LABELS: Record<keyof ProductFieldsConfig, { name: string; des
   },
   serialNumber: {
     name: 'الرقم التسلسلي',
-    description: 'IMEI للهواتف أو ISBN للكتب',
+    description: 'الرقم التسلسلي (S/N) للجهاز أو ISBN للكتب',
+  },
+  imei: {
+    name: 'رقم IMEI',
+    description: 'الرقم الدولي للهاتف (15 خانة)، منفصل عن الرقم التسلسلي',
   },
   warranty: {
     name: 'الضمان',

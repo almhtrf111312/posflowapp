@@ -17,7 +17,8 @@ export interface Product {
   expiryDate?: string; // Optional expiry date for pharmacy/grocery
   image?: string; // Base64 image for product
   // Fix #16: Dynamic fields based on store type
-  serialNumber?: string; // IMEI for phones, ISBN for books
+  serialNumber?: string; // الرقم التسلسلي للجهاز، أو ISBN للكتب
+  imei?: string; // رقم IMEI للهواتف (منفصل عن الرقم التسلسلي)
   warranty?: string; // Warranty period (e.g., "12 months")
   wholesalePrice?: number; // Wholesale price for bulk sales
   size?: string; // Size for clothing

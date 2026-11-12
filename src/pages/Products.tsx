@@ -279,6 +279,7 @@ export default function Products() {
     image: '',
     // Dynamic fields (Fix #16)
     serialNumber: '',
+    imei: '',
     batchNumber: '',
     warranty: '',
     wholesalePrice: 0 as number | string,
@@ -356,6 +357,7 @@ export default function Products() {
     window.addEventListener(EVENTS.PRODUCT_FIELDS_UPDATED, handleFieldsUpdated);
     window.addEventListener(EVENTS.CUSTOM_FIELDS_UPDATED, handleFieldsUpdated);
     window.addEventListener(EVENTS.SETTINGS_UPDATED, handleFieldsUpdated);
+    window.addEventListener(EVENTS.STORE_TYPE_CHANGED, handleFieldsUpdated);
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key?.includes('hyperpos_product_fields') || e.key?.includes('hyperpos_custom_fields')) {
@@ -370,6 +372,7 @@ export default function Products() {
       window.removeEventListener(EVENTS.PRODUCT_FIELDS_UPDATED, handleFieldsUpdated);
       window.removeEventListener(EVENTS.CUSTOM_FIELDS_UPDATED, handleFieldsUpdated);
       window.removeEventListener(EVENTS.SETTINGS_UPDATED, handleFieldsUpdated);
+      window.removeEventListener(EVENTS.STORE_TYPE_CHANGED, handleFieldsUpdated);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
@@ -631,7 +634,7 @@ export default function Products() {
     }
     if (autoOpenHandledRef.current) return;
     autoOpenHandledRef.current = true;
-    setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: categoryOptions[0] || t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
+    setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: categoryOptions[0] || t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', imei: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
     setShowAddDialog(true);
     const next = new URLSearchParams(searchParams);
     next.delete('action');
@@ -1146,7 +1149,7 @@ export default function Products() {
 
       setShowAddDialog(false);
       setImagePreviewBase64('');
-      setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
+      setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', imei: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
       setShowBarcode2(false);
       setShowBarcode3(false);
       setCustomFieldValues({});
@@ -1423,6 +1426,7 @@ export default function Products() {
       expiryDate: product.expiryDate || '',
       image: product.image || '',
       serialNumber: product.serialNumber || '',
+      imei: product.imei || '',
       batchNumber: product.batchNumber || '',
       warranty: product.warranty || '',
       wholesalePrice: toActiveCurrency(product.wholesalePrice || 0),
@@ -1524,6 +1528,7 @@ export default function Products() {
       expiryDate: '',
       image: '',
       serialNumber: '',
+      imei: '',
       batchNumber: '',
       warranty: '',
       wholesalePrice: 0,
@@ -1842,6 +1847,21 @@ export default function Products() {
                       value={formData.serialNumber}
                       onChange={(e) => setFormData(prev => ({ ...prev, serialNumber: e.target.value }))}
                     />
+                  </div>
+                )}
+                {fieldsConfig.imei && (
+                  <div className="sm:col-span-2">
+                    <label className="text-sm font-medium mb-1.5 block">{isRTL ? 'رقم IMEI' : 'IMEI'}</label>
+                    <Input
+                      dir="ltr"
+                      inputMode="numeric"
+                      placeholder={isRTL ? '15 رقماً (اطلب *#06# على الهاتف)' : '15 digits (dial *#06#)'}
+                      value={formData.imei}
+                      onChange={(e) => setFormData(prev => ({ ...prev, imei: e.target.value.replace(/[^\d/ ]/g, '').slice(0, 40) }))}
+                    />
+                    {formData.imei && formData.imei.replace(/\D/g, '').length > 0 && formData.imei.replace(/\D/g, '').length !== 15 && formData.imei.replace(/\D/g, '').length !== 30 && (
+                      <p className="text-[11px] text-amber-600 mt-1">{isRTL ? 'رقم IMEI عادةً 15 رقماً (أو رقمان مفصولان بـ / للهاتف ثنائي الشريحة)' : 'IMEI is usually 15 digits (two separated by / for dual SIM)'}</p>
+                    )}
                   </div>
                 )}
                 {fieldsConfig.warranty && (

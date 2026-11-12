@@ -6,6 +6,7 @@
  */
 
 import { formatNumber } from './utils';
+import { resolveEffectivePerformanceMode } from './performance-mode';
 import { isGuestDemoMode } from './demo-data';
 import { getStoreSettings, getPrintSettings } from './print-utils';
 import { resolveInvoiceCurrencySymbol, getActiveCurrencyCode } from './currencies';
@@ -92,6 +93,37 @@ const FONT_FAMILY = 'Cairo, Tajawal, -apple-system, BlinkMacSystemFont, "Segoe U
 /**
  * دالة مساعدة لرسم مستطيل بحواف دائرية متوافقة مع جميع المتصفحات
  */
+/**
+ * دقة صورة الفاتورة: سرعة الإنشاء أهم من الدقة القصوى.
+ * 1.5x على الأجهزة العادية، و1x على الأجهزة الضعيفة (وضع الأداء الخفيف).
+ */
+export function invoiceImageScale(): number {
+  try {
+    return resolveEffectivePerformanceMode() === 'lite' ? 1 : 1.5;
+  } catch {
+    return 1.5;
+  }
+}
+
+/** JPEG أسرع بكثير من PNG في الترميز وأصغر حجماً بخمس مرات تقريباً، فالمشاركة فورية */
+export const INVOICE_IMAGE_TYPE = 'image/jpeg';
+export const INVOICE_IMAGE_QUALITY = 0.82;
+
+/** تحويل الكانفاس مباشرة إلى base64 (بدون Blob و FileReader) للحفظ على الجوال */
+export function canvasToJpegBase64(canvas: HTMLCanvasElement): string {
+  const dataUrl = canvas.toDataURL(INVOICE_IMAGE_TYPE, INVOICE_IMAGE_QUALITY);
+  return dataUrl.split(',')[1] || '';
+}
+
+export function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Failed to create Blob from canvas'));
+    }, INVOICE_IMAGE_TYPE, INVOICE_IMAGE_QUALITY);
+  });
+}
+
 function drawRoundedRect(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -227,7 +259,7 @@ export async function generateInvoiceCanvas(data: InvoiceCanvasData): Promise<HT
   const LOGICAL_HEIGHT = HEADER_HEIGHT + META_CARD_HEIGHT + TABLE_HEIGHT + SUMMARY_HEIGHT + FOOTER_BAR_HEIGHT + (PADDING * 3) + DEMO_EXTRA_HEIGHT;
 
   // دقة عالية 2x لشاشات Retina
-  const SCALE = 2;
+  const SCALE = invoiceImageScale();
   const canvas = document.createElement('canvas');
   canvas.width = LOGICAL_WIDTH * SCALE;
   canvas.height = LOGICAL_HEIGHT * SCALE;
@@ -729,12 +761,7 @@ export async function generateInvoiceCanvas(data: InvoiceCanvasData): Promise<HT
  */
 export async function generateInvoiceBlob(data: InvoiceCanvasData): Promise<Blob> {
   const canvas = await generateInvoiceCanvas(data);
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Failed to create Blob from canvas'));
-    }, 'image/png');
-  });
+  return canvasToJpegBlob(canvas);
 }
 
 /**
@@ -779,7 +806,7 @@ export async function generateDebtStatementCanvas(data: DebtStatementCanvasData)
 
   const LOGICAL_HEIGHT = HEADER_HEIGHT + META_CARD_HEIGHT + SUMMARY_CARDS_HEIGHT + TABLE_HEIGHT + FOOTER_SECTION_HEIGHT + (PADDING * 3);
 
-  const SCALE = 2;
+  const SCALE = invoiceImageScale();
   const canvas = document.createElement('canvas');
   canvas.width = LOGICAL_WIDTH * SCALE;
   canvas.height = LOGICAL_HEIGHT * SCALE;
@@ -1051,10 +1078,5 @@ export async function generateDebtStatementCanvas(data: DebtStatementCanvasData)
  */
 export async function generateDebtStatementBlob(data: DebtStatementCanvasData): Promise<Blob> {
   const canvas = await generateDebtStatementCanvas(data);
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Failed to create Blob from canvas'));
-    }, 'image/png');
-  });
+  return canvasToJpegBlob(canvas);
 }

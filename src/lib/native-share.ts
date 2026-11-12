@@ -15,8 +15,10 @@ import { isGuestDemoMode } from './demo-data';
 import {
   InvoiceCanvasData,
   DebtStatementCanvasData,
-  generateInvoiceBlob,
-  generateDebtStatementBlob,
+  generateInvoiceCanvas,
+  generateDebtStatementCanvas,
+  canvasToJpegBase64,
+  canvasToJpegBlob,
 } from './invoice-canvas-generator';
 
 interface ShareOptions {
@@ -52,7 +54,8 @@ export async function shareInvoiceImage(
   fileName: string = `invoice_${Date.now()}`,
   title: string = 'مشاركة الفاتورة'
 ): Promise<boolean> {
-  const safeName = `${fileName.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_')}.png`;
+  const ext = blob.type === 'image/jpeg' ? 'jpg' : 'png';
+  const safeName = `${fileName.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_')}.${ext}`;
 
   // 1. على الأندرويد/iOS (Capacitor): حفظ الملف مؤقتاً ومشاركته كملف صورة عبر @capacitor/share
   if (Capacitor.isNativePlatform()) {
@@ -86,7 +89,7 @@ export async function shareInvoiceImage(
   // 2. على المتصفح: استخدام navigator.share({ files: [...] })
   if (typeof navigator !== 'undefined') {
     try {
-      const file = new File([blob], safeName, { type: 'image/png' });
+      const file = new File([blob], safeName, { type: blob.type || 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: title,
@@ -119,6 +122,35 @@ export async function shareInvoiceImage(
   }
 
   return false;
+}
+
+/**
+ * مشاركة كانفاس كصورة بأسرع طريق:
+ * على الجوال يُحوَّل مباشرة إلى JPEG base64 ويُحفظ ثم يُشارك (بدون Blob ولا FileReader)،
+ * وعلى المتصفح يمر بالطريق العادي.
+ */
+export async function shareCanvasImage(
+  canvas: HTMLCanvasElement,
+  fileName: string,
+  title: string
+): Promise<boolean> {
+  if (Capacitor.isNativePlatform()) {
+    const safeName = `${fileName.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_')}.jpg`;
+    try {
+      const writeResult = await Filesystem.writeFile({
+        path: safeName,
+        data: canvasToJpegBase64(canvas),
+        directory: Directory.Cache,
+      });
+      const fileUri = writeResult.uri || (await Filesystem.getUri({ path: safeName, directory: Directory.Cache })).uri;
+      await CapacitorShare.share({ title, files: [fileUri], dialogTitle: 'مشاركة الفاتورة كصورة' });
+      return true;
+    } catch (error: any) {
+      if (error?.message?.includes('cancel') || error?.name === 'AbortError') return false;
+      console.warn('[NativeShare] Fast canvas share failed, trying blob path:', error);
+    }
+  }
+  return shareInvoiceImage(await canvasToJpegBlob(canvas), fileName, title);
 }
 
 /**
@@ -346,8 +378,8 @@ export async function shareInvoice(data: InvoiceShareData): Promise<boolean> {
       footerNote: data.footerNote,
     };
 
-    const blob = await generateInvoiceBlob(canvasData);
-    return await shareInvoiceImage(blob, `invoice_${data.id}`, `فاتورة رقم ${data.id}`);
+    const canvas = await generateInvoiceCanvas(canvasData);
+    return await shareCanvasImage(canvas, `invoice_${data.id}`, `فاتورة رقم ${data.id}`);
   } catch (error) {
     console.warn('[NativeShare] Invoice canvas generation failed, falling back to text share:', error);
     const text = generateInvoiceShareText(data);
@@ -364,9 +396,9 @@ export async function shareInvoice(data: InvoiceShareData): Promise<boolean> {
  */
 export async function shareDebtStatement(data: DebtStatementCanvasData): Promise<boolean> {
   try {
-    const blob = await generateDebtStatementBlob(data);
+    const canvas = await generateDebtStatementCanvas(data);
     const safeCust = (data.customerName || 'customer').replace(/\s+/g, '_');
-    return await shareInvoiceImage(blob, `statement_${safeCust}`, `كشف حساب - ${data.customerName}`);
+    return await shareCanvasImage(canvas, `statement_${safeCust}`, `كشف حساب - ${data.customerName}`);
   } catch (error) {
     console.error('[NativeShare] Debt statement image generation failed:', error);
     return false;
@@ -450,9 +482,9 @@ export async function shareDebt(data: DebtShareData): Promise<boolean> {
       }] : [],
     };
 
-    const blob = await generateDebtStatementBlob(statementData);
+    const canvas = await generateDebtStatementCanvas(statementData);
     const safeCust = (data.customerName || 'debt').replace(/\s+/g, '_');
-    return await shareInvoiceImage(blob, `debt_${safeCust}`, `تذكير بالدين - ${data.customerName}`);
+    return await shareCanvasImage(canvas, `debt_${safeCust}`, `تذكير بالدين - ${data.customerName}`);
   } catch (err) {
     console.warn('[NativeShare] Debt image generation failed, falling back to text:', err);
     const text = generateDebtShareText(data);

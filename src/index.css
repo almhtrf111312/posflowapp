@@ -2187,10 +2187,11 @@ html {
   /* Flow Glass Core Tokens (Unbranded & Calibrated for WCAG AAA) */
   --glass-accent: 215 100% 54%;
   --glass-accent-glow: rgba(10, 124, 255, 0.38);
-  --surface-glass: rgba(255, 255, 255, 0.88);
-  --surface-card: rgba(255, 255, 255, 0.94);
-  --surface-active: rgba(255, 255, 255, 0.98);
-  --border-refract: rgba(0, 0, 0, 0.14);
+  /* أسطح شفافة فعلاً: الضبابية خلفها تحافظ على وضوح النص */
+  --surface-glass: rgba(255, 255, 255, 0.52);
+  --surface-card: rgba(255, 255, 255, 0.60);
+  --surface-active: rgba(255, 255, 255, 0.82);
+  --border-refract: rgba(255, 255, 255, 0.55);
   --specular-highlight: inset 0 1px 1px 0 rgba(255, 255, 255, 0.92);
   --inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 
@@ -2209,10 +2210,10 @@ html {
 .dark .theme-flowglass,
 .dark.theme-xiaomi,
 .dark .theme-xiaomi {
-  --surface-glass: rgba(18, 24, 38, 0.88);
-  --surface-card: rgba(24, 32, 50, 0.92);
+  --surface-glass: rgba(16, 22, 36, 0.48);
+  --surface-card: rgba(22, 30, 48, 0.56);
   --surface-active: rgba(255, 255, 255, 0.16);
-  --border-refract: rgba(255, 255, 255, 0.18);
+  --border-refract: rgba(255, 255, 255, 0.14);
   --specular-highlight: inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
   --inner-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
 
@@ -2227,19 +2228,23 @@ html {
 
 /* 0. Ambient Mesh Background & Optical Refraction */
 .theme-xiaomi body {
+  /* خلفية ملونة بلون الثيم: بدونها لا يظهر الزجاج لأنه لا يوجد شيء خلفه */
+  background-color: hsl(var(--background));
   background-image: 
-    radial-gradient(at 0% 0%, hsla(215, 95%, 60%, 0.07) 0px, transparent 45%),
-    radial-gradient(at 100% 0%, hsla(210, 100%, 75%, 0.06) 0px, transparent 40%),
-    radial-gradient(at 50% 100%, hsla(220, 90%, 65%, 0.05) 0px, transparent 45%);
+    radial-gradient(at 0% 0%, hsl(var(--primary) / 0.32) 0px, transparent 55%),
+    radial-gradient(at 100% 10%, hsl(var(--accent) / 0.26) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsl(var(--primary) / 0.22) 0px, transparent 55%),
+    radial-gradient(at 10% 90%, hsla(280, 85%, 70%, 0.16) 0px, transparent 50%);
   background-attachment: fixed;
 }
 
 .dark.theme-xiaomi body,
 .dark .theme-xiaomi body {
   background-image: 
-    radial-gradient(at 0% 0%, hsla(215, 95%, 50%, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(225, 90%, 45%, 0.09) 0px, transparent 45%),
-    radial-gradient(at 50% 100%, hsla(210, 100%, 40%, 0.06) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, hsl(var(--primary) / 0.38) 0px, transparent 55%),
+    radial-gradient(at 100% 10%, hsl(var(--accent) / 0.28) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsl(var(--primary) / 0.26) 0px, transparent 55%),
+    radial-gradient(at 10% 90%, hsla(280, 80%, 55%, 0.20) 0px, transparent 50%);
   background-attachment: fixed;
 }
 
@@ -2537,10 +2542,19 @@ html {
   box-shadow: 16px 0 48px -8px rgba(0, 0, 0, 0.24), var(--xiaomi-specular-highlight) !important;
 }
 
+/* خلفية الصفحات شفافة لتظهر الخلفية الملونة خلف الأسطح الزجاجية */
+.theme-xiaomi .min-h-screen.bg-background {
+  background-color: transparent !important;
+}
+
 /* 9. Cards, Grid Items & Tables: Inner Reflection & Layered Depth */
 .theme-xiaomi .bg-card,
 .theme-xiaomi [data-slot="card"],
 .theme-xiaomi .card {
+  /* زجاج حقيقي: سطح شفاف مع ضبابية وتشبّع لوني لما خلفه */
+  background-color: var(--xiaomi-surface-card) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   border-radius: 1.45rem !important;
   border: 1px solid var(--xiaomi-border-refract) !important;
   box-shadow: 0 8px 28px -6px rgba(0, 0, 0, 0.08), var(--xiaomi-inner-shadow) !important;

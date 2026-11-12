@@ -169,6 +169,19 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
 
   const effectiveCollapsed = isMobile ? false : collapsed;
 
+  // نشر عرض القائمة المثبتة حتى تُزاح الأزرار العائمة (حفظ/تراجع/إضافة) بجانبها ولا تختفي خلفها
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isMobile) {
+      root.style.setProperty('--sidebar-offset', '0px');
+      root.dataset.sidebarDocked = 'false';
+    } else {
+      // عرض القائمة + هامشها عن الحافة (right-2/left-2 = 0.5rem)
+      root.style.setProperty('--sidebar-offset', effectiveCollapsed ? '5.64rem' : '14.5rem');
+      root.dataset.sidebarDocked = 'true';
+    }
+  }, [isMobile, effectiveCollapsed]);
+
   const license = useLicense();
   const licenseState = (license as any)?.licenseState || license;
   const shouldShowContactDueToLicense = !!licenseState?.isExpired || (licenseState?.remainingDays !== null && licenseState?.remainingDays !== undefined && licenseState?.remainingDays <= 30);

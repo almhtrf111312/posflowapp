@@ -14,6 +14,13 @@ export function detectLowEndDevice(): boolean {
       return true;
     }
     const nav = navigator as Navigator & { deviceMemory?: number };
+    // أجهزة آبل (آيفون/آيباد) يحجب Safari عدد أنويتها الحقيقي ويُظهر رقماً صغيراً،
+    // فكانت تُصنَّف ضعيفة خطأً ويُلغى التأثير الزجاجي بالكامل عليها
+    const isAppleMobile = /iPad|iPhone|iPod/.test(nav.userAgent)
+      || (nav.platform === 'MacIntel' && (nav.maxTouchPoints || 0) > 1);
+    if (isAppleMobile) {
+      return false;
+    }
     if (typeof nav.deviceMemory === 'number' && nav.deviceMemory <= 4) {
       return true;
     }

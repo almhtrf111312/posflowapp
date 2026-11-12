@@ -61,7 +61,10 @@ export function useScrollDirectionVisibility(threshold = 12) {
 export function useSidebarOpenState() {
   const [open, setOpen] = useState(false);
   useEffect(() => {
-    const h = (e: Event) => setOpen(Boolean((e as CustomEvent<boolean>).detail));
+    // القائمة المثبتة (آيباد/كمبيوتر) لا تغطي الأزرار العائمة، فلا نخفيها؛ الإخفاء فقط لقائمة الجوال المنبثقة
+    const h = (e: Event) => setOpen(
+      Boolean((e as CustomEvent<boolean>).detail) && document.documentElement.dataset.sidebarDocked !== 'true'
+    );
     window.addEventListener('sidebar-state', h);
     return () => window.removeEventListener('sidebar-state', h);
   }, []);

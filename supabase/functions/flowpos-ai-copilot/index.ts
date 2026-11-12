@@ -17,20 +17,20 @@ serve(async (req) => {
     // 1. Verify Authentication JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "غير مصرح: يرجى تسجيل الدخول لاستخدام مساعد الذكاء الاصطناعي" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "غير مصرح: يرجى تسجيل الدخول لاستخدام مساعد الذكاء الاصطناعي" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceRoleKey) {
-      return new Response(
-        JSON.stringify({ error: "خطأ في تهيئة الخادم الداخلي" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "خطأ في تهيئة الخادم الداخلي" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -40,10 +40,10 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await serviceClient.auth.getUser(token);
     if (userError || !userData?.user) {
-      return new Response(
-        JSON.stringify({ error: "جلسة المستخدم منتهية الصلاحية" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "جلسة المستخدم منتهية الصلاحية" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 2. Read LOVABLE_API_KEY
@@ -53,7 +53,7 @@ serve(async (req) => {
         JSON.stringify({
           error: "مفتاح LOVABLE_API_KEY غير مهيأ في الخادم. يرجى تفعيله في إعدادات المنصة.",
         }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -62,10 +62,10 @@ serve(async (req) => {
     const { messages, contextType, shopData, preferredModel } = reqBody;
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "مصفوفة الرسائل مطلوبة ولا يمكن أن تكون فارغة" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "مصفوفة الرسائل مطلوبة ولا يمكن أن تكون فارغة" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 4. Build Context String
@@ -122,9 +122,7 @@ ${contextHeader}`;
     const formattedMessages: Array<{
       role: "system" | "user" | "assistant";
       content: string;
-    }> = [
-      { role: "system", content: systemPrompt },
-    ];
+    }> = [{ role: "system", content: systemPrompt }];
 
     // 🛡️ لا نقبل دور "assistant" من الطلب: السجل السابق يُمرَّر كنص اقتباس داخل رسالة مستخدم
     // (للسياق فقط)، والرسالة الأخيرة وحدها رسالة مستخدم فعلية. يمنع اختلاق ردود منسوبة للمساعد.
@@ -134,7 +132,10 @@ ${contextHeader}`;
     const history = clean.slice(0, -1);
     if (history.length > 0) {
       const transcript = history
-        .map((m) => `${m.role === "assistant" ? "[رد سابق منسوب للمساعد]" : "[المستخدم]"}: ${toText(m.content).slice(0, 4000)}`)
+        .map(
+          (m) =>
+            `${m.role === "assistant" ? "[رد سابق منسوب للمساعد]" : "[المستخدم]"}: ${toText(m.content).slice(0, 4000)}`,
+        )
         .join("\n\n");
       formattedMessages.push({
         role: "user",
@@ -164,7 +165,9 @@ ${contextHeader}`;
 
     // If Claude 3.5 Sonnet is unavailable or unsupported, fallback to Gemini 2.5 Flash
     if (!gatewayRes.ok && gatewayRes.status !== 401 && gatewayRes.status !== 402 && gatewayRes.status !== 429) {
-      console.warn(`[FlowPOS Copilot] Primary model ${targetModel} returned status ${gatewayRes.status}, falling back to google/gemini-2.5-flash`);
+      console.warn(
+        `[FlowPOS Copilot] Primary model ${targetModel} returned status ${gatewayRes.status}, falling back to google/gemini-2.5-flash`,
+      );
       gatewayRes = await fetch(gatewayEndpoint, {
         method: "POST",
         headers: {
@@ -183,14 +186,14 @@ ${contextHeader}`;
       if (gatewayRes.status === 429) {
         return new Response(
           JSON.stringify({ error: "تم تجاوز حد الطلبات المسموح به مؤقتاً، يرجى المحاولة بعد قليل." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       if (gatewayRes.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "رصيد بوابة الذكاء الاصطناعي منتهٍ، يرجى شحن الرصيد للمتابعة." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "رصيد بوابة الذكاء الاصطناعي منتهٍ، يرجى شحن الرصيد للمتابعة." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const errText = await gatewayRes.text();
@@ -200,10 +203,10 @@ ${contextHeader}`;
         cleanMsg = parsed.error?.message || parsed.message || parsed.title || cleanMsg;
       } catch {}
 
-      return new Response(
-        JSON.stringify({ error: cleanMsg }),
-        { status: gatewayRes.status >= 400 && gatewayRes.status < 500 ? gatewayRes.status : 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: cleanMsg }), {
+        status: gatewayRes.status >= 400 && gatewayRes.status < 500 ? gatewayRes.status : 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 6. Return Streaming Response
@@ -212,15 +215,15 @@ ${contextHeader}`;
         ...corsHeaders,
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
       },
     });
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("[FlowPOS Copilot] Unhandled error:", errorMsg);
-    return new Response(
-      JSON.stringify({ error: `حدث خطأ أثناء معالجة استشارة الذكاء الاصطناعي: ${errorMsg}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: `حدث خطأ أثناء معالجة استشارة الذكاء الاصطناعي: ${errorMsg}` }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

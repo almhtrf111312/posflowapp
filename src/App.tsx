@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, type ReactElement } from 'react';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, useSearchParams, useNavigate, useLocation, Outlet, Navigate } from "react-router-dom";
@@ -11,7 +11,7 @@ import { AuthProvider } from "./hooks/use-auth";
 import { AppLockProvider, useAppLock } from "./hooks/use-app-lock";
 import { AppLockOverlay } from "./components/auth/AppLockOverlay";
 import { MandatoryPinSetupModal } from "./components/auth/MandatoryPinSetupModal";
-import { LanguageProvider } from "./hooks/use-language";
+import { LanguageProvider, useLanguage } from "./hooks/use-language";
 import { ThemeProvider } from "./hooks/use-theme";
 import { LicenseProvider } from "./hooks/use-license";
 import { UserRoleProvider } from "./hooks/use-user-role";
@@ -61,6 +61,13 @@ const BossPanel = lazy(() => import("./pages/BossPanel"));
 const Purchases = lazy(() => import("./pages/Purchases"));
 const Appearance = lazy(() => import("./pages/Appearance"));
 const LibraryMembers = lazy(() => import("./pages/LibraryMembers"));
+
+/** يفتح القسم فقط لنوع المتجر الخاص به (مثل المكتبة)، وإلا يرجع للرئيسية — يتبع تغيير نوع المتجر فوراً */
+function StoreTypeRoute({ types, children }: { types: string[]; children: ReactElement }) {
+  const { storeType } = useLanguage();
+  if (!types.includes(storeType)) return <Navigate to="/" replace />;
+  return children;
+}
 const Help = lazy(() => import("./pages/Help"));
 const ContactDeveloper = lazy(() => import("./pages/ContactDeveloper"));
 const Renew = lazy(() => import("./pages/Renew"));
@@ -510,7 +517,7 @@ const PageFallback = () => {
           <Route path="/dashboard" element={<Navigate to="/reports" replace />} />
           <Route path="/invoice-tracking" element={<FeatureErrorBoundary featureName="تتبع الفواتير"><InvoiceTracking /></FeatureErrorBoundary>} />
           <Route path="/cash-shifts" element={<FeatureErrorBoundary featureName="ورديات الصندوق"><CashShifts /></FeatureErrorBoundary>} />
-          <Route path="/library" element={<FeatureErrorBoundary featureName="المكتبة"><LibraryMembers /></FeatureErrorBoundary>} />
+          <Route path="/library" element={<StoreTypeRoute types={["bookstore"]}><FeatureErrorBoundary featureName="المكتبة"><LibraryMembers /></FeatureErrorBoundary></StoreTypeRoute>} />
           <Route path="/notifications" element={<FeatureErrorBoundary featureName="الإشعارات"><Notifications /></FeatureErrorBoundary>} />
           <Route path="/contact" element={<FeatureErrorBoundary featureName="تواصل مع المطور"><ContactDeveloper /></FeatureErrorBoundary>} />
           <Route path="/renew" element={<FeatureErrorBoundary featureName="تجديد وترقية الاشتراك"><Renew /></FeatureErrorBoundary>} />

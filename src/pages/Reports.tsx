@@ -66,6 +66,8 @@ import { loadPartnersCloud, loadPartnersLocally, Partner } from '@/lib/cloud/par
 import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/cloud/categories-cloud';
 import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
+import { computeProfitSummary } from '@/lib/profit-engine';
+import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 const PartnerProfitDetailedReport = lazy(() => import('@/components/reports/PartnerProfitDetailedReport').then(m => ({ default: m.PartnerProfitDetailedReport })));
 const ProfitTrendChart = lazy(() => import('@/components/reports/ProfitTrendChart').then(m => ({ default: m.ProfitTrendChart })));
@@ -204,6 +206,8 @@ function ReportsContent() {
   const [cloudExpenses, setCloudExpenses] = useState<Expense[]>([]);
   const [cloudDebts, setCloudDebts] = useState<Debt[]>([]);
   const [cloudPurchases, setCloudPurchases] = useState<any[]>([]);
+  // دفعات الديون المؤرخة والديون المعدومة: يحتاجها تعريف الربح الموحّد
+  const [profitLedger, setProfitLedger] = useState<ProfitLedger>(() => loadProfitLedgerLocally());
 
   // 🚀 ترويض استعلامات التقارير: تغذية التقارير أولاً من الكاشات المحلية المتوفرة بدون تعطيل
   const loadLocalReportsData = useCallback(async () => {
@@ -252,7 +256,7 @@ function ReportsContent() {
       const needCustomers = activeReport === 'customers' || (!isSalesTab && !isSilent);
       const needPartners = activeReport === 'partners' || activeReport === 'partner-detailed';
       const needCategories = activeReport === 'categories' || (!isSilent && !isSalesTab);
-      const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing';
+      const needExpenses = activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'profits' || activeReport === 'overview';
       const needDebts = activeReport === 'debts' || activeReport === 'daily-closing';
       const needPurchases = activeReport === 'purchases';
 
@@ -266,6 +270,7 @@ function ReportsContent() {
         needDebts ? loadDebtsCloud() : Promise.resolve(null),
         needPurchases ? loadPurchaseInvoicesCloud().catch(() => []) : Promise.resolve(null),
       ]);
+      loadProfitLedgerCloud().then(setProfitLedger).catch(() => {});
 
       const [invoices, products, customers, partners, categories, expenses, debts, purchases] = results;
       if (invoices) setCloudInvoices(invoices);
@@ -296,6 +301,7 @@ function ReportsContent() {
     // جلب الفواتير والمنتجات تلقائياً من الكاش أولاً مع إنعاش في الخلفية
     loadInvoicesCloud().then(invs => { if (invs) setCloudInvoices(invs); }).catch(() => {});
     loadProductsCloud().then(prods => { if (prods) setCloudProducts(prods); }).catch(() => {});
+    loadProfitLedgerCloud().then(setProfitLedger).catch(() => {});
 
     // جلب جداول النطاق فقط عند تفعيل التبويب المخصص لها
     if (activeReport === 'debts' || activeReport === 'daily-closing') {
@@ -307,7 +313,7 @@ function ReportsContent() {
     if (activeReport === 'partners' || activeReport === 'partner-detailed') {
       loadPartnersCloud().then(p => { if (p) setCloudPartners(p); }).catch(() => {});
     }
-    if (activeReport === 'expenses' || activeReport === 'daily-closing') {
+    if (activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'profits' || activeReport === 'overview') {
       loadExpensesCloud().then(e => { if (e) setCloudExpenses(e); }).catch(() => {});
     }
     if (activeReport === 'customers') {
@@ -518,13 +524,13 @@ function ReportsContent() {
       return { profit, discount };
     };
 
-    const filteredInvoices = cloudInvoices.filter(inv => {
-      const invDate = toLocalDateString(inv.createdAt);
+    // فلاتر التقرير بدون التاريخ: تُطبَّق على الفواتير أياً كان يوم بيعها،
+    // لأن ربح الفاتورة الآجلة يُسجَّل في يوم تحصيل كل دفعة وليس في يوم البيع فقط.
+    const passesReportFilters = (inv: (typeof cloudInvoices)[0]) => {
       const isValidType = inv.type === 'sale' || inv.type === 'maintenance';
-      if (!isDateInRange(invDate, dateRange.from, dateRange.to)) return false;
       if (!isValidType) return false;
-      // Exclude refunded and cancelled
-      if (inv.status === 'refunded' || inv.status === 'cancelled' || inv.status === 'written_off') return false;
+      // الفاتورة المعدومة تبقى ضمن المبيعات؛ المستردة والملغاة فقط تُستبعد
+      if (inv.status === 'refunded' || inv.status === 'cancelled') return false;
       // Apply status filter
       if (filters.status !== 'all' && inv.status !== filters.status) return false;
       // Apply cashier filter
@@ -538,33 +544,54 @@ function ReportsContent() {
         if (!matches) return false;
       }
       return true;
+    };
+    const hasActiveFilter = filters.status !== 'all' || filters.cashierId !== 'all'
+      || filters.paymentType !== 'all' || !!filters.search;
+
+    const filteredInvoices = cloudInvoices.filter(inv =>
+      isDateInRange(toLocalDateString(inv.createdAt), dateRange.from, dateRange.to) && passesReportFilters(inv));
+
+    // 🎯 تعريف الربح الموحّد (profit-engine): نفس أرقام لوحة التحكم وإقفال الفترة
+    const passingIds = new Set(cloudInvoices.filter(passesReportFilters).map(inv => inv.id));
+    const profitSummary = computeProfitSummary({
+      invoices: cloudInvoices.map(inv => {
+        const stored = Number(inv.profit);
+        return {
+          id: inv.id,
+          type: inv.type,
+          status: inv.status,
+          paymentType: inv.paymentType,
+          total: Number(inv.total || 0),
+          taxAmount: Number(inv.taxAmount || 0),
+          profit: Number.isFinite(stored) && stored !== 0 ? stored : getInvoiceCalculatedMetrics(inv).profit,
+          debtPaid: Number(inv.debtPaid || 0),
+          paidAtSale: inv.paidAtSale,
+          createdAt: inv.createdAt,
+          updatedAt: inv.updatedAt,
+        };
+      }),
+      payments: profitLedger.payments,
+      writeoffs: profitLedger.writeoffs,
+      range: dateRange.from && dateRange.to ? { from: dateRange.from, to: dateRange.to } : undefined,
+      dayOf: toLocalDateString,
+      invoiceFilter: hasActiveFilter ? (inv => passingIds.has(inv.id)) : undefined,
     });
 
-    let totalSales = 0;
-    let totalProfit = 0;
+    // المبيعات بدون الضريبة في يوم البيع، والربح المحقق في يوم تحصيله (نقدي، دفعة أولى، أو دفعة دين لاحقة)
+    const totalSales = profitSummary.sales;
+    const totalProfit = profitSummary.realizedProfit;
     let totalDiscount = 0;
 
     const dailySalesMap: Record<string, { sales: number; profit: number; orders: number; discount: number }> = {};
+    profitSummary.days.forEach(day => {
+      if (day.sales === 0 && day.realizedProfit === 0 && day.orders === 0) return;
+      dailySalesMap[day.date] = { sales: day.sales, profit: day.realizedProfit, orders: day.orders, discount: 0 };
+    });
     filteredInvoices.forEach(inv => {
-      const invTotal = Number(inv.total || 0);
-      const { profit, discount } = getInvoiceCalculatedMetrics(inv);
-      totalSales += invTotal;
+      const discount = Number(inv.discount || (inv as any).discountAmount || 0);
       totalDiscount += discount;
-
-      // حماية الأرباح المحققة: الديون غير المسددة لا تُحسب كأرباح محققة إلا بما تم سداده فعلياً
-      const isUnpaidDebt = inv.paymentType === 'debt' && inv.status !== 'paid';
-      const paidRatio = isUnpaidDebt
-        ? (invTotal > 0 ? Math.min(1, Math.max(0, Number(inv.debtPaid || 0) / invTotal)) : 0)
-        : 1;
-      const realizedProfit = profit * paidRatio;
-
-      totalProfit += realizedProfit;
-
       const date = toLocalDateString(inv.createdAt);
       if (!dailySalesMap[date]) dailySalesMap[date] = { sales: 0, profit: 0, orders: 0, discount: 0 };
-      dailySalesMap[date].sales += invTotal;
-      dailySalesMap[date].profit += realizedProfit;
-      dailySalesMap[date].orders += 1;
       dailySalesMap[date].discount += discount;
     });
 
@@ -620,11 +647,16 @@ function ReportsContent() {
     const topCustomer = topCustomers.length > 0 ? topCustomers[0].name : t('common.noData');
 
     return {
-      summary: { totalSales, totalProfit, totalDiscount, totalOrders, avgOrderValue, topProduct, topCustomer },
+      summary: {
+        totalSales, totalProfit, totalDiscount, totalOrders, avgOrderValue, topProduct, topCustomer,
+        pendingProfit: profitSummary.pendingProfit,
+        badDebtLoss: profitSummary.badDebtLoss,
+        realizedFromCollections: profitSummary.realizedFromCollections,
+      },
       dailySales, allDailySales, topProducts, allProducts, topCustomers, allCustomers,
       hasData: filteredInvoices.length > 0,
     };
-  }, [dateRange, filters.status, filters.cashierId, filters.paymentType, filters.search, cloudInvoices, cloudProducts, t]);
+  }, [dateRange, filters.status, filters.cashierId, filters.paymentType, filters.search, cloudInvoices, cloudProducts, profitLedger, t]);
 
   // Partner report data
   const partnerReportData = useMemo(() => {
@@ -812,7 +844,7 @@ function ReportsContent() {
       const isValidType = inv.type === 'sale' || inv.type === 'maintenance';
       if (!isDateInRange(invDate, dateRange.from, dateRange.to)) return false;
       if (!isValidType) return false;
-      if (inv.status === 'refunded' || inv.status === 'cancelled' || inv.status === 'written_off') return false;
+      if (inv.status === 'refunded' || inv.status === 'cancelled') return false;
       if (filters.status !== 'all' && inv.status !== filters.status) return false;
       if (filters.cashierId !== 'all' && (inv.cashierName || (t('reports.unspecified') || 'غير محدد')) !== filters.cashierId) return false;
       if (filters.paymentType !== 'all' && inv.paymentType !== filters.paymentType) return false;
@@ -886,9 +918,12 @@ function ReportsContent() {
   // ========== DYNAMIC SUMMARY CARDS ==========
   const summaryCards = useMemo(() => {
     // فصل مجمل الربح (Gross Profit) عن صافي الربح (Net Profit) بعد خصم المصروفات التشغيلية
+    // الربح المحقق (ما حُصّل فعلاً)، ثم الصافي = المحقق − المصاريف − خسارة الديون المعدومة
     const grossProfit = reportData.summary.totalProfit;
     const totalExpenses = expenseReportData.totalExpenses || 0;
-    const netProfit = round8(grossProfit - totalExpenses);
+    const badDebtLoss = reportData.summary.badDebtLoss || 0;
+    const pendingProfit = reportData.summary.pendingProfit || 0;
+    const netProfit = round8(grossProfit - totalExpenses - badDebtLoss);
     const netProfitMargin = reportData.summary.totalSales > 0
       ? ((netProfit / reportData.summary.totalSales) * 100).toFixed(1)
       : '0.0';
@@ -935,10 +970,26 @@ function ReportsContent() {
           {
             icon: TrendingUp,
             value: formatReportAmount(grossProfit),
-            label: 'مجمل الربح (Gross Profit)',
+            label: isRTL ? 'الربح المحقق (المحصَّل فعلاً)' : 'Realized profit (collected)',
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
             subtext: `${t('reports.profitMarginRate') || 'هامش المجمل'}: ${profitMargin}%`,
+          },
+          {
+            icon: Clock,
+            value: formatReportAmount(pendingProfit),
+            label: isRTL ? 'أرباح معلّقة (ديون لم تُحصَّل)' : 'Pending profit (uncollected debts)',
+            color: 'text-amber-600',
+            bg: 'bg-amber-500/10',
+            subtext: isRTL ? 'لا تدخل في الربح حتى التحصيل' : 'Not counted until collected',
+          },
+          {
+            icon: AlertTriangle,
+            value: formatReportAmount(badDebtLoss),
+            label: isRTL ? 'خسارة ديون معدومة' : 'Bad-debt loss',
+            color: 'text-destructive',
+            bg: 'bg-destructive/10',
+            subtext: isRTL ? 'المبلغ المعدوم ناقص ربحه المعلّق' : 'Written-off amount minus its pending profit',
           },
           {
             icon: Receipt,
@@ -954,7 +1005,7 @@ function ReportsContent() {
             label: 'صافي الربح الفعلي (Net Profit)',
             color: netProfit >= 0 ? 'text-emerald-600' : 'text-destructive',
             bg: netProfit >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10',
-            subtext: `هامش الصافي: ${netProfitMargin}% (بعد خصم المصاريف)`,
+            subtext: isRTL ? `هامش الصافي: ${netProfitMargin}% (بعد المصاريف والديون المعدومة)` : `Net margin: ${netProfitMargin}% (after expenses and bad debts)`,
           },
           {
             icon: Banknote,
@@ -3244,7 +3295,7 @@ function ReportsContent() {
         {/* Daily Closing */}
         {activeReport === 'daily-closing' && (
           <Suspense fallback={<div className="p-8 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" /></div>}>
-            <DailyClosingReport invoices={cloudInvoices} expenses={cloudExpenses} debts={cloudDebts} isLoading={isLoading} dateRange={dateRange} hideInternalExport={true} />
+            <DailyClosingReport invoices={cloudInvoices} expenses={cloudExpenses} debts={cloudDebts} isLoading={isLoading} dateRange={dateRange} hideInternalExport={true} profitLedger={profitLedger} />
           </Suspense>
         )}
 

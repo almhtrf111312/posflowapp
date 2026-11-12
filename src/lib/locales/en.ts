@@ -466,6 +466,8 @@ const en: TranslationDict = {
   'dashboard.netProfit': 'Net Profit',
   'dashboard.profitMargin': 'Profit Margin',
   'dashboard.dueDebts': 'Due Debts',
+  'dashboard.pendingProfit': 'Pending profit (uncollected debts)',
+  'dashboard.badDebtLossToday': 'Bad-debt loss today',
   'dashboard.client': 'client',
   'dashboard.customersThisMonth': 'Customers This Month',
   'dashboard.uniqueCustomers': 'Unique Customers',

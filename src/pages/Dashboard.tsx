@@ -34,6 +34,8 @@ import { useLanguage } from '@/hooks/use-language';
 import { EVENTS } from '@/lib/events';
 import { isNoInventoryMode } from '@/lib/store-type-config';
 import { toLocalDateString } from '@/lib/date-utils';
+import { computeProfitSummary } from '@/lib/profit-engine';
+import { loadProfitLedgerCloud } from '@/lib/cloud/profit-ledger-cloud';
 
 const DASHBOARD_CACHE_KEY = 'hyperpos_dashboard_stats_cache_v1';
 
@@ -93,6 +95,8 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
     todayCOGS: 0,
     todayExpenses: 0,
     netProfit: 0,
+    pendingProfit: 0,
+    todayBadDebtLoss: 0,
     profitMargin: 0,
     totalDebtAmount: 0,
     debtCustomers: 0,
@@ -136,13 +140,14 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       const currentCap = getCapitalSettings();
       setCapitalConfig(currentCap);
 
-      const [invoices, products, partners, expenses, debts, purchaseInvoices] = await Promise.all([
+      const [invoices, products, partners, expenses, debts, purchaseInvoices, profitLedger] = await Promise.all([
         loadInvoicesCloud(),
         loadProductsCloud(),
         loadPartnersCloud(),
         loadExpensesCloud(),
         loadDebtsCloud(),
-        loadPurchaseInvoicesCloud()
+        loadPurchaseInvoicesCloud(),
+        loadProfitLedgerCloud()
       ]);
 
       const todayDate = new Date();
@@ -154,21 +159,34 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         toLocalDateString(inv.createdAt) === todayLocalYMD && isActiveInvoice(inv)
       );
 
-      const todaySales = todayInvoices.reduce((sum, inv) => sum + inv.total, 0);
-      const todayGrossProfit = todayInvoices.reduce((sum, inv) => sum + (inv.profit || 0), 0);
-      const todayCOGS = todaySales - todayGrossProfit;
-
-      const todayExpensesRecords = expenses.filter(exp => {
-        if (!exp.date) return false;
-        const expDateStr = typeof exp.date === 'string' && exp.date.length >= 10
-          ? exp.date.substring(0, 10)
-          : toLocalDateString(exp.date);
-        return expDateStr === todayLocalYMD;
+      // 🎯 تعريف الربح الموحّد (profit-engine): نفس الأرقام في لوحة التحكم والتقارير وإقفال الفترة
+      // المبيعات بدون الضريبة، والربح المحقق بحسب المبالغ المحصّلة فعلياً في يوم تحصيلها.
+      const netOfTax = (inv: { total: number; taxAmount?: number }) => inv.total - (Number(inv.taxAmount) || 0);
+      const profitInputs = {
+        invoices,
+        payments: profitLedger.payments,
+        writeoffs: profitLedger.writeoffs,
+        dayOf: toLocalDateString,
+      };
+      const expenseInputs = expenses
+        .filter(exp => !!exp.date)
+        .map(exp => ({ amount: Number(exp.amount) || 0, date: String(exp.date) }));
+      const todaySummary = computeProfitSummary({
+        ...profitInputs,
+        expenses: expenseInputs,
+        range: { from: todayLocalYMD, to: todayLocalYMD },
       });
-      const todayExpenses = todayExpensesRecords.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
 
-      const todayProfit = todayGrossProfit;
-      const netProfit = todayGrossProfit - todayExpenses;
+      const todaySales = todaySummary.sales;
+      const todayFullProfit = todayInvoices.reduce((sum, inv) => sum + (inv.profit || 0), 0);
+      const todayCOGS = todaySales - todayFullProfit;
+      const todayExpenses = todaySummary.expenses;
+
+      // الربح المحقق اليوم (نقدي + ما حُصّل اليوم من الآجل)، والصافي بعد المصاريف وخسارة الديون المعدومة
+      const todayProfit = todaySummary.realizedProfit;
+      const netProfit = todaySummary.netProfit;
+      const pendingProfit = todaySummary.pendingProfit;
+      const todayBadDebtLoss = todaySummary.badDebtLoss;
 
       const activeDebts = debts.filter(d => d.status !== 'fully_paid');
       const totalDebtAmount = activeDebts.reduce((sum, d) => sum + d.remainingDebt, 0);
@@ -181,7 +199,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       });
 
       const uniqueCustomers = new Set(monthInvoices.map(inv => inv.customerName)).size;
-      const monthSales = monthInvoices.reduce((sum, inv) => sum + inv.total, 0);
+      const monthSales = monthInvoices.reduce((sum, inv) => sum + netOfTax(inv), 0);
 
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -190,7 +208,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       const weekInvoices = invoices.filter(inv =>
         toLocalDateString(inv.createdAt) >= oneWeekAgoYMD && isActiveInvoice(inv)
       );
-      const weekSales = weekInvoices.reduce((sum, inv) => sum + inv.total, 0);
+      const weekSales = weekInvoices.reduce((sum, inv) => sum + netOfTax(inv), 0);
 
       const inventoryValue = noInventory ? 0 : products.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
 
@@ -207,15 +225,16 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         });
 
       // Daily sales for last 7 days (sparkline)
-      const dailySales = make7Days(dayYmd =>
-        invoices.filter(inv => toLocalDateString(inv.createdAt) === dayYmd && isActiveInvoice(inv))
-          .reduce((sum, inv) => sum + inv.total, 0)
-      );
+      const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 6);
+      const last7Summary = computeProfitSummary({
+        ...profitInputs,
+        range: { from: toLocalDateString(weekStart), to: todayLocalYMD },
+      });
+      const last7ByDay = new Map(last7Summary.days.map(d => [d.date, d]));
+      const dailySales = make7Days(dayYmd => last7ByDay.get(dayYmd)?.sales ?? 0);
 
-      const dailyProfit = make7Days(dayYmd =>
-        invoices.filter(inv => toLocalDateString(inv.createdAt) === dayYmd && isActiveInvoice(inv))
-          .reduce((sum, inv) => sum + (inv.profit || 0), 0)
-      );
+      // الربح المحقق لكل يوم (يشمل ما حُصّل من الديون في ذلك اليوم)
+      const dailyProfit = make7Days(dayYmd => last7ByDay.get(dayYmd)?.realizedProfit ?? 0);
 
       const dailyDebts = make7Days(dayYmd =>
         debts.filter(d => toLocalDateString(d.createdAt) === dayYmd && d.status !== 'fully_paid')
@@ -316,6 +335,8 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         todayCOGS,
         todayExpenses,
         netProfit,
+        pendingProfit,
+        todayBadDebtLoss,
         profitMargin,
         totalDebtAmount,
         debtCustomers,
@@ -480,6 +501,24 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
           sparklineData={stats.dailyCustomers}
         />
       </div>
+
+      {/* أرباح معلّقة وخسارة ديون معدومة: سطران منفصلان لا يدخلان في الربح المحقق */}
+      {((stats.pendingProfit ?? 0) !== 0 || (stats.todayBadDebtLoss ?? 0) !== 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+          {(stats.pendingProfit ?? 0) !== 0 && (
+            <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">{t('dashboard.pendingProfit')}</span>
+              <span className="font-semibold text-amber-600">{formatCurrency(stats.pendingProfit ?? 0)}</span>
+            </div>
+          )}
+          {(stats.todayBadDebtLoss ?? 0) !== 0 && (
+            <div className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">{t('dashboard.badDebtLossToday')}</span>
+              <span className="font-semibold text-destructive">{formatCurrency(stats.todayBadDebtLoss ?? 0)}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Capital / Financial Overview Row */}
       {capitalConfig.trackCapital ? (

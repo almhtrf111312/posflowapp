@@ -67,6 +67,8 @@ export interface CloudInvoice {
   status: string;
   debt_paid: number;
   debt_remaining: number;
+  /** Amount collected at sale time (Phase 2 column; absent on older databases). */
+  paid_at_sale?: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -106,6 +108,8 @@ export interface Invoice {
   partsCost?: number;
   profit?: number;
   debtPaid?: number;
+  /** Amount collected at sale time, when the server recorded it. */
+  paidAtSale?: number | null;
   debtRemaining?: number;
   notes?: string;
   createdAt: string;
@@ -182,6 +186,7 @@ function toInvoice(cloud: CloudInvoice): Invoice {
     status: (cloud.status as InvoiceStatus) || 'paid',
     profit: Number(cloud.profit) || 0,
     debtPaid: Number(cloud.debt_paid) || 0,
+    paidAtSale: cloud.paid_at_sale === null || cloud.paid_at_sale === undefined ? undefined : Number(cloud.paid_at_sale),
     debtRemaining,
     debtRemainingInCurrency,
     serviceDescription: cloud.notes || undefined,

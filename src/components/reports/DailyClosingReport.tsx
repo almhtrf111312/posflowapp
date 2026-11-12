@@ -1,4 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
+import { computeProfitSummary } from '@/lib/profit-engine';
+import type { ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { FileText, Download, Calendar, DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatReportAmount } from '@/lib/utils';
@@ -20,9 +22,11 @@ interface Props {
   isLoading: boolean;
   dateRange: { from: string; to: string };
   hideInternalExport?: boolean;
+  /** دفعات الديون المؤرخة والديون المعدومة لتعريف الربح الموحّد */
+  profitLedger?: ProfitLedger;
 }
 
-export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateRange, hideInternalExport = false }: Props) {
+export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateRange, hideInternalExport = false, profitLedger }: Props) {
   const { t } = useLanguage();
   const [selectedDate, setSelectedDate] = useState('');
 
@@ -77,13 +81,23 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
 
     const totalSales = salesInvoices.reduce((s, i) => s + i.total, 0);
     const totalMaintenance = maintenanceInvoices.reduce((s, i) => s + i.total, 0);
-    const totalProfit = dayInvoices.reduce((s, i) => s + (i.profit || 0), 0);
+    // 🎯 تعريف الربح الموحّد: الربح المحقق في هذا اليوم (نقدي + ما حُصّل اليوم من الآجل)
+    const daySummary = computeProfitSummary({
+      invoices,
+      payments: profitLedger?.payments,
+      writeoffs: profitLedger?.writeoffs,
+      expenses: expenses.map(exp => ({ amount: Number(exp.amount) || 0, date: String(exp.date) })),
+      range: selectedDate ? { from: selectedDate, to: selectedDate } : undefined,
+      dayOf: toLocalDateString,
+    });
+    const totalProfit = selectedDate ? daySummary.realizedProfit : 0;
     const totalExpenses = dayExpenses.reduce((s, e) => s + e.amount, 0);
     const cashSales = dayInvoices.filter(i => i.paymentType === 'cash').reduce((s, i) => s + i.total, 0);
     const debtSales = dayInvoices.filter(i => i.paymentType === 'debt').reduce((s, i) => s + i.total, 0);
     const newDebts = dayDebts.reduce((s, d) => s + d.totalDebt, 0);
     const debtPayments = debtPaymentsTotal;
-    const netProfit = totalProfit - totalExpenses;
+    // الصافي = الربح المحقق − المصاريف − خسارة الديون المعدومة في هذا اليوم
+    const netProfit = selectedDate ? daySummary.netProfit : 0;
 
     return {
       salesInvoices,
@@ -103,7 +117,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
       invoiceCount: dayInvoices.length,
       expenseCount: dayExpenses.length,
     };
-  }, [invoices, expenses, debts, selectedDate, debtPaymentsTotal]);
+  }, [invoices, expenses, debts, selectedDate, debtPaymentsTotal, profitLedger]);
 
   const handleExportExcel = async () => {
     const items = [

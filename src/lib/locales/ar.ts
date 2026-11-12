@@ -538,6 +538,8 @@ const ar = {
   'dashboard.netProfit': 'صافي الأرباح',
   'dashboard.profitMargin': 'هامش ربح',
   'dashboard.dueDebts': 'الديون المستحقة',
+  'dashboard.pendingProfit': 'أرباح معلّقة (ديون لم تُحصَّل بعد)',
+  'dashboard.badDebtLossToday': 'خسارة ديون معدومة اليوم',
   'dashboard.client': 'عميل',
   'dashboard.customersThisMonth': 'العملاء هذا الشهر',
   'dashboard.uniqueCustomers': 'عملاء فريدين',

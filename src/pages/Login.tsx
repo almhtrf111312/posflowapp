@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth, type SignInResult } from '@/hooks/use-auth';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { ContactLinksSection, CHANNELS, type ContactLinks } from '@/components/s
 import { getAuthErrorMessage, isValidEmailFormat } from '@/lib/auth-errors';
 import { injectGuestDemoData, clearGuestDemoData } from '@/lib/demo-data';
 import { cn } from '@/lib/utils';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'; // Google sign-in (removable)
 
 interface PasswordCriteria {
   hasUpper: boolean;
@@ -390,14 +391,18 @@ export default function Login() {
       return;
     }
 
-    // Check device binding after successful login
-    if (data?.user) {
-      const { blocked } = await checkDeviceBinding(data.user.id);
+    await completeLogin(data?.user ?? null, email.trim());
+  };
+
+  // يُستخدم بعد أي دخول ناجح (بريد أو جوجل): فحص ربط الجهاز ثم التوجيه
+  const completeLogin = async (loggedUser: { id: string; email?: string | null } | null, userEmail: string) => {
+    if (loggedUser) {
+      const { blocked } = await checkDeviceBinding(loggedUser.id);
 
       if (blocked) {
         const blockData = {
           isBlocked: true,
-          userEmail: email.trim(),
+          userEmail,
         };
 
         // حفظ الحالة محلياً في الجلسة حتى لا تختفي عند حدوث signOut
@@ -428,6 +433,23 @@ export default function Login() {
     setIsLoading(false);
     toast.success(t('auth.loginSuccess'));
     navigate('/');
+  };
+
+  const handleGoogleSignedIn = async (result: SignInResult) => {
+    if (result.error) {
+      setIsLoading(false);
+      if (result.blockedReason) {
+        navigate('/contact-developer', {
+          replace: true,
+          state: { supportReason: result.blockedReason, email: result.data?.user?.email || '' },
+        });
+        return;
+      }
+      toast.error(getAuthErrorMessage(result.error, 'login'));
+      return;
+    }
+    setIsLoading(true);
+    await completeLogin(result.data?.user ?? null, result.data?.user?.email || '');
   };
 
   const handleResetDevice = async () => {
@@ -634,6 +656,9 @@ export default function Login() {
             <Sparkles className="w-4 h-4 text-primary" />
             <span>تجربة التطبيق بدون حساب (Demo Mode)</span>
           </Button>
+
+          {/* Google sign-in (removable) — احذف هذا السطر لإخفاء الزر */}
+          <GoogleSignInButton disabled={isLoading} stayLoggedIn={stayLoggedIn} onSignedIn={handleGoogleSignedIn} />
         </form>
       </div>
 

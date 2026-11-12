@@ -109,6 +109,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_GOOGLE_WEB_CLIENT_ID: ${{ secrets.VITE_GOOGLE_WEB_CLIENT_ID }}
         run: npm run build
 
       - name: Sync embedded files to Android
@@ -161,6 +162,12 @@ jobs:
           echo "KEYSTORE_PASSWORD=$KEYSTORE_PASS" >> "$GITHUB_ENV"
           echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "KEY_PASSWORD=${KEY_PASS:-$KEYSTORE_PASS}" >> "$GITHUB_ENV"
+
+      - name: Print release key fingerprints (for Google OAuth Android client)
+        shell: bash
+        run: |
+          echo "SHA-1 / SHA-256 of the release signing key (not secret):"
+          keytool -list -v -keystore android/app/flowpos-release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" | sed 's/^[[:space:]]*/  /' | tee -a "$GITHUB_STEP_SUMMARY" || true
 
       - name: Build signed release APK
         working-directory: android

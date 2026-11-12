@@ -21,3 +21,8 @@
 -keepattributes JavascriptInterface
 -dontwarn com.getcapacitor.**
 -dontwarn org.apache.cordova.**
+
+# Google sign-in (Credential Manager)
+-keep class androidx.credentials.playservices.** { *; }
+-keep class com.google.android.libraries.identity.googleid.** { *; }
+-keep class com.flowpos.pro.auth.** { *; }

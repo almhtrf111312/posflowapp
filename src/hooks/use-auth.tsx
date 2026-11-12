@@ -120,6 +120,7 @@ interface AuthContextType {
   isAutoLoginChecking: boolean;
   stayLoggedIn: boolean;
   signIn: (email: string, password: string, stayLoggedIn?: boolean) => Promise<SignInResult>;
+  signInWithIdToken: (token: string, nonce?: string, stayLoggedIn?: boolean) => Promise<SignInResult>;
   signUp: (email: string, password: string, fullName: string, phone?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -614,17 +615,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchProfile, cachedInitial.user]);
 
-  const signIn = async (email: string, password: string, rememberMe: boolean = false): Promise<SignInResult> => {
+  const signIn = (email: string, password: string, rememberMe: boolean = false): Promise<SignInResult> =>
+    completeSignIn(() => supabase.auth.signInWithPassword({ email, password }), rememberMe, { email });
+
+  // تسجيل الدخول برمز هوية (Google) — نفس فحوص الحساب والتنظيف التي يمر بها الدخول بالبريد
+  const signInWithIdToken = (token: string, nonce: string | undefined, rememberMe: boolean = true): Promise<SignInResult> =>
+    completeSignIn(
+      () => supabase.auth.signInWithIdToken({ provider: 'google', token, ...(nonce ? { nonce } : {}) }),
+      rememberMe,
+      { method: 'google' },
+    );
+
+  const completeSignIn = async (
+    authCall: () => Promise<{ data: { user: User | null; session: Session | null }; error: { message: string } | null }>,
+    rememberMe: boolean,
+    logMeta: Record<string, unknown>,
+  ): Promise<SignInResult> => {
     try {
       // Cleanly wipe any demo leftovers before establishing real user session
       if (isGuestDemoMode()) {
         await clearGuestDemoData(true);
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await authCall();
       
       // Set stay logged in preference and cache session
       if (!error && data.session) {
@@ -641,7 +654,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             data.user.id,
             data.user.email || 'مستخدم',
             `تم تسجيل الدخول بنجاح`,
-            { email, stayLoggedIn: rememberMe }
+            { ...logMeta, stayLoggedIn: rememberMe }
           );
         });
       }
@@ -767,6 +780,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAutoLoginChecking,
       stayLoggedIn,
       signIn,
+      signInWithIdToken,
       signUp,
       signOut,
       refreshProfile,
@@ -785,6 +799,7 @@ const SAFE_AUTH_FALLBACK: AuthContextType = {
   isAutoLoginChecking: false,
   stayLoggedIn: false,
   signIn: async () => ({ error: new Error('جاري تهيئة المصادقة...') }),
+  signInWithIdToken: async () => ({ error: new Error('جاري تهيئة المصادقة...') }),
   signUp: async () => ({ error: new Error('جاري تهيئة المصادقة...') }),
   signOut: async () => {},
   refreshProfile: async () => {},

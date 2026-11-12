@@ -14,6 +14,7 @@ import java.util.Locale;
 
 import com.getcapacitor.BridgeActivity;
 import com.flowpos.pro.printer.FlowPosPrinterPlugin;
+import com.flowpos.pro.auth.FlowPosGoogleAuthPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -30,6 +31,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(FlowPosPrinterPlugin.class);
+        registerPlugin(FlowPosGoogleAuthPlugin.class); // Google sign-in (removable)
         super.onCreate(savedInstanceState);
 
         try {

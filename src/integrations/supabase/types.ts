@@ -14,44 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_encryption_keys: {
+        Row: {
+          created_at: string
+          key_material: string
+          key_version: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          key_material: string
+          key_version?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          key_material?: string
+          key_version?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       accounting_period_closures: {
         Row: {
+          bad_debt_loss: number | null
           closed_by: string
+          closing_timezone: string | null
           created_at: string
           gross_profit: number
           id: string
           net_profit: number
           partner_distributions: Json
+          pending_profit: number | null
           period_end: string
           period_start: string
+          realized_profit: number | null
           total_cogs: number
           total_expenses: number
           total_revenue: number
           user_id: string
         }
         Insert: {
+          bad_debt_loss?: number | null
           closed_by: string
+          closing_timezone?: string | null
           created_at?: string
           gross_profit?: number
           id?: string
           net_profit?: number
           partner_distributions?: Json
+          pending_profit?: number | null
           period_end: string
           period_start: string
+          realized_profit?: number | null
           total_cogs?: number
           total_expenses?: number
           total_revenue?: number
           user_id: string
         }
         Update: {
+          bad_debt_loss?: number | null
           closed_by?: string
+          closing_timezone?: string | null
           created_at?: string
           gross_profit?: number
           id?: string
           net_profit?: number
           partner_distributions?: Json
+          pending_profit?: number | null
           period_end?: string
           period_start?: string
+          realized_profit?: number | null
           total_cogs?: number
           total_expenses?: number
           total_revenue?: number
@@ -210,6 +243,7 @@ export type Database = {
           allow_multi_device: boolean | null
           created_at: string | null
           current_cashiers: number | null
+          device_bound_at: string | null
           device_id: string | null
           device_reset_count: number | null
           expires_at: string
@@ -222,9 +256,14 @@ export type Database = {
           max_cashiers: number | null
           max_offline_days: number | null
           max_offline_invoices: number | null
+          max_products: number | null
           offline_lease_secret: string | null
+          plan_audience: string | null
+          plan_id: string | null
+          plan_name: string | null
           revoked_at: string | null
           revoked_reason: string | null
+          total_days: number | null
           updated_at: string | null
           user_id: string
         }
@@ -234,6 +273,7 @@ export type Database = {
           allow_multi_device?: boolean | null
           created_at?: string | null
           current_cashiers?: number | null
+          device_bound_at?: string | null
           device_id?: string | null
           device_reset_count?: number | null
           expires_at: string
@@ -246,9 +286,14 @@ export type Database = {
           max_cashiers?: number | null
           max_offline_days?: number | null
           max_offline_invoices?: number | null
+          max_products?: number | null
           offline_lease_secret?: string | null
+          plan_audience?: string | null
+          plan_id?: string | null
+          plan_name?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
+          total_days?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -258,6 +303,7 @@ export type Database = {
           allow_multi_device?: boolean | null
           created_at?: string | null
           current_cashiers?: number | null
+          device_bound_at?: string | null
           device_id?: string | null
           device_reset_count?: number | null
           expires_at?: string
@@ -270,9 +316,14 @@ export type Database = {
           max_cashiers?: number | null
           max_offline_days?: number | null
           max_offline_invoices?: number | null
+          max_products?: number | null
           offline_lease_secret?: string | null
+          plan_audience?: string | null
+          plan_id?: string | null
+          plan_name?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
+          total_days?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -396,6 +447,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      broadcast_reads: {
+        Row: {
+          broadcast_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          broadcast_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          broadcast_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       cash_shifts: {
         Row: {
@@ -585,8 +654,10 @@ export type Database = {
           customer_name: string | null
           debt_id: string
           id: string
+          loss_amount: number | null
           notes: string | null
           partner_impact: Json | null
+          pending_profit_cancelled: number | null
           reason: string | null
           user_id: string
           written_off_at: string
@@ -599,8 +670,10 @@ export type Database = {
           customer_name?: string | null
           debt_id: string
           id?: string
+          loss_amount?: number | null
           notes?: string | null
           partner_impact?: Json | null
+          pending_profit_cancelled?: number | null
           reason?: string | null
           user_id: string
           written_off_at?: string
@@ -613,8 +686,10 @@ export type Database = {
           customer_name?: string | null
           debt_id?: string
           id?: string
+          loss_amount?: number | null
           notes?: string | null
           partner_impact?: Json | null
+          pending_profit_cancelled?: number | null
           reason?: string | null
           user_id?: string
           written_off_at?: string
@@ -918,6 +993,7 @@ export type Database = {
           invoice_type: string | null
           notes: string | null
           operation_id: string | null
+          paid_at_sale: number | null
           payment_type: string | null
           profit: number | null
           settlement_diff_usd: number
@@ -957,6 +1033,7 @@ export type Database = {
           invoice_type?: string | null
           notes?: string | null
           operation_id?: string | null
+          paid_at_sale?: number | null
           payment_type?: string | null
           profit?: number | null
           settlement_diff_usd?: number
@@ -996,6 +1073,7 @@ export type Database = {
           invoice_type?: string | null
           notes?: string | null
           operation_id?: string | null
+          paid_at_sale?: number | null
           payment_type?: string | null
           profit?: number | null
           settlement_diff_usd?: number
@@ -1185,6 +1263,60 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           withdrawal_history?: Json | null
+        }
+        Relationships: []
+      }
+      payment_methods: {
+        Row: {
+          account_number: string | null
+          badge: string | null
+          button_label: string | null
+          created_at: string
+          enabled: boolean
+          holder_name: string | null
+          id: string
+          instructions: string | null
+          link_label: string | null
+          link_url: string | null
+          logo_path: string | null
+          name: string
+          qr_image_path: string | null
+          qr_image_url: string | null
+          sort_order: number
+        }
+        Insert: {
+          account_number?: string | null
+          badge?: string | null
+          button_label?: string | null
+          created_at?: string
+          enabled?: boolean
+          holder_name?: string | null
+          id?: string
+          instructions?: string | null
+          link_label?: string | null
+          link_url?: string | null
+          logo_path?: string | null
+          name: string
+          qr_image_path?: string | null
+          qr_image_url?: string | null
+          sort_order?: number
+        }
+        Update: {
+          account_number?: string | null
+          badge?: string | null
+          button_label?: string | null
+          created_at?: string
+          enabled?: boolean
+          holder_name?: string | null
+          id?: string
+          instructions?: string | null
+          link_label?: string | null
+          link_url?: string | null
+          logo_path?: string | null
+          name?: string
+          qr_image_path?: string | null
+          qr_image_url?: string | null
+          sort_order?: number
         }
         Relationships: []
       }
@@ -2181,6 +2313,147 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          activation_message: string | null
+          allow_images_above_limit: boolean
+          audience: string
+          badge: string | null
+          created_at: string
+          description: string | null
+          duration_days: number
+          enabled: boolean
+          equivalents: Json
+          features: string[]
+          id: string
+          max_cashiers: number
+          max_products: number
+          name: string
+          price_usd: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          activation_message?: string | null
+          allow_images_above_limit?: boolean
+          audience?: string
+          badge?: string | null
+          created_at?: string
+          description?: string | null
+          duration_days: number
+          enabled?: boolean
+          equivalents?: Json
+          features?: string[]
+          id?: string
+          max_cashiers?: number
+          max_products?: number
+          name: string
+          price_usd: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          activation_message?: string | null
+          allow_images_above_limit?: boolean
+          audience?: string
+          badge?: string | null
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          enabled?: boolean
+          equivalents?: Json
+          features?: string[]
+          id?: string
+          max_cashiers?: number
+          max_products?: number
+          name?: string
+          price_usd?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_requests: {
+        Row: {
+          admin_note: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          equivalents_snapshot: Json
+          id: string
+          method_id: string | null
+          method_name: string
+          payer_name: string | null
+          payer_ref: string | null
+          plan_audience: string
+          plan_days: number
+          plan_id: string | null
+          plan_name: string
+          price_usd: number
+          proof_path: string | null
+          ref_code: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          equivalents_snapshot?: Json
+          id?: string
+          method_id?: string | null
+          method_name: string
+          payer_name?: string | null
+          payer_ref?: string | null
+          plan_audience: string
+          plan_days: number
+          plan_id?: string | null
+          plan_name: string
+          price_usd: number
+          proof_path?: string | null
+          ref_code: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          equivalents_snapshot?: Json
+          id?: string
+          method_id?: string | null
+          method_name?: string
+          payer_name?: string | null
+          payer_ref?: string | null
+          plan_audience?: string
+          plan_days?: number
+          plan_id?: string | null
+          plan_name?: string
+          price_usd?: number
+          proof_path?: string | null
+          ref_code?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_requests_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_requests_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_conversations: {
         Row: {
           created_at: string
@@ -2225,29 +2498,35 @@ export type Database = {
       }
       support_messages: {
         Row: {
+          attachment_url: string | null
           conversation_id: string
           created_at: string
           id: string
           is_read: boolean
           message: string
+          notified_native: boolean | null
           sender_id: string
           sender_role: string
         }
         Insert: {
+          attachment_url?: string | null
           conversation_id: string
           created_at?: string
           id?: string
           is_read?: boolean
           message: string
+          notified_native?: boolean | null
           sender_id: string
           sender_role?: string
         }
         Update: {
+          attachment_url?: string | null
           conversation_id?: string
           created_at?: string
           id?: string
           is_read?: boolean
           message?: string
+          notified_native?: boolean | null
           sender_id?: string
           sender_role?: string
         }
@@ -2261,8 +2540,48 @@ export type Database = {
           },
         ]
       }
+      user_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_archived: boolean
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
+          can_refund: boolean
           created_at: string
           id: string
           is_active: boolean | null
@@ -2271,6 +2590,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          can_refund?: boolean
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -2279,6 +2599,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          can_refund?: boolean
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -2416,12 +2737,39 @@ export type Database = {
         Args: { _amount: number; _product_id: string }
         Returns: number
       }
+      approve_subscription_request_atomic: {
+        Args: { p_admin_note?: string; p_request_id: string }
+        Returns: Json
+      }
+      assert_period_open: {
+        Args: { _date: string; _owner: string; _what?: string }
+        Returns: undefined
+      }
       assign_store_and_profile_phone: {
         Args: { _phone: string }
         Returns: Json
       }
+      boss_activate_license: {
+        Args: {
+          p_admin_note?: string
+          p_custom_days?: number
+          p_mode?: string
+          p_plan_id?: string
+          p_request_id?: string
+          p_target_user_id?: string
+        }
+        Returns: Json
+      }
       boss_change_user_password: {
         Args: { _new_password: string; _target_user_id: string }
+        Returns: Json
+      }
+      boss_direct_activate_by_plan: {
+        Args: {
+          p_custom_days?: number
+          p_plan_id?: string
+          p_target_user_id: string
+        }
         Returns: Json
       }
       boss_hard_delete_user: {
@@ -2441,6 +2789,7 @@ export type Database = {
         Returns: Json
       }
       can_add_cashier: { Args: { _owner_id: string }; Returns: boolean }
+      can_refund_invoices: { Args: { _user_id: string }; Returns: boolean }
       cancel_debt_atomic: {
         Args: { _debt_id: string; _reason?: string }
         Returns: Json
@@ -2462,7 +2811,7 @@ export type Database = {
       clean_old_error_logs: { Args: never; Returns: number }
       clear_user_pin: { Args: { _target_user_id: string }; Returns: boolean }
       close_accounting_period_atomic: {
-        Args: { _period_end: string; _period_start: string }
+        Args: { _period_end: string; _period_start: string; _timezone?: string }
         Returns: Json
       }
       close_cash_shift_atomic: {
@@ -2547,6 +2896,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_boss_telegram_alert_config: { Args: never; Returns: Json }
       get_inventory_value: {
         Args: { _owner_id: string }
         Returns: {
@@ -2558,6 +2908,7 @@ export type Database = {
       }
       get_next_invoice_number: { Args: { _user_id?: string }; Returns: number }
       get_owner_id: { Args: { _user_id: string }; Returns: string }
+      get_public_contact_links: { Args: never; Returns: Json }
       get_stock_discrepancies: {
         Args: never
         Returns: {
@@ -2585,6 +2936,7 @@ export type Database = {
         Args: { _product_id: string }
         Returns: Json
       }
+      has_paid_write_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2595,7 +2947,9 @@ export type Database = {
       is_boss: { Args: { _user_id: string }; Returns: boolean }
       is_first_user: { Args: never; Returns: boolean }
       is_license_valid: { Args: { _user_id: string }; Returns: boolean }
+      is_store_owner: { Args: { _user_id: string }; Returns: boolean }
       issue_offline_lease: { Args: { p_device_id: string }; Returns: Json }
+      mark_all_support_messages_read: { Args: never; Returns: Json }
       normalize_phone_number: { Args: { p_phone: string }; Returns: string }
       partner_deposit_atomic:
         | {

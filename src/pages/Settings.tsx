@@ -2433,23 +2433,6 @@ export default function Settings() {
           year: 'numeric', month: 'long', day: 'numeric'
         });
 
-        // Build timestamp injected at build time
-        const rawBuildTimestamp = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : versionInfo.lastUpdated;
-        const buildDate = new Date(rawBuildTimestamp);
-        const buildTimeStr = buildDate.toLocaleString(isRTL ? 'ar-SA' : 'en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-        });
-
-        const commitHash = typeof __BUILD_COMMIT__ !== 'undefined' && __BUILD_COMMIT__ !== 'local'
-          ? __BUILD_COMMIT__.slice(0, 7)
-          : null;
-
         // Load changelog from build-time injection (limited to latest update fixes only)
         const rawChangelog = (globalThis as unknown as { __APP_CHANGELOG__?: unknown }).__APP_CHANGELOG__ ?? (typeof __APP_CHANGELOG__ !== 'undefined' ? __APP_CHANGELOG__ : null);
         const changelog: { type: 'new' | 'improved' | 'fixed'; ar: string; en: string }[] = Array.isArray(rawChangelog) && rawChangelog.length > 0
@@ -2465,9 +2448,7 @@ export default function Settings() {
           <div className="space-y-5">
             {/* App Identity */}
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-md flex-shrink-0">
-                <span className="text-2xl font-black text-primary-foreground">F</span>
-              </div>
+              <img src="/app-icon.png" alt="FlowPOS Pro" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
               <div>
                 <h2 className="text-xl font-bold text-foreground">FlowPOS Pro</h2>
                 <p className="text-sm text-muted-foreground">{isRTL ? 'نظام نقطة البيع المتكامل' : 'Integrated Point of Sale System'}</p>
@@ -2478,16 +2459,13 @@ export default function Settings() {
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-4 py-2.5 border-b border-border bg-muted/30">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {isRTL ? 'معلومات الإصدار والبناء' : 'Version & Build Info'}
+                  {isRTL ? 'معلومات الإصدار' : 'Version Info'}
                 </p>
               </div>
               <div className="divide-y divide-border">
                 {[
                   { label: isRTL ? 'الإصدار الحالي' : 'Current Version', value: `v${versionInfo.versionName}`, icon: '🏷️' },
-                  { label: isRTL ? 'رقم البناء' : 'Build Number', value: String(versionInfo.versionCode), icon: '🔢' },
-                  { label: isRTL ? 'تاريخ ووقت البناء الفعلي' : 'Build Timestamp', value: buildTimeStr, icon: '⏱️' },
                   { label: isRTL ? 'تاريخ الإصدار' : 'Release Date', value: releaseDateStr, icon: '📅' },
-                  ...(commitHash ? [{ label: isRTL ? 'معرّف التحديث (Commit)' : 'Commit', value: commitHash, icon: '🔖' }] : []),
                   { label: isRTL ? 'المنصة' : 'Platform', value: 'Android / Web / Windows', icon: '📱' },
                   { label: isRTL ? 'المطور' : 'Developer', value: 'FlowPOS Team', icon: '👨‍💻' },
                 ].map((item) => (
@@ -2507,8 +2485,8 @@ export default function Settings() {
               <div className="px-4 py-2.5 border-b border-border bg-muted/30">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   {isRTL
-                    ? `آخر التحديثات — الإصدار ${versionInfo.versionName} (بناء ${versionInfo.versionCode})`
-                    : `Latest Updates — v${versionInfo.versionName} (Build ${versionInfo.versionCode})`}
+                    ? `آخر التحديثات — الإصدار ${versionInfo.versionName}`
+                    : `Latest Updates — v${versionInfo.versionName}`}
                 </p>
               </div>
               <div className="divide-y divide-border">

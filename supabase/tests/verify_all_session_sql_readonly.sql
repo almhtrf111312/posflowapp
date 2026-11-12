@@ -52,8 +52,9 @@ checks(ord, phase, item, ok) AS (
 
   -- 3) قفل الفترات وخسائر الشركاء (20261111030000)
   (301, '3 قفل الفترات', 'assert_period_open موجودة', EXISTS (SELECT 1 FROM fn WHERE name = 'assert_period_open')),
-  (302, '3 قفل الفترات', 'تسديد الدين يرفض الفترة المقفلة',
-     EXISTS (SELECT 1 FROM fn WHERE name = 'record_debt_payment_atomic' AND def ILIKE '%assert_period_open%')),
+  -- تسديد الدين يقع بتاريخ اليوم فلا يحتاج قفل الفترة؛ تعديله في هذا الملف كان تحرير أرباح الشركاء بنسبة الدفعة
+  (302, '3 قفل الفترات', 'تسديد الدين يحرر أرباح الشركاء بنسبة الدفعة (النسخة الأخيرة)',
+     EXISTS (SELECT 1 FROM fn WHERE name = 'record_debt_payment_atomic' AND def ILIKE '%superseded%')),
   (303, '3 قفل الفترات', 'حذف المصروف يرفض الفترة المقفلة',
      EXISTS (SELECT 1 FROM fn WHERE name = 'delete_expense_atomic' AND def ILIKE '%assert_period_open%')),
   (304, '3 قفل الفترات', 'تعديل فاتورة الشراء موجودة', EXISTS (SELECT 1 FROM fn WHERE name = 'edit_purchase_invoice_atomic')),

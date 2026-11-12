@@ -9,6 +9,7 @@ import { getCurrentLanguage } from './i18n';
 import ArabicReshaper from 'arabic-reshaper';
 import { getCurrencyDisplayLabel, getReportCurrency } from './currencies';
 import { roundForCurrency } from './money-engine';
+import { moneyTone, statusTone, cellTone, TONE_COLORS, type Tone } from './export-semantics';
 
 export interface ExportCurrencySnapshot {
   code: string;
@@ -486,14 +487,6 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
         cellData.cell.styles.fontStyle = arabicFontLoaded ? 'normal' : 'bold';
       }
 
-      // المبالغ السالبة (خسارة) بالأحمر
-      if (cellData.section === 'body') {
-        const col = effectiveColumns[cellData.column.index];
-        if (col?.kind === 'money' && String(cellData.cell.raw ?? '').trim().startsWith('-')) {
-          cellData.cell.styles.textColor = [220, 38, 38];
-        }
-      }
-
       if (isRTL) {
         const rawVal = cellData.cell.raw;
         const textVal = String(rawVal ?? '').trim();
@@ -514,6 +507,53 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
             cellData.cell.styles.halign = 'center';
           }
         }
+      }
+
+      // 🎨 ألوان الدلالة: الربح أخضر، الخسارة والمتبقي من الدين أحمر، والحالات بشارة ✓/✗ ملونة
+      if (cellData.section === 'body') {
+        const col = effectiveColumns[cellData.column.index];
+        const isTotalsRow = Boolean(totals) && cellData.row.index === rows.length - 1;
+        const raw = isTotalsRow ? totals?.[col?.key ?? ''] : data[cellData.row.index]?.[col?.key ?? ''];
+        let tone: Tone = 'neutral';
+        if (col?.kind === 'money' && typeof raw === 'number') {
+          tone = moneyTone(col.key, col.header, raw);
+          if (tone !== 'neutral') cellData.cell.styles.textColor = TONE_COLORS[tone].text;
+        } else if (col && (tone = cellTone(col.key, col.header, raw, false)) !== 'neutral') {
+          // مبلغ منسَّق نصياً في عمود مالي
+          cellData.cell.styles.textColor = TONE_COLORS[tone].text;
+        } else if (!isTotalsRow) {
+          tone = statusTone(raw);
+          if (tone !== 'neutral') {
+            cellData.cell.styles.textColor = TONE_COLORS[tone].text;
+            cellData.cell.styles.fillColor = TONE_COLORS[tone].fill;
+            cellData.cell.styles.halign = 'center';
+            // مساحة للشارة المرسومة على يسار الخلية
+            cellData.cell.styles.cellPadding = { top: 3.5, bottom: 3.5, left: 8, right: 3 };
+            (cellData.cell as unknown as { _statusTone?: Tone })._statusTone = tone;
+          }
+        }
+      }
+    },
+    didDrawCell: (cellData) => {
+      // رسم شارة الحالة (دائرة بعلامة ✓ أو ✗ أو نصف دائرة) بخطوط مستقلة عن الخط العربي
+      const tone = (cellData.cell as unknown as { _statusTone?: Tone })._statusTone;
+      if (cellData.section !== 'body' || !tone || tone === 'neutral') return;
+      const [r, g, b] = TONE_COLORS[tone].text;
+      const cx = cellData.cell.x + 4.2;
+      const cy = cellData.cell.y + cellData.cell.height / 2;
+      const rad = 1.9;
+      doc.setFillColor(r, g, b);
+      doc.circle(cx, cy, rad, 'F');
+      doc.setDrawColor(255, 255, 255);
+      doc.setLineWidth(0.45);
+      if (tone === 'positive') {
+        doc.line(cx - 0.95, cy + 0.05, cx - 0.25, cy + 0.75);
+        doc.line(cx - 0.25, cy + 0.75, cx + 1.0, cy - 0.7);
+      } else if (tone === 'negative') {
+        doc.line(cx - 0.8, cy - 0.8, cx + 0.8, cy + 0.8);
+        doc.line(cx - 0.8, cy + 0.8, cx + 0.8, cy - 0.8);
+      } else {
+        doc.line(cx - 0.9, cy, cx + 0.9, cy);
       }
     },
     columnStyles: effectiveColumnStyles,

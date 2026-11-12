@@ -6,6 +6,7 @@ import { Share } from '@capacitor/share';
 import { formatDate, formatDateTime } from './utils';
 import { getCurrencyDisplayLabel, getReportCurrency } from './currencies';
 import { roundForCurrency } from './money-engine';
+import { moneyTone, statusTone, statusMark, cellTone, TONE_COLORS, toArgb } from './export-semantics';
 
 export interface ExportCurrencySnapshot {
   code: string;
@@ -264,9 +265,12 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
       if (col.kind === 'money') {
         cell.numFmt = numFmt;
         cell.alignment = { horizontal: 'left', vertical: 'middle' };
-        // المبالغ السالبة (خسارة) بالأحمر
-        if (typeof cell.value === 'number' && cell.value < 0) {
-          cell.font = { name: 'Segoe UI', size: 11, color: { argb: 'FFDC2626' } };
+        // 🎨 الربح أخضر، الخسارة والمتبقي من الدين أحمر، المدفوع أخضر
+        if (typeof cell.value === 'number') {
+          const tone = moneyTone(col.key, col.header, cell.value);
+          if (tone !== 'neutral') {
+            cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: toArgb(TONE_COLORS[tone].text) } };
+          }
         }
       } else if (col.kind === 'quantity' && typeof cell.value === 'number') {
         cell.numFmt = '#,##0.###';
@@ -275,6 +279,20 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
         cell.alignment = { horizontal: 'left', vertical: 'middle' };
       } else {
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        // 🎨 الحالات: ✔ أخضر للمسدد/المكتمل، ✘ أحمر لغير المسدد/المتأخر، ◐ برتقالي للجزئي
+        // مبلغ منسَّق نصياً في عمود مالي (ربح/متبقي/مدفوع/خسارة)
+        const amountTone = cellTone(col.key, col.header, cell.value, false);
+        if (amountTone !== 'neutral') {
+          cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: toArgb(TONE_COLORS[amountTone].text) } };
+        }
+        const tone = amountTone === 'neutral' ? statusTone(cell.value) : 'neutral';
+        if (tone !== 'neutral') {
+          const colors = TONE_COLORS[tone];
+          cell.value = `${statusMark(tone)} ${String(cell.value).trim()}`;
+          cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: toArgb(colors.text) } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: toArgb(colors.fill) } };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
       }
     });
   });
@@ -299,6 +317,12 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
         if (col?.kind === 'money') {
           cell.numFmt = numFmt;
           cell.alignment = { horizontal: 'left', vertical: 'middle' };
+          if (typeof cell.value === 'number') {
+            const tone = moneyTone(col.key, col.header, cell.value);
+            if (tone !== 'neutral') {
+              cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: toArgb(TONE_COLORS[tone].text) } };
+            }
+          }
         }
     });
   }

@@ -124,12 +124,14 @@ export function googleErrorMessage(code: string): string {
 }
 
 export const DESKTOP_REDIRECT_URL = 'flowpos://auth-callback';
+/** صفحة وسيطة على الموقع المنشور (مسموحة تلقائياً في Supabase) تحوّل الرموز إلى flowpos:// */
+export const DESKTOP_BRIDGE_URL = 'https://flowpospro.lovable.app/desktop-auth.html';
 
 /** الكمبيوتر: يفتح صفحة جوجل في المتصفح الافتراضي (جوجل تمنع الدخول داخل نافذة التطبيق). */
 export async function startDesktopGoogleSignIn(): Promise<{ error: Error | null }> {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: DESKTOP_REDIRECT_URL, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+    options: { redirectTo: DESKTOP_BRIDGE_URL, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
   });
   if (error || !data?.url) return { error: new Error(error?.message || 'no auth url') };
   window.open(data.url, '_blank'); // Electron يحوّلها للمتصفح الخارجي

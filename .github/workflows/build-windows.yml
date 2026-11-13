@@ -122,12 +122,22 @@ jobs:
               "createDesktopShortcut": true,
               "createStartMenuShortcut": true,
               "shortcutName": "FlowPOS Pro"
-            },
-            "protocols": [
-              { "name": "FlowPOS Pro", "schemes": ["flowpos"] }
-            ]
+            }
           }
           EOF
+
+      - name: Write Google desktop sign-in config (optional)
+        shell: bash
+        env:
+          GOOGLE_DESKTOP_CLIENT_ID: ${{ secrets.GOOGLE_DESKTOP_CLIENT_ID }}
+          GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.GOOGLE_DESKTOP_CLIENT_SECRET }}
+        run: |
+          if [ -n "$GOOGLE_DESKTOP_CLIENT_ID" ] && [ -n "$GOOGLE_DESKTOP_CLIENT_SECRET" ]; then
+            node -e "require('fs').writeFileSync('electron/google-desktop.json', JSON.stringify({clientId: process.env.GOOGLE_DESKTOP_CLIENT_ID, clientSecret: process.env.GOOGLE_DESKTOP_CLIENT_SECRET}))"
+            echo "Google desktop sign-in config written"
+          else
+            echo "Google desktop sign-in secrets not set - button will be hidden on desktop"
+          fi
 
       - name: Build Windows Installer
         shell: pwsh

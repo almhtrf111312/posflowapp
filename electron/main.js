@@ -5,44 +5,125 @@ const url = require('url');
 
 let mainWindow;
 
-// ── Google sign-in (removable): رابط العودة flowpos://auth-callback من المتصفح ──
-const OAUTH_PROTOCOL = 'flowpos';
-let pendingAuthUrl = null;
+// ── Google sign-in (removable): OAuth عبر المتصفح مع عنوان رجوع محلي 127.0.0.1 (بدون أي دومين وسيط) ──
+const http = require('http');
+const https = require('https');
+const crypto = require('crypto');
+const { ipcMain } = require('electron');
 
-if (process.defaultApp && process.argv.length >= 2) {
-  app.setAsDefaultProtocolClient(OAUTH_PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
-} else {
-  app.setAsDefaultProtocolClient(OAUTH_PROTOCOL);
+function loadGoogleDesktopConfig() {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, 'google-desktop.json'), 'utf8');
+    const cfg = JSON.parse(raw);
+    if (cfg && cfg.clientId && cfg.clientSecret) return cfg;
+  } catch (_) { /* غير مضبوط */ }
+  return null;
 }
 
-function findAuthUrl(argv) {
-  return (argv || []).find((a) => typeof a === 'string' && a.startsWith(OAUTH_PROTOCOL + '://auth-callback')) || null;
+const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+function postForm(urlStr, form) {
+  return new Promise((resolve, reject) => {
+    const body = new URLSearchParams(form).toString();
+    const u = new URL(urlStr);
+    const req = https.request(
+      { method: 'POST', hostname: u.hostname, path: u.pathname, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) } },
+      (res) => {
+        let data = '';
+        res.on('data', (c) => (data += c));
+        res.on('end', () => {
+          try { resolve({ status: res.statusCode, json: JSON.parse(data) }); } catch (e) { reject(e); }
+        });
+      },
+    );
+    req.on('error', reject);
+    req.setTimeout(20000, () => req.destroy(new Error('timeout')));
+    req.write(body);
+    req.end();
+  });
 }
 
-function deliverAuthUrl(authUrl) {
-  if (!authUrl) return;
-  if (!mainWindow || mainWindow.webContents.isLoading()) {
-    pendingAuthUrl = authUrl;
-    return;
+let googleFlowActive = false;
+
+async function googleDesktopSignIn(nonceHashed) {
+  const cfg = loadGoogleDesktopConfig();
+  if (!cfg) return { ok: false, code: 'CONFIG', message: 'google desktop client not configured' };
+  if (googleFlowActive) return { ok: false, code: 'BUSY', message: 'sign-in already in progress' };
+  googleFlowActive = true;
+
+  const verifier = b64url(crypto.randomBytes(48));
+  const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
+  const state = b64url(crypto.randomBytes(16));
+
+  try {
+    const code = await new Promise((resolve, reject) => {
+      const server = http.createServer((req, res) => {
+        const reqUrl = new URL(req.url, 'http://127.0.0.1');
+        if (reqUrl.pathname !== '/') { res.writeHead(404); res.end(); return; }
+        const err = reqUrl.searchParams.get('error');
+        const gotCode = reqUrl.searchParams.get('code');
+        const okState = reqUrl.searchParams.get('state') === state;
+        const success = !err && !!gotCode && okState;
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>FlowPOS Pro</title><body style="font-family:Segoe UI,Tahoma,sans-serif;background:#f5f7fb;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0"><div style="background:#fff;border-radius:18px;padding:28px 36px;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center"><h2>${success ? 'تم تسجيل الدخول' : 'تعذّر تسجيل الدخول'}</h2><p style="color:#4b5563">${success ? 'يمكنك إغلاق هذه الصفحة والعودة إلى FlowPOS Pro.' : 'ارجع إلى التطبيق وحاول مرة أخرى.'}</p></div></body></html>`);
+        clearTimeout(timer);
+        server.close();
+        if (success) resolve(gotCode); else reject(new Error(err || 'state mismatch'));
+      });
+      const timer = setTimeout(() => { server.close(); reject(new Error('timeout')); }, 3 * 60 * 1000);
+      server.on('error', (e) => { clearTimeout(timer); reject(e); });
+      server.listen(0, '127.0.0.1', () => {
+        const redirectUri = `http://127.0.0.1:${server.address().port}`;
+        server.redirectUri = redirectUri;
+        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+          client_id: cfg.clientId,
+          redirect_uri: redirectUri,
+          response_type: 'code',
+          scope: 'openid email profile',
+          code_challenge: challenge,
+          code_challenge_method: 'S256',
+          state,
+          nonce: nonceHashed || '',
+          prompt: 'select_account',
+        }).toString();
+        shell.openExternal(authUrl);
+      });
+      server.redirectUriPromise = null;
+      googleDesktopSignIn._server = server;
+    });
+
+    const redirectUri = googleDesktopSignIn._server.redirectUri;
+    const tok = await postForm('https://oauth2.googleapis.com/token', {
+      code,
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+      code_verifier: verifier,
+    });
+    if (tok.status !== 200 || !tok.json.id_token) {
+      return { ok: false, code: 'GOOGLE_ERROR', message: String((tok.json && (tok.json.error_description || tok.json.error)) || 'token exchange failed') };
+    }
+    return { ok: true, idToken: tok.json.id_token };
+  } catch (e) {
+    return { ok: false, code: e && e.message === 'timeout' ? 'CANCELLED' : 'GOOGLE_ERROR', message: String((e && e.message) || e) };
+  } finally {
+    googleFlowActive = false;
   }
-  const payload = JSON.stringify(authUrl);
-  mainWindow.webContents
-    .executeJavaScript(`window.__flowposOAuthUrl=${payload};window.dispatchEvent(new CustomEvent('flowpos-oauth-callback',{detail:${payload}}));`)
-    .catch(() => {});
-  pendingAuthUrl = null;
 }
+
+ipcMain.on('flowpos:google-available', (event) => { event.returnValue = !!loadGoogleDesktopConfig(); });
+ipcMain.handle('flowpos:google-signin', (_event, nonceHashed) => googleDesktopSignIn(String(nonceHashed || '')));
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {
-  pendingAuthUrl = findAuthUrl(process.argv);
-  app.on('second-instance', (_event, argv) => {
+  app.on('second-instance', () => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
-    deliverAuthUrl(findAuthUrl(argv));
   });
 }
 
@@ -56,7 +137,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: undefined,
+      preload: path.join(__dirname, 'preload.js'),
     },
     show: false,
     frame: true,
@@ -237,10 +318,6 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
-  });
-
-  mainWindow.webContents.on('did-finish-load', () => {
-    if (pendingAuthUrl) deliverAuthUrl(pendingAuthUrl);
   });
 
   mainWindow.on('closed', () => {

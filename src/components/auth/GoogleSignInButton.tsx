@@ -16,8 +16,7 @@ import {
   isGoogleSignInAvailable,
   isElectron,
   isNativeAndroid,
-  parseDesktopCallback,
-  startDesktopGoogleSignIn,
+  getDesktopGoogleIdToken,
   nativeGoogleSignOut,
   startWebGoogleSignIn,
 } from '@/lib/auth/google-sign-in';
@@ -44,7 +43,7 @@ function GoogleIcon() {
 }
 
 export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, onNewAccount, onBusyChange }: Props) {
-  const { signInWithIdToken, signInWithSessionTokens } = useAuth();
+  const { signInWithIdToken } = useAuth();
   const [busy, setBusy] = useState(false);
   const handledReturn = useRef(false);
 
@@ -70,33 +69,6 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
     }
     await onSignedIn(result);
   };
-
-  // الكمبيوتر: استقبال رابط العودة من المتصفح
-  useEffect(() => {
-    if (!isElectron()) return;
-    const w = window as unknown as { __flowposOAuthUrl?: string | null };
-    const handle = async (rawUrl: string | null | undefined) => {
-      if (!rawUrl) return;
-      w.__flowposOAuthUrl = null;
-      const cb = parseDesktopCallback(rawUrl);
-      if (cb.ok === false) {
-        toast.error(googleErrorMessage('GOOGLE_ERROR'), { description: `[desktop] ${cb.message}`.slice(0, 220) });
-        return;
-      }
-      setBusyBoth(true);
-      try {
-        const result = await signInWithSessionTokens(cb.accessToken, cb.refreshToken, stayLoggedIn);
-        await finish(result);
-      } finally {
-        setBusyBoth(false);
-      }
-    };
-    const listener = (e: Event) => { void handle((e as CustomEvent<string>).detail); };
-    window.addEventListener('flowpos-oauth-callback', listener);
-    if (w.__flowposOAuthUrl) void handle(w.__flowposOAuthUrl);
-    return () => window.removeEventListener('flowpos-oauth-callback', listener);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // الويب: إكمال الفحوص بعد العودة من صفحة جوجل
   useEffect(() => {
@@ -129,21 +101,16 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
     if (busy) return;
     setBusyBoth(true);
     try {
-      if (isNativeAndroid()) {
-        const res = await getNativeGoogleIdToken();
+      if (isNativeAndroid() || isElectron()) {
+        const res = isElectron() ? await getDesktopGoogleIdToken() : await getNativeGoogleIdToken();
         if (res.ok === false) {
           const msg = googleErrorMessage(res.code);
-          // نعرض السبب التقني تحت الرسالة لتشخيص مشاكل الإعداد (SHA-1 / Client ID)
           if (msg) toast.error(msg, res.code === 'GOOGLE_ERROR' ? { description: `[${res.code}] ${res.message}`.slice(0, 220) } : undefined);
           if (res.code !== 'CANCELLED') console.warn('[GoogleSignIn]', res.code, res.message);
           return;
         }
         const result = await signInWithIdToken(res.idToken, res.rawNonce, stayLoggedIn);
         await finish(result);
-      } else if (isElectron()) {
-        const { error } = await startDesktopGoogleSignIn();
-        if (error) toast.error(googleErrorMessage('GOOGLE_ERROR'), { description: error.message.slice(0, 220) });
-        else toast.info('أكمل تسجيل الدخول في المتصفح، ثم ارجع للتطبيق');
       } else {
         const { error } = await startWebGoogleSignIn();
         if (error) toast.error(googleErrorMessage('GOOGLE_ERROR'));

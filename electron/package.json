@@ -41,14 +41,6 @@
       "installerHeaderIcon": "../resources/icon.png",
       "differentialPackage": false,
       "packElevate": false
-    },
-    "protocols": [
-      {
-        "name": "FlowPOS Pro",
-        "schemes": [
-          "flowpos"
-        ]
-      }
-    ]
+    }
   }
 }

@@ -29,13 +29,20 @@ const NativeGoogle = registerPlugin<FlowPosGoogleAuthPlugin>('FlowPosGoogleAuth'
 export const isElectron = (): boolean =>
   typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent);
 
+interface DesktopGoogleBridge {
+  available: boolean;
+  signIn(nonceHashed: string): Promise<{ ok: true; idToken: string } | { ok: false; code: string; message: string }>;
+}
+const desktopBridge = (): DesktopGoogleBridge | null =>
+  typeof window !== 'undefined' ? ((window as unknown as { flowposGoogle?: DesktopGoogleBridge }).flowposGoogle ?? null) : null;
+
 export const isNativeAndroid = (): boolean =>
   Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
 /** هل يظهر الزر على هذه المنصة؟ */
 export function isGoogleSignInAvailable(): boolean {
   if (!GOOGLE_SIGN_IN_ENABLED) return false;
-  if (isElectron()) return true; // ويندوز: المتصفح الخارجي ثم العودة عبر flowpos://
+  if (isElectron()) return !!desktopBridge()?.available; // ويندوز: يظهر فقط إذا ضُبط عميل Desktop في البناء
   if (Capacitor.isNativePlatform()) return isNativeAndroid() && GOOGLE_WEB_CLIENT_ID.length > 0;
   return true; // الويب: OAuth عبر المتصفح نفسه
 }
@@ -122,39 +129,22 @@ export function googleErrorMessage(code: string): string {
   }
 }
 
-export const DESKTOP_REDIRECT_URL = 'flowpos://auth-callback';
-/** صفحة وسيطة على الموقع المنشور (مسموحة تلقائياً في Supabase) تحوّل الرموز إلى flowpos:// */
-export const DESKTOP_BRIDGE_URL = 'https://flowpospro.lovable.app/desktop-auth.html';
-
-/** الكمبيوتر: يفتح صفحة جوجل في المتصفح الافتراضي (جوجل تمنع الدخول داخل نافذة التطبيق). */
-export async function startDesktopGoogleSignIn(): Promise<{ error: Error | null }> {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: DESKTOP_BRIDGE_URL, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
-  });
-  if (error || !data?.url) return { error: new Error(error?.message || 'no auth url') };
-  window.open(data.url, '_blank'); // Electron يحوّلها للمتصفح الخارجي
-  return { error: null };
-}
-
-export type DesktopCallback =
-  | { ok: true; accessToken: string; refreshToken: string }
-  | { ok: false; message: string };
-
-/** يقرأ الرموز من رابط العودة (#access_token=...&refresh_token=...) */
-export function parseDesktopCallback(rawUrl: string): DesktopCallback {
-  if (!rawUrl || !rawUrl.startsWith(DESKTOP_REDIRECT_URL)) return { ok: false, message: 'invalid callback' };
-  const hashIndex = rawUrl.indexOf('#');
-  const queryIndex = rawUrl.indexOf('?');
-  const params = new URLSearchParams();
-  if (queryIndex >= 0) new URLSearchParams(rawUrl.slice(queryIndex + 1, hashIndex >= 0 && hashIndex > queryIndex ? hashIndex : undefined)).forEach((v, k) => params.set(k, v));
-  if (hashIndex >= 0) new URLSearchParams(rawUrl.slice(hashIndex + 1)).forEach((v, k) => params.set(k, v));
-  const err = params.get('error_description') || params.get('error');
-  if (err) return { ok: false, message: err };
-  const accessToken = params.get('access_token');
-  const refreshToken = params.get('refresh_token');
-  if (!accessToken || !refreshToken) return { ok: false, message: params.get('code') ? 'unexpected code flow' : 'missing tokens' };
-  return { ok: true, accessToken, refreshToken };
+/** الكمبيوتر: المتصفح الخارجي + عنوان رجوع محلي (127.0.0.1) — بدون أي دومين وسيط. */
+export async function getDesktopGoogleIdToken(): Promise<NativeGoogleResult> {
+  const bridge = desktopBridge();
+  if (!bridge?.available) return { ok: false, code: 'CONFIG', message: 'desktop google not configured' };
+  const rawNonce = randomNonce();
+  try {
+    const hashed = await sha256Hex(rawNonce);
+    const res = await bridge.signIn(hashed);
+    if (res.ok === false) {
+      const code = (['CANCELLED', 'CONFIG'].includes(res.code) ? res.code : 'GOOGLE_ERROR') as 'CANCELLED' | 'CONFIG' | 'GOOGLE_ERROR';
+      return { ok: false, code, message: res.message };
+    }
+    return { ok: true, idToken: res.idToken, rawNonce };
+  } catch (e) {
+    return { ok: false, code: 'GOOGLE_ERROR', message: String((e as Error)?.message || e) };
+  }
 }
 
 /** نفس قاعدة صفحة التسجيل: أرقام فقط (9–15) مع + اختيارية */

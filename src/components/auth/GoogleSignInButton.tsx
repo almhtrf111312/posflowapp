@@ -5,12 +5,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/lib/sonner-bridge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth, type SignInResult } from '@/hooks/use-auth';
 import {
   GOOGLE_WEB_RETURN_FLAG,
   checkGoogleAccountAllowed,
+  completeGoogleSignup,
+  isValidSignupPhone,
   getNativeGoogleIdToken,
   googleErrorMessage,
   isGoogleSignInAvailable,
@@ -27,6 +32,8 @@ interface Props {
   stayLoggedIn?: boolean;
   /** يُستدعى بعد نجاح الدخول وفحوص الحساب — Login يكمل فحص الجهاز والتوجيه كالمعتاد */
   onSignedIn: (result: SignInResult) => void | Promise<void>;
+  /** حساب جوجل جديد أكمل بياناته → مسار التسجيل الجديد (معالج الإعداد) */
+  onNewAccount: () => void | Promise<void>;
   onBusyChange?: (busy: boolean) => void;
 }
 
@@ -41,10 +48,14 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, onBusyChange }: Props) {
+export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, onNewAccount, onBusyChange }: Props) {
   const { signInWithIdToken, signInWithSessionTokens } = useAuth();
   const [busy, setBusy] = useState(false);
   const handledReturn = useRef(false);
+  const [newUser, setNewUser] = useState<{ id: string; name: string } | null>(null);
+  const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [savingNew, setSavingNew] = useState(false);
 
   const setBusyBoth = (v: boolean) => { setBusy(v); onBusyChange?.(v); };
 
@@ -55,6 +66,14 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
       return;
     }
     const check = await checkGoogleAccountAllowed(result.data.user.id, result.data.user.identities ?? []);
+    if (check.reason === 'new_account') {
+      const meta = (result.data.user.user_metadata || {}) as { full_name?: string; name?: string };
+      const name = String(meta.full_name || meta.name || '');
+      setFullName(name);
+      setPhone('');
+      setNewUser({ id: result.data.user.id, name });
+      return;
+    }
     if (!check.allowed) {
       await supabase.auth.signOut();
       await nativeGoogleSignOut();
@@ -116,6 +135,36 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const cancelNewAccount = async () => {
+    setNewUser(null);
+    await supabase.auth.signOut();
+    await nativeGoogleSignOut();
+  };
+
+  const submitNewAccount = async () => {
+    if (!newUser || savingNew) return;
+    if (!fullName.trim()) {
+      toast.error('أدخل الاسم الكامل');
+      return;
+    }
+    if (!isValidSignupPhone(phone)) {
+      toast.error('رقم الهاتف غير صالح', { description: 'أرقام فقط (من 9 إلى 15 رقماً) بدون مسافات أو رموز.' });
+      return;
+    }
+    setSavingNew(true);
+    try {
+      const { error } = await completeGoogleSignup(newUser.id, phone, fullName);
+      if (error) {
+        toast.error('تعذّر إنشاء الحساب', { description: error.message.slice(0, 200) });
+        return;
+      }
+      setNewUser(null);
+      await onNewAccount();
+    } finally {
+      setSavingNew(false);
+    }
+  };
+
   if (!isGoogleSignInAvailable()) return null;
 
   const handleClick = async () => {
@@ -147,7 +196,7 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
     }
   };
 
-  return (
+  const button = (
     <Button
       type="button"
       variant="outline"
@@ -158,6 +207,42 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
       {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <GoogleIcon />}
       <span>المتابعة باستخدام Google</span>
     </Button>
+  );
+
+  const newAccountDialog = (
+    <Dialog open={!!newUser} onOpenChange={(open) => { if (!open && !savingNew) void cancelNewAccount(); }}>
+      <DialogContent className="max-w-sm" dir="rtl">
+        <DialogHeader>
+          <DialogTitle>إنشاء حساب جديد بجوجل</DialogTitle>
+          <DialogDescription>هذا البريد غير مسجّل بعد. أكمل بياناتك لإنشاء متجرك.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="g-name">الاسم الكامل</Label>
+            <Input id="g-name" value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={100} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="g-phone">رقم الهاتف</Label>
+            <Input id="g-phone" type="tel" inputMode="tel" dir="ltr" placeholder="+963..." value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={16} />
+          </div>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button type="button" onClick={submitNewAccount} disabled={savingNew} className="flex-1">
+            {savingNew ? <Loader2 className="w-4 h-4 animate-spin" /> : 'إنشاء الحساب'}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => void cancelNewAccount()} disabled={savingNew} className="flex-1">
+            إلغاء
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <>
+      {button}
+      {newAccountDialog}
+    </>
   );
 }
 

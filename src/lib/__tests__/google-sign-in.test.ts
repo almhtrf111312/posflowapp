@@ -13,7 +13,7 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
-import { isGoogleSignInAvailable, checkGoogleAccountAllowed, googleErrorMessage } from '../auth/google-sign-in';
+import { isGoogleSignInAvailable, checkGoogleAccountAllowed, googleErrorMessage, isValidSignupPhone } from '../auth/google-sign-in';
 
 describe('google sign-in (removable module)', () => {
   beforeEach(() => { platform.native = false; platform.name = 'web'; roleRow.value = null; });
@@ -40,8 +40,13 @@ describe('google sign-in (removable module)', () => {
 
   it('rejects a Google-only identity even if a default role was auto-created', async () => {
     roleRow.value = { role: 'admin' };
-    expect(await checkGoogleAccountAllowed('u1', [{ provider: 'google' }])).toEqual({ allowed: false, reason: 'no_account' });
+    expect(await checkGoogleAccountAllowed('u1', [{ provider: 'google' }])).toEqual({ allowed: false, reason: 'new_account' });
     expect((await checkGoogleAccountAllowed('u1', [{ provider: 'email' }, { provider: 'google' }])).allowed).toBe(true);
+  });
+
+  it('validates signup phone like the signup page', () => {
+    expect(isValidSignupPhone('+963912345678')).toBe(true);
+    expect(isValidSignupPhone('0912 345')).toBe(false);
   });
 
   it('cancel is silent', () => {

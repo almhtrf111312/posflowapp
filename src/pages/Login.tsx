@@ -435,6 +435,17 @@ export default function Login() {
     navigate('/');
   };
 
+  // حساب جوجل جديد: نفس مسار صفحة التسجيل (معالج الإعداد ثم ربط الجهاز داخل التطبيق)
+  const handleGoogleNewAccount = async () => {
+    try {
+      sessionStorage.setItem('hyperpos_just_signed_up', 'true');
+      localStorage.removeItem('hyperpos_setup_complete');
+    } catch {}
+    setIsLoading(false);
+    toast.success(t('auth.signupSuccess'));
+    navigate('/');
+  };
+
   const handleGoogleSignedIn = async (result: SignInResult) => {
     if (result.error) {
       setIsLoading(false);
@@ -658,7 +669,7 @@ export default function Login() {
           </Button>
 
           {/* Google sign-in (removable) — احذف هذا السطر لإخفاء الزر */}
-          <GoogleSignInButton disabled={isLoading} stayLoggedIn={stayLoggedIn} onSignedIn={handleGoogleSignedIn} />
+          <GoogleSignInButton disabled={isLoading} stayLoggedIn={stayLoggedIn} onSignedIn={handleGoogleSignedIn} onNewAccount={handleGoogleNewAccount} />
         </form>
       </div>
 

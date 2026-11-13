@@ -96,11 +96,10 @@ export async function nativeGoogleSignOut(): Promise<void> {
 export async function checkGoogleAccountAllowed(
   userId: string,
   identities?: ReadonlyArray<{ provider?: string | null }> | null,
-): Promise<{ allowed: boolean; reason?: 'no_account' | 'role' }> {
-  // حساب جوجل جديد يُنشأ تلقائياً مع دور افتراضي (trigger)، لذلك وجود الدور لا يكفي:
-  // الحساب الموجود فعلاً له هوية بريد/كلمة مرور، وجوجل تُربط به لاحقاً.
+): Promise<{ allowed: boolean; reason?: 'no_account' | 'role' | 'new_account' }> {
+  // حساب جوجل جديد (هوية جوجل فقط): يُعامل كتسجيل حساب جديد → إدخال الهاتف ثم معالج الإعداد
   if (identities && identities.length > 0 && !identities.some((i) => i?.provider === 'email')) {
-    return { allowed: false, reason: 'no_account' };
+    return { allowed: false, reason: 'new_account' };
   }
   const { data, error } = await supabase
     .from('user_roles')
@@ -156,4 +155,25 @@ export function parseDesktopCallback(rawUrl: string): DesktopCallback {
   const refreshToken = params.get('refresh_token');
   if (!accessToken || !refreshToken) return { ok: false, message: params.get('code') ? 'unexpected code flow' : 'missing tokens' };
   return { ok: true, accessToken, refreshToken };
+}
+
+/** نفس قاعدة صفحة التسجيل: أرقام فقط (9–15) مع + اختيارية */
+export function isValidSignupPhone(phone: string): boolean {
+  const cleaned = phone.trim();
+  if (!/^\+?\d+$/.test(cleaned)) return false;
+  const digits = cleaned.replace(/\D/g, '');
+  return digits.length >= 9 && digits.length <= 15;
+}
+
+/** إكمال حساب جوجل الجديد: حفظ الهاتف (والاسم) كما في التسجيل بالبريد */
+export async function completeGoogleSignup(userId: string, phone: string, fullName: string): Promise<{ error: Error | null }> {
+  const cleanPhone = phone.trim();
+  const name = fullName.trim().slice(0, 100);
+  const { error: metaError } = await supabase.auth.updateUser({ data: { phone: cleanPhone, ...(name ? { full_name: name } : {}) } });
+  if (metaError) return { error: new Error(metaError.message) };
+  await supabase
+    .from('profiles')
+    .update({ phone: cleanPhone, ...(name ? { full_name: name } : {}) } as never)
+    .eq('user_id', userId);
+  return { error: null };
 }

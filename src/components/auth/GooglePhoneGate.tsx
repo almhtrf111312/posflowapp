@@ -2,7 +2,7 @@
  * بوابة إكمال حساب جوجل الجديد (الاسم + الهاتف) — جزء من وحدة جوجل القابلة للإزالة.
  * تعمل على مستوى التطبيق كله، فلا تختفي عند انتقال التطبيق من شاشة الدخول، وتعود إذا أُعيد فتح التطبيق.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,13 @@ export function GooglePhoneGate() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsPhone]);
 
-  if (!needsPhone || !user) return null;
+  // قفل: بمجرد ظهور النافذة تبقى ثابتة حتى يُحفظ الرقم أو يخرج المستخدم،
+  // حتى لو تبدّلت كائنات الجلسة/المستخدم لحظياً (تحديث توكن، كاش، إعادة جلب) — كانت تُسبب إغلاقاً وفتحاً وإخفاء الكيبورد.
+  const armed = useRef(false);
+  if (needsPhone) armed.current = true;
+  const phoneSaved = !!String(meta.phone || '').trim();
+  if (!user || phoneSaved) armed.current = false;
+  if (!user || !(needsPhone || armed.current)) return null;
 
   const cancel = async () => {
     if (saving) return;
@@ -102,7 +108,7 @@ export function GooglePhoneGate() {
 
   return (
     <Dialog open onOpenChange={() => { /* لا يُغلق بالنقر خارجه؛ الإلغاء يخرج من الحساب */ }}>
-      <DialogContent className="max-w-sm z-[10000]" dir="rtl" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+      <DialogContent className="max-w-sm z-[10000] data-[state=open]:animate-none data-[state=closed]:animate-none" dir="rtl" onInteractOutside={(e) => e.preventDefault()} onOpenAutoFocus={(e) => e.preventDefault()} onCloseAutoFocus={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>إكمال إنشاء الحساب</DialogTitle>
           <DialogDescription>أدخل اسمك ورقم هاتفك لإنشاء متجرك.</DialogDescription>

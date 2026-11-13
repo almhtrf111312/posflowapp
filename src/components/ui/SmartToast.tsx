@@ -105,7 +105,26 @@ export interface ParsedToastDetails {
   statusBadge?: React.ReactNode;
 }
 
-function resolveToastDetails(toast: SmartToastData): ParsedToastDetails {
+// تنظيف الحشو: إزالة "بنجاح" ورموز ✓ والإيموجي الزائدة والتنقيط الطرفي، لمقارنة النص المكرر
+const stripFiller = (s: string): string =>
+  s.replace(/[✓✔✅🎉]/g, '').replace(/\s*بنجاح\s*/g, ' ').replace(/\s+/g, ' ').replace(/^[\s.:،\-–—]+|[\s.:،\-–—]+$/g, '').trim();
+const norm = (s: string): string => stripFiller(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+// هل الوصف يكرر العنوان (متطابق أو أحدهما داخل الآخر)؟
+const isRedundant = (a?: unknown, b?: unknown): boolean => {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const x = norm(a), y = norm(b);
+  if (!x || !y) return true;
+  return x === y || x.includes(y) || y.includes(x);
+};
+
+function resolveToastDetails(rawToast: SmartToastData): ParsedToastDetails {
+  const toast: SmartToastData = {
+    ...rawToast,
+    title: typeof rawToast.title === 'string' ? (stripFiller(rawToast.title) || rawToast.title) : rawToast.title,
+    description: typeof rawToast.description === 'string' ? stripFiller(rawToast.description) : rawToast.description,
+  };
+  // وصف يكرر العنوان لا قيمة له
+  if (isRedundant(toast.description, toast.title)) toast.description = undefined;
   const type = toast.type || 'success';
   let cat: ParsedToastDetails['category'] = 'general';
   const str = `${typeof toast.title === 'string' ? toast.title : ''} ${typeof toast.subtitle === 'string' ? toast.subtitle : ''} ${typeof toast.description === 'string' ? toast.description : ''} ${toast.operation || ''}`.toLowerCase();
@@ -140,27 +159,25 @@ function resolveToastDetails(toast: SmartToastData): ParsedToastDetails {
 
   // 1. إضافة أو تعديل منتج
   if (str.includes('إضافة منتج') || str.includes('تم حفظ المنتج') || str.includes('إضافة الصنف') || toast.operation === 'product_added') {
-    if (!formattedItemName && toast.description && typeof toast.description === 'string' && !toast.description.includes('نجاح')) {
+    if (!formattedItemName && toast.description && typeof toast.description === 'string') {
       formattedItemName = `📦 ${toast.description}`;
+      formattedDescription = undefined;
     } else if (formattedItemName) {
       formattedItemName = `📦 ${formattedItemName}`;
     }
   } else if (str.includes('تعديل منتج') || str.includes('تحديث بيانات') || str.includes('تعديل الصنف') || toast.operation === 'product_updated') {
     if (!formattedItemName && toast.description && typeof toast.description === 'string') {
-      formattedItemName = `✏️ تم تحديث بيانات ${toast.description}`;
+      formattedItemName = `✏️ ${toast.description}`;
+      formattedDescription = undefined;
     } else if (formattedItemName) {
-      formattedItemName = `✏️ تم تحديث بيانات ${formattedItemName}`;
+      formattedItemName = `✏️ ${formattedItemName}`;
     }
   } else if (cat === 'sync' || str.includes('مزامنة')) {
-    if (!formattedDescription && !formattedItemName) {
-      formattedItemName = '☁️ تم التزامن مع السحابة بنجاح';
-    } else if (formattedDescription && typeof formattedDescription === 'string') {
-      formattedItemName = `☁️ ${formattedDescription}`;
-    }
+    // لا حشو: العنوان وحده كافٍ، والوصف (إن وُجد) يُعرض مرة واحدة فقط
+
   } else if (cat === 'cash_sale' || cat === 'debt_sale' || str.includes('فاتورة')) {
-    if (invoiceNum && !formattedItemName && !formattedDescription) {
-      formattedItemName = `🧾 فاتورة #${invoiceNum}`;
-    }
+    // رقم الفاتورة يظهر في الشارة بجانب العنوان، فلا نكرره هنا
+
   }
 
   return {

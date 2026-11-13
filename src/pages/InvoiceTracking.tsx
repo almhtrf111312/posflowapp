@@ -204,7 +204,7 @@ export default function InvoiceTracking() {
     );
     previousKeys.current.forEach(key => {
       if (!currentPendingKeys.has(key)) {
-        toast.success('تمت مزامنة الفاتورة بنجاح', { id: `tracking-done-${key}` });
+        // لا إشعار نجاح تلقائي: الفاتورة تظهر مزامنة في القائمة نفسها
         refreshCloud();
       }
     });

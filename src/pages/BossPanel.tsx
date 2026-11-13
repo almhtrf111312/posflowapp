@@ -245,6 +245,13 @@ export default function BossPanel() {
 
   // Edit Name Dialog
   const [editNameDialog, setEditNameDialog] = useState<{ owner: Owner } | null>(null);
+  // تعديل الترخيص وحظر المستخدم (حظر رقم الجهاز)
+  const [licenseEditDialog, setLicenseEditDialog] = useState<{ owner: Owner } | null>(null);
+  const [licenseEdit, setLicenseEdit] = useState({ addDays: '0', maxProducts: '', maxCashiers: '', currentExpiry: '' });
+  const [banDialog, setBanDialog] = useState<{ owner: Owner } | null>(null);
+  const [banReason, setBanReason] = useState('');
+  const [isBanOrLicenseBusy, setIsBanOrLicenseBusy] = useState(false);
+  const [bannedUserIds, setBannedUserIds] = useState<Set<string>>(new Set());
   const [newName, setNewName] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
 
@@ -928,6 +935,117 @@ export default function BossPanel() {
     } catch (error: any) {
       console.error('Error deleting owner:', error);
       toast.error(error.message || 'فشل في حذف المالك');
+    }
+  };
+
+  const loadBannedUsers = async () => {
+    try {
+      const { data, error } = await supabase.from('banned_devices' as any).select('banned_user_id');
+      if (error) return;
+      setBannedUserIds(new Set(((data || []) as any[]).map((r) => r.banned_user_id).filter(Boolean)));
+    } catch { /* الجدول غير موجود بعد */ }
+  };
+
+  useEffect(() => {
+    if (isBoss) void loadBannedUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBoss]);
+
+  const openLicenseEdit = async (owner: Owner) => {
+    setLicenseEditDialog({ owner });
+    setLicenseEdit({ addDays: '0', maxProducts: '', maxCashiers: '', currentExpiry: '' });
+    try {
+      const { data } = await supabase
+        .from('app_licenses')
+        .select('max_products, max_cashiers, expires_at')
+        .eq('user_id', owner.user_id)
+        .maybeSingle();
+      if (data) {
+        setLicenseEdit({
+          addDays: '0',
+          maxProducts: data.max_products != null ? String(data.max_products) : '',
+          maxCashiers: data.max_cashiers != null ? String(data.max_cashiers) : '',
+          currentExpiry: data.expires_at || '',
+        });
+      }
+    } catch { /* نترك الحقول فارغة */ }
+  };
+
+  const handleSaveLicenseEdit = async () => {
+    if (!licenseEditDialog) return;
+    const addDays = parseInt(licenseEdit.addDays || '0', 10);
+    if (!Number.isFinite(addDays) || addDays < -3650 || addDays > 3650) {
+      toast.error('عدد الأيام غير صحيح (بين -3650 و 3650)');
+      return;
+    }
+    const maxProducts = licenseEdit.maxProducts.trim() ? parseInt(licenseEdit.maxProducts, 10) : null;
+    const maxCashiers = licenseEdit.maxCashiers.trim() ? parseInt(licenseEdit.maxCashiers, 10) : null;
+    if ((maxProducts !== null && (!Number.isFinite(maxProducts) || maxProducts < 1)) ||
+        (maxCashiers !== null && (!Number.isFinite(maxCashiers) || maxCashiers < 1))) {
+      toast.error('الحدود يجب أن تكون أرقاماً أكبر من صفر');
+      return;
+    }
+    setIsBanOrLicenseBusy(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)('boss_update_license', {
+        p_target_user_id: licenseEditDialog.owner.user_id,
+        p_add_days: addDays,
+        p_max_products: maxProducts,
+        p_max_cashiers: maxCashiers,
+      });
+      if (error) throw error;
+      if (!(data as any)?.success) {
+        toast.error((data as any)?.error || 'تعذّر تعديل الترخيص');
+        return;
+      }
+      toast.success('تم تعديل الترخيص');
+      setLicenseEditDialog(null);
+      fetchData();
+    } catch (e: any) {
+      toast.error('فشل تعديل الترخيص: ' + (e?.message || ''));
+    } finally {
+      setIsBanOrLicenseBusy(false);
+    }
+  };
+
+  const handleBanUser = async () => {
+    if (!banDialog) return;
+    setIsBanOrLicenseBusy(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)('boss_ban_user', {
+        p_target_user_id: banDialog.owner.user_id,
+        p_reason: banReason.trim() || null,
+      });
+      if (error) throw error;
+      if (!(data as any)?.success) {
+        toast.error((data as any)?.error || 'تعذّر حظر المستخدم');
+        return;
+      }
+      toast.success((data as any)?.message || 'تم الحظر');
+      setBanDialog(null);
+      setBanReason('');
+      void loadBannedUsers();
+      fetchData();
+    } catch (e: any) {
+      toast.error('فشل الحظر: ' + (e?.message || ''));
+    } finally {
+      setIsBanOrLicenseBusy(false);
+    }
+  };
+
+  const handleUnbanUser = async (owner: Owner) => {
+    try {
+      const { data, error } = await (supabase.rpc as any)('boss_unban_user', { p_target_user_id: owner.user_id });
+      if (error) throw error;
+      if (!(data as any)?.success) {
+        toast.error((data as any)?.error || 'تعذّر رفع الحظر');
+        return;
+      }
+      toast.success('تم رفع الحظر عن الجهاز');
+      void loadBannedUsers();
+      fetchData();
+    } catch (e: any) {
+      toast.error('فشل رفع الحظر: ' + (e?.message || ''));
     }
   };
 
@@ -2143,6 +2261,10 @@ export default function BossPanel() {
                                       <CheckCircle className="w-4 h-4" />
                                       تفعيل مباشر باختيار باقة
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => void openLicenseEdit(owner)}>
+                                      <Pencil className="w-4 h-4" />
+                                      تعديل الترخيص
+                                    </DropdownMenuItem>
                                     {/* «تفعيل عن بعد» بالأكواد اليدوية مُلغى: التفعيل من «تفعيل مباشر» فقط */}
                                     {isLicenseValid && (
                                       <DropdownMenuItem
@@ -2182,6 +2304,23 @@ export default function BossPanel() {
                                     )}
 
                                     <DropdownMenuSeparator />
+                                    {bannedUserIds.has(owner.user_id) ? (
+                                      <DropdownMenuItem
+                                        onClick={() => void handleUnbanUser(owner)}
+                                        className="text-emerald-600 dark:text-emerald-400 font-medium cursor-pointer"
+                                      >
+                                        <RotateCcw className="w-4 h-4" />
+                                        رفع الحظر عن المستخدم
+                                      </DropdownMenuItem>
+                                    ) : (
+                                      <DropdownMenuItem
+                                        onClick={() => { setBanDialog({ owner }); setBanReason(''); }}
+                                        className="text-destructive focus:text-destructive font-medium cursor-pointer"
+                                      >
+                                        <Ban className="w-4 h-4" />
+                                        حظر المستخدم
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem
                                       onClick={() => setDeleteConfirm({ type: 'owner', id: owner.user_id, name: owner.full_name || 'هذا المستخدم' })}
                                       className="text-destructive focus:text-destructive"
@@ -3562,6 +3701,73 @@ export default function BossPanel() {
               <Button onClick={handleSaveName} disabled={isSavingName || !newName.trim()}>
                 {isSavingName && <RefreshCw className="w-4 h-4 animate-spin" />}
                 حفظ
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* تعديل الترخيص (أيام/حد المنتجات/حد الكاشيرات) */}
+        <Dialog open={!!licenseEditDialog} onOpenChange={(o) => { if (!o) setLicenseEditDialog(null); }}>
+          <DialogContent className="max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="w-5 h-5" />
+                تعديل الترخيص
+              </DialogTitle>
+              <DialogDescription>
+                {licenseEditDialog?.owner.email || licenseEditDialog?.owner.full_name || 'المستخدم'}
+                {licenseEdit.currentExpiry && ` — ينتهي: ${new Date(licenseEdit.currentExpiry).toLocaleDateString('ar-EG')}`}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label>إضافة أيام (سالب للإنقاص)</Label>
+                <Input type="number" inputMode="numeric" value={licenseEdit.addDays}
+                  onChange={(e) => setLicenseEdit({ ...licenseEdit, addDays: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>حد المنتجات</Label>
+                <Input type="number" inputMode="numeric" value={licenseEdit.maxProducts}
+                  onChange={(e) => setLicenseEdit({ ...licenseEdit, maxProducts: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>حد الكاشيرات</Label>
+                <Input type="number" inputMode="numeric" value={licenseEdit.maxCashiers}
+                  onChange={(e) => setLicenseEdit({ ...licenseEdit, maxCashiers: e.target.value })} />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setLicenseEditDialog(null)}>إلغاء</Button>
+              <Button onClick={handleSaveLicenseEdit} disabled={isBanOrLicenseBusy}>
+                {isBanOrLicenseBusy && <RefreshCw className="w-4 h-4 animate-spin" />}
+                حفظ
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* حظر المستخدم: حظر رقم الجهاز وإيقاف الترخيص */}
+        <Dialog open={!!banDialog} onOpenChange={(o) => { if (!o) setBanDialog(null); }}>
+          <DialogContent className="max-w-md" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <Ban className="w-5 h-5" />
+                حظر المستخدم
+              </DialogTitle>
+              <DialogDescription>
+                سيُحظر رقم الجهاز المرتبط بحساب {banDialog?.owner.email || banDialog?.owner.full_name || 'المستخدم'} ويُوقف ترخيصه،
+                فلا يدخل من هذا الجهاز بأي إيميل وتظهر له رسالة «جهازك محظور، تواصل مع المطور». يمكنك رفع الحظر لاحقاً.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5 py-2">
+              <Label>سبب الحظر (اختياري)</Label>
+              <Input value={banReason} onChange={(e) => setBanReason(e.target.value)} placeholder="مثال: تلاعب بالترخيص" />
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setBanDialog(null)}>إلغاء</Button>
+              <Button variant="destructive" onClick={handleBanUser} disabled={isBanOrLicenseBusy}>
+                {isBanOrLicenseBusy && <RefreshCw className="w-4 h-4 animate-spin" />}
+                تأكيد الحظر
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -142,7 +142,8 @@ const SAMPLE_ID_PREFIX = '5a0e7c10-7e51-4c2a-9b1d-';
  */
 async function purgeLegacySampleCatalog(): Promise<void> {
   try {
-    if (localStorage.getItem(SAMPLE_PURGED_KEY) === '1') return;
+    // يُعاد الفحص كلما زُرع كتالوج الضيف (علامة الإصدار موجودة): تسجيل الدخول بعد جلسة ديمو لا يترك منتجات افتراضية
+    if (localStorage.getItem(SAMPLE_PURGED_KEY) === '1' && !localStorage.getItem(CATALOG_VERSION_KEY)) return;
     const isSample = (x: { id?: unknown }) => String(x?.id || '').startsWith(SAMPLE_ID_PREFIX);
 
     const { loadProducts } = await import('@/lib/products-store');

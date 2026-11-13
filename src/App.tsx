@@ -13,6 +13,7 @@ import { AppLockOverlay } from "./components/auth/AppLockOverlay";
 import { MandatoryPinSetupModal } from "./components/auth/MandatoryPinSetupModal";
 import { GooglePhoneGate } from "./components/auth/GooglePhoneGate"; // Google sign-in (removable)
 import { TelegramLinkPrompt } from "./components/auth/TelegramLinkPrompt";
+import { DeviceBanGate } from "./components/auth/DeviceBanGate";
 import { LanguageProvider, useLanguage } from "./hooks/use-language";
 import { ThemeProvider } from "./hooks/use-theme";
 import { LicenseProvider } from "./hooks/use-license";
@@ -555,6 +556,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <HashRouter>
+        <DeviceBanGate>
         <LanguageProvider>
           <ThemeProvider>
             <AuthProvider>
@@ -587,6 +589,7 @@ const App = () => (
             </AuthProvider>
           </ThemeProvider>
         </LanguageProvider>
+        </DeviceBanGate>
       </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>

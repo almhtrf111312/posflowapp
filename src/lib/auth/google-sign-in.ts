@@ -3,7 +3,8 @@
  *
  * للإيقاف السريع: اجعل GOOGLE_SIGN_IN_ENABLED = false (الزر يختفي فوراً).
  * للإزالة الكاملة: احذف هذا الملف + GoogleSignInButton.tsx + سطرين في Login.tsx
- * + FlowPosGoogleAuthPlugin.java وسطر تسجيله في MainActivity + تبعيات googleid في android/app/build.gradle.
+ * + FlowPosGoogleAuthPlugin.java وسطر تسجيله في MainActivity + تبعيات googleid في android/app/build.gradle
+ * + كتلة "Google sign-in" في electron/main.js و protocols في electron/package.json.
  */
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +26,7 @@ interface FlowPosGoogleAuthPlugin {
 
 const NativeGoogle = registerPlugin<FlowPosGoogleAuthPlugin>('FlowPosGoogleAuth');
 
-const isElectron = (): boolean =>
+export const isElectron = (): boolean =>
   typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent);
 
 export const isNativeAndroid = (): boolean =>
@@ -34,7 +35,7 @@ export const isNativeAndroid = (): boolean =>
 /** هل يظهر الزر على هذه المنصة؟ */
 export function isGoogleSignInAvailable(): boolean {
   if (!GOOGLE_SIGN_IN_ENABLED) return false;
-  if (isElectron()) return false; // ويندوز: غير مدعوم حالياً
+  if (isElectron()) return true; // ويندوز: المتصفح الخارجي ثم العودة عبر flowpos://
   if (Capacitor.isNativePlatform()) return isNativeAndroid() && GOOGLE_WEB_CLIENT_ID.length > 0;
   return true; // الويب: OAuth عبر المتصفح نفسه
 }
@@ -112,4 +113,37 @@ export function googleErrorMessage(code: string): string {
     case 'role': return 'الدخول بجوجل متاح لمالك المتجر فقط. استخدم البريد وكلمة المرور';
     default: return 'تعذّر تسجيل الدخول بجوجل، استخدم البريد وكلمة المرور';
   }
+}
+
+export const DESKTOP_REDIRECT_URL = 'flowpos://auth-callback';
+
+/** الكمبيوتر: يفتح صفحة جوجل في المتصفح الافتراضي (جوجل تمنع الدخول داخل نافذة التطبيق). */
+export async function startDesktopGoogleSignIn(): Promise<{ error: Error | null }> {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: DESKTOP_REDIRECT_URL, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+  });
+  if (error || !data?.url) return { error: new Error(error?.message || 'no auth url') };
+  window.open(data.url, '_blank'); // Electron يحوّلها للمتصفح الخارجي
+  return { error: null };
+}
+
+export type DesktopCallback =
+  | { ok: true; accessToken: string; refreshToken: string }
+  | { ok: false; message: string };
+
+/** يقرأ الرموز من رابط العودة (#access_token=...&refresh_token=...) */
+export function parseDesktopCallback(rawUrl: string): DesktopCallback {
+  if (!rawUrl || !rawUrl.startsWith(DESKTOP_REDIRECT_URL)) return { ok: false, message: 'invalid callback' };
+  const hashIndex = rawUrl.indexOf('#');
+  const queryIndex = rawUrl.indexOf('?');
+  const params = new URLSearchParams();
+  if (queryIndex >= 0) new URLSearchParams(rawUrl.slice(queryIndex + 1, hashIndex >= 0 && hashIndex > queryIndex ? hashIndex : undefined)).forEach((v, k) => params.set(k, v));
+  if (hashIndex >= 0) new URLSearchParams(rawUrl.slice(hashIndex + 1)).forEach((v, k) => params.set(k, v));
+  const err = params.get('error_description') || params.get('error');
+  if (err) return { ok: false, message: err };
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  if (!accessToken || !refreshToken) return { ok: false, message: params.get('code') ? 'unexpected code flow' : 'missing tokens' };
+  return { ok: true, accessToken, refreshToken };
 }

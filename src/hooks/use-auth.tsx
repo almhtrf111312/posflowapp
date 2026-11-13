@@ -121,6 +121,7 @@ interface AuthContextType {
   stayLoggedIn: boolean;
   signIn: (email: string, password: string, stayLoggedIn?: boolean) => Promise<SignInResult>;
   signInWithIdToken: (token: string, nonce?: string, stayLoggedIn?: boolean) => Promise<SignInResult>;
+  signInWithSessionTokens: (accessToken: string, refreshToken: string, stayLoggedIn?: boolean) => Promise<SignInResult>;
   signUp: (email: string, password: string, fullName: string, phone?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -626,6 +627,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { method: 'google' },
     );
 
+  // دخول جوجل على الكمبيوتر: الرموز تعود من المتصفح عبر flowpos://auth-callback
+  const signInWithSessionTokens = (access_token: string, refresh_token: string, rememberMe: boolean = true): Promise<SignInResult> =>
+    completeSignIn(
+      () => supabase.auth.setSession({ access_token, refresh_token }),
+      rememberMe,
+      { method: 'google-desktop' },
+    );
+
   const completeSignIn = async (
     authCall: () => Promise<{ data: { user: User | null; session: Session | null }; error: { message: string } | null }>,
     rememberMe: boolean,
@@ -781,6 +790,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       stayLoggedIn,
       signIn,
       signInWithIdToken,
+      signInWithSessionTokens,
       signUp,
       signOut,
       refreshProfile,
@@ -800,6 +810,7 @@ const SAFE_AUTH_FALLBACK: AuthContextType = {
   stayLoggedIn: false,
   signIn: async () => ({ error: new Error('جاري تهيئة المصادقة...') }),
   signInWithIdToken: async () => ({ error: new Error('جاري تهيئة المصادقة...') }),
+  signInWithSessionTokens: async () => ({ error: new Error('جاري تهيئة المصادقة...') }),
   signUp: async () => ({ error: new Error('جاري تهيئة المصادقة...') }),
   signOut: async () => {},
   refreshProfile: async () => {},

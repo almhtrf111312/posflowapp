@@ -5,6 +5,47 @@ const url = require('url');
 
 let mainWindow;
 
+// ── Google sign-in (removable): رابط العودة flowpos://auth-callback من المتصفح ──
+const OAUTH_PROTOCOL = 'flowpos';
+let pendingAuthUrl = null;
+
+if (process.defaultApp && process.argv.length >= 2) {
+  app.setAsDefaultProtocolClient(OAUTH_PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+} else {
+  app.setAsDefaultProtocolClient(OAUTH_PROTOCOL);
+}
+
+function findAuthUrl(argv) {
+  return (argv || []).find((a) => typeof a === 'string' && a.startsWith(OAUTH_PROTOCOL + '://auth-callback')) || null;
+}
+
+function deliverAuthUrl(authUrl) {
+  if (!authUrl) return;
+  if (!mainWindow || mainWindow.webContents.isLoading()) {
+    pendingAuthUrl = authUrl;
+    return;
+  }
+  const payload = JSON.stringify(authUrl);
+  mainWindow.webContents
+    .executeJavaScript(`window.__flowposOAuthUrl=${payload};window.dispatchEvent(new CustomEvent('flowpos-oauth-callback',{detail:${payload}}));`)
+    .catch(() => {});
+  pendingAuthUrl = null;
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  pendingAuthUrl = findAuthUrl(process.argv);
+  app.on('second-instance', (_event, argv) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    deliverAuthUrl(findAuthUrl(argv));
+  });
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -196,6 +237,10 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
+  });
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (pendingAuthUrl) deliverAuthUrl(pendingAuthUrl);
   });
 
   mainWindow.on('closed', () => {

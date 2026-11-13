@@ -22,7 +22,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "../resources/icon.png",
@@ -39,6 +41,14 @@
       "installerHeaderIcon": "../resources/icon.png",
       "differentialPackage": false,
       "packElevate": false
-    }
+    },
+    "protocols": [
+      {
+        "name": "FlowPOS Pro",
+        "schemes": [
+          "flowpos"
+        ]
+      }
+    ]
   }
 }

@@ -122,7 +122,10 @@ jobs:
               "createDesktopShortcut": true,
               "createStartMenuShortcut": true,
               "shortcutName": "FlowPOS Pro"
-            }
+            },
+            "protocols": [
+              { "name": "FlowPOS Pro", "schemes": ["flowpos"] }
+            ]
           }
           EOF
 

@@ -319,6 +319,7 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
         dashboardDesign: localDesign,
         ...(parsed?.appearanceSettings || {}),
         settingsLayout: localStorage.getItem('settings_layout_mode') || parsed?.appearanceSettings?.settingsLayout || 'grid',
+        posViewMode: localStorage.getItem('pos_view_mode') || parsed?.appearanceSettings?.posViewMode || 'grid',
       },
       appFont: localFont,
       uiScale: localScale,
@@ -768,6 +769,14 @@ export const applyCloudStoreSettings = (cloudSettings: any) => {
     if (profile.appearanceSettings && typeof profile.appearanceSettings === 'object') {
       const layout = profile.appearanceSettings.settingsLayout;
       if (layout === 'grid' || layout === 'list') localStorage.setItem('settings_layout_mode', layout);
+      // طريقة عرض المنتجات في نقطة البيع (الحجم المختار) تتبع الحساب على كل الأجهزة
+      const posView = profile.appearanceSettings.posViewMode;
+      if (posView === 'grid' || posView === 'dense' || posView === 'list' || posView === 'compact') {
+        if (localStorage.getItem('pos_view_mode') !== posView) {
+          localStorage.setItem('pos_view_mode', posView);
+          window.dispatchEvent(new CustomEvent('hp-pos-view-mode-changed', { detail: posView }));
+        }
+      }
       const current = loadUnifiedStoreSettings();
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
         ...current, appearanceSettings: { ...current.appearanceSettings, ...profile.appearanceSettings },

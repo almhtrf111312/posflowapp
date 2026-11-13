@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { isLocalOnlyMode } from '@/lib/subscription-lock';
 /**
  * Sync Recovery - FlowPOS Pro
  * ===========================
@@ -110,6 +111,8 @@ export const getStuckOperations = (): StuckOperation[] => {
   const queue = loadQueue();
   const queueOps = queue
     .filter(op => op.status !== 'completed')
+    // إعدادات المتجر المحفوظة محلياً في وضع التجربة تنتظر الاشتراك عمداً — ليست عملية عالقة ولا تُنبَّه كخطأ
+    .filter(op => !(op.type === 'store_settings_update' && op.status === 'pending' && isLocalOnlyMode()))
     .map(op => {
       const bundle = getBundle(op);
       const opId = getOperationId(op);

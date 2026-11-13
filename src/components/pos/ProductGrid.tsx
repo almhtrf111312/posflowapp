@@ -10,6 +10,8 @@ import { DualUnitDisplayCompact } from '@/components/products/DualUnitDisplay';
 import { ProductDetailsDialog } from '@/components/pos/ProductDetailsDialog';
 import { toast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
+import { saveUnifiedStoreSettings } from '@/lib/store-settings-sync';
+import { isGuestDemoMode } from '@/lib/demo-data';
 import { getCurrentStoreType, isNoInventoryMode } from '@/lib/store-type-config';
 
 interface Product {
@@ -110,13 +112,23 @@ export const ProductGrid = memo(function ProductGrid({
     );
   };
 
+  // تغيّر الحجم من جهاز آخر (مزامنة الإعدادات)
+  useEffect(() => {
+    const onRemote = (e: Event) => {
+      const v = (e as CustomEvent<string>).detail;
+      if (v === 'grid' || v === 'dense' || v === 'list' || v === 'compact') setViewMode(v);
+    };
+    window.addEventListener('hp-pos-view-mode-changed', onRemote);
+    return () => window.removeEventListener('hp-pos-view-mode-changed', onRemote);
+  }, []);
+
   const cycleViewMode = () => {
-    setViewMode((prev) => {
-      if (prev === 'grid') return 'dense';
-      if (prev === 'dense') return 'list';
-      if (prev === 'list') return 'compact';
-      return 'grid';
-    });
+    const next: ViewMode = viewMode === 'grid' ? 'dense' : viewMode === 'dense' ? 'list' : viewMode === 'list' ? 'compact' : 'grid';
+    setViewMode(next);
+    try {
+      localStorage.setItem('pos_view_mode', next);
+      if (!isGuestDemoMode()) void saveUnifiedStoreSettings({ appearanceSettings: { posViewMode: next } });
+    } catch { /* ignore */ }
   };
 
   // ✅ استعادة الباركود المعلق — يتم التعامل معها في POS.tsx الآن

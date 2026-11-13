@@ -11,6 +11,7 @@ import { AuthProvider } from "./hooks/use-auth";
 import { AppLockProvider, useAppLock } from "./hooks/use-app-lock";
 import { AppLockOverlay } from "./components/auth/AppLockOverlay";
 import { MandatoryPinSetupModal } from "./components/auth/MandatoryPinSetupModal";
+import { GooglePhoneGate } from "./components/auth/GooglePhoneGate"; // Google sign-in (removable)
 import { LanguageProvider, useLanguage } from "./hooks/use-language";
 import { ThemeProvider } from "./hooks/use-theme";
 import { LicenseProvider } from "./hooks/use-license";
@@ -492,6 +493,7 @@ const PageFallback = () => {
     <>
       <AppLockOverlay />
       <MandatoryPinSetupModal />
+      <GooglePhoneGate />
       <div id="app-main-layout" {...({ inert: shouldBeInert ? '' : undefined } as Record<string, unknown>)} className="contents">
         {isDebugClick && <ClickProbe />}
       <ExitConfirmDialog />

@@ -13,7 +13,7 @@ vi.mock('@/integrations/supabase/client', () => ({
   },
 }));
 
-import { isGoogleSignInAvailable, checkGoogleAccountAllowed, googleErrorMessage, isValidSignupPhone } from '../auth/google-sign-in';
+import { isGoogleSignInAvailable, checkGoogleAccountAllowed, googleErrorMessage, isValidSignupPhone, isGoogleOnlyUser } from '../auth/google-sign-in';
 
 describe('google sign-in (removable module)', () => {
   beforeEach(() => { platform.native = false; platform.name = 'web'; roleRow.value = null; });
@@ -47,6 +47,14 @@ describe('google sign-in (removable module)', () => {
   it('validates signup phone like the signup page', () => {
     expect(isValidSignupPhone('+963912345678')).toBe(true);
     expect(isValidSignupPhone('0912 345')).toBe(false);
+  });
+
+  it('detects Google-only users (gate shows only for them)', () => {
+    expect(isGoogleOnlyUser({ identities: [{ provider: 'google' }] })).toBe(true);
+    expect(isGoogleOnlyUser({ identities: [{ provider: 'email' }, { provider: 'google' }] })).toBe(false);
+    expect(isGoogleOnlyUser({ app_metadata: { providers: ['google'] } })).toBe(true);
+    expect(isGoogleOnlyUser({ app_metadata: { providers: ['email'] } })).toBe(false);
+    expect(isGoogleOnlyUser(null)).toBe(false);
   });
 
   it('cancel is silent', () => {

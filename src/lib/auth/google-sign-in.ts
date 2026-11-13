@@ -177,3 +177,16 @@ export async function completeGoogleSignup(userId: string, phone: string, fullNa
     .eq('user_id', userId);
   return { error: null };
 }
+
+/** هل الحساب جوجل فقط (لا هوية بريد/كلمة مرور)؟ */
+export function isGoogleOnlyUser(user: {
+  identities?: ReadonlyArray<{ provider?: string | null }> | null;
+  app_metadata?: { providers?: unknown } | null;
+} | null | undefined): boolean {
+  if (!user) return false;
+  const fromIdentities = (user.identities || []).map((i) => i?.provider).filter(Boolean) as string[];
+  const rawProviders = user.app_metadata?.providers;
+  const fromMeta = Array.isArray(rawProviders) ? (rawProviders as unknown[]).filter((p): p is string => typeof p === 'string') : [];
+  const providers = fromIdentities.length > 0 ? fromIdentities : fromMeta;
+  return providers.length > 0 && !providers.includes('email');
+}

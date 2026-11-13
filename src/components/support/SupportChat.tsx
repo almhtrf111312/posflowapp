@@ -122,6 +122,9 @@ export function BossConversationList({
             <p className="text-sm font-semibold text-foreground truncate">
               {c.user_name || c.user_email || 'مجهول'}
             </p>
+            {c.user_email && (
+              <p className="text-[11px] text-foreground/80 truncate font-mono" dir="ltr">{c.user_email}</p>
+            )}
             {c.store_name && (
               <p className="text-[11px] text-muted-foreground truncate">{c.store_name}</p>
             )}
@@ -597,7 +600,7 @@ export function SupportChat() {
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {isBoss
                     ? bossView === 'chat'
-                      ? selectedConv?.store_name || selectedConv?.user_email || ''
+                      ? [selectedConv?.user_email, selectedConv?.store_name].filter(Boolean).join(' · ')
                       : 'اختر محادثة للرد'
                     : 'سنرد عليك في أقرب وقت'}
                 </p>

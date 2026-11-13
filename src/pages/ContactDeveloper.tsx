@@ -26,7 +26,7 @@ export default function ContactDeveloper() {
   const licenseState = (license as any)?.licenseState || license;
   const [info, setInfo] = useState<DevInfo>({});
   const isDirectChatOpen = Boolean((location.state as any)?.openChat);
-  const [chatOpen, setChatOpen] = useState(isDirectChatOpen || isBoss);
+  const [chatOpen, setChatOpen] = useState(isDirectChatOpen || isBoss || ['revoked','inactive','owner_inactive'].includes(supportReason || ''));
   const [rel, setRel] = useState<ReleaseConfig>(getCachedReleaseConfig());
   useEffect(() => { fetchReleaseConfig().then(setRel).catch(() => {}); }, []);
 
@@ -99,6 +99,10 @@ export default function ContactDeveloper() {
     }
   })();
 
+  const phoneValue = (info.phone || '').trim();
+  const phoneIsLink = /^(https?:\/\/|t\.me\/|telegram\.me\/|wa\.me\/|@)/i.test(phoneValue);
+  const phoneUrl = phoneValue.startsWith('@') ? `https://t.me/${phoneValue.slice(1)}` : (/^https?:\/\//i.test(phoneValue) ? phoneValue : `https://${phoneValue}`);
+  const phoneDigits = phoneValue.replace(/[^\d+]/g, '');
   const site = info.website?.trim();
   const siteUrl = site ? (site.startsWith('http') ? site : `https://${site}`) : '';
 
@@ -137,8 +141,8 @@ export default function ContactDeveloper() {
             تحديد الكل كمقروء وتصفير الشارة
           </Button>
         </div>
-      ) : (
-        /* للعملاء العاديين: بطاقة تجديد وترقية الاشتراك */
+      ) : (supportReason === 'revoked' || supportReason === 'inactive' || supportReason === 'owner_inactive') ? null : (
+        /* للعملاء العاديين: بطاقة تجديد وترقية الاشتراك (لا تُعرض للحساب الملغى/المحظور) */
         <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
@@ -224,11 +228,20 @@ export default function ContactDeveloper() {
           </p>
         )}
         <div className="flex flex-wrap justify-center gap-2 pt-1">
-          {info.phone?.trim() && (
-            <a href={`tel:${info.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm hover:bg-muted" dir="ltr">
-              <Phone className="w-4 h-4 text-primary" /> {info.phone}
-            </a>
+          {phoneValue && (
+            phoneIsLink ? (
+              <button type="button" onClick={() => openExternal(phoneUrl)} className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm hover:bg-muted" dir="ltr">
+                <Send className="w-4 h-4 text-primary" /> {phoneValue.replace(/^https?:\/\//, '')}
+              </button>
+            ) : phoneDigits.length > 3 ? (
+              <a href={`tel:${phoneDigits}`} className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm hover:bg-muted" dir="ltr">
+                <Phone className="w-4 h-4 text-primary" /> {phoneValue}
+              </a>
+            ) : null
           )}
+          <button type="button" onClick={() => setChatOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20">
+            <MessageCircle className="w-4 h-4" /> محادثة المطور داخل التطبيق
+          </button>
           {siteUrl && (
             <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm hover:bg-muted" dir="ltr">
               <Globe className="w-4 h-4 text-primary" /> {site}

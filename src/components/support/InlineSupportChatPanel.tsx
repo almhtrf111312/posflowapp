@@ -104,7 +104,7 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
             <p className="text-xs text-muted-foreground mt-0.5">
               {isBoss
                 ? bossView === 'chat'
-                  ? selectedConv?.store_name || selectedConv?.user_email || ''
+                  ? [selectedConv?.user_email, selectedConv?.store_name].filter(Boolean).join(' · ')
                   : 'اختر محادثة للرد'
                 : 'سنرد عليك في أقرب وقت'}
             </p>

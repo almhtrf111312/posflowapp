@@ -8,6 +8,16 @@ import { fetchOfflineLease, getOfflineLeaseStatus, clearOfflineLease } from '@/l
 import { setLocalOnlyMode, setCloudWriteBlocked } from '@/lib/subscription-lock';
 import { toast } from '@/lib/sonner-bridge';
 
+
+// رسالة مفهومة بدل "Failed to send a request to the Edge Function"
+const friendlyFunctionError = (err: any, fallback: string): string => {
+  const msg = String(err?.message || '');
+  if (/Failed to send a request|Failed to fetch|NetworkError|network/i.test(msg)) {
+    return 'تعذّر الاتصال بالخادم، تحقق من الإنترنت ثم حاول مجدداً';
+  }
+  return msg || fallback;
+};
+
 export interface LicenseState {
   isLoading: boolean;
   isValid: boolean;
@@ -387,7 +397,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (response.error) return { success: false, error: response.error.message };
+      if (response.error) return { success: false, error: friendlyFunctionError(response.error, 'حدث خطأ أثناء تفعيل الكود') };
       const data = response.data;
       if (!data.success) return { success: false, error: data.error };
 
@@ -410,7 +420,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (response.error) return { success: false, error: response.error.message || 'حدث خطأ أثناء بدء الفترة التجريبية' };
+      if (response.error) return { success: false, error: friendlyFunctionError(response.error, 'حدث خطأ أثناء بدء الفترة التجريبية') };
       const data = response.data;
       if (!data.success) return { success: false, error: data.error || 'حدث خطأ أثناء بدء الفترة التجريبية' };
 

@@ -10,13 +10,14 @@ const allowedOrigins = [
   'http://localhost:8080'
 ];
 
-function getCorsHeaders(req: Request) {
-  const origin = req.headers.get('origin') || '';
-  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+function getCorsHeaders(_req: Request) {
+  // التطبيق على أندرويد يرسل Origin = https://localhost وعلى ويندوز قد يكون مختلفاً،
+  // والقائمة المحصورة كانت ترفضه فيظهر "Failed to send a request to the Edge Function".
+  // الحماية الفعلية عبر توكن Authorization وليس عبر الـ Origin، فنسمح لكل الأصول مثل باقي الدوال.
   return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 }
 

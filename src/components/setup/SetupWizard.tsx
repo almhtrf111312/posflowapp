@@ -925,8 +925,8 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 <div className="grid grid-cols-3 gap-2.5">
                   {[
                     { code: 'USD', symbol: '$', title: 'دولار أمريكي', badge: 'مرجع النظام', active: true },
-                    { code: sec1Code, symbol: sec1Symbol, title: sec1Name, badge: 'عملة ثانوية 1', active: sec1Enabled || primaryCurrency === sec1Code },
-                    { code: sec2Code, symbol: sec2Symbol, title: sec2Name, badge: 'عملة ثانوية 2', active: sec2Enabled || primaryCurrency === sec2Code },
+                    { code: sec1Code, symbol: sec1Symbol, title: sec1Name, badge: 'العملة الثانية', active: sec1Enabled || primaryCurrency === sec1Code },
+                    { code: sec2Code, symbol: sec2Symbol, title: sec2Name, badge: 'العملة الثالثة', active: sec2Enabled || primaryCurrency === sec2Code },
                   ].map((curr) => {
                     const isSelected = primaryCurrency === curr.code;
                     return (
@@ -994,7 +994,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                       1
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-foreground">العملة الثانوية الأولى</p>
+                      <p className="text-xs font-bold text-foreground">العملة الثانية (مثال: التركية)</p>
                       <p className={cn("text-[10px]", sec1Enabled ? "text-muted-foreground" : "text-destructive font-bold")}>{sec1Enabled ? "خيار سداد وتبديل في سلة البيع والفواتير" : "معطّلة"}</p>
                     </div>
                   </div>
@@ -1077,7 +1077,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                       2
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-foreground">العملة الثانوية الثانية</p>
+                      <p className="text-xs font-bold text-foreground">العملة الثالثة (مثال: السورية)</p>
                       <p className={cn("text-[10px]", sec2Enabled ? "text-muted-foreground" : "text-destructive font-bold")}>{sec2Enabled ? "خيار سداد وتبديل إضافي بالعملة المحلية" : "معطّلة"}</p>
                     </div>
                   </div>

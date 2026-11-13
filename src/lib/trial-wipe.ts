@@ -109,18 +109,6 @@ export async function wipeTrialDatabases(): Promise<void> {
   }
 }
 
-/** هل يلزم إعادة تعبئة الكتالوج؟ (المخزن فارغ، أو الكتالوج من إصدار أقدم) */
-function trialCatalogNeeded(): boolean {
-  try {
-    if (localStorage.getItem(CATALOG_VERSION_KEY) !== CATALOG_VERSION) return true;
-    const raw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-    const current = raw ? JSON.parse(raw) : [];
-    return !Array.isArray(current) || current.length === 0;
-  } catch {
-    return true;
-  }
-}
-
 /** الجزء المتزامن من التعبئة: يكتب المنتجات والتصنيفات إلى المفاتيح التي تقرأ منها نقطة البيع */
 function seedTrialLocalStorage(): void {
   const catalog = buildTrialCatalog();
@@ -174,8 +162,8 @@ function isTrialWindowExpired(now: number = Date.now()): boolean {
 
 /**
  * تحضير جلسة التجربة. يرجع true إذا كُتبت بيانات جديدة (ويلزم إعادة تحميل إن حدث ذلك بعد رسم الواجهة).
- * - بداية نافذة جديدة (أول مرة أو بعد انتهاء 24 ساعة): مسح كامل، ثم الشكل الافتراضي والكتالوج.
- * - داخل النافذة: لا يُلمس شيء، إلا إذا كان الكتالوج مفقوداً أو من إصدار أقدم.
+ * - بداية نافذة جديدة (أول مرة أو بعد انتهاء 24 ساعة): مسح كامل ثم الشكل الافتراضي، بدون منتجات تجريبية.
+ * - داخل النافذة: لا يُلمس شيء.
  */
 async function prepareTrialSession(): Promise<boolean> {
   const now = Date.now();
@@ -183,18 +171,11 @@ async function prepareTrialSession(): Promise<boolean> {
     wipeTrialLocalStorage();
     writeWindowStart(now);
     applyTrialDisplayDefaults();
-    seedTrialLocalStorage();
+    // المنتجات التجريبية لوضع الضيف (بدون إيميل) فقط؛ المتجر الحقيقي يبدأ فارغاً
     await wipeTrialDatabases();
-    await seedTrialDatabase();
     return true;
   }
 
-  if (trialCatalogNeeded()) {
-    applyTrialDisplayDefaults();
-    seedTrialLocalStorage();
-    await seedTrialDatabase();
-    return true;
-  }
   return false;
 }
 

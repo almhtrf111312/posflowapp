@@ -114,7 +114,7 @@ const MainLayoutWithKeepAlive = () => {
   );
 };
 
-const AppContent = () => {
+const AppContentInner = () => {
   const { isLocked, requiresPinSetup } = useAppLock();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -494,8 +494,6 @@ const PageFallback = () => {
     <>
       <AppLockOverlay />
       <MandatoryPinSetupModal />
-      <GooglePhoneGate />
-      <TelegramLinkPrompt />
       <div id="app-main-layout" {...({ inert: shouldBeInert ? '' : undefined } as Record<string, unknown>)} className="contents">
         {isDebugClick && <ClickProbe />}
       <ExitConfirmDialog />
@@ -552,6 +550,16 @@ const PageFallback = () => {
     </>
   );
 };
+
+// نوافذ الحساب (إكمال الاسم/الهاتف ثم ربط تيليجرام) تُعرض فوق كل الشاشات دائماً:
+// كانت داخل AppContent فتختفي وتظهر عشوائياً مع كل return مبكر (شاشة الترحيب/المعالج/التحميل).
+const AppContent = () => (
+  <>
+    <AppContentInner />
+    <GooglePhoneGate />
+    <TelegramLinkPrompt />
+  </>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

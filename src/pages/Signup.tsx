@@ -1,3 +1,4 @@
+import { PhoneInput } from '@/components/ui/phone-input';
 import { useState } from 'react';
 import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 import { Link, useNavigate } from 'react-router-dom';
@@ -122,21 +123,8 @@ export default function Signup() {
 
             <div className="space-y-2">
               <Label htmlFor="phone">{t('auth.phone')}</Label>
-              <div className="relative">
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder={t('auth.phonePlaceholder')}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  className="h-11 pe-10"
-                  dir="ltr"
-                />
-                <Phone className="absolute top-1/2 -translate-y-1/2 end-3 w-4 h-4 text-muted-foreground" />
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1">أرقام فقط (9 إلى 15 رقماً)</p>
+              <PhoneInput id="phone" value={phone} onChange={setPhone} disabled={isLoading} />
+              <p className="text-[11px] text-muted-foreground mt-1">اختر الدولة ثم اكتب رقمك بدون رمز الدولة</p>
             </div>
 
             <div className="space-y-2">

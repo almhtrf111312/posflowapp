@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/lib/sonner-bridge';
@@ -113,7 +114,7 @@ export function GooglePhoneGate() {
           </div>
           <div className="space-y-1">
             <Label htmlFor="gate-phone">رقم الهاتف</Label>
-            <Input id="gate-phone" type="tel" inputMode="tel" dir="ltr" placeholder="+963..." value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={16} />
+            <PhoneInput id="gate-phone" value={phone} onChange={setPhone} disabled={saving} />
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-2">

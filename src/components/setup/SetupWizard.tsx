@@ -56,6 +56,7 @@ import { UI_SCALE_OPTIONS, UIScaleId, getStoredUIScale, setStoredUIScale } from 
 import { emitEvent, EVENTS } from '@/lib/events';
 import { getDefaultFieldsByStoreType, saveProductFieldsConfig, type StoreType } from '@/lib/product-fields-config';
 import { saveStoreSettings, getCurrentUserId, getCurrentUserName } from '@/lib/supabase-store';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { claimAccountPhone } from '@/lib/auth/phone-claim';
 import { isValidSignupPhone } from '@/lib/auth/google-sign-in';
 import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVerificationDialog';
@@ -807,12 +808,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                   <label className="text-xs font-bold text-foreground">
                     رقم الهاتف (إلزامي) <span className="text-destructive">*</span>
                   </label>
-                  <Input
-                    value={storePhone}
-                    onChange={(e) => setStorePhone(e.target.value)}
-                    placeholder="رقم الهاتف أو الواتساب"
-                    className="h-10 rounded-xl text-xs"
-                  />
+                  <PhoneInput value={storePhone} onChange={setStorePhone} />
                 </div>
 
                 <div className="space-y-1.5">

@@ -417,7 +417,12 @@ export function BossReleasesPanel() {
     setIsBusy(true);
     try {
       const days = parseInt(broadcastDraft.expires_days) || 7;
+      // إشعار التحديث يُختم برقم البناء المعلن: من ثبّت هذا الرقم أو أحدث لا يراه، ويظهر فقط لأصحاب النسخ الأقدم
+      let announcedCode = Number(cfg?.latest_version_code || 0);
+      if (announcedCode > 1000 || announcedCode <= 0) announcedCode = Number(mainVersion?.versionCode || 0);
+      const isUpdateLike = broadcastDraft.kind === 'update' || (broadcastDraft.kind === 'warning' && !!broadcastDraft.link_url.trim());
       const { error } = await supabase.from('app_broadcasts').insert({
+        ...(isUpdateLike && announcedCode > 0 ? { target_version_code: announcedCode } : {}),
         title: broadcastDraft.title.trim(),
         body: broadcastDraft.body.trim(),
         kind: broadcastDraft.kind,

@@ -72,6 +72,8 @@ export function RemoteUpdatesGate() {
           if (CURRENT_VERSION_CODE >= targetCode) return false;
           return true;
         }
+        // تحذير موجّه لإصدار معيّن: لا يظهر لمن ثبّت هذا الإصدار أو أحدث
+        if (b.target_version_code && CURRENT_VERSION_CODE >= b.target_version_code) return false;
         const createdAt = new Date(b.created_at).getTime();
         if (now - createdAt > THREE_DAYS_MS) return false;
         return true;

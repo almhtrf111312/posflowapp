@@ -113,6 +113,7 @@ export default function Notifications() {
         return true;
       }
 
+      if (b.target_version_code && CURRENT_VERSION_CODE >= b.target_version_code) return false;
       const createdAt = new Date(b.created_at).getTime();
       const isOlderThan3Days = now - createdAt > THREE_DAYS_MS;
       if (isOlderThan3Days) {

@@ -1,0 +1,70 @@
+name: Cleanup old artifacts
+
+# يحذف النسخ القديمة من قسم Actions ويبقي الأحدث فقط لكل فرع:
+#   - نسخ الويندوز (PC): آخر 10 لكل فرع
+#   - نسخ الأندرويد (APK): آخر 20 لكل فرع
+#   - أي ملفات أخرى: آخر 20 لكل فرع
+on:
+  workflow_run:
+    workflows: ["Build FlowPOS Pro APK", "Build FlowPOS Pro Windows"]
+    types: [completed]
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: cleanup-artifacts
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const KEEP_WINDOWS = 10;
+            const KEEP_APK = 20;
+            const KEEP_OTHER = 20;
+
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 }
+            );
+
+            const typeOf = (name) => {
+              if (/windows/i.test(name)) return 'windows';
+              if (/^FlowPOS-v/i.test(name) || /apk/i.test(name)) return 'apk';
+              return 'other';
+            };
+            const keepFor = { windows: KEEP_WINDOWS, apk: KEEP_APK, other: KEEP_OTHER };
+
+            const groups = {};
+            for (const a of artifacts) {
+              if (a.expired) continue;
+              const branch = a.workflow_run?.head_branch || 'unknown';
+              const key = `${typeOf(a.name)}|${branch}`;
+              (groups[key] ||= []).push(a);
+            }
+
+            let deleted = 0, freed = 0;
+            for (const [key, list] of Object.entries(groups)) {
+              const type = key.split('|')[0];
+              list.sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
+              const old = list.slice(keepFor[type]);
+              core.info(`${key}: ${list.length} موجودة، سيتم حذف ${old.length}`);
+              for (const a of old) {
+                try {
+                  await github.rest.actions.deleteArtifact({
+                    owner: context.repo.owner, repo: context.repo.repo, artifact_id: a.id,
+                  });
+                  deleted++; freed += a.size_in_bytes;
+                } catch (e) {
+                  core.warning(`تعذر حذف ${a.name}: ${e.message}`);
+                }
+              }
+            }
+            core.notice(`تم حذف ${deleted} نسخة، وتحرير ${(freed / 1024 / 1024).toFixed(1)} ميغابايت`);

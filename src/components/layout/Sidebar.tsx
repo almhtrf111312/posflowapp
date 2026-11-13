@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { 
@@ -295,7 +296,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
             /* Collapsed: icon only */
             <div className="flex flex-col items-center gap-2">
               <img 
-                src="/app-icon.png" 
+                src={appIconUrl} 
                 alt="FlowPOS Pro" 
                 className="w-10 h-10 rounded-xl object-cover shadow-md"
               />
@@ -315,7 +316,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <img 
-                    src="/app-icon.png" 
+                    src={appIconUrl} 
                     alt="FlowPOS Pro" 
                     className="w-9 h-9 rounded-xl object-cover shadow-md flex-shrink-0"
                   />

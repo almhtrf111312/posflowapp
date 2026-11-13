@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 
 const ArchiveSection = lazy(() => import('@/components/settings/ArchiveSection').then(m => ({ default: m.ArchiveSection })));
 const ActivityLogSection = lazy(() => import('@/components/settings/ActivityLogSection').then(m => ({ default: m.ActivityLogSection })));
@@ -2448,7 +2449,7 @@ export default function Settings() {
           <div className="space-y-5">
             {/* App Identity */}
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-              <img src="/app-icon.png" alt="FlowPOS Pro" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
+              <img src={appIconUrl} alt="FlowPOS Pro" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
               <div>
                 <h2 className="text-xl font-bold text-foreground">FlowPOS Pro</h2>
                 <p className="text-sm text-muted-foreground">{isRTL ? 'نظام نقطة البيع المتكامل' : 'Integrated Point of Sale System'}</p>

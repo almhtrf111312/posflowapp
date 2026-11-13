@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, type SignInResult } from '@/hooks/use-auth';
 import { useLanguage } from '@/hooks/use-language';
@@ -549,7 +550,7 @@ export default function Login() {
         {/* شعار المتجر والعنوان المدمج */}
         <div className="flex items-center gap-2.5">
           <img 
-            src="/app-icon.png" 
+            src={appIconUrl} 
             alt="FlowPOS Pro" 
             className="w-10 h-10 rounded-2xl shadow-sm object-cover" 
           />

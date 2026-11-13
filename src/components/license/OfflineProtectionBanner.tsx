@@ -2,10 +2,15 @@ import { AlertTriangle, Wifi } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { useLicense } from '@/hooks/use-license';
 
+const SHOW_OFFLINE_WARNING_BANNER: boolean = false;
+
 export function OfflineProtectionBanner() {
   const { t, direction } = useLanguage();
   const { offlineDays, offlineWarning } = useLicense();
 
+  // قرار المالك: لا يُعرض أي تنبيه مسبق قبل التشفير (حماية ضد النسخ المخترقة).
+  // منطق العدّ والتشفير بعد 30 يوماً يبقى كما هو في use-license. لإعادة التنبيه احذف السطر التالي.
+  if (SHOW_OFFLINE_WARNING_BANNER !== true) return null;
   if (!offlineWarning) return null;
 
   const remainingDays = 30 - offlineDays;

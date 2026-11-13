@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { useLanguage } from '@/hooks/use-language';
@@ -93,7 +94,7 @@ export default function Signup() {
       <Card className="w-full max-w-md shadow-2xl border-border/50 bg-card">
         <CardHeader className="text-center space-y-4">
           <img 
-            src="/app-icon.png" 
+            src={appIconUrl} 
             alt="FlowPOS Pro" 
             className="mx-auto w-16 h-16 rounded-2xl shadow-md object-cover" 
           />

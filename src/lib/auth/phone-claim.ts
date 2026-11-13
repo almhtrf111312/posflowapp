@@ -13,7 +13,9 @@ export type PhoneClaimResult =
   | { kind: 'error'; message: string };
 
 export async function claimAccountPhone(phone: string): Promise<PhoneClaimResult> {
-  const rpc = supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: any; error: { message: string } | null }>;
+  const client = supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: any; error: { message: string } | null }> };
+  // لا نفصل rpc عن الكائن (يفقد this)
+  const rpc = (fn: string, args: Record<string, unknown>) => client.rpc(fn, args);
   try {
     const { data: check, error } = await rpc('check_store_phone_status', { _phone: phone });
     if (error) return { kind: 'error', message: error.message };

@@ -96,7 +96,8 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
         const res = await getNativeGoogleIdToken();
         if (res.ok === false) {
           const msg = googleErrorMessage(res.code);
-          if (msg) toast.error(msg);
+          // نعرض السبب التقني تحت الرسالة لتشخيص مشاكل الإعداد (SHA-1 / Client ID)
+          if (msg) toast.error(msg, res.code === 'GOOGLE_ERROR' ? { description: `[${res.code}] ${res.message}`.slice(0, 220) } : undefined);
           if (res.code !== 'CANCELLED') console.warn('[GoogleSignIn]', res.code, res.message);
           return;
         }

@@ -445,7 +445,7 @@ export default function Login() {
         });
         return;
       }
-      toast.error(getAuthErrorMessage(result.error, 'login'));
+      toast.error(getAuthErrorMessage(result.error, 'login'), { description: `[Google→Supabase] ${result.error.message}`.slice(0, 220) });
       return;
     }
     setIsLoading(true);

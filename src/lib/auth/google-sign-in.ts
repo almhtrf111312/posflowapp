@@ -93,7 +93,15 @@ export async function nativeGoogleSignOut(): Promise<void> {
  * يُسمح فقط لحساب موجود مسبقاً (له دور في user_roles) وبدور مسموح.
  * حساب جوجل جديد بلا متجر يُرفض حتى يقرر المالك مسار التسجيل.
  */
-export async function checkGoogleAccountAllowed(userId: string): Promise<{ allowed: boolean; reason?: 'no_account' | 'role' }> {
+export async function checkGoogleAccountAllowed(
+  userId: string,
+  identities?: ReadonlyArray<{ provider?: string | null }> | null,
+): Promise<{ allowed: boolean; reason?: 'no_account' | 'role' }> {
+  // حساب جوجل جديد يُنشأ تلقائياً مع دور افتراضي (trigger)، لذلك وجود الدور لا يكفي:
+  // الحساب الموجود فعلاً له هوية بريد/كلمة مرور، وجوجل تُربط به لاحقاً.
+  if (identities && identities.length > 0 && !identities.some((i) => i?.provider === 'email')) {
+    return { allowed: false, reason: 'no_account' };
+  }
   const { data, error } = await supabase
     .from('user_roles')
     .select('role')

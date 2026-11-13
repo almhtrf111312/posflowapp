@@ -38,6 +38,12 @@ describe('google sign-in (removable module)', () => {
     expect(await checkGoogleAccountAllowed('u1')).toEqual({ allowed: false, reason: 'role' });
   });
 
+  it('rejects a Google-only identity even if a default role was auto-created', async () => {
+    roleRow.value = { role: 'admin' };
+    expect(await checkGoogleAccountAllowed('u1', [{ provider: 'google' }])).toEqual({ allowed: false, reason: 'no_account' });
+    expect((await checkGoogleAccountAllowed('u1', [{ provider: 'email' }, { provider: 'google' }])).allowed).toBe(true);
+  });
+
   it('cancel is silent', () => {
     expect(googleErrorMessage('CANCELLED')).toBe('');
     expect(googleErrorMessage('no_account')).toContain('البريد');

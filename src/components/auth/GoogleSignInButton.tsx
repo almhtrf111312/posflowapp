@@ -54,7 +54,7 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
       await onSignedIn(result);
       return;
     }
-    const check = await checkGoogleAccountAllowed(result.data.user.id);
+    const check = await checkGoogleAccountAllowed(result.data.user.id, result.data.user.identities ?? []);
     if (!check.allowed) {
       await supabase.auth.signOut();
       await nativeGoogleSignOut();

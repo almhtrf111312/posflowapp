@@ -7,6 +7,7 @@
 -- 3. boss_ban_user / boss_unban_user: حظر/رفع حظر جهاز حساب المالك
 -- 4. boss_update_license: زيادة/إنقاص أيام، وتعديل حد المنتجات والكاشيرات
 --
+-- طُبّق على الإنتاج عبر محرر SQL في Lovable Cloud (2026-11-14) وتم التحقق منه.
 -- التراجع (Rollback):
 --   DROP FUNCTION IF EXISTS public.boss_update_license(uuid, integer, integer, integer, text);
 --   DROP FUNCTION IF EXISTS public.boss_unban_user(uuid);
@@ -14,8 +15,6 @@
 --   DROP FUNCTION IF EXISTS public.is_device_banned(text);
 --   DROP TABLE IF EXISTS public.banned_devices;
 -- =========================================================================
-
-BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.banned_devices (
   device_id       text PRIMARY KEY,
@@ -95,7 +94,7 @@ BEGIN
   END IF;
 
   -- إيقاف ترخيص الحساب أيضاً حتى لا يعمل من جهاز آخر
-  IF FOUND OR v_lic.user_id IS NOT NULL THEN
+  IF v_lic.user_id IS NOT NULL THEN
     UPDATE public.app_licenses
        SET is_revoked = true,
            revoked_at = now(),
@@ -213,4 +212,3 @@ $$;
 REVOKE ALL ON FUNCTION public.boss_update_license(uuid, integer, integer, integer, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.boss_update_license(uuid, integer, integer, integer, text) TO authenticated;
 
-COMMIT;

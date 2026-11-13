@@ -112,6 +112,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVerificationDialog';
+import { TelegramLinkCard } from '@/components/auth/TelegramLinkCard';
 import { showToast } from '@/lib/toast-config';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/hooks/use-language';
@@ -1908,7 +1909,12 @@ export default function Settings() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
-        return <ProfileManagement />;
+        return (
+          <div className="space-y-4">
+            <TelegramLinkCard />
+            <ProfileManagement />
+          </div>
+        );
       case 'productFields':
         return (
           <ProductFieldsSection

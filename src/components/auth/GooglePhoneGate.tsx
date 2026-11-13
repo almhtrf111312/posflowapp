@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from '@/lib/sonner-bridge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { claimAccountPhone } from '@/lib/auth/phone-claim';
+import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVerificationDialog';
 import {
   GOOGLE_SIGN_IN_ENABLED,
   completeGoogleSignup,
@@ -26,6 +28,7 @@ export function GooglePhoneGate() {
   const [phone, setPhone] = useState('');
   const [fullName, setFullName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [telegramOpen, setTelegramOpen] = useState(false);
 
   const meta = (user?.user_metadata || {}) as { phone?: string; full_name?: string; name?: string };
   const needsPhone = GOOGLE_SIGN_IN_ENABLED && !!user && isGoogleOnlyUser(user) && !String(meta.phone || '').trim();
@@ -54,6 +57,32 @@ export function GooglePhoneGate() {
       toast.error('رقم الهاتف غير صالح', { description: 'أرقام فقط (من 9 إلى 15 رقماً) بدون مسافات أو رموز.' });
       return;
     }
+    setSaving(true);
+    try {
+      // 1) فحص استخدام الرقم في حساب آخر وربطه بالحساب (يظهر في الإعدادات)
+      const claim = await claimAccountPhone(phone.trim());
+      if (claim.kind === 'needs_telegram') {
+        toast.warning('هذا الرقم مستخدم في حساب آخر', { description: 'يلزم رمز تأكيد يصل إلى تيليجرام الحساب الأصلي.' });
+        setTelegramOpen(true);
+        return;
+      }
+      if (claim.kind === 'conflict') {
+        toast.error('الرقم مستخدم في حساب آخر', { description: claim.message });
+        return;
+      }
+      if (claim.kind === 'error') {
+        toast.error('تعذّر التحقق من الرقم', { description: claim.message.slice(0, 200) });
+        return;
+      }
+      await finishSignup();
+      return;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const finishSignup = async () => {
+    if (!user) return;
     setSaving(true);
     try {
       const { error } = await completeGoogleSignup(user.id, phone, fullName);
@@ -96,6 +125,13 @@ export function GooglePhoneGate() {
           </Button>
         </DialogFooter>
       </DialogContent>
+      <StorePhoneVerificationDialog
+        open={telegramOpen}
+        onOpenChange={setTelegramOpen}
+        phone={phone.trim()}
+        status="requires_telegram_verification"
+        onSuccess={() => { void finishSignup(); }}
+      />
     </Dialog>
   );
 }

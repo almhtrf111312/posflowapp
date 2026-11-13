@@ -56,6 +56,10 @@ import { UI_SCALE_OPTIONS, UIScaleId, getStoredUIScale, setStoredUIScale } from 
 import { emitEvent, EVENTS } from '@/lib/events';
 import { getDefaultFieldsByStoreType, saveProductFieldsConfig, type StoreType } from '@/lib/product-fields-config';
 import { saveStoreSettings, getCurrentUserId, getCurrentUserName } from '@/lib/supabase-store';
+import { claimAccountPhone } from '@/lib/auth/phone-claim';
+import { isValidSignupPhone } from '@/lib/auth/google-sign-in';
+import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVerificationDialog';
+import { TelegramLinkCard } from '@/components/auth/TelegramLinkCard';
 import { getDefaultCategories } from '@/lib/store-type-config';
 import { saveCategories, loadCategories, Category } from '@/lib/categories-store';
 import { detectCurrencyCodeFromMeta, PREDEFINED_CURRENCIES } from '@/lib/currencies';
@@ -192,6 +196,11 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     return s?.storeSettings?.logo || '';
   });
   const [seedCategories, setSeedCategories] = useState(true);
+
+  // رقم الهاتف إلزامي: يجب ربطه بالحساب (مع فحص استخدامه في حساب آخر) قبل متابعة الإعداد
+  const [phoneClaimedFor, setPhoneClaimedFor] = useState<string>('');
+  const [phoneChecking, setPhoneChecking] = useState(false);
+  const [phoneTelegramOpen, setPhoneTelegramOpen] = useState(false);
 
   // Step 2: Currencies & Pricing (Flexible Dynamic Multi-Currency)
   const initialCurrencies = getInitialCurrencies();
@@ -796,7 +805,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border/50">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground">
-                    رقم الهاتف للزبائن
+                    رقم الهاتف (إلزامي) <span className="text-destructive">*</span>
                   </label>
                   <Input
                     value={storePhone}
@@ -919,9 +928,9 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 </label>
                 <div className="grid grid-cols-3 gap-2.5">
                   {[
-                    { code: 'USD', symbol: '$', title: 'دولار أمريكي', badge: 'مرجع النظام' },
-                    { code: sec1Code, symbol: sec1Symbol, title: sec1Name, badge: 'عملة ثانوية 1' },
-                    { code: sec2Code, symbol: sec2Symbol, title: sec2Name, badge: 'عملة ثانوية 2' },
+                    { code: 'USD', symbol: '$', title: 'دولار أمريكي', badge: 'مرجع النظام', active: true },
+                    { code: sec1Code, symbol: sec1Symbol, title: sec1Name, badge: 'عملة ثانوية 1', active: sec1Enabled || primaryCurrency === sec1Code },
+                    { code: sec2Code, symbol: sec2Symbol, title: sec2Name, badge: 'عملة ثانوية 2', active: sec2Enabled || primaryCurrency === sec2Code },
                   ].map((curr) => {
                     const isSelected = primaryCurrency === curr.code;
                     return (
@@ -937,7 +946,8 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                           "flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-colors relative cursor-pointer",
                           isSelected
                             ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30"
-                            : "border-border/60 bg-card hover:bg-muted/40"
+                            : "border-border/60 bg-card hover:bg-muted/40",
+                          !curr.active && "opacity-50 border-dashed"
                         )}
                       >
                         <span className="text-2xl font-black text-primary mb-1">
@@ -947,7 +957,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                           {curr.title}
                         </span>
                         <span className="text-[10px] text-muted-foreground mt-0.5">
-                          {curr.badge}
+                          {curr.active ? curr.badge : 'معطّلة'}
                         </span>
                         {isSelected && (
                           <div className="absolute top-2 left-2 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
@@ -960,6 +970,26 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 </div>
               </div>
 
+              {/* العملات المفعّلة حالياً */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="font-bold text-muted-foreground">العملات المفعّلة:</span>
+                {[
+                  { code: 'USD', on: true },
+                  { code: sec1Code, on: sec1Enabled || primaryCurrency === sec1Code },
+                  { code: sec2Code, on: sec2Enabled || primaryCurrency === sec2Code },
+                ].map((c) => (
+                  <span
+                    key={c.code}
+                    className={cn(
+                      'px-2 py-0.5 rounded-full border font-mono font-bold',
+                      c.on ? 'bg-primary/10 text-primary border-primary/40' : 'bg-muted text-muted-foreground border-border line-through opacity-60'
+                    )}
+                  >
+                    {c.code}
+                  </span>
+                ))}
+              </div>
+
               {/* Secondary Currency 1 Configuration Card */}
               <div className="p-4 rounded-2xl border border-border/70 bg-card space-y-3">
                 <div className="flex items-center justify-between">
@@ -969,13 +999,16 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-foreground">العملة الثانوية الأولى</p>
-                      <p className="text-[10px] text-muted-foreground">خيار سداد وتبديل في سلة البيع والفواتير</p>
+                      <p className={cn("text-[10px]", sec1Enabled ? "text-muted-foreground" : "text-destructive font-bold")}>{sec1Enabled ? "خيار سداد وتبديل في سلة البيع والفواتير" : "معطّلة"}</p>
                     </div>
                   </div>
                   <Switch
                     checked={sec1Enabled || primaryCurrency === sec1Code}
-                    disabled={primaryCurrency === sec1Code}
-                    onCheckedChange={setSec1Enabled}
+                    onCheckedChange={(on) => {
+                      setSec1Enabled(on);
+                      // تعطيل العملة الافتراضية الحالية → الرجوع إلى الدولار
+                      if (!on && primaryCurrency === sec1Code) setPrimaryCurrency('USD');
+                    }}
                   />
                 </div>
 
@@ -1049,13 +1082,16 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-foreground">العملة الثانوية الثانية</p>
-                      <p className="text-[10px] text-muted-foreground">خيار سداد وتبديل إضافي بالعملة المحلية</p>
+                      <p className={cn("text-[10px]", sec2Enabled ? "text-muted-foreground" : "text-destructive font-bold")}>{sec2Enabled ? "خيار سداد وتبديل إضافي بالعملة المحلية" : "معطّلة"}</p>
                     </div>
                   </div>
                   <Switch
                     checked={sec2Enabled || primaryCurrency === sec2Code}
-                    disabled={primaryCurrency === sec2Code}
-                    onCheckedChange={setSec2Enabled}
+                    onCheckedChange={(on) => {
+                      setSec2Enabled(on);
+                      // تعطيل العملة الافتراضية الحالية → الرجوع إلى الدولار
+                      if (!on && primaryCurrency === sec2Code) setPrimaryCurrency('USD');
+                    }}
                   />
                 </div>
 
@@ -1511,6 +1547,9 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 </p>
               </div>
 
+              {/* تنبيه ربط تيليجرام لاستعادة كلمة المرور */}
+              <TelegramLinkCard />
+
               {/* Font Family Selector */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-foreground">
@@ -1719,7 +1758,36 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
             {step < totalSteps ? (
               <Button
                 type="button"
-                onClick={() => {
+                disabled={phoneChecking}
+                onClick={async () => {
+                  if (step === 1 && phoneClaimedFor !== storePhone.trim()) {
+                    const phone = storePhone.trim();
+                    if (!phone) {
+                      toast.error('رقم الهاتف إلزامي', { description: 'أدخل رقم هاتفك لإكمال إنشاء الحساب.' });
+                      return;
+                    }
+                    if (!isValidSignupPhone(phone)) {
+                      toast.error('رقم الهاتف غير صالح', { description: 'أرقام فقط (من 9 إلى 15 رقماً).' });
+                      return;
+                    }
+                    setPhoneChecking(true);
+                    const res = await claimAccountPhone(phone);
+                    setPhoneChecking(false);
+                    if (res.kind === 'needs_telegram') {
+                      toast.warning('هذا الرقم مستخدم في حساب آخر', { description: 'يلزم رمز تأكيد يصل إلى تيليجرام الحساب الأصلي.' });
+                      setPhoneTelegramOpen(true);
+                      return;
+                    }
+                    if (res.kind === 'conflict') {
+                      toast.error('الرقم مستخدم في حساب آخر', { description: res.message });
+                      return;
+                    }
+                    if (res.kind === 'error') {
+                      toast.error('تعذّر التحقق من الرقم', { description: res.message.slice(0, 160) });
+                      return;
+                    }
+                    setPhoneClaimedFor(phone);
+                  }
                   const nextStep = step + 1;
                   setVisitedSteps(prev => new Set([...prev, nextStep]));
                   setStep(nextStep);
@@ -1749,6 +1817,17 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
           </div>
         </div>
 
+        <StorePhoneVerificationDialog
+          open={phoneTelegramOpen}
+          onOpenChange={setPhoneTelegramOpen}
+          phone={storePhone.trim()}
+          status="requires_telegram_verification"
+          onSuccess={() => {
+            setPhoneClaimedFor(storePhone.trim());
+            setVisitedSteps(prev => new Set([...prev, 2]));
+            setStep(2);
+          }}
+        />
       </div>
     </div>
   );

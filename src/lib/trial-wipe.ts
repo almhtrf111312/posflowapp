@@ -1,16 +1,13 @@
 // مسح بيانات وضع التجربة المحلي وإعادة تعبئتها بالنماذج.
-// بيانات التجربة تبقى على الجهاز 24 ساعة من بدايتها ثم تُمسح كلها (دون رفع شيء للسحابة)،
-// وتُفحص المدة عند الإقلاع وعند العودة إلى التطبيق. بعد المسح تُضاف المنتجات النموذجية من جديد.
+// خاص بوضع الضيف (بدون إيميل): كتالوج نموذجي مؤقت. حسابات الإيميل لا تُمسح بياناتها.
 // لا يُمسح: الجلسة، الجهاز، الترخيص، سجل الحظر، اللغة، موافقة الخصوصية، وعلامة وضع التجربة نفسها.
 import { Capacitor } from '@capacitor/core';
-import { isLocalOnlyMode, isCloudWriteBlocked, LOCAL_MODE_EVENT } from '@/lib/subscription-lock';
 import { saveProducts } from '@/lib/products-store';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { saveCategories } from '@/lib/categories-store';
 import { buildTrialCatalog, buildTrialCategories, applyTrialDisplayDefaults } from '@/lib/trial-sample-catalog';
 
 const WINDOW_START_KEY = 'hp_trial_window_start';
-const TRIAL_DATA_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
 const PRODUCTS_CACHE_KEY = 'hyperpos_products_cache';
 const CATEGORIES_CACHE_KEY = 'hyperpos_categories_cache';
@@ -135,53 +132,48 @@ async function seedTrialDatabase(): Promise<void> {
   }
 }
 
-function readWindowStart(): number | null {
-  try {
-    const value = Number(localStorage.getItem(WINDOW_START_KEY));
-    return Number.isFinite(value) && value > 0 ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeWindowStart(now: number): void {
-  try {
-    localStorage.setItem(WINDOW_START_KEY, String(now));
-  } catch {
-    /* noop */
-  }
-}
-
-/** انتهت نافذة الـ24 ساعة؟ (ساعة مرتدّة إلى الخلف تُعامل كمنتهية حتى لا تُطال المدة) */
-function isTrialWindowExpired(now: number = Date.now()): boolean {
-  const start = readWindowStart();
-  if (start === null) return false;
-  const age = now - start;
-  return age >= TRIAL_DATA_WINDOW_MS || age < 0;
-}
+const SAMPLE_PURGED_KEY = 'hp_sample_catalog_purged_v1';
+const SAMPLE_ID_PREFIX = '5a0e7c10-7e51-4c2a-9b1d-';
 
 /**
- * تحضير جلسة التجربة. يرجع true إذا كُتبت بيانات جديدة (ويلزم إعادة تحميل إن حدث ذلك بعد رسم الواجهة).
- * - بداية نافذة جديدة (أول مرة أو بعد انتهاء 24 ساعة): مسح كامل ثم الشكل الافتراضي، بدون منتجات تجريبية.
- * - داخل النافذة: لا يُلمس شيء.
+ * حساب بإيميل (تجربة 30 يوماً): بياناته تبقى على الجهاز ولا تُمسح لا يومياً ولا عند الاشتراك،
+ * وتُرفع كلها عند التفعيل عبر طابور المزامنة (CloudSyncProvider ← المزامنة الأولى).
+ * مرة واحدة فقط: إزالة المنتجات/التصنيفات النموذجية التي زُرعت سابقاً حتى لا تُرفع كأنها بيانات حقيقية.
  */
-async function prepareTrialSession(): Promise<boolean> {
-  const now = Date.now();
-  if (readWindowStart() === null || isTrialWindowExpired(now)) {
-    wipeTrialLocalStorage();
-    writeWindowStart(now);
-    applyTrialDisplayDefaults();
-    // المنتجات التجريبية لوضع الضيف (بدون إيميل) فقط؛ المتجر الحقيقي يبدأ فارغاً
-    await wipeTrialDatabases();
-    return true;
-  }
+async function purgeLegacySampleCatalog(): Promise<void> {
+  try {
+    if (localStorage.getItem(SAMPLE_PURGED_KEY) === '1') return;
+    const isSample = (x: { id?: unknown }) => String(x?.id || '').startsWith(SAMPLE_ID_PREFIX);
 
-  return false;
+    const { loadProducts } = await import('@/lib/products-store');
+    const products = loadProducts();
+    const real = products.filter((p) => !isSample(p));
+    if (real.length !== products.length) saveProducts(real);
+
+    const { loadCategories } = await import('@/lib/categories-store');
+    const cats = loadCategories();
+    const realCats = cats.filter((c) => !isSample(c));
+    if (realCats.length !== cats.length) saveCategories(realCats);
+
+    try {
+      const { loadProductsFromIDB, clearProductsIDB, saveProductsToIDB } = await import('@/lib/indexeddb-cache');
+      const cached = await loadProductsFromIDB<{ id?: unknown }>();
+      if (cached?.products?.some(isSample)) {
+        await clearProductsIDB();
+        await saveProductsToIDB(cached.products.filter((p) => !isSample(p)));
+      }
+    } catch { /* noop */ }
+
+    for (const k of [WINDOW_START_KEY, CATALOG_VERSION_KEY]) localStorage.removeItem(k);
+    localStorage.setItem(SAMPLE_PURGED_KEY, '1');
+  } catch (err) {
+    console.warn('[TrialWipe] Sample purge failed:', err);
+  }
 }
 
-/** يُستدعى عند الإقلاع قبل الرسم: في وضع التجربة تُفحص النافذة وتُحضَّر الجلسة. */
+/** يُستدعى عند الإقلاع قبل الرسم. */
 export async function wipeTrialDataOnBoot(): Promise<void> {
-  // وضع الضيف: جلسة بدأت بالكتالوج القديم تُحدَّث إلى الكتالوج الجديد (المعرّفات القديمة ترفضها نقطة البيع)
+  // وضع الضيف (بدون إيميل): جلسة بدأت بالكتالوج القديم تُحدَّث إلى الكتالوج الجديد (المعرّفات القديمة ترفضها نقطة البيع)
   if (isGuestDemoMode()) {
     if (localStorage.getItem(CATALOG_VERSION_KEY) !== CATALOG_VERSION) {
       applyTrialDisplayDefaults();
@@ -190,50 +182,10 @@ export async function wipeTrialDataOnBoot(): Promise<void> {
     }
     return;
   }
-  if (!isLocalOnlyMode()) return;
-  await prepareTrialSession();
+  await purgeLegacySampleCatalog();
 }
 
-/** عند تفعيل اشتراك مدفوع: تُحذف بيانات التجربة (نماذج ومبيعات تجريبية) حتى لا تُرفع إلى الحساب الحقيقي */
-function discardTrialDataAfterActivation(): void {
-  if (readWindowStart() === null) return;
-  wipeTrialLocalStorage();
-  try {
-    localStorage.removeItem(WINDOW_START_KEY);
-    localStorage.removeItem(CATALOG_VERSION_KEY);
-    localStorage.removeItem('pos_view_mode');
-  } catch {
-    /* noop */
-  }
-  void wipeTrialDatabases().finally(() => window.location.reload());
-}
-
-/**
- * - عند دخول وضع التجربة: تُحضَّر الجلسة، ويُعاد التحميل إن كُتبت بيانات جديدة لتظهر فوراً.
- * - عند الخروج منه باشتراك مدفوع فعّال: تُحذف بيانات التجربة ويُعاد التحميل.
- * - على أندرويد: عند العودة إلى التطبيق يُعاد التحميل إن انتهت نافذة الـ24 ساعة.
- */
+/** لم يعد هناك مسح يومي ولا مسح عند الاشتراك لحسابات الإيميل: المزامنة الأولى تتولاها CloudSyncProvider. */
 export function initTrialLifecycle(): void {
-  window.addEventListener(LOCAL_MODE_EVENT, () => {
-    // التأجيل يضمن أن علامة حجب الكتابة السحابية تحدّثت (تُضبط في نفس دورة الترخيص)
-    setTimeout(() => {
-      if (isLocalOnlyMode()) {
-        void prepareTrialSession().then((changed) => {
-          if (changed) window.location.reload();
-        });
-      } else if (!isCloudWriteBlocked()) {
-        discardTrialDataAfterActivation();
-      }
-    }, 0);
-  });
-
-  if (!Capacitor.isNativePlatform()) return;
-
-  import('@capacitor/app')
-    .then(({ App }) => {
-      App.addListener('resume', () => {
-        if (isLocalOnlyMode() && isTrialWindowExpired()) window.location.reload();
-      });
-    })
-    .catch((err) => console.warn('[TrialWipe] Lifecycle listener failed:', err));
+  /* intentionally empty */
 }

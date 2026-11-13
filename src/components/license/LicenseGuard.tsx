@@ -256,8 +256,14 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
           onConfirm={async () => {
             setShowTrialNotice(false);
             setIsStartingTrial(true);
-            await startTrial();
+            const res = await startTrial();
             setIsStartingTrial(false);
+            // كان الفشل صامتاً فتعود الشاشة نفسها دون تفسير
+            if (!res.success) {
+              toast.error(res.error || 'تعذّر بدء الفترة التجريبية');
+            } else if (res.message) {
+              toast.info(res.message);
+            }
           }}
         />
       </>

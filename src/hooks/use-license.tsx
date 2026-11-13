@@ -41,7 +41,7 @@ export interface LicenseState {
 interface LicenseContextType extends LicenseState {
   checkLicense: () => Promise<void>;
   activateCode: (code: string) => Promise<{ success: boolean; error?: string; expiresAt?: string }>;
-  startTrial: () => Promise<{ success: boolean; error?: string }>;
+  startTrial: () => Promise<{ success: boolean; error?: string; message?: string }>;
 }
 
 const LicenseContext = createContext<LicenseContextType | undefined>(undefined);
@@ -399,7 +399,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const startTrial = async (): Promise<{ success: boolean; error?: string }> => {
+  const startTrial = async (): Promise<{ success: boolean; error?: string; message?: string }> => {
     if (!user) return { success: false, error: 'يجب تسجيل الدخول أولاً' };
 
     try {
@@ -415,7 +415,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
       if (!data.success) return { success: false, error: data.error || 'حدث خطأ أثناء بدء الفترة التجريبية' };
 
       await checkLicense();
-      return { success: true };
+      return { success: true, message: typeof data.message === 'string' ? data.message : undefined };
     } catch (error) {
       console.error('Error starting trial:', error);
       return { success: false, error: 'حدث خطأ أثناء بدء الفترة التجريبية' };

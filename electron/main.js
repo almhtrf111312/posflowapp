@@ -7,9 +7,8 @@ let mainWindow;
 
 // ── Google sign-in (removable): OAuth عبر المتصفح مع عنوان رجوع محلي 127.0.0.1 (بدون أي دومين وسيط) ──
 const http = require('http');
-const https = require('https');
 const crypto = require('crypto');
-const { ipcMain } = require('electron');
+const { ipcMain, net } = require('electron');
 
 function loadGoogleDesktopConfig() {
   try {
@@ -22,25 +21,22 @@ function loadGoogleDesktopConfig() {
 
 const b64url = (buf) => buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
-function postForm(urlStr, form) {
-  return new Promise((resolve, reject) => {
-    const body = new URLSearchParams(form).toString();
-    const u = new URL(urlStr);
-    const req = https.request(
-      { method: 'POST', hostname: u.hostname, path: u.pathname, headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) } },
-      (res) => {
-        let data = '';
-        res.on('data', (c) => (data += c));
-        res.on('end', () => {
-          try { resolve({ status: res.statusCode, json: JSON.parse(data) }); } catch (e) { reject(e); }
-        });
-      },
-    );
-    req.on('error', reject);
-    req.setTimeout(20000, () => req.destroy(new Error('timeout')));
-    req.write(body);
-    req.end();
+// نستخدم شبكة Chromium (net.fetch) لأنها تحترم إعدادات النظام (بروكسي/VPN/IPv6) بخلاف https في Node
+async function postForm(urlStr, form) {
+  const res = await net.fetch(urlStr, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(form).toString(),
   });
+  let json = {};
+  try { json = await res.json(); } catch (_) { /* ignore */ }
+  return { status: res.status, json };
+}
+
+function describeError(e) {
+  if (!e) return 'unknown';
+  const inner = Array.isArray(e.errors) && e.errors.length ? e.errors.map((x) => x && (x.code || x.message)).filter(Boolean).join(',') : '';
+  return String(e.message || e.code || inner || e) + (inner ? ` [${inner}]` : '');
 }
 
 let googleFlowActive = false;
@@ -106,7 +102,7 @@ async function googleDesktopSignIn(nonceHashed) {
     }
     return { ok: true, idToken: tok.json.id_token };
   } catch (e) {
-    return { ok: false, code: e && e.message === 'timeout' ? 'CANCELLED' : 'GOOGLE_ERROR', message: String((e && e.message) || e) };
+    return { ok: false, code: e && e.message === 'timeout' ? 'CANCELLED' : 'GOOGLE_ERROR', message: describeError(e) };
   } finally {
     googleFlowActive = false;
   }

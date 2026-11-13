@@ -114,7 +114,7 @@ const MainLayoutWithKeepAlive = () => {
   );
 };
 
-const AppContentInner = () => {
+const AppContent = () => {
   const { isLocked, requiresPinSetup } = useAppLock();
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -551,16 +551,6 @@ const PageFallback = () => {
   );
 };
 
-// نوافذ الحساب (إكمال الاسم/الهاتف ثم ربط تيليجرام) تُعرض فوق كل الشاشات دائماً:
-// كانت داخل AppContent فتختفي وتظهر عشوائياً مع كل return مبكر (شاشة الترحيب/المعالج/التحميل).
-const AppContent = () => (
-  <>
-    <AppContentInner />
-    <GooglePhoneGate />
-    <TelegramLinkPrompt />
-  </>
-);
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -578,6 +568,9 @@ const App = () => (
                         {/* LicenseWarningBadge is OUTSIDE LicenseGuard so it always renders */}
                         <LicenseWarningBadge />
                         <OfflineProtectionBanner />
+                        {/* خارج LicenseGuard عمداً: شاشة الترخيص/التحميل كانت تُلغي تركيب النافذة فتختفي وتظهر عشوائياً */}
+                        <GooglePhoneGate />
+                        <TelegramLinkPrompt />
                         <DemoModeBanner />
                         <RemoteUpdatesGate />
                         <LicenseGuard>

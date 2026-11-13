@@ -78,7 +78,7 @@ function useCountries(): Country[] {
 function defaultIso(): string {
   try {
     const region = (navigator.language || '').split('-')[1]?.toUpperCase();
-    if (region && COUNTRY_DIAL_CODES.some(([iso]) => iso === region)) return region;
+    if (region && PINNED.includes(region)) return region;
   } catch { /* ignore */ }
   return DEFAULT_ISO;
 }

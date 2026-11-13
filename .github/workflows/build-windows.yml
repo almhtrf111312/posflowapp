@@ -29,6 +29,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          # آخر main دائماً (يتضمن commit رفع رقم الإصدار الذي ينتجه بناء الأندرويد)، وليس commit لحظة التشغيل
+          ref: main
           fetch-depth: 1
 
       - name: Setup Node.js

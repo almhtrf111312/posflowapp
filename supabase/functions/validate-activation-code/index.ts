@@ -1,13 +1,13 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Allowed origins for CORS
 const allowedOrigins = [
-  'https://propos.lovable.app',
-  'https://id-preview--f922b973-c15b-4c58-86ca-0f04c8a8dada.lovable.app',
-  'https://f922b973-c15b-4c58-86ca-0f04c8a8dada.lovableproject.com',
-  'capacitor://localhost',
-  'http://localhost:5173',
-  'http://localhost:8080'
+  "https://propos.lovable.app",
+  "https://id-preview--f922b973-c15b-4c58-86ca-0f04c8a8dada.lovable.app",
+  "https://f922b973-c15b-4c58-86ca-0f04c8a8dada.lovableproject.com",
+  "capacitor://localhost",
+  "http://localhost:5173",
+  "http://localhost:8080",
 ];
 
 function getCorsHeaders(_req: Request) {
@@ -15,106 +15,110 @@ function getCorsHeaders(_req: Request) {
   // والقائمة المحصورة كانت ترفضه فيظهر "Failed to send a request to the Edge Function".
   // الحماية الفعلية عبر توكن Authorization وليس عبر الـ Origin، فنسمح لكل الأصول مثل باقي الدوال.
   return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 }
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
-  
+
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     // Create client with user's auth token
-    const authHeader = req.headers.get('Authorization')
+    const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'غير مصرح' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ success: false, error: "غير مصرح" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
+      global: { headers: { Authorization: authHeader } },
+    });
 
     // Get current user
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser()
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseUser.auth.getUser();
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'غير مصرح' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ success: false, error: "غير مصرح" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get the activation code and device id from request
-    const { code, device_id } = await req.json()
-    if (!code || typeof code !== 'string') {
-      return new Response(
-        JSON.stringify({ success: false, error: 'كود التفعيل مطلوب' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    const { code, device_id } = await req.json();
+    if (!code || typeof code !== "string") {
+      return new Response(JSON.stringify({ success: false, error: "كود التفعيل مطلوب" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     if (!device_id) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'معرف الجهاز مطلوب لربط الترخيص' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ success: false, error: "معرف الجهاز مطلوب لربط الترخيص" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Sanitize code input
-    const sanitizedCode = code.trim().toUpperCase()
+    const sanitizedCode = code.trim().toUpperCase();
     if (sanitizedCode.length < 5 || sanitizedCode.length > 50) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'كود التفعيل غير صالح' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ success: false, error: "كود التفعيل غير صالح" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Utility function to mask activation code (e.g. ACT-***)
-    const maskCode = (c: string) => c.length > 4 ? `${c.substring(0, 4)}***` : '***';
+    const maskCode = (c: string) => (c.length > 4 ? `${c.substring(0, 4)}***` : "***");
     const maskedLogCode = maskCode(sanitizedCode);
 
     // Use service role to access activation_codes table
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log(`User ${user.id} attempting to activate code: ${maskedLogCode}`)
+    console.log(`User ${user.id} attempting to activate code: ${maskedLogCode}`);
 
     // Call strict activation RPC
-    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc('activate_code_strict', {
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc("activate_code_strict", {
       p_code: sanitizedCode,
       p_user_id: user.id,
       p_user_email: user.email,
-      p_device_id: device_id
-    })
+      p_device_id: device_id,
+    });
 
     if (rpcError) {
-      console.error('RPC Error:', rpcError)
-      return new Response(
-        JSON.stringify({ success: false, error: 'حدث خطأ في النظام أثناء تفعيل الترخيص' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.error("RPC Error:", rpcError);
+      return new Response(JSON.stringify({ success: false, error: "حدث خطأ في النظام أثناء تفعيل الترخيص" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // The RPC returns a JSON object
     if (!rpcResult.success) {
-      console.warn('Activation failed:', rpcResult.error)
-      return new Response(
-        JSON.stringify({ success: false, error: rpcResult.error }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.warn("Activation failed:", rpcResult.error);
+      return new Response(JSON.stringify({ success: false, error: rpcResult.error }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log('License activated successfully for user:', user.id)
+    console.log("License activated successfully for user:", user.id);
 
     return new Response(
       JSON.stringify({
@@ -124,14 +128,15 @@ Deno.serve(async (req) => {
         maxCashiers: rpcResult.max_cashiers,
         licenseTier: rpcResult.license_tier,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error) {
-    console.error('Error:', error)
-    return new Response(
-      JSON.stringify({ success: false, error: 'حدث خطأ غير متوقع' }),
-      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
-    )
+    console.error("Error:", error);
+    return new Response(JSON.stringify({ success: false, error: "حدث خطأ غير متوقع" }), {
+      status: 500,
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+    });
   }
-})
+});
+
+// redeploy: CORS fix for Android origin

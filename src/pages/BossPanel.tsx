@@ -940,9 +940,13 @@ export default function BossPanel() {
 
   const loadBannedUsers = async () => {
     try {
-      const { data, error } = await supabase.from('banned_devices' as any).select('banned_user_id');
-      if (error) return;
-      setBannedUserIds(new Set(((data || []) as any[]).map((r) => r.banned_user_id).filter(Boolean)));
+      const ids = new Set<string>();
+      const { data } = await supabase.from('banned_devices' as any).select('banned_user_id');
+      ((data || []) as any[]).forEach((r) => { if (r.banned_user_id) ids.add(r.banned_user_id); });
+      // الحظر يُعرف أيضاً من سبب إيقاف الترخيص (حتى لو لم يكن للحساب رقم جهاز مسجّل)
+      const { data: lic } = await supabase.from('app_licenses').select('user_id').like('revoked_reason', 'حظر:%');
+      ((lic || []) as any[]).forEach((r) => { if (r.user_id) ids.add(r.user_id); });
+      setBannedUserIds(ids);
     } catch { /* الجدول غير موجود بعد */ }
   };
 
@@ -2056,6 +2060,12 @@ export default function BossPanel() {
                                   <Badge className="bg-gradient-to-r from-amber-500 to-orange-600 text-[10px] md:text-xs">
                                     <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 me-1" />
                                     Boss
+                                  </Badge>
+                                )}
+                                {bannedUserIds.has(owner.user_id) && (
+                                  <Badge variant="destructive" className="text-[10px] md:text-xs font-bold">
+                                    <Ban className="w-2.5 h-2.5 md:w-3 md:h-3 me-1" />
+                                    محظور
                                   </Badge>
                                 )}
                                 {isBossUser ? (

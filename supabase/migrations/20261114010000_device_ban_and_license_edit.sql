@@ -81,6 +81,11 @@ BEGIN
   SELECT * INTO v_lic FROM public.app_licenses WHERE user_id = p_target_user_id FOR UPDATE;
   v_device := NULLIF(trim(COALESCE(v_lic.device_id, '')), '');
 
+  -- بدون رقم جهاز نسجّل الحظر على مستوى الحساب (مفتاح user:<id>) كي يبقى ظاهراً في اللوحة
+  INSERT INTO public.banned_devices (device_id, banned_user_id, banned_email, reason, banned_by, revoked_license)
+  VALUES ('user:' || p_target_user_id::text, p_target_user_id, v_email, v_reason, auth.uid(), true)
+  ON CONFLICT (device_id) DO UPDATE SET reason = EXCLUDED.reason, banned_at = now(), revoked_license = true;
+
   IF v_device IS NOT NULL THEN
     INSERT INTO public.banned_devices (device_id, banned_user_id, banned_email, reason, banned_by, revoked_license)
     VALUES (v_device, p_target_user_id, v_email, v_reason, auth.uid(), true)
@@ -212,3 +217,10 @@ $$;
 REVOKE ALL ON FUNCTION public.boss_update_license(uuid, integer, integer, integer, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.boss_update_license(uuid, integer, integer, integer, text) TO authenticated;
 
+
+-- تعبئة رجعية: الحسابات الموقوفة بسبب حظر سابق ولا صف لها في banned_devices
+INSERT INTO public.banned_devices (device_id, banned_user_id, banned_email, reason, banned_by, revoked_license)
+SELECT 'user:' || l.user_id::text, l.user_id, u.email, l.revoked_reason, NULL, true
+FROM public.app_licenses l JOIN auth.users u ON u.id = l.user_id
+WHERE l.revoked_reason LIKE 'حظر:%'
+ON CONFLICT (device_id) DO NOTHING;

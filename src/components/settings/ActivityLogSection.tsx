@@ -218,17 +218,17 @@ export function ActivityLogSection() {
   return (
     <div className="space-y-4 max-w-4xl mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* 1. Header & Actions Bar */}
-      <header className="bg-white dark:bg-card p-4 rounded-2xl border border-zinc-200/80 dark:border-border/80 shadow-2xs space-y-3">
+      <header className="bg-card p-4 rounded-2xl border border-border shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-foreground">
+              <h2 className="text-sm sm:text-base font-bold text-foreground">
                 {isAr ? 'سجل العمليات والنشاطات' : language === 'tr' ? 'Etkinlik ve İşlem Günlüğü' : 'Audit Activity Log'}
               </h2>
-              <p className="text-xs text-zinc-500 dark:text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {isAr ? 'تدقيق كامل لحركات البيع وتعديل الأسعار والديون والمصاريف' : 'Live audit log of sales, pricing, debts and partner transactions'}
               </p>
             </div>
@@ -251,12 +251,12 @@ export function ActivityLogSection() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className={cn("w-4 h-4 text-zinc-400 absolute top-1/2 -translate-y-1/2 pointer-events-none", isRTL ? "right-3" : "left-3")} />
+          <Search className={cn("w-4 h-4 text-muted-foreground absolute top-1/2 -translate-y-1/2 pointer-events-none", isRTL ? "right-3" : "left-3")} />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={isAr ? 'بحث في الفواتير، المنتجات، المبالغ، أو أسماء الكاشيرات...' : 'Search logs by invoice, product, amounts or cashier...'}
-            className={cn("text-xs h-9 bg-zinc-50/70 dark:bg-muted/40 border-zinc-200 dark:border-border", isRTL ? "pr-9" : "pl-9")}
+            className={cn("text-xs h-9 bg-muted/40 border-border", isRTL ? "pr-9" : "pl-9")}
           />
         </div>
 
@@ -268,12 +268,12 @@ export function ActivityLogSection() {
             className={cn(
               "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
               selectedCategory === 'all' && !specificFilter
-                ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
+                ? "bg-primary text-primary-foreground font-bold"
+                : "bg-muted hover:bg-muted/80 text-muted-foreground"
             )}
           >
             <span>{isAr ? 'الكل' : 'All'}</span>
-            <span className="text-[10px] opacity-70 bg-black/10 dark:bg-white/20 px-1.5 py-0.2 rounded-full">{logs.length}</span>
+            <span className="text-[10px] opacity-70 bg-black/10 dark:bg-card/20 px-1.5 py-0.2 rounded-full">{logs.length}</span>
           </button>
 
           {CATEGORY_PILLS.map((c) => (
@@ -284,7 +284,7 @@ export function ActivityLogSection() {
                 "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
                 selectedCategory === c.id
                   ? c.on + " font-bold"
-                  : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
+                  : "bg-muted hover:bg-muted/80 text-muted-foreground"
               )}
             >
               <span className={cn("w-1.5 h-1.5 rounded-full", c.dot)} />
@@ -299,7 +299,7 @@ export function ActivityLogSection() {
               "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1.5 border text-xs font-semibold",
               specificFilter
                 ? "bg-primary/10 text-primary border-primary font-bold"
-                : "bg-white dark:bg-card border-zinc-200 dark:border-border text-zinc-700 dark:text-foreground"
+                : "bg-card border-border text-foreground"
             )}
             title={isAr ? 'تصفية مخصصة' : 'Custom Filter'}
           >
@@ -312,12 +312,12 @@ export function ActivityLogSection() {
       {/* 3. Activity Cards Feed */}
       <div className="space-y-2.5">
         {filteredLogs.length === 0 ? (
-          <div className="p-8 text-center bg-white dark:bg-card rounded-2xl border border-zinc-200/80 dark:border-border/80">
-            <Activity className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-2 opacity-50" />
-            <p className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+          <div className="p-8 text-center bg-card rounded-2xl border border-border">
+            <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+            <p className="text-xs font-bold text-muted-foreground ">
               {isAr ? 'لا توجد عمليات تطابق هذا الفلتر' : 'No activity logs matching this filter'}
             </p>
-            <p className="text-[11px] text-zinc-400 mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               {isAr ? 'جرّب تغيير التصنيف أو كلمات البحث' : 'Try changing category or search query'}
             </p>
           </div>
@@ -344,10 +344,10 @@ export function ActivityLogSection() {
             <AlertTriangle className="w-5 h-5" />
           </div>
           <DialogHeader className="text-center pt-1">
-            <DialogTitle className="text-base font-bold text-zinc-900 dark:text-foreground">
+            <DialogTitle className="text-base font-bold text-foreground">
               {isAr ? 'تأكيد مسح سجل النشاطات' : 'Clear Activity Log?'}
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-500 dark:text-muted-foreground mt-1">
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
               {isAr
                 ? 'هل أنت متأكد من مسح جميع السجلات المحلية والتدقيقات الحالية؟ لا يمكن التراجع عن هذا الإجراء.'
                 : 'Are you sure you want to clear all local activity logs? This action cannot be undone.'}
@@ -371,7 +371,7 @@ export function ActivityLogSection() {
             <DialogTitle className="text-sm font-bold">
               {isAr ? 'اختر نوع العملية للتصفية الدقيقة' : 'Select Exact Activity Type'}
             </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-500">
+            <DialogDescription className="text-xs text-muted-foreground">
               {isAr ? 'عرض الحركات المرتبطة بنوع محدد فقط' : 'Filter feed by a single exact operation type'}
             </DialogDescription>
           </DialogHeader>
@@ -381,7 +381,7 @@ export function ActivityLogSection() {
               onClick={() => { setSpecificFilter(null); setCustomFilterOpen(false); }}
               className={cn(
                 "p-2 rounded-xl text-xs font-medium text-start border transition",
-                specificFilter === null ? "border-primary bg-primary/10 text-primary font-bold" : "border-zinc-200 dark:border-border hover:bg-zinc-50 dark:hover:bg-muted/40"
+                specificFilter === null ? "border-primary bg-primary/10 text-primary font-bold" : "border-border hover:bg-muted/40 dark:hover:bg-muted/40"
               )}
             >
               {isAr ? 'عرض الكل (إلغاء الفلتر)' : 'All Types (Reset)'}
@@ -394,8 +394,8 @@ export function ActivityLogSection() {
                   key={type}
                   onClick={() => { setSpecificFilter(type); setCustomFilterOpen(false); }}
                   className={cn(
-                    "p-2 rounded-xl text-xs font-medium text-start border transition truncate",
-                    isSelected ? "border-primary bg-primary/10 text-primary font-bold" : "border-zinc-200 dark:border-border hover:bg-zinc-50 dark:hover:bg-muted/40"
+                    "p-2 rounded-xl text-xs font-medium text-start border transition break-words",
+                    isSelected ? "border-primary bg-primary/10 text-primary font-bold" : "border-border hover:bg-muted/40 dark:hover:bg-muted/40"
                   )}
                 >
                   {getActivityTypeLabel(type, language)}
@@ -444,13 +444,13 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
 
   // إعدادات المظهر المالي والأيقونات
   let iconEmoji = '📄';
-  let iconClass = 'bg-zinc-50 border-zinc-200 text-zinc-700 dark:bg-muted dark:border-border';
+  let iconClass = 'bg-muted/40 border-border text-muted-foreground dark:bg-muted dark:border-border';
   let badgeLabel = getActivityTypeLabel(log.type, language);
-  let badgeClass = 'bg-zinc-50 text-zinc-800 border-zinc-200 dark:bg-muted dark:text-foreground dark:border-border';
+  let badgeClass = 'bg-muted/40 text-foreground border-border dark:bg-muted dark:text-foreground dark:border-border';
   
   let leftAmount: string | null = null;
   let leftStatus: string | null = null;
-  let leftClass = 'text-zinc-900 dark:text-foreground';
+  let leftClass = 'text-foreground';
 
   if (isPricing) {
     iconEmoji = '🏷️';
@@ -518,7 +518,7 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
   }, [details.name, log.description]);
 
   return (
-    <div className="bg-white dark:bg-card rounded-2xl border border-zinc-200 dark:border-border/80 p-3 shadow-card space-y-2.5 transition">
+    <div className="bg-card rounded-2xl border border-border/80 p-3 shadow-card space-y-2.5 transition">
       {/* 1. Header of the Card */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-2.5">
@@ -531,12 +531,12 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
               <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold border", badgeClass)}>
                 {badgeLabel}
               </span>
-              <span className="text-[10px] text-zinc-400 font-mono">
+              <span className="text-[10px] text-muted-foreground font-mono">
                 {timeText}
               </span>
             </div>
 
-            <h3 className="text-xs font-bold text-zinc-900 dark:text-foreground mt-1 leading-snug">
+            <h3 className="text-xs font-bold text-foreground mt-1 leading-snug">
               {cardTitle}
             </h3>
           </div>
@@ -556,8 +556,8 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
               )}
             </div>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-muted px-2 py-0.5 rounded-md border border-zinc-200/70 dark:border-border/70">
-              <User className="w-3 h-3 text-zinc-400" />
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground  bg-muted/40 dark:bg-muted px-2 py-0.5 rounded-md border border-border">
+              <User className="w-3 h-3 text-muted-foreground" />
               <span>{isAr ? `المستخدم: ${log.userName}` : log.userName}</span>
             </span>
           )}
@@ -568,7 +568,7 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 pt-1.5 border-t border-zinc-100 dark:border-border/50 transition cursor-pointer"
+        className="w-full flex items-center justify-between text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 pt-1.5 border-t border-border dark:border-border/50 transition cursor-pointer"
       >
         <span>{isExpanded ? (isAr ? 'إخفاء التفاصيل' : 'Hide details') : (isAr ? 'عرض التفاصيل' : 'Show details')}</span>
         <ChevronDown className={cn("w-3.5 h-3.5 transform transition-transform duration-200", isExpanded && "rotate-180")} />
@@ -622,44 +622,44 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between bg-zinc-50 dark:bg-muted/40 px-2.5 py-1.5 rounded-lg border border-zinc-200/60 dark:border-border/60 text-[11px]">
-        <span className="text-zinc-500 font-medium">{isAr ? 'مصدر التعديل:' : 'Source:'}</span>
-        <span className="font-bold text-zinc-800 dark:text-foreground">
+      <div className="flex items-center justify-between bg-muted/40 dark:bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border text-[11px]">
+        <span className="text-muted-foreground font-medium">{isAr ? 'مصدر التعديل:' : 'Source:'}</span>
+        <span className="font-bold text-foreground dark:text-foreground">
           {isAr ? 'تعديل يدوي مباشر من بطاقة الصنف' : 'Direct manual edit from product card'}
         </span>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 dark:border-border overflow-hidden">
-        <div className="bg-zinc-100 dark:bg-muted px-3 py-1.5 grid grid-cols-3 text-[11px] font-bold text-zinc-500 dark:text-muted-foreground text-center">
+      <div className="rounded-xl border border-border overflow-hidden">
+        <div className="bg-muted dark:bg-muted px-3 py-1.5 grid grid-cols-3 text-[11px] font-bold text-muted-foreground text-center">
           <div className="text-start">{isAr ? 'نوع السعر' : 'Price Type'}</div>
           <div>{isAr ? 'السابق (القديم)' : 'Old (Previous)'}</div>
           <div>{isAr ? 'المعتمد (الجديد)' : 'New (Confirmed)'}</div>
         </div>
 
-        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-zinc-100 dark:border-border/40 bg-white dark:bg-card">
-          <div className="text-start font-medium text-zinc-700 dark:text-foreground flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
+        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-card">
+          <div className="text-start font-medium text-foreground flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground shrink-0" />
             <span>{isAr ? 'رأس المال (الشراء)' : 'Cost Price'}</span>
           </div>
-          <div className="font-mono text-zinc-500 line-through numeric-tabular">
+          <div className="font-mono text-muted-foreground line-through numeric-tabular">
             {oldCost !== null ? formatMoney(oldCost) : '—'}
           </div>
-          <div className="font-mono font-bold text-zinc-900 dark:text-foreground numeric-tabular flex items-center justify-center gap-1 text-emerald-700 dark:text-emerald-400">
+          <div className="font-mono font-bold text-foreground numeric-tabular flex items-center justify-center gap-1 text-emerald-700 dark:text-emerald-400">
             <span>{formatMoney(newCost)}</span>
             {costDiff !== 0 && (
-              <span className="text-[10px] text-zinc-400 font-normal">
+              <span className="text-[10px] text-muted-foreground font-normal">
                 ({costDiff > 0 ? `+${formatMoney(costDiff)}` : `-${formatMoney(Math.abs(costDiff))}`})
               </span>
             )}
           </div>
         </div>
 
-        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-zinc-100 dark:border-border/40 bg-blue-50/30 dark:bg-blue-950/20">
+        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-blue-50/30 dark:bg-blue-950/20">
           <div className="text-start font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
             <span>{isAr ? 'سعر البيع (المعتمد)' : 'Sale Price'}</span>
           </div>
-          <div className="font-mono text-zinc-500 line-through numeric-tabular">
+          <div className="font-mono text-muted-foreground line-through numeric-tabular">
             {oldSale !== null ? formatMoney(oldSale) : '—'}
           </div>
           <div className="font-mono font-black text-blue-700 dark:text-blue-400 numeric-tabular flex items-center justify-center gap-1">
@@ -672,12 +672,12 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
           </div>
         </div>
 
-        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-zinc-100 dark:border-border/40 bg-emerald-50/30 dark:bg-emerald-950/20">
+        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-emerald-50/30 dark:bg-emerald-950/20">
           <div className="text-start font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
             <span>{isAr ? 'هامش الربح المتوقع' : 'Expected Margin'}</span>
           </div>
-          <div className="font-mono text-zinc-500 numeric-tabular">
+          <div className="font-mono text-muted-foreground numeric-tabular">
             {oldCost !== null && oldSale !== null ? `${formatMoney(oldProfit)} (${oldMargin.toFixed(0)}%)` : '—'}
           </div>
           <div className="font-mono font-bold text-emerald-700 dark:text-emerald-400 numeric-tabular">
@@ -701,14 +701,14 @@ function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, 
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <div className="p-2 rounded-xl bg-zinc-50 dark:bg-muted/40 border border-zinc-200/80 dark:border-border/80">
-          <span className="text-[10px] text-zinc-500 block">{isAr ? 'إجمالي الفاتورة:' : 'Invoice Total:'}</span>
-          <span className="font-bold text-zinc-900 dark:text-foreground font-mono numeric-tabular text-xs">${total.toFixed(2)}</span>
+        <div className="p-2 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border">
+          <span className="text-[10px] text-muted-foreground block">{isAr ? 'إجمالي الفاتورة:' : 'Invoice Total:'}</span>
+          <span className="font-bold text-foreground font-mono numeric-tabular text-xs">${total.toFixed(2)}</span>
         </div>
 
-        <div className="p-2 rounded-xl bg-zinc-50 dark:bg-muted/40 border border-zinc-200/80 dark:border-border/80">
-          <span className="text-[10px] text-zinc-500 block">{isAr ? 'عدد المنتجات المباعة:' : 'Sold Items Count:'}</span>
-          <span className="font-bold text-zinc-900 dark:text-foreground font-mono numeric-tabular text-xs">
+        <div className="p-2 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border">
+          <span className="text-[10px] text-muted-foreground block">{isAr ? 'عدد المنتجات المباعة:' : 'Sold Items Count:'}</span>
+          <span className="font-bold text-foreground font-mono numeric-tabular text-xs">
             {isAr ? `${itemsCount} صنف (قطعة)` : `${itemsCount} item(s)`}
           </span>
         </div>
@@ -728,9 +728,9 @@ function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, 
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-zinc-500 px-1 pt-1 border-t border-zinc-100 dark:border-border/50">
-        <span>{isAr ? 'طريقة السداد: ' : 'Payment Method: '}<strong className="text-zinc-800 dark:text-foreground">{isAr ? 'حساب آجل (دين)' : 'Credit (Debt)'}</strong></span>
-        {userName && <span>{isAr ? 'الكاشير: ' : 'Cashier: '}<strong className="text-zinc-800 dark:text-foreground">{userName}</strong></span>}
+      <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1 pt-1 border-t border-border dark:border-border/50">
+        <span>{isAr ? 'طريقة السداد: ' : 'Payment Method: '}<strong className="text-foreground dark:text-foreground">{isAr ? 'حساب آجل (دين)' : 'Credit (Debt)'}</strong></span>
+        {userName && <span>{isAr ? 'الكاشير: ' : 'Cashier: '}<strong className="text-foreground dark:text-foreground">{userName}</strong></span>}
       </div>
     </div>
   );
@@ -745,19 +745,19 @@ function CashDetailsBox({ details, isAr }: { details: Record<string, unknown>; i
   const customerName = (details.customerName || (isAr ? 'عميل نقدي مباشر' : 'Direct Cash Customer')) as string;
 
   return (
-    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-muted/40 border border-zinc-200/80 dark:border-border/80 space-y-1.5 text-xs">
+    <div className="p-2.5 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border space-y-1.5 text-xs">
       {invoiceNumber && (
         <div className="flex justify-between">
-          <span className="text-zinc-500">{isAr ? 'رقم الفاتورة:' : 'Invoice No:'}</span>
-          <span className="font-mono font-bold text-zinc-800 dark:text-foreground">#{invoiceNumber}</span>
+          <span className="text-muted-foreground">{isAr ? 'رقم الفاتورة:' : 'Invoice No:'}</span>
+          <span className="font-mono font-bold text-foreground dark:text-foreground">#{invoiceNumber}</span>
         </div>
       )}
       <div className="flex justify-between">
-        <span className="text-zinc-500">{isAr ? 'العميل:' : 'Customer:'}</span>
-        <span className="font-bold text-zinc-800 dark:text-foreground">{customerName}</span>
+        <span className="text-muted-foreground">{isAr ? 'العميل:' : 'Customer:'}</span>
+        <span className="font-bold text-foreground dark:text-foreground">{customerName}</span>
       </div>
-      <div className="flex justify-between border-t border-zinc-200/60 dark:border-border/50 pt-1">
-        <span className="text-zinc-500">{isAr ? 'حالة الصندوق:' : 'Drawer Status:'}</span>
+      <div className="flex justify-between border-t border-border dark:border-border/50 pt-1">
+        <span className="text-muted-foreground">{isAr ? 'حالة الصندوق:' : 'Drawer Status:'}</span>
         <span className="text-emerald-700 dark:text-emerald-400 font-bold">
           + ${total.toFixed(2)} {isAr ? 'تم إيداعها في الدرج' : 'deposited in drawer'}
         </span>
@@ -777,15 +777,15 @@ function DebtPaymentDetailsBox({ details, isAr }: { details: Record<string, unkn
   return (
     <div className="p-2.5 rounded-xl bg-blue-50/40 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 space-y-1 text-xs">
       <div className="flex justify-between">
-        <span className="text-zinc-600 dark:text-muted-foreground">{isAr ? 'العميل المسدد:' : 'Paying Customer:'}</span>
-        <span className="font-bold text-zinc-900 dark:text-foreground">{customerName}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'العميل المسدد:' : 'Paying Customer:'}</span>
+        <span className="font-bold text-foreground">{customerName}</span>
       </div>
       <div className="flex justify-between">
-        <span className="text-zinc-600 dark:text-muted-foreground">{isAr ? 'المبلغ المسدد:' : 'Paid Amount:'}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'المبلغ المسدد:' : 'Paid Amount:'}</span>
         <span className="font-mono font-bold text-blue-800 dark:text-blue-300">${amount.toFixed(2)} {isAr ? 'نقداً' : 'Cash'}</span>
       </div>
       <div className="flex justify-between border-t border-blue-200/60 dark:border-blue-800/40 pt-1">
-        <span className="text-zinc-600 dark:text-muted-foreground">{isAr ? 'الرصيد المتبقي على العميل:' : 'Remaining Balance:'}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'الرصيد المتبقي على العميل:' : 'Remaining Balance:'}</span>
         <span className={cn("font-mono font-bold", remaining <= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
           ${remaining.toFixed(2)} {remaining <= 0 ? (isAr ? '(تمت التصفية)' : '(Cleared)') : ''}
         </span>
@@ -808,25 +808,25 @@ function RefundDetailsBox({ details, isAr }: { details: Record<string, unknown>;
     <div className="p-2.5 rounded-xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/60 space-y-1.5 text-xs">
       {invoiceNumber && (
         <div className="flex justify-between">
-          <span className="text-zinc-500">{isAr ? 'رقم الفاتورة المستردة:' : 'Refunded Invoice:'}</span>
-          <span className="font-mono font-bold text-zinc-900 dark:text-foreground">#{invoiceNumber}</span>
+          <span className="text-muted-foreground">{isAr ? 'رقم الفاتورة المستردة:' : 'Refunded Invoice:'}</span>
+          <span className="font-mono font-bold text-foreground">#{invoiceNumber}</span>
         </div>
       )}
       {refundAmount > 0 && (
         <div className="flex justify-between">
-          <span className="text-zinc-600 dark:text-muted-foreground">{isAr ? 'المبلغ المسترد للزبون:' : 'Refunded Amount:'}</span>
+          <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'المبلغ المسترد للزبون:' : 'Refunded Amount:'}</span>
           <span className="font-mono font-bold text-rose-700 dark:text-rose-400">${refundAmount.toFixed(2)}</span>
         </div>
       )}
       {invoiceTotal > 0 && (
         <div className="flex justify-between">
-          <span className="text-zinc-500">{isAr ? 'إجمالي الفاتورة الأصلية:' : 'Original Total:'}</span>
-          <span className="font-mono font-semibold text-zinc-800 dark:text-foreground">${invoiceTotal.toFixed(2)}</span>
+          <span className="text-muted-foreground">{isAr ? 'إجمالي الفاتورة الأصلية:' : 'Original Total:'}</span>
+          <span className="font-mono font-semibold text-foreground dark:text-foreground">${invoiceTotal.toFixed(2)}</span>
         </div>
       )}
       {restoredUnits > 0 && (
         <div className="flex justify-between">
-          <span className="text-zinc-500">{isAr ? 'القطع المرجعة للمخزون:' : 'Restored Stock Units:'}</span>
+          <span className="text-muted-foreground">{isAr ? 'القطع المرجعة للمخزون:' : 'Restored Stock Units:'}</span>
           <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
             {isAr ? `${restoredUnits} قطعة` : `${restoredUnits} unit(s)`}
           </span>
@@ -834,11 +834,11 @@ function RefundDetailsBox({ details, isAr }: { details: Record<string, unknown>;
       )}
       {deletedDebt > 0 && (
         <div className="flex justify-between">
-          <span className="text-zinc-500">{isAr ? 'تخفيض الدين المسترد:' : 'Debt Deducted:'}</span>
+          <span className="text-muted-foreground">{isAr ? 'تخفيض الدين المسترد:' : 'Debt Deducted:'}</span>
           <span className="font-mono font-bold text-blue-700 dark:text-blue-400">${deletedDebt.toFixed(2)}</span>
         </div>
       )}
-      <div className="border-t border-rose-200/60 dark:border-rose-900/40 pt-1 text-[11px] text-zinc-500 flex items-center justify-between">
+      <div className="border-t border-rose-200/60 dark:border-rose-900/40 pt-1 text-[11px] text-muted-foreground flex items-center justify-between">
         <span>{isAr ? 'حالة الحركة:' : 'Status:'}</span>
         <span className="font-semibold text-rose-700 dark:text-rose-400">
           {isAr ? 'تم استرجاع البضاعة وتعديل قيود الصندوق' : 'Goods returned and balance adjusted'}
@@ -861,19 +861,19 @@ function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Reco
   return (
     <div className="p-2.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 space-y-1.5 text-xs">
       <div className="flex justify-between items-center">
-        <span className="text-zinc-500">{isAr ? 'اسم الشريك المعني:' : language === 'tr' ? 'İlgili Ortak:' : 'Partner:'}</span>
-        <span className="font-bold text-zinc-900 dark:text-foreground">{partnerName}</span>
+        <span className="text-muted-foreground">{isAr ? 'اسم الشريك المعني:' : language === 'tr' ? 'İlgili Ortak:' : 'Partner:'}</span>
+        <span className="font-bold text-foreground">{partnerName}</span>
       </div>
 
       <div className="flex justify-between items-center">
-        <span className="text-zinc-500">{isAr ? 'المبلغ بالدولار (الأساس):' : language === 'tr' ? 'Dolar Tutarı (Baz):' : 'Amount (USD):'}</span>
+        <span className="text-muted-foreground">{isAr ? 'المبلغ بالدولار (الأساس):' : language === 'tr' ? 'Dolar Tutarı (Baz):' : 'Amount (USD):'}</span>
         <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">${amountUsd.toFixed(2)}</span>
       </div>
 
       {currency !== 'USD' && (
         <div className="flex justify-between items-center">
-          <span className="text-zinc-500">{isAr ? 'المعادل بالعملة المحصلة:' : language === 'tr' ? 'Tahsil Edilen Para Birimi:' : 'Local Currency:'}</span>
-          <span className="font-mono font-semibold text-zinc-700 dark:text-zinc-300">
+          <span className="text-muted-foreground">{isAr ? 'المعادل بالعملة المحصلة:' : language === 'tr' ? 'Tahsil Edilen Para Birimi:' : 'Local Currency:'}</span>
+          <span className="font-mono font-semibold text-muted-foreground ">
             {origAmount.toLocaleString()} {currency}
           </span>
         </div>
@@ -881,8 +881,8 @@ function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Reco
 
       {notes && (
         <div className="pt-1 border-t border-indigo-200/50 dark:border-indigo-800/40 text-[11px]">
-          <span className="text-zinc-500 block mb-0.5">{isAr ? 'البيان / الملاحظة:' : language === 'tr' ? 'Açıklama / Not:' : 'Notes:'}</span>
-          <p className="text-zinc-700 dark:text-zinc-300 italic bg-white/60 dark:bg-black/20 p-1.5 rounded-md">
+          <span className="text-muted-foreground block mb-0.5">{isAr ? 'البيان / الملاحظة:' : language === 'tr' ? 'Açıklama / Not:' : 'Notes:'}</span>
+          <p className="text-muted-foreground  italic bg-card/60 dark:bg-black/20 p-1.5 rounded-md">
             "{notes}"
           </p>
         </div>
@@ -907,13 +907,13 @@ function GenericDetailsBox({ details, isAr }: { details: Record<string, unknown>
   if (entries.length === 0) return null;
 
   return (
-    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-muted/30 border border-zinc-200/60 dark:border-border/60 space-y-1 text-xs">
+    <div className="p-2.5 rounded-xl bg-muted/40 dark:bg-muted/30 border border-border space-y-1 text-xs">
       {entries.map(([key, val]) => {
         let displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
         return (
           <div key={key} className="flex justify-between items-center">
-            <span className="text-zinc-500 capitalize">{key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}:</span>
-            <span className="font-medium text-zinc-800 dark:text-foreground font-mono truncate max-w-[200px]">{displayVal}</span>
+            <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}:</span>
+            <span className="font-medium text-foreground dark:text-foreground font-mono truncate max-w-[200px]">{displayVal}</span>
           </div>
         );
       })}

@@ -485,3 +485,20 @@ export const getExpenseStatsCloud = async () => {
     byType,
   };
 };
+
+/** المصاريف المستردة/الملغاة فقط (تُستثنى من التحميل العادي) — للأرشيف */
+export const loadReversedExpensesCloud = async (): Promise<Expense[]> => {
+  try {
+    const { data, error } = await sb
+      .from('expenses')
+      .select('*')
+      .eq('is_reversed', true)
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    return ((data || []) as CloudExpense[]).map(toExpense);
+  } catch (e) {
+    console.warn('[expenses-cloud] loadReversedExpensesCloud failed:', e);
+    return [];
+  }
+};

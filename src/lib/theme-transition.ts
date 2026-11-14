@@ -25,8 +25,11 @@ export function executeCircularTransition(
     'startViewTransition' in document;
 
   if (!supportsViewTransition || prefersReducedMotion) {
-    // Fallback آمن: تطبيق التغيير فوراً
+    // Fallback آمن: تطبيق التغيير مع تلاشٍ خفيف للألوان
+    const root = document.documentElement;
+    root.classList.add('theme-transitioning');
     updateCallback();
+    setTimeout(() => root.classList.remove('theme-transitioning'), 500);
     return;
   }
 
@@ -67,8 +70,8 @@ export function executeCircularTransition(
         clipPath: clipPath
       },
       {
-        duration: 550,
-        easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.0)', // فيزياء انسيابية متزنة لنمط Flow Glass
+        duration: 1600,
+        easing: 'cubic-bezier(0.45, 0.05, 0.25, 1)', // بداية هادئة وانسياب طويل ليظهر توسّع الدائرة
         pseudoElement: '::view-transition-new(root)'
       } as any
     );

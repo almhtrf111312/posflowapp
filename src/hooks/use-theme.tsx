@@ -549,7 +549,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setMode = (newMode: ThemeMode, event?: ThemeTransitionEvent) => {
     executeCircularTransition(event, () => {
-      triggerThemeTransition();
       setModeState(newMode);
       applyTheme(newMode, color);
       applyBlurTheme(blurEnabled, newMode, transparencyLevel);
@@ -559,7 +558,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setColor = (newColor: ThemeColor, event?: ThemeTransitionEvent) => {
     executeCircularTransition(event, () => {
-      triggerThemeTransition();
       setColorState(newColor);
       applyTheme(mode, newColor);
       saveTheme(mode, newColor, blurEnabled, transparencyLevel, themeStyle);
@@ -581,7 +579,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setThemeStyle = (newStyle: ThemeStyle, event?: ThemeTransitionEvent) => {
     executeCircularTransition(event, () => {
-      triggerThemeTransition();
       setThemeStyleState(newStyle);
       applyThemeStyle(newStyle);
       saveTheme(mode, color, blurEnabled, transparencyLevel, newStyle);
@@ -590,7 +587,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = (newMode: ThemeMode, newColor: ThemeColor, event?: ThemeTransitionEvent) => {
     executeCircularTransition(event, () => {
-      triggerThemeTransition();
       setModeState(newMode);
       setColorState(newColor);
       applyTheme(newMode, newColor);
@@ -601,7 +597,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setFullTheme = (newMode: ThemeMode, newColor: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle, event?: ThemeTransitionEvent) => {
     executeCircularTransition(event, () => {
-      triggerThemeTransition();
       const t = transparency ?? transparencyLevel;
       const s = style ?? themeStyle;
       setModeState(newMode);

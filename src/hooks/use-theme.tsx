@@ -288,6 +288,15 @@ const darkModeColors = {
   posCart: '222 47% 8%',
 };
 
+/** لون الدائرة على الأندرويد: خلفية الثيم الجديد عند تغيير الوضع، وإلا اللون الأساسي الجديد */
+function overlayColorFor(prevMode: ThemeMode, newMode: ThemeMode, newColor: ThemeColor): string {
+  if (prevMode !== newMode) {
+    const bg = newMode === 'light' ? lightPalettes[newColor].background : darkModeColors.background;
+    return `hsl(${bg})`;
+  }
+  return `hsl(${themeColors[newColor].primary})`;
+}
+
 function triggerThemeTransition() {
   const root = document.documentElement;
   root.classList.add('theme-transitioning');
@@ -553,7 +562,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyTheme(newMode, color);
       applyBlurTheme(blurEnabled, newMode, transparencyLevel);
       saveTheme(newMode, color, blurEnabled, transparencyLevel, themeStyle);
-    });
+    }, overlayColorFor(mode, newMode, color));
   };
 
   const setColor = (newColor: ThemeColor, event?: ThemeTransitionEvent) => {
@@ -561,7 +570,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setColorState(newColor);
       applyTheme(mode, newColor);
       saveTheme(mode, newColor, blurEnabled, transparencyLevel, themeStyle);
-    });
+    }, overlayColorFor(mode, mode, newColor));
   };
 
   const setBlurEnabled = (enabled: boolean) => {
@@ -582,7 +591,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setThemeStyleState(newStyle);
       applyThemeStyle(newStyle);
       saveTheme(mode, color, blurEnabled, transparencyLevel, newStyle);
-    });
+    }, overlayColorFor(mode, mode, color));
   };
 
   const setTheme = (newMode: ThemeMode, newColor: ThemeColor, event?: ThemeTransitionEvent) => {
@@ -592,7 +601,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyTheme(newMode, newColor);
       applyBlurTheme(blurEnabled, newMode, transparencyLevel);
       saveTheme(newMode, newColor, blurEnabled, transparencyLevel, themeStyle);
-    });
+    }, overlayColorFor(mode, newMode, newColor));
   };
 
   const setFullTheme = (newMode: ThemeMode, newColor: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle, event?: ThemeTransitionEvent) => {
@@ -608,7 +617,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyBlurTheme(blur, newMode, t);
       applyThemeStyle(s);
       saveTheme(newMode, newColor, blur, t, s);
-    });
+    }, overlayColorFor(mode, newMode, newColor));
   };
 
   const previewTheme = useCallback((m: ThemeMode, c: ThemeColor, b: boolean, t: number, s?: ThemeStyle, event?: ThemeTransitionEvent) => {
@@ -616,7 +625,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       applyTheme(m, c);
       applyBlurTheme(b, m, t);
       if (s) applyThemeStyle(s);
-    });
+    }, overlayColorFor(document.documentElement.classList.contains('dark') ? 'dark' : 'light', m, c));
   }, []);
 
   const revertTheme = useCallback(() => {

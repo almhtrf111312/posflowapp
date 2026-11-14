@@ -16,7 +16,7 @@ import { cn, formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
 import { supabase } from '@/integrations/supabase/client';
 
-type FilterCategory = 'all' | 'pricing' | 'sales' | 'debts' | 'partners' | 'expenses' | 'auth';
+type FilterCategory = 'all' | 'sales' | 'invoices' | 'invoiceEdits' | 'debts' | 'shifts' | 'expenses' | 'partners' | 'pricing' | 'auth';
 
 export function ActivityLogSection() {
   const { isRTL, language } = useLanguage();
@@ -136,16 +136,39 @@ export function ActivityLogSection() {
     return ['login', 'logout', 'shift_opened', 'shift_closed', 'password_changed', 'user_added', 'user_deleted'].includes(log.type);
   };
 
+  const isInvoiceLog = (log: ActivityLog) => ['invoice_created', 'invoice_deleted', 'invoice_refunded'].includes(log.type);
+  const isInvoiceEditLog = (log: ActivityLog) => log.type === 'invoice_updated';
+  const isShiftLog = (log: ActivityLog) => ['shift_opened', 'shift_closed'].includes(log.type);
+
+  const CATEGORY_TESTS: Record<Exclude<FilterCategory, 'all'>, (l: ActivityLog) => boolean> = {
+    sales: (l) => ['sale', 'partial_refund', 'refund'].includes(l.type),
+    invoices: isInvoiceLog,
+    invoiceEdits: isInvoiceEditLog,
+    debts: isDebtsLog,
+    shifts: isShiftLog,
+    expenses: isExpenseLog,
+    partners: isPartnerLog,
+    pricing: isPricingLog,
+    auth: (l) => ['login', 'logout', 'password_changed', 'user_added', 'user_deleted'].includes(l.type),
+  };
+
+  const CATEGORY_PILLS: { id: Exclude<FilterCategory, 'all'>; ar: string; en: string; tr: string; dot: string; on: string }[] = [
+    { id: 'sales', ar: 'البيع والمرتجعات', en: 'Sales & Refunds', tr: 'Satış ve İadeler', dot: 'bg-emerald-500', on: 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200' },
+    { id: 'invoices', ar: 'الفواتير', en: 'Invoices', tr: 'Faturalar', dot: 'bg-sky-500', on: 'bg-sky-100 text-sky-900 border border-sky-300 dark:bg-sky-950/60 dark:text-sky-200' },
+    { id: 'invoiceEdits', ar: 'تعديل الفواتير', en: 'Invoice Edits', tr: 'Fatura Düzenleme', dot: 'bg-orange-500', on: 'bg-orange-100 text-orange-900 border border-orange-300 dark:bg-orange-950/60 dark:text-orange-200' },
+    { id: 'debts', ar: 'الديون والتحصيل', en: 'Debts & Collections', tr: 'Borç ve Tahsilat', dot: 'bg-blue-500', on: 'bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-200' },
+    { id: 'shifts', ar: 'الورديات (فتح وإغلاق)', en: 'Shifts (open/close)', tr: 'Vardiyalar', dot: 'bg-teal-500', on: 'bg-teal-100 text-teal-900 border border-teal-300 dark:bg-teal-950/60 dark:text-teal-200' },
+    { id: 'expenses', ar: 'المصاريف', en: 'Expenses', tr: 'Giderler', dot: 'bg-rose-500', on: 'bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-200' },
+    { id: 'partners', ar: 'الشركاء ورأس المال', en: 'Partners & Capital', tr: 'Ortaklar ve Sermaye', dot: 'bg-indigo-500', on: 'bg-indigo-100 text-indigo-900 border border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-200' },
+    { id: 'pricing', ar: 'تعديل الأسعار', en: 'Price Adjustments', tr: 'Fiyat Güncellemeleri', dot: 'bg-amber-500', on: 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200' },
+    { id: 'auth', ar: 'الدخول والأمان', en: 'Auth & Security', tr: 'Giriş ve Güvenlik', dot: 'bg-purple-500', on: 'bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950/60 dark:text-purple-200' },
+  ];
+
   // تصفية السجلات
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
       // 1. فلتر الفئات السريعة
-      if (selectedCategory === 'pricing' && !isPricingLog(log)) return false;
-      if (selectedCategory === 'sales' && !isSalesLog(log)) return false;
-      if (selectedCategory === 'debts' && !isDebtsLog(log)) return false;
-      if (selectedCategory === 'partners' && !isPartnerLog(log)) return false;
-      if (selectedCategory === 'expenses' && !isExpenseLog(log)) return false;
-      if (selectedCategory === 'auth' && !isAuthLog(log)) return false;
+      if (selectedCategory !== 'all' && !CATEGORY_TESTS[selectedCategory](log)) return false;
 
       // 2. فلتر مخصص للنوع
       if (specificFilter && log.type !== specificFilter) return false;
@@ -253,89 +276,21 @@ export function ActivityLogSection() {
             <span className="text-[10px] opacity-70 bg-black/10 dark:bg-white/20 px-1.5 py-0.2 rounded-full">{logs.length}</span>
           </button>
 
-          {/* Pricing Adjustments Pill */}
-          <button
-            onClick={() => { setSelectedCategory('pricing'); setSpecificFilter(null); }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
-              selectedCategory === 'pricing'
-                ? "bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
-            )}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            <span>{isAr ? 'تعديل الأسعار' : language === 'tr' ? 'Fiyat Güncellemeleri' : 'Price Adjustments'}</span>
-          </button>
-
-          {/* Sales & Refunds Pill */}
-          <button
-            onClick={() => { setSelectedCategory('sales'); setSpecificFilter(null); }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
-              selectedCategory === 'sales'
-                ? "bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
-            )}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>{isAr ? 'المبيعات والمرتجعات' : language === 'tr' ? 'Satış ve İadeler' : 'Sales & Refunds'}</span>
-          </button>
-
-          {/* Debts Pill */}
-          <button
-            onClick={() => { setSelectedCategory('debts'); setSpecificFilter(null); }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
-              selectedCategory === 'debts'
-                ? "bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-200 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
-            )}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            <span>{isAr ? 'الديون والتحصيل' : language === 'tr' ? 'Borç ve Tahsilat' : 'Debts & Collections'}</span>
-          </button>
-
-          {/* Partners Pill */}
-          <button
-            onClick={() => { setSelectedCategory('partners'); setSpecificFilter(null); }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
-              selectedCategory === 'partners'
-                ? "bg-indigo-100 text-indigo-900 border border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-200 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
-            )}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-            <span>{isAr ? 'الشركاء ورأس المال' : language === 'tr' ? 'Ortaklar ve Sermaye' : 'Partners & Capital'}</span>
-          </button>
-
-          {/* Expenses Pill */}
-          <button
-            onClick={() => { setSelectedCategory('expenses'); setSpecificFilter(null); }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
-              selectedCategory === 'expenses'
-                ? "bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-200 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
-            )}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            <span>{isAr ? 'المصاريف' : language === 'tr' ? 'Giderler' : 'Expenses'}</span>
-          </button>
-
-          {/* Auth */}
-          <button
-            onClick={() => { setSelectedCategory('auth'); setSpecificFilter(null); }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
-              selectedCategory === 'auth'
-                ? "bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950/60 dark:text-purple-200 font-bold"
-                : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
-            )}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-            <span>{isAr ? 'الأمان والجلسات' : 'Auth & Sessions'}</span>
-          </button>
+          {CATEGORY_PILLS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => { setSelectedCategory(c.id); setSpecificFilter(null); }}
+              className={cn(
+                "px-3 py-1.5 rounded-xl shrink-0 transition flex items-center gap-1 shadow-xs text-xs font-semibold",
+                selectedCategory === c.id
+                  ? c.on + " font-bold"
+                  : "bg-zinc-100 hover:bg-zinc-200 dark:bg-muted dark:hover:bg-muted/80 text-zinc-600 dark:text-muted-foreground"
+              )}
+            >
+              <span className={cn("w-1.5 h-1.5 rounded-full", c.dot)} />
+              <span>{isAr ? c.ar : language === 'tr' ? c.tr : c.en}</span>
+            </button>
+          ))}
 
           {/* Custom Filter Selector */}
           <button

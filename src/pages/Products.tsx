@@ -2965,13 +2965,13 @@ export default function Products() {
               return (
                 <div
                   key={product.id}
-                  className="bg-card rounded-2xl p-3 border border-border shadow-2xs relative hover:border-border/80 transition-colors fade-in"
+                  className="bg-card rounded-2xl p-2.5 border border-border shadow-2xs relative hover:border-border/80 transition-colors fade-in"
                   style={{ animationDelay: `${index * 20}ms` }}
                 >
                   {/* Main Body: Right Info, Center Square Image, Left Stacked Actions */}
                   <div className="flex items-center justify-between gap-2.5">
                     {/* Right Column: Name, Barcode + Status, and Stock */}
-                    <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex-1 min-w-0 space-y-1">
                       {/* Product Name */}
                       <h3
                         className="font-black text-foreground text-sm leading-tight truncate cursor-pointer hover:text-primary transition-colors"
@@ -3081,6 +3081,71 @@ export default function Products() {
                           {product.color && <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{product.color}</span>}
                         </div>
                       )}
+                  {/* Bottom 3-Metric Price Row (الشراء | البيع | الربح) */}
+                  {noInventory ? (
+                    <div className={cn("grid gap-0.5 text-center bg-muted/40 p-0.5 rounded-lg border border-border/80 mt-1", isRepairMode ? "grid-cols-3" : "grid-cols-2")}>
+                      {isRepairMode ? (
+                        <>
+                          <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.pieceCost')}</span>
+                            <span className="text-[11px] font-black leading-tight text-foreground font-mono">{formatPrice(product.costPrice)}</span>
+                          </div>
+                          <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.laborCost')}</span>
+                            <span className="text-[11px] font-black leading-tight text-foreground font-mono">${formatNumber(product.laborCost || 0, 2)}</span>
+                          </div>
+                          <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('common.total')}</span>
+                            <span className="text-[11px] font-black leading-tight text-primary font-mono">{formatPrice(product.costPrice + (product.laborCost || 0))}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.salePrice') || 'البيع'}</span>
+                            <span className="text-[11px] font-black leading-tight text-primary font-mono">{formatPrice(product.salePrice)}</span>
+                          </div>
+                          <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.wholesalePrice')}</span>
+                            <span className="text-[11px] font-black leading-tight text-foreground font-mono">{formatPrice(product.wholesalePrice || 0)}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-0.5 text-center bg-muted/40 p-0.5 rounded-lg border border-border/80 mt-1">
+                      {/* الشراء */}
+                      <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                        <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.costPrice') || 'الشراء'}</span>
+                        <span className="text-[11px] font-black leading-tight text-foreground font-mono">{formatPrice(product.costPrice)}</span>
+                      </div>
+                      {/* البيع */}
+                      <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                        <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.salePrice') || 'البيع'}</span>
+                        <span className="text-[11px] font-black leading-tight text-primary font-mono">{formatPrice(product.salePrice)}</span>
+                      </div>
+                      {/* الربح */}
+                      <div className={cn(
+                        "px-0.5 py-0.5 rounded-md border min-w-0",
+                        profit > 0
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          : profit < 0
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                          : "bg-card border-border/70 text-muted-foreground"
+                      )}>
+                        <span className="text-[9px] font-bold block leading-tight truncate">
+                          {profit >= 0 ? (t('products.profit') || "الربح") : (t('products.loss') || "الخسارة")}
+                        </span>
+                        <span className="text-[11px] font-black leading-tight font-mono">
+                          {profit > 0 
+                            ? `+${m.fmt(profit)}` 
+                            : profit < 0 
+                            ? `-${m.fmt(Math.abs(profit))}` 
+                            : m.fmt(0)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                     </div>
 
                     {/* Center: Enlarged Square Image */}
@@ -3116,71 +3181,6 @@ export default function Products() {
                     )}
                   </div>
 
-                  {/* Bottom 3-Metric Price Row (الشراء | البيع | الربح) */}
-                  {noInventory ? (
-                    <div className={cn("grid gap-1.5 text-center bg-muted/40 p-1.5 rounded-xl border border-border/80 mt-2.5", isRepairMode ? "grid-cols-3" : "grid-cols-2")}>
-                      {isRepairMode ? (
-                        <>
-                          <div className="bg-card p-1 rounded-lg border border-border/70">
-                            <span className="text-[9px] text-muted-foreground font-bold block">{t('products.pieceCost')}</span>
-                            <span className="text-xs font-black text-foreground font-mono">{formatPrice(product.costPrice)}</span>
-                          </div>
-                          <div className="bg-card p-1 rounded-lg border border-border/70">
-                            <span className="text-[9px] text-muted-foreground font-bold block">{t('products.laborCost')}</span>
-                            <span className="text-xs font-black text-foreground font-mono">${formatNumber(product.laborCost || 0, 2)}</span>
-                          </div>
-                          <div className="bg-card p-1 rounded-lg border border-border/70">
-                            <span className="text-[9px] text-muted-foreground font-bold block">{t('common.total')}</span>
-                            <span className="text-xs font-black text-primary font-mono">{formatPrice(product.costPrice + (product.laborCost || 0))}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="bg-card p-1 rounded-lg border border-border/70">
-                            <span className="text-[9px] text-muted-foreground font-bold block">{t('products.salePrice') || 'البيع'}</span>
-                            <span className="text-xs font-black text-primary font-mono">{formatPrice(product.salePrice)}</span>
-                          </div>
-                          <div className="bg-card p-1 rounded-lg border border-border/70">
-                            <span className="text-[9px] text-muted-foreground font-bold block">{t('products.wholesalePrice')}</span>
-                            <span className="text-xs font-black text-foreground font-mono">{formatPrice(product.wholesalePrice || 0)}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-1.5 text-center bg-muted/40 p-1.5 rounded-xl border border-border/80 mt-2.5">
-                      {/* الشراء */}
-                      <div className="bg-card p-1 rounded-lg border border-border/70">
-                        <span className="text-[9px] text-muted-foreground font-bold block">{t('products.costPrice') || 'الشراء'}</span>
-                        <span className="text-xs font-black text-foreground font-mono">{formatPrice(product.costPrice)}</span>
-                      </div>
-                      {/* البيع */}
-                      <div className="bg-card p-1 rounded-lg border border-border/70">
-                        <span className="text-[9px] text-muted-foreground font-bold block">{t('products.salePrice') || 'البيع'}</span>
-                        <span className="text-xs font-black text-primary font-mono">{formatPrice(product.salePrice)}</span>
-                      </div>
-                      {/* الربح */}
-                      <div className={cn(
-                        "p-1 rounded-lg border",
-                        profit > 0
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                          : profit < 0
-                          ? "bg-destructive/10 text-destructive border-destructive/20"
-                          : "bg-card border-border/70 text-muted-foreground"
-                      )}>
-                        <span className="text-[9px] font-bold block">
-                          {profit >= 0 ? (t('products.profit') || "الربح") : (t('products.loss') || "الخسارة")}
-                        </span>
-                        <span className="text-xs font-black font-mono">
-                          {profit > 0 
-                            ? `+${m.fmt(profit)}` 
-                            : profit < 0 
-                            ? `-${m.fmt(Math.abs(profit))}` 
-                            : m.fmt(0)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}

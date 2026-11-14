@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 
-const ArchiveSection = lazy(() => import('@/components/settings/ArchiveSection').then(m => ({ default: m.ArchiveSection })));
-const ActivityLogSection = lazy(() => import('@/components/settings/ActivityLogSection').then(m => ({ default: m.ActivityLogSection })));
+const ActivityArchiveSection = lazy(() => import('@/components/settings/ActivityArchiveSection').then(m => ({ default: m.ActivityArchiveSection })));
 const SystemDiagnostics = lazy(() => import('@/components/settings/SystemDiagnostics').then(m => ({ default: m.SystemDiagnostics })));
 const LocalBackupSection = lazy(() => import('@/components/settings/LocalBackupSection').then(m => ({ default: m.LocalBackupSection })));
 const Partners = lazy(() => import('@/pages/Partners'));
@@ -1093,15 +1092,14 @@ export default function Settings() {
       keywords: ['مستخدمين', 'كاشير', 'صلاحيات', 'وصول', 'users', 'roles', 'cashier'],
     },
     {
-      id: 'activity',
-      label: t('settings.activityLog') || 'سجل النشاط والعمليات',
-      description: isRTL ? 'تدقيق الحركات والمصروفات' : 'Audit operations & activity logs',
-      icon: Activity,
-      bossOnly: true,
-      category: 'operations',
-      color: 'emerald',
-      badge: isRTL ? 'تدقيق آمن' : 'Audit',
-      keywords: ['نشاط', 'سجل', 'تدقيق', 'عمليات', 'حركات', 'activity', 'log', 'audit'],
+      id: 'activity',
+      label: isRTL ? 'سجل النشاط والأرشيف' : 'Activity log & archive',
+      description: isRTL ? 'تدقيق الحركات، الأرشيف واسترجاع المحذوفات' : 'Audit trail, archive & restore deleted items',
+      icon: Activity,
+      category: 'operations',
+      color: 'emerald',
+      badge: isRTL ? 'تدقيق آمن' : 'Audit',
+      keywords: ['نشاط', 'سجل', 'تدقيق', 'عمليات', 'حركات', 'أرشيف', 'محذوفات', 'استرجاع', 'فواتير', 'activity', 'log', 'audit', 'archive', 'deleted'],
     },
     {
       id: 'license',
@@ -1135,16 +1133,6 @@ export default function Settings() {
       color: 'cyan',
       badge: isRTL ? 'أرباح' : 'Profits',
       keywords: ['شركاء', 'أرباح', 'رأس مال', 'مسحوبات', 'partners', 'capital'],
-    },
-    {
-      id: 'archive',
-      label: t('archive.title') || 'الأرشيف والمحذوفات',
-      description: isRTL ? 'استرجاع الفواتير والديون' : 'Restore deleted invoices & debts',
-      icon: Archive,
-      category: 'operations',
-      color: 'stone',
-      badge: isRTL ? 'محفوظ' : 'Saved',
-      keywords: ['أرشيف', 'محذوفات', 'استرجاع', 'فواتير', 'archive', 'deleted'],
     },
     {
       id: 'reset',
@@ -1970,8 +1958,9 @@ export default function Settings() {
             </Suspense>
           </div>
         );
-      case 'activity':
-        return <ActivityLogSection />;
+      case 'activity':
+      case 'archive':
+        return <ActivityArchiveSection initialView={activeTab === 'archive' ? 'archive' : undefined} />;
       case 'store':
         return (
           <div className="space-y-4">
@@ -2423,9 +2412,6 @@ export default function Settings() {
       case 'partners':
         return <Partners />;
 
-      case 'archive':
-        return <ArchiveSection />;
-
       case 'reset':
         return <DataResetSection />;
 
@@ -2605,7 +2591,7 @@ export default function Settings() {
           {(() => {
             const visibleTabs = settingsTabs.filter(tab => {
               if (isGuestDemoMode()) {
-                if (tab.id === 'licenses' || tab.id === 'activity' || tab.id === 'license') {
+                if (tab.id === 'licenses' || tab.id === 'license') {
                   return false;
                 }
               }

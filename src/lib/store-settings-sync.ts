@@ -29,7 +29,7 @@ import {
   setStoredUIScale,
   getStoredUIScale,
 } from '@/lib/ui-scale-config';
-import { applyTheme, applyBlurTheme, applyThemeStyle, ThemeMode, ThemeColor, ThemeStyle, getThemeStorageKey, THEME_STORAGE_KEY } from '@/hooks/use-theme';
+import { applyTheme, applyBlurTheme, applyThemeStyle, normalizeThemeStyle, ThemeMode, ThemeColor, ThemeStyle, getThemeStorageKey, THEME_STORAGE_KEY } from '@/hooks/use-theme';
 import { Language, setLanguage, getCurrentLanguage } from '@/lib/i18n';
 import type { ProductFieldsConfig } from '@/lib/product-fields-config';
 import type { CustomField } from '@/lib/custom-fields-config';
@@ -215,7 +215,7 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
           color: pt.color || 'emerald',
           blur: pt.blur ?? true,
           transparency: typeof pt.transparency === 'number' ? pt.transparency : 80,
-          style: (pt.style === 'flowglass' || pt.style === 'xiaomi') ? 'flowglass' : 'standard',
+          style: normalizeThemeStyle(pt.style),
         };
       }
     } catch {
@@ -757,7 +757,7 @@ export const applyCloudStoreSettings = (cloudSettings: any) => {
       localStorage.setItem('hyperpos_theme_v1', newValue);
       applyTheme(theme.mode, theme.color);
       applyBlurTheme(theme.blur, theme.mode, theme.transparency);
-      applyThemeStyle((theme.style === 'flowglass' || theme.style === 'xiaomi') ? 'flowglass' : 'standard');
+      applyThemeStyle(normalizeThemeStyle(theme.style));
       window.dispatchEvent(new StorageEvent('storage', { key: getThemeStorageKey(), newValue }));
     }
     if (profile.appFont && isValidAppFontId(profile.appFont)) {

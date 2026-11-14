@@ -2821,3 +2821,100 @@ html[data-perf="lite"] * {
     animation: none !important;
   }
 }
+
+
+/* ==========================================================================
+   Apple Lite — نمط خفيف بلون ثابت (مستوحى من واجهات iOS/macOS)
+   بدون زجاج (backdrop-filter) ولا تدرجات ولا ظلال ثقيلة ولا حركات.
+   القيم بـ !important لأن applyTheme تضع ألوان اللوحة كـ inline style.
+   ========================================================================== */
+html.theme-applelite {
+  --background: 240 11% 96% !important;
+  --foreground: 240 3% 12% !important;
+  --card: 0 0% 100% !important;
+  --card-foreground: 240 3% 12% !important;
+  --popover: 0 0% 100% !important;
+  --popover-foreground: 240 3% 12% !important;
+  --primary: 211 100% 50% !important;
+  --primary-foreground: 0 0% 100% !important;
+  --secondary: 240 5% 94% !important;
+  --secondary-foreground: 240 3% 12% !important;
+  --muted: 240 5% 93% !important;
+  --muted-foreground: 240 2% 44% !important;
+  --accent: 211 100% 95% !important;
+  --accent-foreground: 211 100% 42% !important;
+  --border: 240 6% 88% !important;
+  --input: 240 6% 88% !important;
+  --ring: 211 100% 50% !important;
+  --sidebar-background: 240 20% 98% !important;
+  --sidebar-foreground: 240 3% 20% !important;
+  --sidebar-accent: 211 100% 95% !important;
+  --sidebar-accent-foreground: 211 100% 42% !important;
+  --sidebar-border: 240 6% 88% !important;
+  --pos-grid: 240 11% 96% !important;
+  --pos-item: 0 0% 100% !important;
+  --pos-item-hover: 240 5% 94% !important;
+  --pos-cart: 0 0% 100% !important;
+}
+
+html.dark.theme-applelite {
+  --background: 0 0% 0% !important;
+  --foreground: 240 11% 96% !important;
+  --card: 240 3% 11% !important;
+  --card-foreground: 240 11% 96% !important;
+  --popover: 240 3% 14% !important;
+  --popover-foreground: 240 11% 96% !important;
+  --primary: 211 100% 52% !important;
+  --secondary: 240 2% 17% !important;
+  --secondary-foreground: 240 11% 96% !important;
+  --muted: 240 2% 17% !important;
+  --muted-foreground: 240 3% 62% !important;
+  --accent: 211 60% 18% !important;
+  --accent-foreground: 211 100% 70% !important;
+  --border: 240 2% 22% !important;
+  --input: 240 2% 22% !important;
+  --sidebar-background: 240 3% 8% !important;
+  --sidebar-foreground: 240 11% 90% !important;
+  --sidebar-accent: 211 60% 18% !important;
+  --sidebar-accent-foreground: 211 100% 70% !important;
+  --sidebar-border: 240 2% 20% !important;
+  --pos-grid: 0 0% 0% !important;
+  --pos-item: 240 3% 11% !important;
+  --pos-item-hover: 240 2% 17% !important;
+  --pos-cart: 240 3% 9% !important;
+}
+
+html.theme-applelite *,
+html.theme-applelite *::before,
+html.theme-applelite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition-duration: 0.08s !important;
+}
+
+/* تدرجات -> ألوان مسطحة */
+html.theme-applelite .bg-gradient-primary,
+html.theme-applelite button.bg-gradient-primary,
+html.theme-applelite [role="button"].bg-gradient-primary {
+  background: hsl(var(--primary)) !important;
+  background-image: none !important;
+}
+
+/* ظلال خفيفة جداً بدل الثقيلة */
+html.theme-applelite :is(.shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-xs, .shadow-2xs) {
+  box-shadow: 0 1px 2px hsl(240 6% 10% / 0.06) !important;
+}
+
+html.theme-applelite aside[data-tour="sidebar"],
+html.theme-applelite header,
+html.theme-applelite [data-slot="card"],
+html.theme-applelite [role="dialog"],
+html.theme-applelite [role="tablist"] {
+  background: hsl(var(--card)) !important;
+}
+
+html.theme-applelite .animate-pulse,
+html.theme-applelite .animate-bounce,
+html.theme-applelite .blob-bg {
+  animation: none !important;
+}

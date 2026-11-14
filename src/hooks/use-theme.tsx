@@ -7,7 +7,7 @@ export type { ThemeTransitionEvent };
 
 export type ThemeMode = 'light' | 'dark';
 export type ThemeColor = 'emerald' | 'blue' | 'purple' | 'rose' | 'orange' | 'cyan' | 'indigo' | 'coral' | 'lime' | 'magenta' | 'coffee' | 'silver';
-export type ThemeStyle = 'standard' | 'flowglass' | 'xiaomi';
+export type ThemeStyle = 'standard' | 'flowglass' | 'xiaomi' | 'applelite';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -382,14 +382,20 @@ const DEFAULT_BLUR: boolean = false;
 const DEFAULT_TRANSPARENCY: number = 0;
 const DEFAULT_STYLE: ThemeStyle = 'standard';
 
+/** يوحّد القيم القديمة (xiaomi) ويرفض غير المعروف */
+export function normalizeThemeStyle(style: unknown): ThemeStyle {
+  if (style === 'applelite') return 'applelite';
+  if (style === 'flowglass' || style === 'xiaomi') return 'flowglass';
+  return 'standard';
+}
+
 export function applyThemeStyle(style: ThemeStyle) {
   const root = document.documentElement;
-  root.setAttribute('data-theme-style', (style === 'flowglass' || style === 'xiaomi') ? 'flowglass' : 'standard');
-  if (style === 'flowglass' || style === 'xiaomi') {
-    root.classList.add('theme-flowglass', 'theme-xiaomi');
-  } else {
-    root.classList.remove('theme-flowglass', 'theme-xiaomi');
-  }
+  const s = normalizeThemeStyle(style);
+  root.setAttribute('data-theme-style', s);
+  root.classList.toggle('theme-flowglass', s === 'flowglass');
+  root.classList.toggle('theme-xiaomi', s === 'flowglass');
+  root.classList.toggle('theme-applelite', s === 'applelite');
 }
 
 export function applyBlurTheme(enabled: boolean, mode: ThemeMode, transparency: number = 0) {
@@ -454,7 +460,7 @@ function readStoredTheme(): StoredTheme {
       color: parsed.color && themeColors[parsed.color as ThemeColor] ? parsed.color : DEFAULT_COLOR,
       blur: parsed.blur ?? DEFAULT_BLUR,
       transparency: parsed.transparency ?? DEFAULT_TRANSPARENCY,
-      style: (parsed.style === 'flowglass' || parsed.style === 'xiaomi') ? 'flowglass' : DEFAULT_STYLE,
+      style: normalizeThemeStyle(parsed.style),
     };
   } catch {
     return fallback;
@@ -494,7 +500,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         const finalColor = savedColor || DEFAULT_COLOR;
         const finalBlur = savedBlur ?? DEFAULT_BLUR;
         const finalTransparency = savedTransparency ?? DEFAULT_TRANSPARENCY;
-        const finalStyle: ThemeStyle = (savedStyle === 'flowglass' || savedStyle === 'xiaomi') ? 'flowglass' : DEFAULT_STYLE;
+        const finalStyle: ThemeStyle = normalizeThemeStyle(savedStyle);
         setModeState(finalMode);
         setColorState(finalColor);
         setBlurEnabledState(finalBlur);
@@ -527,7 +533,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           const finalColor = parsed.color || DEFAULT_COLOR;
           const finalBlur = parsed.blur ?? DEFAULT_BLUR;
           const finalTransparency = typeof parsed.transparency === 'number' ? parsed.transparency : DEFAULT_TRANSPARENCY;
-          const finalStyle: ThemeStyle = (parsed.style === 'flowglass' || parsed.style === 'xiaomi') ? 'flowglass' : DEFAULT_STYLE;
+          const finalStyle: ThemeStyle = normalizeThemeStyle(parsed.style);
           setModeState(finalMode);
           setColorState(finalColor);
           setBlurEnabledState(finalBlur);

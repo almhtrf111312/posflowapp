@@ -223,6 +223,36 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
                 : 'Smooth squircle corners, dynamic liquid glass depth, and optical light refraction.'}
             </p>
           </button>
+
+          <button
+            type="button"
+            onClick={(e) => handleStyleChange('applelite', e)}
+            className={cn(
+              "sm:col-span-2 p-3.5 sm:p-4 rounded-xl border-2 text-start transition-all relative active:scale-98",
+              pendingStyle === 'applelite'
+                ? "border-primary bg-primary/10 shadow-xs"
+                : "border-border/60 bg-muted/40 hover:bg-muted/70"
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-xs sm:text-sm text-foreground">
+                  {isRTL ? 'أبل الخفيف (Apple Lite)' : 'Apple Lite'}
+                </span>
+                <span className="px-1.5 py-0.2 rounded-md bg-primary/20 text-primary text-[10px] font-bold">
+                  {isRTL ? 'سريع' : 'Fast'}
+                </span>
+              </div>
+              {pendingStyle === 'applelite' && (
+                <Check className="w-4 h-4 text-primary shrink-0" />
+              )}
+            </div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
+              {isRTL
+                ? 'تصميم نظيف بلون أزرق ثابت، بدون زجاج أو ظلال ثقيلة أو حركات. الأخف على الأجهزة الضعيفة.'
+                : 'Clean fixed-blue design with no glass, heavy shadows or animations. Lightest on low-end devices.'}
+            </p>
+          </button>
         </div>
       </div>
 

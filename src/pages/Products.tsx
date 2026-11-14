@@ -2310,7 +2310,8 @@ export default function Products() {
 
       {/* Stats - كبسولات إحصائيات مصغرة بنسبة 50% مع تقليل الارتفاع */}
       {!noInventory && (
-        <div className="flex-shrink-0 px-3 md:px-6 pb-2 md:pb-2.5">
+        <div className={cn("flex-shrink-0 px-3 md:px-6 pb-2 md:pb-2.5", isRTL ? "pr-14 md:pr-6" : "pl-14 md:pl-6")}>
+          <div className="bg-muted/60 p-1 rounded-2xl border border-border/40 shadow-xs sm:w-fit sm:min-w-[24rem]">
           {mainTab === 'archive' ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 md:gap-3">
               <button
@@ -2379,16 +2380,16 @@ export default function Products() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 md:gap-3">
+            <div className="grid grid-cols-3 gap-1">
               <button
                 type="button"
                 onClick={() => setStatusFilter('all')}
                 className={cn(
-                  "flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2.5 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-primary/40",
+                  "flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-primary/40",
                   statusFilter === 'all' ? "border-primary bg-primary/10 ring-1 ring-primary/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
                 )}
               >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                   <Package className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
@@ -2400,11 +2401,11 @@ export default function Products() {
                 type="button"
                 onClick={() => setStatusFilter('in_stock')}
                 className={cn(
-                  "flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2.5 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-success/40",
+                  "flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-success/40",
                   statusFilter === 'in_stock' ? "border-success bg-success/10 ring-1 ring-success/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
                 )}
               >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
                   <CheckCircle className="w-3.5 h-3.5 text-success" />
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
@@ -2416,11 +2417,11 @@ export default function Products() {
                 type="button"
                 onClick={() => setStatusFilter('low_stock')}
                 className={cn(
-                  "flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2.5 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-warning/40",
+                  "flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-warning/40",
                   statusFilter === 'low_stock' ? "border-warning bg-warning/10 ring-1 ring-warning/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
                 )}
               >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-3.5 h-3.5 text-warning" />
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
@@ -2430,6 +2431,7 @@ export default function Products() {
               </button>
             </div>
           )}
+          </div>
         </div>
       )}
 

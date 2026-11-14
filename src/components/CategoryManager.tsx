@@ -32,13 +32,15 @@ interface CategoryManagerProps {
   onClose: () => void;
   onCategoriesChange?: () => void;
   usedCategories?: string[]; // Categories that are in use and cannot be deleted
+  inline?: boolean; // عرض كصفحة داخل الشاشة بدل نافذة عائمة
 }
 
 export function CategoryManager({ 
   isOpen, 
   onClose, 
   onCategoriesChange,
-  usedCategories = []
+  usedCategories = [],
+  inline = false
 }: CategoryManagerProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,7 +101,7 @@ export function CategoryManager({
       onCategoriesChange?.();
       toast.success('تم إضافة التصنيف بنجاح');
       loadData();
-      onClose();
+      if (!inline) onClose();
     } else {
       toast.error('فشل في إضافة التصنيف');
     }
@@ -165,6 +167,101 @@ export function CategoryManager({
 
   return (
     <>
+      {inline ? (
+        <div className="space-y-3">
+          {/* Add new category */}
+          <div className="flex gap-2 p-2 bg-muted rounded-lg">
+            <Input
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="اسم التصنيف الجديد..."
+              className="flex-1"
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+              disabled={isSaving}
+            />
+            <Button onClick={handleAddCategory} size="icon" disabled={isSaving} className="bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground shadow-sm">
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            </Button>
+          </div>
+
+          {/* Categories list */}
+          <div className="space-y-2 py-2">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                {categories.map((category) => (
+                  <div 
+                    key={category.id}
+                    className="flex items-center justify-between p-3 bg-card border rounded-lg"
+                  >
+                    {editingCategory?.id === category.id ? (
+                      <div className="flex gap-2 flex-1">
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1"
+                          autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && handleEditCategory()}
+                          disabled={isSaving}
+                        />
+                        <Button size="icon" variant="ghost" onClick={handleEditCategory} disabled={isSaving}>
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-green-600" />}
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => setEditingCategory(null)} disabled={isSaving}>
+                          <X className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Tag className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{category.name}</span>
+                          {isCategoryInUse(category.name) && (
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                              مستخدم
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => startEdit(category)}
+                            className="h-8 w-8"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDeleteCategory(category)}
+                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                            disabled={isCategoryInUse(category.name)}
+                            title={isCategoryInUse(category.name) ? 'لا يمكن حذف تصنيف مستخدم' : ''}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+                
+                {categories.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Tag className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>لا توجد تصنيفات</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+        </div>
+      ) : (
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <SheetContent side="bottom" className="max-h-[85vh] max-h-[85dvh] sm:max-w-lg sm:mx-auto rounded-t-2xl sm:rounded-2xl p-0 flex flex-col overflow-hidden bg-background border-border shadow-2xl">
           <SheetHeader className="p-4 border-b border-border/50 shrink-0 bg-muted/20">
@@ -272,6 +369,7 @@ export function CategoryManager({
           </div>
         </SheetContent>
       </Sheet>
+      )}
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteCategory} onOpenChange={() => setDeleteCategory(null)}>

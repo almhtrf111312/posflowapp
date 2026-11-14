@@ -197,7 +197,7 @@ export default function Products() {
   const [scanTarget, setScanTarget] = useState<'search' | 'form' | 'barcode1' | 'barcode2' | 'barcode3' | 'archive'>('search');
 
   // Archive state
-  const [mainTab, setMainTab] = useState<'products' | 'archive'>('products');
+  const [mainTab, setMainTab] = useState<'products' | 'categories' | 'archive'>('products');
   const [archivedProducts, setArchivedProducts] = useState<Product[]>([]);
   const [isArchiveLoading, setIsArchiveLoading] = useState(false);
   const [archiveSearchQuery, setArchiveSearchQuery] = useState('');
@@ -2266,10 +2266,15 @@ export default function Products() {
           {/* 2. التصنيفات (في المنتصف) */}
           <button
             type="button"
-            onClick={() => setShowCategoryManager(true)}
-            className="rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-200 select-none text-muted-foreground hover:text-foreground hover:bg-card/60 cursor-pointer"
+            onClick={() => setMainTab('categories')}
+            className={cn(
+              "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-200 select-none cursor-pointer",
+              mainTab === 'categories'
+                ? "bg-gradient-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-card/60"
+            )}
           >
-            <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-primary" />
+            <Tag className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0", mainTab === 'categories' ? "text-primary-foreground" : "text-primary")} />
             <span>{t('products.categories') || 'التصنيفات'}</span>
           </button>
 
@@ -2309,77 +2314,10 @@ export default function Products() {
       </div>
 
       {/* Stats - كبسولات إحصائيات مصغرة بنسبة 50% مع تقليل الارتفاع */}
-      {!noInventory && (
+      {!noInventory && mainTab === 'products' && (
         <div className={cn("flex-shrink-0 px-3 md:px-6 pb-2 md:pb-2.5", isRTL ? "pr-14 md:pr-6" : "pl-14 md:pl-6")}>
           <div className="bg-muted/60 p-1 rounded-2xl border border-border/40 shadow-xs sm:w-fit sm:min-w-[24rem]">
-          {mainTab === 'archive' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 md:gap-3">
-              <button
-                type="button"
-                onClick={() => setArchiveFilter('all')}
-                className={cn(
-                  "flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2.5 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-red-500/40",
-                  archiveFilter === 'all' ? "border-red-500 bg-red-500/10 ring-1 ring-red-500/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
-                )}
-              >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-red-500/15 flex items-center justify-center shrink-0">
-                  <Archive className="w-3.5 h-3.5 text-red-500" />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-foreground leading-none">{archiveStats.total}</span>
-                  <span className="text-[9px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.totalArchive') || 'إجمالي الأرشيف'}</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setArchiveFilter('out_of_stock')}
-                className={cn(
-                  "flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2.5 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-destructive/40",
-                  archiveFilter === 'out_of_stock' ? "border-destructive bg-destructive/10 ring-1 ring-destructive/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
-                )}
-              >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-foreground leading-none">{archiveStats.outOfStock}</span>
-                  <span className="text-[9px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.outOfStock') || 'نَفَذ'}</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setArchiveFilter('manual_archived')}
-                className={cn(
-                  "flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2.5 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-warning/40",
-                  archiveFilter === 'manual_archived' ? "border-warning bg-warning/10 ring-1 ring-warning/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
-                )}
-              >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-warning/15 flex items-center justify-center shrink-0">
-                  <Archive className="w-3.5 h-3.5 text-warning" />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-foreground leading-none">{archiveStats.manualArchived}</span>
-                  <span className="text-[9px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.manuallyArchived') || 'مؤرشف يدوياً'}</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setArchiveFilter('ready_to_restore')}
-                className={cn(
-                  "flex items-center gap-1.5 sm:gap-2.5 p-1.5 sm:p-2.5 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-emerald-500/40",
-                  archiveFilter === 'ready_to_restore' ? "border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
-                )}
-              >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center shrink-0">
-                  <RotateCcw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-foreground leading-none">{archiveStats.manualArchived}</span>
-                  <span className="text-[9px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.readyToRestore') || 'جاهز للاسترداد'}</span>
-                </div>
-              </button>
-            </div>
-          ) : (
+          {mainTab === 'products' ? (
             <div className="grid grid-cols-3 gap-1">
               <button
                 type="button"
@@ -2430,12 +2368,13 @@ export default function Products() {
                 </div>
               </button>
             </div>
-          )}
+          ) : null}
           </div>
         </div>
       )}
 
       {/* Filters & Search - Fixed Geometry for Both Modes */}
+      {mainTab !== 'categories' && (
       <div className="flex-shrink-0 px-3 md:px-6 pb-2 md:pb-3">
         <div className="flex flex-col gap-3">
           <div className="flex gap-2">
@@ -2504,27 +2443,7 @@ export default function Products() {
             </div>
           </div>
 
-          {mainTab === 'archive' ? (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                type="button"
-                onClick={() => setArchiveFilter('all')}
-                className={cn(
-                  "px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0",
-                  archiveFilter === 'all'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-              >
-                {t('common.all') || 'الكل'} ({archiveStats.total})
-              </button>
-              <div className="h-6 w-px bg-border mx-1 self-center" />
-              <div className="px-3 py-1 rounded-full text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium whitespace-nowrap flex items-center gap-1.5">
-                <Archive className="w-3.5 h-3.5" />
-                <span>{t('products.cloudArchive')}</span>
-              </div>
-            </div>
-          ) : (
+          {mainTab === 'archive' ? null : (
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
               {categories.map((category) => (
                 <button
@@ -2559,9 +2478,20 @@ export default function Products() {
           )}
         </div>
       </div>
+      )}
 
       {/* Content Area - Scrollable */}
-      {mainTab === 'archive' ? (
+      {mainTab === 'categories' ? (
+        <div className="flex-1 overflow-y-auto px-3 md:px-6 pb-24 pt-2">
+          <CategoryManager
+            inline
+            isOpen
+            onClose={() => setMainTab('products')}
+            onCategoriesChange={reloadCategories}
+            usedCategories={usedCategories}
+          />
+        </div>
+      ) : mainTab === 'archive' ? (
         <div onScroll={handleProductsScroll} className="flex-1 overflow-y-auto px-3 md:px-6 pb-24 space-y-3 pt-2">
           {/* Archived Products List / Cards */}
           {isArchiveLoading && mergedArchivedProducts.length === 0 ? (

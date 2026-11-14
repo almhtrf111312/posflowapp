@@ -3,7 +3,7 @@
  * Replaces Google Drive backup with built-in cloud storage
  */
 import { supabase } from '@/integrations/supabase/client';
-import { encryptBackup, decryptBackup } from './backup-encryption';
+import { encryptBackupV2, decryptBackupAny } from './backup-encryption';
 import { generateBackupData } from './auto-backup';
 
 const BUCKET_NAME = 'backups';
@@ -36,7 +36,7 @@ export const uploadCloudBackup = async (data?: object): Promise<boolean> => {
     }
 
     const backupData = data || await generateBackupData();
-    const encrypted = encryptBackup(backupData);
+    const encrypted = await encryptBackupV2(backupData, userId);
     const fileName = `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.hpbk`;
     const filePath = `${userId}/${fileName}`;
 
@@ -106,7 +106,8 @@ export const downloadCloudBackup = async (path: string): Promise<object | null> 
     }
 
     const text = await data.text();
-    return decryptBackup(text);
+    const uid = await getUserId();
+    return await decryptBackupAny(text, uid || '');
   } catch (error) {
     console.error('Cloud backup download failed:', error);
     return null;

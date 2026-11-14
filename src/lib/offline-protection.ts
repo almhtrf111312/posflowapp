@@ -4,7 +4,7 @@
  * Shows warnings after 5 days.
  */
 
-import { encryptBackup, decryptBackup } from './backup-encryption';
+import { encryptBackupV2, decryptBackupAny, getDeviceBackupSecret } from './backup-encryption';
 import { isLocalOnlyMode } from './subscription-lock';
 import { loadProductsFromIDB, saveProductsToIDB, clearProductsIDB } from './indexeddb-cache';
 
@@ -99,13 +99,13 @@ export const encryptLocalData = async (): Promise<boolean> => {
 
     // Encrypt localStorage data
     if (Object.keys(localData).length > 0) {
-      const encrypted = encryptBackup(localData);
+      const encrypted = await encryptBackupV2(localData, getDeviceBackupSecret());
       localStorage.setItem(ENCRYPTED_BACKUP_KEY, encrypted);
     }
 
     // Encrypt IDB data
     if (idbData && idbData.length > 0) {
-      const encryptedIdb = encryptBackup({ products: idbData });
+      const encryptedIdb = await encryptBackupV2({ products: idbData }, getDeviceBackupSecret());
       localStorage.setItem(ENCRYPTED_IDB_KEY, encryptedIdb);
     }
 
@@ -139,7 +139,7 @@ export const decryptLocalData = async (): Promise<boolean> => {
     // Decrypt localStorage data
     const encryptedLS = localStorage.getItem(ENCRYPTED_BACKUP_KEY);
     if (encryptedLS) {
-      const decrypted = decryptBackup(encryptedLS) as Record<string, string> | null;
+      const decrypted = await decryptBackupAny(encryptedLS, getDeviceBackupSecret()) as Record<string, string> | null;
       if (decrypted) {
         for (const [key, value] of Object.entries(decrypted)) {
           localStorage.setItem(key, value);
@@ -153,7 +153,7 @@ export const decryptLocalData = async (): Promise<boolean> => {
     // Decrypt IDB data
     const encryptedIdb = localStorage.getItem(ENCRYPTED_IDB_KEY);
     if (encryptedIdb) {
-      const decrypted = decryptBackup(encryptedIdb) as { products: unknown[] } | null;
+      const decrypted = await decryptBackupAny(encryptedIdb, getDeviceBackupSecret()) as { products: unknown[] } | null;
       if (decrypted && decrypted.products) {
         try {
           await saveProductsToIDB(decrypted.products);

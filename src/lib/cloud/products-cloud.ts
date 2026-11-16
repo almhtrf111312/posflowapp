@@ -364,7 +364,6 @@ export const loadProductsCloud = async (): Promise<Product[]> => {
 };
 
 export const loadProductsLocalFirst = async (): Promise<Product[]> => {
-  if (fetchPromise) return fetchPromise;
   // 1. فحص كاش الذاكرة أولاً
   if (productsCache && productsCache.length > 0) {
     const activeCache = productsCache.filter(p => !isProductArchivedOrDeleted(p));
@@ -374,10 +373,12 @@ export const loadProductsLocalFirst = async (): Promise<Product[]> => {
 
   // 2. فحص الكاش المحلي المسبق (IndexedDB ثم localStorage)
   const localProducts = await loadFromLocalCache();
+  if (productsCache && productsCache.length > 0) {
+    return productsCache.filter(p => !isProductArchivedOrDeleted(p));
+  }
   if (localProducts && localProducts.length > 0) {
     const activeLocal = localProducts.filter(p => !isProductArchivedOrDeleted(p));
     productsCache = activeLocal;
-    cacheTimestamp = Date.now();
     return activeLocal;
   }
 
@@ -1459,3 +1460,4 @@ export function restoreProductsQuantitiesLocally(items: Array<{ productId: strin
     console.warn('[ProductsCloud] restoreProductsQuantitiesLocally failed:', err);
   }
 }
+

@@ -110,7 +110,7 @@ import { NativeCameraPreview } from '@/components/camera/NativeCameraPreview';
 import { isNoInventoryMode, getCurrentStoreType, getVisibleSections } from '@/lib/store-type-config';
 import { ProductImage } from '@/components/products/ProductImage';
 import { getSignedImageUrl } from '@/lib/image-upload';
-import { usePageActivity } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden, usePageActivity } from '@/contexts/PageActivityContext';
 
 export default function Products() {
   const navigate = useNavigate();
@@ -152,6 +152,7 @@ export default function Products() {
   };
   const [searchParams, setSearchParams] = useSearchParams();
   const { isActive: isPageActive } = usePageActivity();
+  const deferWhileHidden = useDeferWhileHidden();
   const { user, profile } = useAuth();
   const { t, tDynamic, storeType, isRTL, language } = useLanguage();
   const visible = getVisibleSections(storeType);
@@ -529,31 +530,22 @@ export default function Products() {
     }
   }, []);
 
-  // Helper function to get custody quantity for a product
-  const getCustodyQuantity = useCallback((productId: string): number => {
-    // Sum all warehouse stock for this product (excluding main warehouse)
-    const vehicleWarehouses = warehouses.filter(w => w.type === 'vehicle');
-    const vehicleWarehouseIds = new Set(vehicleWarehouses.map(w => w.id));
-
-    return warehouseStocks
-      .filter(ws => ws.product_id === productId && vehicleWarehouseIds.has(ws.warehouse_id))
-      .reduce((sum, ws) => sum + (ws.quantity || 0), 0);
+  const custodyByProduct = useMemo(() => {
+    const vehicles = new Map(warehouses.filter(w => w.type === 'vehicle').map(w => [w.id, w.name]));
+    const byProduct = new Map<string, { total: number; breakdown: { warehouseName: string; quantity: number }[] }>();
+    for (const stock of warehouseStocks) {
+      const warehouseName = vehicles.get(stock.warehouse_id);
+      if (warehouseName === undefined) continue;
+      const entry = byProduct.get(stock.product_id) ?? { total: 0, breakdown: [] };
+      entry.total += stock.quantity || 0;
+      if (stock.quantity > 0) entry.breakdown.push({ warehouseName, quantity: stock.quantity });
+      byProduct.set(stock.product_id, entry);
+    }
+    return byProduct;
   }, [warehouses, warehouseStocks]);
 
-  // Get custody breakdown by warehouse
-  const getCustodyBreakdown = useCallback((productId: string): { warehouseName: string; quantity: number }[] => {
-    const vehicleWarehouses = warehouses.filter(w => w.type === 'vehicle');
-
-    return vehicleWarehouses
-      .map(w => {
-        const stock = warehouseStocks.find(ws => ws.product_id === productId && ws.warehouse_id === w.id);
-        return {
-          warehouseName: w.name,
-          quantity: stock?.quantity || 0
-        };
-      })
-      .filter(item => item.quantity > 0);
-  }, [warehouses, warehouseStocks]);
+  const getCustodyQuantity = (id: string) => custodyByProduct.get(id)?.total ?? 0;
+  const getCustodyBreakdown = (id: string) => custodyByProduct.get(id)?.breakdown ?? [];
 
   // Load archived products from cloud (supports background silent load)
   const loadArchivedData = useCallback(async (isBackground = false) => {
@@ -578,30 +570,28 @@ export default function Products() {
     showAddDialog || showEditDialog || showDeleteDialog || showRestockDialog || showHardDeleteDialog
   );
   const pendingProductRefreshRef = useRef(false);
+  const archiveVisitedRef = useRef(false);
+
+  useEffect(() => {
+    if (mainTab !== 'archive' || !isPageActive || archiveVisitedRef.current) return;
+    archiveVisitedRef.current = true;
+    void loadArchivedData();
+  }, [mainTab, isPageActive, loadArchivedData]);
 
   // Memory leak prevention - proper cleanup for storage events
   useEffect(() => {
     loadData();
-    loadArchivedData();
 
-    const handleProductsUpdated = () => {
-      // 🛡️ إذا كانت هناك نافذة مفتوحة تفاعلية (إضافة/تعديل/توريد)، نؤجل التحديث حتى تغلق
-      if (isAnyProductModalOpenRef.current) {
-        pendingProductRefreshRef.current = true;
-        return;
-      }
-      // 🚀 تحديث صامت في الخلفية دائماً لتجنب الوميض وفقدان التركيز أو التمرير
-      loadData(true);
-      loadArchivedData(true);
-    };
-
-    const handleCategoriesUpdated = () => {
+    const handleProductsUpdated = () => deferWhileHidden('products', () => {
       if (isAnyProductModalOpenRef.current) {
         pendingProductRefreshRef.current = true;
         return;
       }
       loadData(true);
-    };
+      if (archiveVisitedRef.current) loadArchivedData(true);
+    });
+
+    const handleCategoriesUpdated = handleProductsUpdated;
 
     window.addEventListener(EVENTS.PRODUCTS_UPDATED, handleProductsUpdated);
     window.addEventListener(EVENTS.CATEGORIES_UPDATED, handleCategoriesUpdated);
@@ -612,7 +602,7 @@ export default function Products() {
       window.removeEventListener(EVENTS.CATEGORIES_UPDATED, handleCategoriesUpdated);
       window.removeEventListener(EVENTS.APP_REFRESH, handleProductsUpdated);
     };
-  }, [loadData, loadArchivedData]);
+  }, [loadData, loadArchivedData, deferWhileHidden]);
 
   // تنفيذ أي تحديث مؤجل عند إغلاق النوافذ المنبثقة
   useEffect(() => {
@@ -620,7 +610,7 @@ export default function Products() {
     if (!isAnyOpen && pendingProductRefreshRef.current) {
       pendingProductRefreshRef.current = false;
       loadData(true);
-      loadArchivedData(true);
+      if (archiveVisitedRef.current) loadArchivedData(true);
     }
   }, [showAddDialog, showEditDialog, showDeleteDialog, showRestockDialog, showHardDeleteDialog, loadData, loadArchivedData]);
 
@@ -901,71 +891,31 @@ export default function Products() {
     });
   }, [products, noInventory, debouncedSearch, selectedCategory, statusFilter, unitFilter, t]);
 
-  // Progressive rendering limits to keep initial render <10ms for large catalogs
-  const INITIAL_PRODUCTS_LIMIT = 48;
-  const PRODUCTS_BATCH_SIZE = 36;
-  const [productDisplayLimit, setProductDisplayLimit] = useState(INITIAL_PRODUCTS_LIMIT);
-  const [archiveDisplayLimit, setArchiveDisplayLimit] = useState(INITIAL_PRODUCTS_LIMIT);
-  const productSentinelRef = useRef<HTMLDivElement | null>(null);
-  const archiveSentinelRef = useRef<HTMLDivElement | null>(null);
+  // Bound the number of mounted cards even after browsing the whole catalog.
+  const pageSize = 48;
+  const [productPage, setProductPage] = useState(0);
+  const [archivePage, setArchivePage] = useState(0);
+  const productLastPage = Math.max(0, Math.ceil(filteredProducts.length / pageSize) - 1);
+  const archiveLastPage = Math.max(0, Math.ceil(filteredArchivedProducts.length / pageSize) - 1);
+  const currentProductPage = Math.min(productPage, productLastPage);
+  const currentArchivePage = Math.min(archivePage, archiveLastPage);
+  const catalogScrollRef = useRef<HTMLDivElement>(null);
+  const archiveScrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setProductDisplayLimit(INITIAL_PRODUCTS_LIMIT);
-  }, [debouncedSearch, selectedCategory, statusFilter, unitFilter]);
+  useEffect(() => setProductPage(0), [debouncedSearch, selectedCategory, statusFilter, unitFilter]);
+  useEffect(() => setArchivePage(0), [archiveSearchQuery, archiveFilter]);
+  useEffect(() => setProductPage(page => Math.min(page, productLastPage)), [productLastPage]);
+  useEffect(() => setArchivePage(page => Math.min(page, archiveLastPage)), [archiveLastPage]);
+  useEffect(() => { catalogScrollRef.current?.scrollTo(0, 0); }, [currentProductPage]);
+  useEffect(() => { archiveScrollRef.current?.scrollTo(0, 0); }, [currentArchivePage]);
 
-  useEffect(() => {
-    setArchiveDisplayLimit(INITIAL_PRODUCTS_LIMIT);
-  }, [archiveSearchQuery, archiveFilter]);
+  const displayedProducts = useMemo(() =>
+    filteredProducts.slice(currentProductPage * pageSize, (currentProductPage + 1) * pageSize),
+  [filteredProducts, currentProductPage]);
+  const displayedArchivedProducts = useMemo(() =>
+    filteredArchivedProducts.slice(currentArchivePage * pageSize, (currentArchivePage + 1) * pageSize),
+  [filteredArchivedProducts, currentArchivePage]);
 
-  const displayedProducts = useMemo(() => {
-    return filteredProducts.slice(0, productDisplayLimit);
-  }, [filteredProducts, productDisplayLimit]);
-
-  const displayedArchivedProducts = useMemo(() => {
-    return filteredArchivedProducts.slice(0, archiveDisplayLimit);
-  }, [filteredArchivedProducts, archiveDisplayLimit]);
-
-  // Progressive infinite scroll for active products grid
-  useEffect(() => {
-    if (!isPageActive) return;
-    if (displayedProducts.length >= filteredProducts.length) return;
-
-    const sentinel = productSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setProductDisplayLimit((prev) => Math.min(prev + PRODUCTS_BATCH_SIZE, filteredProducts.length));
-        }
-      },
-      { rootMargin: '300px' }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [isPageActive, displayedProducts.length, filteredProducts.length]);
-
-  // Progressive infinite scroll for archived products grid
-  useEffect(() => {
-    if (!isPageActive || mainTab !== 'archive') return;
-    if (displayedArchivedProducts.length >= filteredArchivedProducts.length) return;
-
-    const sentinel = archiveSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setArchiveDisplayLimit((prev) => Math.min(prev + PRODUCTS_BATCH_SIZE, filteredArchivedProducts.length));
-        }
-      },
-      { rootMargin: '300px' }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [isPageActive, mainTab, displayedArchivedProducts.length, filteredArchivedProducts.length]);
 
   const activeProductsCount = useMemo(() => {
     return products.filter(p => !p.archived && (noInventory || p.quantity > 0)).length;
@@ -2281,10 +2231,7 @@ export default function Products() {
           {/* 3. الأرشيف (يسار في RTL) - لون أحمر موحد بالوضع النهاري والليلي */}
           <button
             type="button"
-            onClick={() => {
-              setMainTab('archive');
-              loadArchivedData();
-            }}
+            onClick={() => setMainTab('archive')}
             className={cn(
               "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all duration-200 select-none cursor-pointer",
               mainTab === 'archive'
@@ -2492,7 +2439,7 @@ export default function Products() {
           />
         </div>
       ) : mainTab === 'archive' ? (
-        <div onScroll={handleProductsScroll} className="flex-1 overflow-y-auto px-3 md:px-6 pb-24 space-y-3 pt-2">
+        <div ref={archiveScrollRef} onScroll={handleProductsScroll} className="flex-1 overflow-y-auto px-3 md:px-6 pb-24 space-y-3 pt-2">
           {/* Archived Products List / Cards */}
           {isArchiveLoading && mergedArchivedProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -2652,27 +2599,22 @@ export default function Products() {
                 </div>
               ))}
 
-              {/* Progressive Rendering Load More Sentinel for Archive */}
-              {displayedArchivedProducts.length < filteredArchivedProducts.length && (
-                <div className="col-span-full pt-3 pb-2 flex flex-col items-center justify-center gap-2">
-                  <div ref={archiveSentinelRef} className="h-4 w-full" aria-hidden="true" />
-                  <button
-                    type="button"
-                    onClick={() => setArchiveDisplayLimit(prev => Math.min(prev + PRODUCTS_BATCH_SIZE, filteredArchivedProducts.length))}
-                    className="px-4 py-2 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-bold transition-[colors,transform] active:scale-95 shadow-2xs flex items-center gap-2"
-                  >
-                    <span>{t('common.more')}</span>
-                    <span className="text-[11px] font-mono text-muted-foreground">
-                      ({displayedArchivedProducts.length} / {filteredArchivedProducts.length})
-                    </span>
-                  </button>
-                </div>
-              )}
+            {archiveLastPage > 0 && (
+              <nav aria-label={isRTL ? 'صفحات المنتجات' : 'Product pages'} className="col-span-full flex items-center justify-center gap-3 py-4">
+                <Button variant="outline" size="sm" disabled={currentArchivePage === 0} onClick={() => setArchivePage(currentArchivePage - 1)}>
+                  {isRTL ? 'السابق' : 'Previous'}
+                </Button>
+                <span className="text-sm tabular-nums" dir="ltr">{currentArchivePage + 1} / {archiveLastPage + 1}</span>
+                <Button variant="outline" size="sm" disabled={currentArchivePage === archiveLastPage} onClick={() => setArchivePage(currentArchivePage + 1)}>
+                  {isRTL ? 'التالي' : 'Next'}
+                </Button>
+              </nav>
+            )}
             </div>
           )}
         </div>
       ) : (
-        <div onScroll={handleProductsScroll} className="flex-1 overflow-y-auto px-3 md:px-6 pb-24">
+        <div ref={catalogScrollRef} onScroll={handleProductsScroll} className="flex-1 overflow-y-auto px-3 md:px-6 pb-24">
         {/* Products Display (3 Modes: Grid / Large, List / Medium, Compact / Small) */}
         {isLoading ? (
           <div className={cn(
@@ -2709,7 +2651,7 @@ export default function Products() {
               ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5"
               : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 items-start"
           )}>
-            {displayedProducts.map((product, index) => {
+            {displayedProducts.map(product => {
               const status = statusConfig[product.status];
               const profit = product.salePrice - product.costPrice;
 
@@ -2719,7 +2661,6 @@ export default function Products() {
                   <div
                     key={product.id}
                     className="bg-card rounded-xl px-2.5 py-1.5 border border-border shadow-2xs hover:border-border/80 transition-colors text-xs space-y-1 fade-in"
-                    style={{ animationDelay: `${index * 10}ms` }}
                   >
                     {/* Line 1: Full Product Name + Action Buttons on Left */}
                     <div className="flex items-center justify-between gap-1.5 min-w-0">
@@ -2832,7 +2773,6 @@ export default function Products() {
                   <div
                     key={product.id}
                     className="bg-card rounded-2xl p-2.5 border border-border shadow-2xs hover:border-border/80 transition-colors fade-in"
-                    style={{ animationDelay: `${index * 15}ms` }}
                   >
                     <div className="flex items-center justify-between gap-2.5">
                       {/* Right: Product Thumbnail Image (Enlarged ~28% to 72x72px) */}
@@ -2966,7 +2906,6 @@ export default function Products() {
                 <div
                   key={product.id}
                   className="bg-card rounded-2xl p-2.5 border border-border shadow-2xs relative hover:border-border/80 transition-colors fade-in"
-                  style={{ animationDelay: `${index * 20}ms` }}
                 >
                   {/* Main Body: Right Info, Center Square Image, Left Stacked Actions */}
                   <div className="flex items-center justify-between gap-2.5">
@@ -3185,21 +3124,16 @@ export default function Products() {
               );
             })}
 
-            {/* Progressive Rendering Load More Sentinel for Active Products */}
-            {displayedProducts.length < filteredProducts.length && (
-              <div className="col-span-full pt-4 pb-2 flex flex-col items-center justify-center gap-2">
-                <div ref={productSentinelRef} className="h-4 w-full" aria-hidden="true" />
-                <button
-                  type="button"
-                  onClick={() => setProductDisplayLimit(prev => Math.min(prev + PRODUCTS_BATCH_SIZE, filteredProducts.length))}
-                  className="px-5 py-2.5 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-bold transition-[colors,transform] active:scale-95 shadow-2xs flex items-center gap-2"
-                >
-                  <span>{t('common.more')}</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">
-                    ({displayedProducts.length} / {filteredProducts.length})
-                  </span>
-                </button>
-              </div>
+            {productLastPage > 0 && (
+              <nav aria-label={isRTL ? 'صفحات المنتجات' : 'Product pages'} className="col-span-full flex items-center justify-center gap-3 py-4">
+                <Button variant="outline" size="sm" disabled={currentProductPage === 0} onClick={() => setProductPage(currentProductPage - 1)}>
+                  {isRTL ? 'السابق' : 'Previous'}
+                </Button>
+                <span className="text-sm tabular-nums" dir="ltr">{currentProductPage + 1} / {productLastPage + 1}</span>
+                <Button variant="outline" size="sm" disabled={currentProductPage === productLastPage} onClick={() => setProductPage(currentProductPage + 1)}>
+                  {isRTL ? 'التالي' : 'Next'}
+                </Button>
+              </nav>
             )}
           </div>
         )}
@@ -3463,6 +3397,7 @@ export default function Products() {
     </div>
   );
 }
+
 
 
 

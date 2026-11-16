@@ -2918,3 +2918,87 @@ html.theme-applelite .animate-bounce,
 html.theme-applelite .blob-bg {
   animation: none !important;
 }
+
+
+/* Soft & Simple: opaque surfaces and compact corners, with the selected accent. */
+html.theme-soft {
+  --background: 330 12% 95% !important;
+  --foreground: 330 9% 13% !important;
+  --card: 0 0% 100% !important;
+  --card-foreground: var(--foreground) !important;
+  --popover: var(--card) !important;
+  --popover-foreground: var(--foreground) !important;
+  --muted: 330 10% 92% !important;
+  --muted-foreground: 330 6% 40% !important;
+  --secondary: var(--muted) !important;
+  --secondary-foreground: var(--foreground) !important;
+  --border: 330 9% 85% !important;
+  --input: var(--border) !important;
+  --sidebar-background: var(--card) !important;
+  --sidebar-foreground: var(--foreground) !important;
+  --sidebar-border: var(--border) !important;
+  --pos-grid: var(--background) !important;
+  --pos-item: var(--card) !important;
+  --pos-item-hover: var(--muted) !important;
+  --pos-cart: var(--card) !important;
+  --radius: 0.625rem;
+  --gradient-primary: linear-gradient(hsl(var(--primary)), hsl(var(--primary))) !important;
+  --soft-highlight: color-mix(in srgb, hsl(var(--primary)) 12%, hsl(var(--card)));
+}
+
+html.dark.theme-soft {
+  --background: 240 5% 9% !important;
+  --foreground: 240 8% 96% !important;
+  --card: 240 4% 15% !important;
+  --muted: 240 4% 20% !important;
+  --muted-foreground: 240 5% 70% !important;
+  --border: 240 4% 29% !important;
+}
+
+.theme-soft :where(*, *::before, *::after) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.theme-soft :where(button, a, [role="tab"], [role="button"], input, select, textarea):not([role="switch"]) {
+  transition-property: color, background-color, border-color !important;
+  transition-duration: 90ms !important;
+}
+
+.theme-soft :is(.rounded-2xl, .rounded-3xl, .rounded-\[20px\], .rounded-\[24px\]) {
+  border-radius: 0.75rem !important;
+}
+
+.theme-soft :is(button, a, input, select, [role="tab"], [role="tablist"], [role="button"], .category-pill).rounded-full:not([role="switch"]) {
+  border-radius: 0.5rem !important;
+}
+
+.theme-soft :is(header, aside[data-tour="sidebar"], [role="dialog"], [role="alertdialog"], [data-slot="card"], .pos-item),
+.theme-soft :is([class^="bg-card/"], [class*=" bg-card/"], [class^="bg-popover/"], [class*=" bg-popover/"]) {
+  background-color: hsl(var(--card)) !important;
+}
+
+.theme-soft :is([class^="bg-background/"], [class*=" bg-background/"]) {
+  background-color: hsl(var(--background)) !important;
+}
+
+.theme-soft :is([class^="bg-muted/"], [class*=" bg-muted/"], [role="tablist"]) {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.theme-soft :is([class^="bg-primary/"], [class*=" bg-primary/"]) {
+  background-color: var(--soft-highlight) !important;
+}
+
+.theme-soft :is(.bg-gradient-primary, [data-state="active"].data-\[state\=active\]\:bg-gradient-primary) {
+  background: hsl(var(--primary)) !important;
+}
+
+.theme-soft :is(.shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-xs, .shadow-2xs, [class*="shadow-["]) {
+  --tw-shadow: 0 0 #0000 !important;
+  --tw-shadow-colored: 0 0 #0000 !important;
+}
+
+.theme-soft :is(.fade-in, .fade-in-up, .animate-pulse, .animate-bounce, .blob-bg) {
+  animation: none !important;
+}

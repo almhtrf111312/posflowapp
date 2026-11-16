@@ -15,11 +15,13 @@ import { showSmartToast } from '@/hooks/use-smart-toast';
 import { applyAppFontToDOM, AppFontId } from '@/lib/app-font-config';
 import { applyUIScaleToDOM, UIScaleId } from '@/lib/ui-scale-config';
 import { saveUnifiedStoreSettings } from '@/lib/store-settings-sync';
+import { usePageActivity } from '@/contexts/PageActivityContext';
 
 export type AppearanceTab = 'theme' | 'fonts' | 'scale';
 
 export default function Appearance() {
   const { t, isRTL } = useLanguage();
+  const { isActive } = usePageActivity();
   const [activeTab, setActiveTab] = useState<AppearanceTab>('theme');
   const { mode, color, blurEnabled, transparencyLevel, themeStyle, setFullTheme, previewTheme, revertTheme } = useTheme();
   const { currentFont, setFont } = useAppFont();
@@ -67,9 +69,9 @@ export default function Appearance() {
     applyUIScaleToDOM(newScale);
   };
 
-  // Revert preview on unmount ONLY if user leaves page without saving
+  // Revert global preview when this page is hidden or unmounted.
   useEffect(() => {
-    isCommittedRef.current = false;
+    if (!isActive) return;
     return () => {
       if (!isCommittedRef.current) {
         const s = savedThemeRef.current;
@@ -81,7 +83,14 @@ export default function Appearance() {
         clearTimeout(successTimerRef.current);
       }
     };
-  }, []); // Empty deps: runs cleanup only on true unmount!
+  }, [isActive, previewTheme]);
+
+  useEffect(() => {
+    if (!isActive || isCommittedRef.current) return;
+    if (draftTheme) previewTheme(draftTheme.mode, draftTheme.color, draftTheme.blur, draftTheme.transparency, draftTheme.style);
+    if (draftFont !== savedFontRef.current) applyAppFontToDOM(draftFont);
+    if (draftScale !== savedScaleRef.current) applyUIScaleToDOM(draftScale);
+  }, [isActive]);
 
   // Commit all draft changes (Optimistic UI - 0ms immediate local apply)
   const handleSaveAll = () => {

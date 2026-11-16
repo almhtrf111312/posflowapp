@@ -253,6 +253,28 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
                 : 'Clean fixed-blue design with no glass, heavy shadows or animations. Lightest on low-end devices.'}
             </p>
           </button>
+          <button
+            type="button"
+            aria-pressed={pendingStyle === 'soft'}
+            onClick={(event) => handleStyleChange('soft', event)}
+            className={cn(
+              "sm:col-span-2 flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border-2 text-start",
+              pendingStyle === 'soft' ? "border-primary bg-muted" : "border-border bg-card hover:bg-muted"
+            )}
+          >
+            <div className="w-12 shrink-0 grid gap-1 rounded-lg border border-border bg-background p-1.5" aria-hidden="true">
+              <span className="h-2 w-5 rounded-sm bg-primary" />
+              <span className="h-2 rounded-sm bg-muted" />
+              <span className="h-2 rounded-sm bg-muted" />
+            </div>
+            <div className="flex-1">
+              <span className="block text-sm font-bold">{isRTL ? 'ناعم وبسيط' : 'Soft & Simple'}</span>
+              <span className="block text-xs text-muted-foreground mt-1">
+                {isRTL ? 'أسطح معتمة، زوايا خفيفة، ولون تمييز تختاره.' : 'Solid surfaces, softly rounded corners, and your choice of accent color.'}
+              </span>
+            </div>
+            {pendingStyle === 'soft' && <Check className="w-4 h-4 shrink-0 text-primary" aria-hidden="true" />}
+          </button>
         </div>
       </div>
 
@@ -295,7 +317,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
       </div>
 
       {/* Transparency Feature */}
-      <div className="pt-4 border-t border-border space-y-4">
+      {pendingStyle !== 'soft' && <div className="pt-4 border-t border-border space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={cn(
@@ -347,7 +369,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* وضع الأداء والسرعة (Lite Mode للأجهزة الضعيفة) */}
       <div className="pt-4 border-t border-border space-y-3">
@@ -433,3 +455,4 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
     </div>
   );
 }
+

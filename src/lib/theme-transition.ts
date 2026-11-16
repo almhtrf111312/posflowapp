@@ -55,8 +55,14 @@ function runOverlayReveal(x: number, y: number, endRadius: number, color: string
 export function executeCircularTransition(
   event: ThemeTransitionEvent,
   updateCallback: () => void,
-  overlayColor?: string
+  overlayColor?: string,
+  immediate = false
 ): void {
+  if (immediate || (typeof document !== 'undefined' && document.documentElement.classList.contains('theme-soft'))) {
+    updateCallback();
+    return;
+  }
+
   // التحقق من دعم المتصفح / الـ WebView وتفضيل تقليل الحركة
   const prefersReducedMotion = typeof window !== 'undefined' && 
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;

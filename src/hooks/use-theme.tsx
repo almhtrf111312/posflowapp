@@ -7,7 +7,7 @@ export type { ThemeTransitionEvent };
 
 export type ThemeMode = 'light' | 'dark';
 export type ThemeColor = 'emerald' | 'blue' | 'purple' | 'rose' | 'orange' | 'cyan' | 'indigo' | 'coral' | 'lime' | 'magenta' | 'coffee' | 'silver';
-export type ThemeStyle = 'standard' | 'flowglass' | 'xiaomi' | 'applelite';
+export type ThemeStyle = 'standard' | 'flowglass' | 'xiaomi' | 'applelite' | 'soft';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -384,7 +384,7 @@ const DEFAULT_STYLE: ThemeStyle = 'standard';
 
 /** يوحّد القيم القديمة (xiaomi) ويرفض غير المعروف */
 export function normalizeThemeStyle(style: unknown): ThemeStyle {
-  if (style === 'applelite') return 'applelite';
+  if (style === 'applelite' || style === 'soft') return style;
   if (style === 'flowglass' || style === 'xiaomi') return 'flowglass';
   return 'standard';
 }
@@ -396,11 +396,12 @@ export function applyThemeStyle(style: ThemeStyle) {
   root.classList.toggle('theme-flowglass', s === 'flowglass');
   root.classList.toggle('theme-xiaomi', s === 'flowglass');
   root.classList.toggle('theme-applelite', s === 'applelite');
+  root.classList.toggle('theme-soft', s === 'soft');
 }
 
 export function applyBlurTheme(enabled: boolean, mode: ThemeMode, transparency: number = 0) {
   const root = document.documentElement;
-  if (enabled && transparency > 0) {
+  if (enabled && transparency > 0 && !root.classList.contains('theme-soft')) {
     root.classList.add('blur-theme');
     
     // حساب نسبة العتامة الأساسية (0 إلى 1)
@@ -472,8 +473,8 @@ export function applyStoredThemeEarly(): void {
   try {
     const theme = readStoredTheme();
     applyTheme(theme.mode, theme.color);
-    applyBlurTheme(theme.blur, theme.mode, theme.transparency);
     applyThemeStyle(theme.style);
+    applyBlurTheme(theme.blur, theme.mode, theme.transparency);
   } catch { /* noop */ }
 }
 
@@ -507,17 +508,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setTransparencyLevelState(finalTransparency);
         setThemeStyleState(finalStyle);
         applyTheme(finalMode, finalColor);
-        applyBlurTheme(finalBlur, finalMode, finalTransparency);
         applyThemeStyle(finalStyle);
+        applyBlurTheme(finalBlur, finalMode, finalTransparency);
       } else {
         applyTheme(DEFAULT_MODE, DEFAULT_COLOR);
-        applyBlurTheme(DEFAULT_BLUR, DEFAULT_MODE, DEFAULT_TRANSPARENCY);
         applyThemeStyle(DEFAULT_STYLE);
+        applyBlurTheme(DEFAULT_BLUR, DEFAULT_MODE, DEFAULT_TRANSPARENCY);
       }
     } catch {
       applyTheme(DEFAULT_MODE, DEFAULT_COLOR);
-      applyBlurTheme(DEFAULT_BLUR, DEFAULT_MODE, DEFAULT_TRANSPARENCY);
       applyThemeStyle(DEFAULT_STYLE);
+      applyBlurTheme(DEFAULT_BLUR, DEFAULT_MODE, DEFAULT_TRANSPARENCY);
     }
     setIsInitialized(true);
   }, []);
@@ -540,8 +541,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           setTransparencyLevelState(finalTransparency);
           setThemeStyleState(finalStyle);
           applyTheme(finalMode, finalColor);
-          applyBlurTheme(finalBlur, finalMode, finalTransparency);
           applyThemeStyle(finalStyle);
+          applyBlurTheme(finalBlur, finalMode, finalTransparency);
         } catch {
           // ignore
         }
@@ -596,8 +597,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     executeCircularTransition(event, () => {
       setThemeStyleState(newStyle);
       applyThemeStyle(newStyle);
+      applyBlurTheme(blurEnabled, mode, transparencyLevel);
       saveTheme(mode, color, blurEnabled, transparencyLevel, newStyle);
-    }, overlayColorFor(mode, mode, color));
+    }, overlayColorFor(mode, mode, color), newStyle === 'soft');
   };
 
   const setTheme = (newMode: ThemeMode, newColor: ThemeColor, event?: ThemeTransitionEvent) => {
@@ -611,33 +613,33 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   const setFullTheme = (newMode: ThemeMode, newColor: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle, event?: ThemeTransitionEvent) => {
+    const s = style ?? themeStyle;
     executeCircularTransition(event, () => {
       const t = transparency ?? transparencyLevel;
-      const s = style ?? themeStyle;
       setModeState(newMode);
       setColorState(newColor);
       setBlurEnabledState(blur);
       setTransparencyLevelState(t);
       setThemeStyleState(s);
       applyTheme(newMode, newColor);
-      applyBlurTheme(blur, newMode, t);
       applyThemeStyle(s);
+      applyBlurTheme(blur, newMode, t);
       saveTheme(newMode, newColor, blur, t, s);
-    }, overlayColorFor(mode, newMode, newColor));
+    }, overlayColorFor(mode, newMode, newColor), s === 'soft');
   };
 
   const previewTheme = useCallback((m: ThemeMode, c: ThemeColor, b: boolean, t: number, s?: ThemeStyle, event?: ThemeTransitionEvent) => {
     executeCircularTransition(event, () => {
       applyTheme(m, c);
-      applyBlurTheme(b, m, t);
       if (s) applyThemeStyle(s);
-    }, overlayColorFor(document.documentElement.classList.contains('dark') ? 'dark' : 'light', m, c));
+      applyBlurTheme(b, m, t);
+    }, overlayColorFor(document.documentElement.classList.contains('dark') ? 'dark' : 'light', m, c), s === 'soft');
   }, []);
 
   const revertTheme = useCallback(() => {
     applyTheme(mode, color);
-    applyBlurTheme(blurEnabled, mode, transparencyLevel);
     applyThemeStyle(themeStyle);
+    applyBlurTheme(blurEnabled, mode, transparencyLevel);
   }, [mode, color, blurEnabled, transparencyLevel, themeStyle]);
 
   return (

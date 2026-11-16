@@ -756,8 +756,8 @@ export const applyCloudStoreSettings = (cloudSettings: any) => {
       localStorage.setItem(getThemeStorageKey(), newValue);
       localStorage.setItem('hyperpos_theme_v1', newValue);
       applyTheme(theme.mode, theme.color);
-      applyBlurTheme(theme.blur, theme.mode, theme.transparency);
       applyThemeStyle(normalizeThemeStyle(theme.style));
+      applyBlurTheme(theme.blur, theme.mode, theme.transparency);
       window.dispatchEvent(new StorageEvent('storage', { key: getThemeStorageKey(), newValue }));
     }
     if (profile.appFont && isValidAppFontId(profile.appFont)) {

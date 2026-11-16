@@ -162,7 +162,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
         </div>
       </div>
 
-      {/* Theme Style Selection (FlowPOS Standard vs Flow Glass) */}
+      {/* Theme style */}
       <div className="pt-2">
         <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
@@ -196,69 +196,10 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
 
           <button
             type="button"
-            onClick={(e) => handleStyleChange('flowglass', e)}
-            className={cn(
-              "p-3.5 sm:p-4 rounded-xl border-2 text-start transition-all relative active:scale-98",
-              (pendingStyle === 'flowglass' || pendingStyle === 'xiaomi')
-                ? "border-primary bg-primary/10 shadow-xs"
-                : "border-border/60 bg-muted/40 hover:bg-muted/70"
-            )}
-          >
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs sm:text-sm text-foreground">
-                  {isRTL ? 'نمط زجاجي فائق (Flow Glass)' : 'Flow Glass Style'}
-                </span>
-                <span className="px-1.5 py-0.2 rounded-md bg-primary/20 text-primary text-[10px] font-bold">
-                  Flow Glass
-                </span>
-              </div>
-              {(pendingStyle === 'flowglass' || pendingStyle === 'xiaomi') && (
-                <Check className="w-4 h-4 text-primary shrink-0" />
-              )}
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-              {isRTL 
-                ? 'حواف منحنية ناعمة (Squircle) وتأثيرات زجاجية سائلة وانكسار ضوئي فيزيائي متقدم.'
-                : 'Smooth squircle corners, dynamic liquid glass depth, and optical light refraction.'}
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={(e) => handleStyleChange('applelite', e)}
-            className={cn(
-              "sm:col-span-2 p-3.5 sm:p-4 rounded-xl border-2 text-start transition-all relative active:scale-98",
-              pendingStyle === 'applelite'
-                ? "border-primary bg-primary/10 shadow-xs"
-                : "border-border/60 bg-muted/40 hover:bg-muted/70"
-            )}
-          >
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs sm:text-sm text-foreground">
-                  {isRTL ? 'أبل الخفيف (Apple Lite)' : 'Apple Lite'}
-                </span>
-                <span className="px-1.5 py-0.2 rounded-md bg-primary/20 text-primary text-[10px] font-bold">
-                  {isRTL ? 'سريع' : 'Fast'}
-                </span>
-              </div>
-              {pendingStyle === 'applelite' && (
-                <Check className="w-4 h-4 text-primary shrink-0" />
-              )}
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-              {isRTL
-                ? 'تصميم نظيف بلون أزرق ثابت، بدون زجاج أو ظلال ثقيلة أو حركات. الأخف على الأجهزة الضعيفة.'
-                : 'Clean fixed-blue design with no glass, heavy shadows or animations. Lightest on low-end devices.'}
-            </p>
-          </button>
-          <button
-            type="button"
             aria-pressed={pendingStyle === 'soft'}
             onClick={(event) => handleStyleChange('soft', event)}
             className={cn(
-              "sm:col-span-2 flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border-2 text-start",
+              "flex items-center gap-3 p-3.5 sm:p-4 rounded-xl border-2 text-start",
               pendingStyle === 'soft' ? "border-primary bg-muted" : "border-border bg-card hover:bg-muted"
             )}
           >

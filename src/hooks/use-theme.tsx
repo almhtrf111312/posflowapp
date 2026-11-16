@@ -1,13 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getPlatformStoragePrefix } from '@/lib/app-font-config';
-import { executeCircularTransition, type ThemeTransitionEvent } from '@/lib/theme-transition';
+import type { ThemeTransitionEvent } from '@/lib/theme-transition';
 
 export type { ThemeTransitionEvent };
 
 export type ThemeMode = 'light' | 'dark';
 export type ThemeColor = 'emerald' | 'blue' | 'purple' | 'rose' | 'orange' | 'cyan' | 'indigo' | 'coral' | 'lime' | 'magenta' | 'coffee' | 'silver';
-export type ThemeStyle = 'standard' | 'flowglass' | 'xiaomi' | 'applelite' | 'soft';
+export type ThemeStyle = 'standard' | 'soft';
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -288,22 +288,6 @@ const darkModeColors = {
   posCart: '222 47% 8%',
 };
 
-/** لون الدائرة على الأندرويد: خلفية الثيم الجديد عند تغيير الوضع، وإلا اللون الأساسي الجديد */
-function overlayColorFor(prevMode: ThemeMode, newMode: ThemeMode, newColor: ThemeColor): string {
-  if (prevMode !== newMode) {
-    const bg = newMode === 'light' ? lightPalettes[newColor].background : darkModeColors.background;
-    return `hsl(${bg})`;
-  }
-  return `hsl(${themeColors[newColor].primary})`;
-}
-
-function triggerThemeTransition() {
-  const root = document.documentElement;
-  root.classList.add('theme-transitioning');
-  // Remove after transition completes
-  setTimeout(() => root.classList.remove('theme-transitioning'), 500);
-}
-
 export function applyTheme(mode: ThemeMode, color: ThemeColor) {
   const root = document.documentElement;
   const colors = mode === 'light' ? lightPalettes[color] : darkModeColors;
@@ -382,10 +366,9 @@ const DEFAULT_BLUR: boolean = false;
 const DEFAULT_TRANSPARENCY: number = 0;
 const DEFAULT_STYLE: ThemeStyle = 'standard';
 
-/** يوحّد القيم القديمة (xiaomi) ويرفض غير المعروف */
+/** تنقل الأنماط المعطّلة إلى النمط المعتم عند قراءة الإعدادات القديمة. */
 export function normalizeThemeStyle(style: unknown): ThemeStyle {
-  if (style === 'applelite' || style === 'soft') return style;
-  if (style === 'flowglass' || style === 'xiaomi') return 'flowglass';
+  if (style === 'soft' || style === 'flowglass' || style === 'xiaomi' || style === 'applelite') return 'soft';
   return 'standard';
 }
 
@@ -393,9 +376,7 @@ export function applyThemeStyle(style: ThemeStyle) {
   const root = document.documentElement;
   const s = normalizeThemeStyle(style);
   root.setAttribute('data-theme-style', s);
-  root.classList.toggle('theme-flowglass', s === 'flowglass');
-  root.classList.toggle('theme-xiaomi', s === 'flowglass');
-  root.classList.toggle('theme-applelite', s === 'applelite');
+  root.classList.remove('theme-flowglass', 'theme-xiaomi', 'theme-applelite');
   root.classList.toggle('theme-soft', s === 'soft');
 }
 
@@ -563,25 +544,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setMode = (newMode: ThemeMode, event?: ThemeTransitionEvent) => {
-    executeCircularTransition(event, () => {
-      setModeState(newMode);
-      applyTheme(newMode, color);
-      applyBlurTheme(blurEnabled, newMode, transparencyLevel);
-      saveTheme(newMode, color, blurEnabled, transparencyLevel, themeStyle);
-    }, overlayColorFor(mode, newMode, color));
+  const setMode = (newMode: ThemeMode) => {
+    setModeState(newMode);
+    applyTheme(newMode, color);
+    applyBlurTheme(blurEnabled, newMode, transparencyLevel);
+    saveTheme(newMode, color, blurEnabled, transparencyLevel, themeStyle);
   };
 
-  const setColor = (newColor: ThemeColor, event?: ThemeTransitionEvent) => {
-    executeCircularTransition(event, () => {
-      setColorState(newColor);
-      applyTheme(mode, newColor);
-      saveTheme(mode, newColor, blurEnabled, transparencyLevel, themeStyle);
-    }, overlayColorFor(mode, mode, newColor));
+  const setColor = (newColor: ThemeColor) => {
+    setColorState(newColor);
+    applyTheme(mode, newColor);
+    saveTheme(mode, newColor, blurEnabled, transparencyLevel, themeStyle);
   };
 
   const setBlurEnabled = (enabled: boolean) => {
-    triggerThemeTransition();
     setBlurEnabledState(enabled);
     applyBlurTheme(enabled, mode, transparencyLevel);
     saveTheme(mode, color, enabled, transparencyLevel, themeStyle);
@@ -593,47 +569,39 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     saveTheme(mode, color, blurEnabled, level, themeStyle);
   };
 
-  const setThemeStyle = (newStyle: ThemeStyle, event?: ThemeTransitionEvent) => {
-    executeCircularTransition(event, () => {
-      setThemeStyleState(newStyle);
-      applyThemeStyle(newStyle);
-      applyBlurTheme(blurEnabled, mode, transparencyLevel);
-      saveTheme(mode, color, blurEnabled, transparencyLevel, newStyle);
-    }, overlayColorFor(mode, mode, color), newStyle === 'soft');
+  const setThemeStyle = (newStyle: ThemeStyle) => {
+    setThemeStyleState(newStyle);
+    applyThemeStyle(newStyle);
+    applyBlurTheme(blurEnabled, mode, transparencyLevel);
+    saveTheme(mode, color, blurEnabled, transparencyLevel, newStyle);
   };
 
-  const setTheme = (newMode: ThemeMode, newColor: ThemeColor, event?: ThemeTransitionEvent) => {
-    executeCircularTransition(event, () => {
-      setModeState(newMode);
-      setColorState(newColor);
-      applyTheme(newMode, newColor);
-      applyBlurTheme(blurEnabled, newMode, transparencyLevel);
-      saveTheme(newMode, newColor, blurEnabled, transparencyLevel, themeStyle);
-    }, overlayColorFor(mode, newMode, newColor));
+  const setTheme = (newMode: ThemeMode, newColor: ThemeColor) => {
+    setModeState(newMode);
+    setColorState(newColor);
+    applyTheme(newMode, newColor);
+    applyBlurTheme(blurEnabled, newMode, transparencyLevel);
+    saveTheme(newMode, newColor, blurEnabled, transparencyLevel, themeStyle);
   };
 
-  const setFullTheme = (newMode: ThemeMode, newColor: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle, event?: ThemeTransitionEvent) => {
-    const s = style ?? themeStyle;
-    executeCircularTransition(event, () => {
-      const t = transparency ?? transparencyLevel;
-      setModeState(newMode);
-      setColorState(newColor);
-      setBlurEnabledState(blur);
-      setTransparencyLevelState(t);
-      setThemeStyleState(s);
-      applyTheme(newMode, newColor);
-      applyThemeStyle(s);
-      applyBlurTheme(blur, newMode, t);
-      saveTheme(newMode, newColor, blur, t, s);
-    }, overlayColorFor(mode, newMode, newColor), s === 'soft');
+  const setFullTheme = (newMode: ThemeMode, newColor: ThemeColor, blur: boolean, transparency?: number, style?: ThemeStyle) => {
+    const s = normalizeThemeStyle(style ?? themeStyle);
+    const t = transparency ?? transparencyLevel;
+    setModeState(newMode);
+    setColorState(newColor);
+    setBlurEnabledState(blur);
+    setTransparencyLevelState(t);
+    setThemeStyleState(s);
+    applyTheme(newMode, newColor);
+    applyThemeStyle(s);
+    applyBlurTheme(blur, newMode, t);
+    saveTheme(newMode, newColor, blur, t, s);
   };
 
-  const previewTheme = useCallback((m: ThemeMode, c: ThemeColor, b: boolean, t: number, s?: ThemeStyle, event?: ThemeTransitionEvent) => {
-    executeCircularTransition(event, () => {
-      applyTheme(m, c);
-      if (s) applyThemeStyle(s);
-      applyBlurTheme(b, m, t);
-    }, overlayColorFor(document.documentElement.classList.contains('dark') ? 'dark' : 'light', m, c), s === 'soft');
+  const previewTheme = useCallback((m: ThemeMode, c: ThemeColor, b: boolean, t: number, s?: ThemeStyle) => {
+    applyTheme(m, c);
+    if (s) applyThemeStyle(s);
+    applyBlurTheme(b, m, t);
   }, []);
 
   const revertTheme = useCallback(() => {

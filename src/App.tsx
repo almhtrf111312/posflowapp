@@ -49,8 +49,7 @@ import { FeatureErrorBoundary } from "@/components/debug/FeatureErrorBoundary";
 
 // Lazy-loaded heavy pages to keep the initial startup bundle ultra-fast
 // نقطة البيع هي الشاشة الأولى: يبدأ تحميلها فوراً مع الإقلاع بدلاً من انتظار أول رسم (يلغي شاشة "جاري تحميل الصفحة")
-const posModule = import("./pages/POS");
-const POS = lazy(() => posModule);
+const POS = lazy(() => import("./pages/POS"));
 const Products = lazy(() => import("./pages/Products"));
 const Customers = lazy(() => import("./pages/Customers"));
 const Services = lazy(() => import("./pages/Services"));
@@ -156,62 +155,32 @@ const AppContent = () => {
   // Android heads-up system tray and native chat notifications
   useNativeChatAlerts();
 
-  // Staged & Progressive Bundle Pre-warming during idle time (Native Feel Pillar 4)
+  // Only warm the most likely next screens, one at a time, during actual idle time.
   useEffect(() => {
-    // Respect Data Saver mode if user enabled it on mobile / slow connection
-    if (typeof navigator !== 'undefined' && (navigator as any).connection?.saveData) {
-      return;
-    }
+    if (resolveEffectivePerformanceMode() === 'lite' || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
+    if (!('requestIdleCallback' in window)) return;
 
-    const warmUpRoutes = () => {
-      // Prioritized sequence: highest-frequency user paths loaded first
-      const prioritizedTargets = [
-        () => import("./pages/POS"),
-        () => import("./pages/Products"),
-        () => import("./pages/Invoices"),
-        () => import("./pages/Customers"),
-        () => import("./pages/Purchases"),
-        () => import("./pages/Expenses"),
-        () => import("./pages/Reports"),
-        () => import("./pages/Services"),
-        () => import("./pages/Settings"),
-        () => import("./pages/Appearance"),
-      ];
-
-      // على الأجهزة الضعيفة (الوضع الخفيف) نجهّز الشاشات الثلاث الأكثر استخداماً فقط
-      const targets = resolveEffectivePerformanceMode() === 'lite'
-        ? prioritizedTargets.slice(0, 5)
-        : prioritizedTargets;
-
-      // شاشة واحدة في كل فترة خمول للمعالج (بدلاً من شاشة كل 350ms) حتى لا يتقطع التطبيق في ثوانيه الأولى
-      let index = 0;
-      const scheduleNext = () => {
-        if (cancelled || index >= targets.length) return;
-        const run = () => {
-          if (cancelled) return;
-          try { targets[index]().catch(() => {}); } catch {}
-          index++;
-          warmTimer = setTimeout(scheduleNext, 250);
-        };
-        if ('requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(run, { timeout: 1500 });
-        } else {
-          warmTimer = setTimeout(run, 500);
-        }
-      };
-      scheduleNext();
-    };
-
+    const paths = [
+      ['/pos', () => import("./pages/POS")],
+      ['/products', () => import("./pages/Products")],
+    ] as const;
+    const targets = paths.filter(([path]) => path !== location.pathname);
     let cancelled = false;
-    let warmTimer: ReturnType<typeof setTimeout> | undefined;
-    // البدء بعد استقرار الإقلاع بدلاً من التنافس مع الرسم الأول
-    const startTimer = setTimeout(warmUpRoutes, 1200);
+    let idleHandle: number | undefined;
+    const schedule = (index: number) => {
+      if (cancelled || index >= targets.length) return;
+      idleHandle = window.requestIdleCallback(() => {
+        if (cancelled) return;
+        void targets[index][1]().catch(() => {}).finally(() => schedule(index + 1));
+      });
+    };
+    const timer = window.setTimeout(() => schedule(0), 2000);
     return () => {
       cancelled = true;
-      clearTimeout(startTimer);
-      if (warmTimer) clearTimeout(warmTimer);
+      window.clearTimeout(timer);
+      if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle);
     };
-  }, []);
+  }, [location.pathname]);
 
   // Privacy policy acceptance
   const { accepted: privacyAccepted, accept: acceptPrivacy } = usePrivacyAccepted();
@@ -596,3 +565,4 @@ const App = () => (
 );
 
 export default App;
+

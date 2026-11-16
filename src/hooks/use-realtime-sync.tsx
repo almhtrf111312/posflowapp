@@ -38,18 +38,18 @@ export function useRealtimeSync() {
   // ✅ تخميد وتجميع أحداث المزامنة الحية (Debounce & Batch Realtime)
   // يمنع إرسال أحداث متكررة أو تجميد الواجهة عند استلام عدة تعديلات متتالية على نفس الجدول
   const emitDebouncedEvent = (tableName: string, eventName: string) => {
-    const existingTimer = debounceTimersRef.current.get(tableName);
+    const existingTimer = debounceTimersRef.current.get(eventName);
     if (existingTimer) {
       clearTimeout(existingTimer);
     }
 
     const timer = setTimeout(() => {
-      debounceTimersRef.current.delete(tableName);
+      debounceTimersRef.current.delete(eventName);
       console.log(`[Realtime] Emitting targeted event for changed table: ${tableName}`);
       emitEvent(eventName);
     }, 350);
 
-    debounceTimersRef.current.set(tableName, timer);
+    debounceTimersRef.current.set(eventName, timer);
   };
 
   useEffect(() => {
@@ -158,3 +158,4 @@ export function useRealtimeSync() {
     };
   }, [user?.id]);
 }
+

@@ -127,7 +127,7 @@ import { getCurrentUserRole } from '@/lib/supabase-store';
 import { PurchaseInvoicesListTab } from '@/components/purchases/PurchaseInvoicesListTab';
 import { InvoiceProfitDialog } from '@/components/invoices/InvoiceProfitDialog';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { usePageActivity } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 
 // مفتاح موحّد لبنود الاسترداد (يُستخدم في الاختيار والإرسال معًا)
 const refundKey = (item: { productId?: string; name: string }): string =>
@@ -281,7 +281,7 @@ export function isInvoiceInRange(createdAt?: string | null, from?: string, to?: 
 
 export default function Invoices() {
   const { t, language, isRTL } = useLanguage();
-  const { isActive: isPageActive } = usePageActivity();
+  const deferWhileHidden = useDeferWhileHidden();
   const { isBoss, isAdmin } = useUserRole();
   const canViewInvoiceProfit = isBoss || isAdmin;
 
@@ -684,7 +684,7 @@ export default function Invoices() {
 
     fetchFreshInvoices();
 
-    const handleUpdate = () => {
+    const handleUpdate = () => deferWhileHidden('invoices', () => {
       // 🛡️ إذا كانت هناك نافذة تفاعلية مفتوحة (عرض، مشاركة، استرداد، سداد)، نؤجل التحديث حتى تغلق
       if (isAnyModalOpenRef.current) {
         pendingUpdateRef.current = true;
@@ -692,7 +692,7 @@ export default function Invoices() {
       }
       // 🚀 تحديث صامت في الخلفية دائماً عند وصول أحداث التحديث لمنع وميض الشاشة أو تصفير التمرير
       fetchFreshInvoices();
-    };
+    });
 
     window.addEventListener(EVENTS.INVOICES_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.APP_REFRESH, handleUpdate);
@@ -702,7 +702,7 @@ export default function Invoices() {
       window.removeEventListener(EVENTS.INVOICES_UPDATED, handleUpdate);
       window.removeEventListener(EVENTS.APP_REFRESH, handleUpdate);
     };
-  }, []);
+  }, [deferWhileHidden]);
 
   // تنفيذ أي تحديث مؤجل بمجرد إغلاق كافة النوافذ المنبثقة
   useEffect(() => {
@@ -771,24 +771,22 @@ export default function Invoices() {
     return result;
   }, [invoices, debouncedSearch, filterType, filterPayment, dateQuickFilter, dateFilter, customDateMode, dateFrom, dateTo, showRefunded, refundMeta]);
 
-  // Progressive rendering limits to keep initial render <10ms for large invoice lists
-  const INITIAL_INVOICES_LIMIT = 40;
-  const INVOICES_BATCH_SIZE = 30;
-  const [invoiceDisplayLimit, setInvoiceDisplayLimit] = useState(INITIAL_INVOICES_LIMIT);
-  const invoiceSentinelRef = useRef<HTMLDivElement | null>(null);
+  const invoicePageSize = 40;
+  const [invoicePage, setInvoicePage] = useState(0);
+  const invoiceLastPage = Math.max(0, Math.ceil(filteredInvoices.length / invoicePageSize) - 1);
+  const currentInvoicePage = Math.min(invoicePage, invoiceLastPage);
+  const invoiceListStartRef = useRef<HTMLDivElement>(null);
+  useEffect(() => setInvoicePage(0),
+    [debouncedSearch, filterType, filterPayment, dateQuickFilter, dateFilter, customDateMode, dateFrom, dateTo, showRefunded]);
+  useEffect(() => setInvoicePage(page => Math.min(page, invoiceLastPage)), [invoiceLastPage]);
 
-  useEffect(() => {
-    setInvoiceDisplayLimit(INITIAL_INVOICES_LIMIT);
-  }, [debouncedSearch, filterType, filterPayment, dateQuickFilter, dateFilter, customDateMode, dateFrom, dateTo, showRefunded]);
-
-  // الوقوف على الفاتورة المطلوبة من التقرير: توسيع العرض حتى تظهر، ثم التمرير إليها وفتحها
   useEffect(() => {
     const target = pendingFocusRef.current;
     if (!target || filteredInvoices.length === 0) return;
     const idx = filteredInvoices.findIndex(inv => inv.id === target);
     if (idx < 0) return;
     pendingFocusRef.current = null;
-    if (idx >= invoiceDisplayLimit) setInvoiceDisplayLimit(idx + 10);
+    setInvoicePage(Math.floor(idx / invoicePageSize));
     setFocusedInvoiceId(target);
     const found = filteredInvoices[idx];
     setTimeout(() => {
@@ -799,29 +797,13 @@ export default function Invoices() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredInvoices]);
 
-  const displayedInvoices = useMemo(() => {
-    return filteredInvoices.slice(0, invoiceDisplayLimit);
-  }, [filteredInvoices, invoiceDisplayLimit]);
-
-  useEffect(() => {
-    if (!isPageActive) return;
-    if (displayedInvoices.length >= filteredInvoices.length) return;
-
-    const sentinel = invoiceSentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setInvoiceDisplayLimit((prev) => Math.min(prev + INVOICES_BATCH_SIZE, filteredInvoices.length));
-        }
-      },
-      { rootMargin: '300px' }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [isPageActive, displayedInvoices.length, filteredInvoices.length]);
+  const displayedInvoices = useMemo(() =>
+    filteredInvoices.slice(currentInvoicePage * invoicePageSize, (currentInvoicePage + 1) * invoicePageSize),
+  [filteredInvoices, currentInvoicePage]);
+  const goToInvoicePage = (page: number) => {
+    setInvoicePage(page);
+    invoiceListStartRef.current?.scrollIntoView({ block: 'start' });
+  };
 
   // KPI Card Filter Handlers
   const handleKpiTotal = () => {
@@ -2268,7 +2250,7 @@ export default function Invoices() {
           </div>
 
           {/* Invoices List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <div ref={invoiceListStartRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {isLoading ? (
               // Skeleton loading state
               [1, 2, 3, 4, 5, 6].map(i => (
@@ -2487,21 +2469,16 @@ export default function Invoices() {
               })
             )}
 
-            {/* Progressive Rendering Load More Sentinel for Invoices */}
-            {displayedInvoices.length < filteredInvoices.length && (
-              <div className="col-span-full pt-4 pb-2 flex flex-col items-center justify-center gap-2">
-                <div ref={invoiceSentinelRef} className="h-4 w-full" aria-hidden="true" />
-                <button
-                  type="button"
-                  onClick={() => setInvoiceDisplayLimit(prev => Math.min(prev + INVOICES_BATCH_SIZE, filteredInvoices.length))}
-                  className="px-5 py-2.5 rounded-xl bg-card border border-border text-foreground hover:bg-muted text-xs font-bold transition-[colors,transform] active:scale-95 shadow-2xs flex items-center gap-2"
-                >
-                  <span>{tx('invoices.loadMore', 'عرض المزيد من الفواتير')}</span>
-                  <span className="text-[11px] font-mono text-muted-foreground">
-                    ({displayedInvoices.length} / {filteredInvoices.length})
-                  </span>
-                </button>
-              </div>
+            {invoiceLastPage > 0 && (
+              <nav aria-label={isRTL ? 'صفحات الفواتير' : 'Invoice pages'} className="col-span-full flex items-center justify-center gap-3 py-4">
+                <Button size="sm" variant="outline" disabled={currentInvoicePage === 0} onClick={() => goToInvoicePage(currentInvoicePage - 1)}>
+                  {isRTL ? 'السابق' : 'Previous'}
+                </Button>
+                <span className="text-sm tabular-nums" dir="ltr">{currentInvoicePage + 1} / {invoiceLastPage + 1}</span>
+                <Button size="sm" variant="outline" disabled={currentInvoicePage === invoiceLastPage} onClick={() => goToInvoicePage(currentInvoicePage + 1)}>
+                  {isRTL ? 'التالي' : 'Next'}
+                </Button>
+              </nav>
             )}
           </div>
         </TabsContent>

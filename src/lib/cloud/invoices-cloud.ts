@@ -384,11 +384,10 @@ const refreshInvoicesInBackground = async (userId: string) => {
     const oldCache = invoicesCache || loadInvoicesFromLocalCache() || [];
     const fresh = await fetchInvoicesFromCloud(userId);
     if (fresh && fresh.length > 0) {
-      const oldLen = oldCache.length;
-      const newLen = fresh.length;
-      const oldLatest = oldCache[0]?.id;
-      const newLatest = fresh[0]?.id;
-      if (oldLen !== newLen || oldLatest !== newLatest) {
+      if (oldCache.length !== fresh.length || fresh.some((invoice, index) => {
+        const old = oldCache[index];
+        return !old || old.id !== invoice.id || old.updatedAt !== invoice.updatedAt;
+      })) {
         emitEvent(EVENTS.INVOICES_UPDATED, fresh);
       }
     }
@@ -410,7 +409,7 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
 
   // 1. Instant offline fast-path: zero network delay, instant local cache + queue
   if (typeof navigator !== 'undefined' && isLocalDataMode()) {
-    const localInvoices = loadInvoicesFromLocalCache();
+    const localInvoices = invoicesCache ?? loadInvoicesFromLocalCache();
     if (localInvoices && localInvoices.length > 0) {
       invoicesCache = localInvoices;
       cacheTimestamp = Date.now();
@@ -432,8 +431,7 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
   }
 
   // 3. Cache-First: Always serve local cache immediately (0ms) - True SWR
-  const localInvoices = loadInvoicesFromLocalCache();
-  const cachedData = localInvoices !== null ? localInvoices : invoicesCache;
+  const cachedData = invoicesCache ?? loadInvoicesFromLocalCache();
 
   if (cachedData !== null) {
     invoicesCache = cachedData;
@@ -456,8 +454,7 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
     return mergeSyncQueueInvoices(cloudInvoices);
   } catch (err) {
     console.warn('[InvoicesCloud] Cloud fetch failed, serving local cache:', err);
-    if (localInvoices) return mergeSyncQueueInvoices(localInvoices);
-    return mergeSyncQueueInvoices(invoicesCache || []);
+    return mergeSyncQueueInvoices(invoicesCache ?? loadInvoicesFromLocalCache() ?? []);
   }
 };
 
@@ -493,16 +490,19 @@ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
     const BATCH = 150;
     const batches: string[][] = [];
     for (let i = 0; i < ids.length; i += BATCH) batches.push(ids.slice(i, i + BATCH));
-    const batchResults = await Promise.all(batches.map(async (batch) => {
-      const { data, error } = await sb.from('invoice_items').select('*').in('invoice_id', batch);
-      if (error) throw error;
-      return (data || []) as Record<string, unknown>[];
-    }));
-    for (const rows of batchResults) {
-      for (const row of rows) {
-        const key = row.invoice_id as string;
-        const list = itemsByInvoice.get(key);
-        if (list) list.push(row); else itemsByInvoice.set(key, [row]);
+    const concurrency = 4;
+    for (let offset = 0; offset < batches.length; offset += concurrency) {
+      const batchResults = await Promise.all(batches.slice(offset, offset + concurrency).map(async (batch) => {
+        const { data, error } = await sb.from('invoice_items').select('*').in('invoice_id', batch);
+        if (error) throw error;
+        return (data || []) as Record<string, unknown>[];
+      }));
+      for (const rows of batchResults) {
+        for (const row of rows) {
+          const key = row.invoice_id as string;
+          const list = itemsByInvoice.get(key);
+          if (list) list.push(row); else itemsByInvoice.set(key, [row]);
+        }
       }
     }
 
@@ -1451,3 +1451,4 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
     return invoices;
   }
 }
+

@@ -155,8 +155,17 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       const thisMonthPrefix = todayLocalYMD.substring(0, 7);
       const isActiveInvoice = (inv: { status?: string }) => inv.status !== 'cancelled' && inv.status !== 'refunded';
 
+      const invoiceDays = new Map<string, string>();
+      const dayOfInvoice = (createdAt: string) => {
+        const cached = invoiceDays.get(createdAt);
+        if (cached !== undefined) return cached;
+        const day = toLocalDateString(createdAt);
+        invoiceDays.set(createdAt, day);
+        return day;
+      };
+
       const todayInvoices = invoices.filter(inv =>
-        toLocalDateString(inv.createdAt) === todayLocalYMD && isActiveInvoice(inv)
+        dayOfInvoice(inv.createdAt) === todayLocalYMD && isActiveInvoice(inv)
       );
 
       // 🎯 تعريف الربح الموحّد (profit-engine): نفس الأرقام في لوحة التحكم والتقارير وإقفال الفترة
@@ -166,7 +175,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         invoices,
         payments: profitLedger.payments,
         writeoffs: profitLedger.writeoffs,
-        dayOf: toLocalDateString,
+        dayOf: dayOfInvoice,
       };
       const expenseInputs = expenses
         .filter(exp => !!exp.date)
@@ -195,7 +204,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       const profitMargin = todaySales > 0 ? Math.round((todayProfit / todaySales) * 100) : 0;
 
       const monthInvoices = invoices.filter(inv => {
-        return toLocalDateString(inv.createdAt).substring(0, 7) === thisMonthPrefix && isActiveInvoice(inv);
+        return dayOfInvoice(inv.createdAt).substring(0, 7) === thisMonthPrefix && isActiveInvoice(inv);
       });
 
       const uniqueCustomers = new Set(monthInvoices.map(inv => inv.customerName)).size;
@@ -206,7 +215,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       const oneWeekAgoYMD = toLocalDateString(oneWeekAgo);
 
       const weekInvoices = invoices.filter(inv =>
-        toLocalDateString(inv.createdAt) >= oneWeekAgoYMD && isActiveInvoice(inv)
+        dayOfInvoice(inv.createdAt) >= oneWeekAgoYMD && isActiveInvoice(inv)
       );
       const weekSales = weekInvoices.reduce((sum, inv) => sum + netOfTax(inv), 0);
 
@@ -242,12 +251,12 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       );
 
       const dailyCustomers = make7Days(dayYmd =>
-        new Set(invoices.filter(inv => toLocalDateString(inv.createdAt) === dayYmd && isActiveInvoice(inv))
+        new Set(invoices.filter(inv => dayOfInvoice(inv.createdAt) === dayYmd && isActiveInvoice(inv))
           .map(inv => inv.customerName)).size
       );
 
       const dailyRefunds = make7Days(dayYmd =>
-        invoices.filter(inv => toLocalDateString(inv.createdAt) === dayYmd && inv.status === 'refunded')
+        invoices.filter(inv => dayOfInvoice(inv.createdAt) === dayYmd && inv.status === 'refunded')
           .reduce((sum, inv) => sum + inv.total, 0)
       );
 
@@ -261,7 +270,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         const startYmd = toLocalDateString(weekStart);
         const endYmd = toLocalDateString(weekEnd);
         return invoices.filter(inv => {
-          const dStr = toLocalDateString(inv.createdAt);
+          const dStr = dayOfInvoice(inv.createdAt);
           return dStr >= startYmd && dStr <= endYmd && isActiveInvoice(inv);
         }).reduce((sum, inv) => sum + inv.total, 0);
       }).reverse();
@@ -316,13 +325,13 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
 
       // ✅ إحصائيات الفواتير المستردة
       const todayRefundedInvoices = invoices.filter(inv =>
-        toLocalDateString(inv.createdAt) === todayLocalYMD && inv.status === 'refunded'
+        dayOfInvoice(inv.createdAt) === todayLocalYMD && inv.status === 'refunded'
       );
       const todayRefundedCount = todayRefundedInvoices.length;
 
       const monthRefundedAmount = invoices
         .filter(inv => {
-          return toLocalDateString(inv.createdAt).substring(0, 7) === thisMonthPrefix && inv.status === 'refunded';
+          return dayOfInvoice(inv.createdAt).substring(0, 7) === thisMonthPrefix && inv.status === 'refunded';
         })
         .reduce((sum, inv) => sum + inv.total, 0);
 
@@ -633,3 +642,4 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
     </div>
   );
 }
+

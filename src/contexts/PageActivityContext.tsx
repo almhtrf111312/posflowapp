@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useRef, useEffect, useCallback, useMemo } from 'react';
 
 export interface PageActivityContextValue {
   isActive: boolean;
@@ -19,8 +19,9 @@ export function PageActivityProvider({
   activePath: string;
   children: React.ReactNode;
 }) {
+  const value = useMemo(() => ({ isActive, activePath }), [isActive, activePath]);
   return (
-    <PageActivityContext.Provider value={{ isActive, activePath }}>
+    <PageActivityContext.Provider value={value}>
       {children}
     </PageActivityContext.Provider>
   );
@@ -68,3 +69,4 @@ export function useDeferWhileHidden(): (key: string, fn: () => void) => void {
     }
   }, []);
 }
+

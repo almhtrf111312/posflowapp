@@ -94,14 +94,31 @@ const CURRENT_VERSION = 2;
 // Legacy key that used to be hardcoded in the bundle. Kept ONLY so existing
 // stored values can still be decrypted; never used to encrypt new values.
 const LEGACY_APP_SECRET = 'HyperPOS2024SecureStorage';
-const APP_SECRET_STORAGE = 'hp_app_secret';
+export const APP_SECRET_STORAGE = 'hp_app_secret';
+/** The same secret, encrypted by a hardware-backed key (Android Keystore). Present only on native Android. */
+export const WRAPPED_APP_SECRET_STORAGE = 'hp_app_secret_w';
+
+// Secret unwrapped by the native keystore at startup; lives in memory only.
+let runtimeAppSecret: string | null = null;
+
+/** Called once at startup by native-key.ts, before anything reads secure storage. */
+export const setRuntimeAppSecret = (secret: string): void => {
+  runtimeAppSecret = secret;
+};
 
 /**
  * Per-installation secret, generated randomly on first use.
- * NOTE: this is obfuscation for locally cached data only. It is NOT a security
- * boundary — never make a trust/authorization decision based on local storage.
+ * On Android it is kept only in wrapped form (see native-key.ts) and handed over in memory;
+ * elsewhere it is stored in localStorage, which is obfuscation rather than a security boundary.
  */
 const getAppSecret = (): string => {
+  if (runtimeAppSecret) return runtimeAppSecret;
+  let wrappedOnly = false;
+  try {
+    wrappedOnly = !!localStorage.getItem(WRAPPED_APP_SECRET_STORAGE);
+  } catch { /* storage unavailable */ }
+  // The secret exists but has not been unwrapped: refuse instead of silently creating a second key
+  if (wrappedOnly) throw new Error('SecureStorage: key is not unlocked yet');
   try {
     const existing = localStorage.getItem(APP_SECRET_STORAGE);
     if (existing) return existing;

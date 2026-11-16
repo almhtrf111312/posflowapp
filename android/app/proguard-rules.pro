@@ -26,3 +26,4 @@
 -keep class androidx.credentials.playservices.** { *; }
 -keep class com.google.android.libraries.identity.googleid.** { *; }
 -keep class com.flowpos.pro.auth.** { *; }
+-keep class com.flowpos.pro.security.** { *; }

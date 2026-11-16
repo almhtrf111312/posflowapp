@@ -294,6 +294,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
       <div className="space-y-1.5 relative">
         <Label className="text-sm">{t('products.name')} *</Label>
         <Input
+          data-testid="pii-name"
           value={productName}
           onChange={(e) => {
             setProductName(e.target.value);
@@ -398,6 +399,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
           <Input
             type="number"
             min="1"
+            data-testid="pii-qty"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             className="h-9 text-xs sm:text-sm px-2 font-bold"
@@ -410,6 +412,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
           <Input
             type="number"
             step="any"
+            data-testid="pii-cost"
             value={costPrice}
             onChange={(e) => setCostPrice(e.target.value)}
             className="h-9 text-xs sm:text-sm px-2 font-bold"
@@ -427,6 +430,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
           <Input
             type="number"
             step="any"
+            data-testid="pii-sale"
             value={salePrice}
             onChange={(e) => setSalePrice(e.target.value)}
             className="h-9 text-xs sm:text-sm px-2"
@@ -460,6 +464,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
             <Input
               type="number"
               min="1"
+              data-testid="pii-factor"
               value={conversionFactor}
               onChange={(e) => setConversionFactor(e.target.value)}
               className="h-8 text-xs"
@@ -504,6 +509,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
             <Input
               type="number"
               step="0.01"
+              data-testid="pii-bulk-sale"
               value={bulkSalePrice}
               onChange={(e) => setBulkSalePrice(e.target.value)}
               className="h-8 text-xs"
@@ -710,7 +716,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
         <Button variant="outline" size="sm" onClick={onClose} disabled={loading} className="flex-1">
           {t('purchaseInvoice.finishAdding')}
         </Button>
-        <Button size="sm" onClick={handleSubmit} disabled={loading || !productName || !quantity || !costPrice} className="flex-1">
+        <Button data-testid="pii-submit" size="sm" onClick={handleSubmit} disabled={loading || !productName || !quantity || !costPrice} className="flex-1">
           <Plus className="w-4 h-4" />
           {loading ? t('common.loading') : t('purchaseInvoice.addAndContinue')}
         </Button>

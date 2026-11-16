@@ -581,6 +581,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     {t('purchaseInvoice.invoiceNumber')} *
                   </Label>
                   <Input
+                    data-testid="pi-number"
                     value={invoiceNumber}
                     onChange={(e) => setInvoiceNumber(e.target.value)}
                     placeholder="INV-2024-001"
@@ -594,6 +595,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     {t('purchaseInvoice.supplierName')} *
                   </Label>
                   <Input
+                    data-testid="pi-supplier"
                     value={supplierName}
                     onChange={(e) => setSupplierName(e.target.value)}
                     placeholder={t('purchaseInvoice.supplierNamePlaceholder')}
@@ -682,6 +684,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     <Button
                       size="sm"
                       variant="outline"
+                      data-testid="pi-add-item"
                       onClick={() => setShowItemForm(true)}
                       className="h-9 rounded-xl text-xs font-bold gap-1"
                     >
@@ -859,6 +862,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                 <Button
                   type="button"
                   className="flex-[2] h-11 rounded-xl font-bold text-xs sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md gap-1.5"
+                  data-testid="pi-create"
                   onClick={handleCreateInvoice}
                   disabled={loading}
                 >
@@ -882,6 +886,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                 <Button
                   type="button"
                   className="flex-[2] h-11 rounded-xl font-bold text-xs sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md gap-1.5"
+                  data-testid="pi-go-finalize"
                   onClick={goToFinalize}
                   disabled={invoiceItems.length === 0 || loading}
                 >
@@ -906,6 +911,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                 <Button
                   type="button"
                   className="flex-[2] h-11 rounded-xl font-bold text-xs sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md gap-1.5"
+                  data-testid="pi-finalize"
                   onClick={handleFinalize}
                   disabled={loading}
                 >

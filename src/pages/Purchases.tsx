@@ -61,6 +61,7 @@ export default function Purchases() {
           <button
             type="button"
             className={cn(capsuleItem, capsuleActive)}
+            data-testid="purchase-new"
             onClick={() => setShowDialog(true)}
           >
             <Plus className="w-4 h-4 shrink-0" />

@@ -1960,6 +1960,7 @@ export function CartPanel({
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
               <Input
                 type="text"
+                data-testid="cart-customer"
                 placeholder={t('pos.customerName')}
                 value={customerName}
                 onChange={(e) => handleCustomerSearch(e.target.value)}
@@ -2076,6 +2077,7 @@ export function CartPanel({
                         {onToggleUnit && (
                           <button
                             type="button"
+                            data-testid="cart-toggle-unit"
                             onClick={() => onToggleUnit(item.id, item.unit)}
                             className="p-1 text-muted-foreground hover:text-primary transition-colors relative after:absolute after:-inset-2 after:content-['']"
                             title={t('pos.switchUnit') || 'تبديل الوحدة'}
@@ -2120,6 +2122,7 @@ export function CartPanel({
                   </span>
                   <button
                     type="button"
+                    data-testid="cart-qty-plus"
                     onClick={() => onUpdateQuantity(item.id, 1, item.unit)}
                     className="size-8 rounded-lg bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-90 transition-all shadow-xs relative after:absolute after:-inset-1.5 after:content-['']"
                     title={t('pos.increaseQty') || 'زيادة الكمية'}
@@ -2171,6 +2174,7 @@ export function CartPanel({
                   <Input
                     type="number"
                     placeholder={t('pos.discount') || 'خصم'}
+                    data-testid="cart-discount-percent"
                     value={discountType === 'percent' ? (discount || '') : ''}
                     onChange={(e) => {
                       setDiscountType('percent');
@@ -2204,6 +2208,7 @@ export function CartPanel({
                   <Input
                     type="number"
                     placeholder={t('pos.discount') || 'خصم'}
+                    data-testid="cart-discount-fixed"
                     value={discountType === 'fixed' ? (discount || '') : ''}
                     onChange={(e) => {
                       setDiscountType('fixed');
@@ -2241,6 +2246,7 @@ export function CartPanel({
               )} />
               <Input
                 type="number"
+                data-testid="cart-received"
                 placeholder={t('pos.receivedAmount') || 'المبلغ المقبوض'}
                 value={receivedAmount === 0 ? '' : receivedAmount}
                 onChange={(e) => {
@@ -2320,7 +2326,7 @@ export function CartPanel({
                   ⊞
                 </button>
               </div>
-              <span className={cn("text-xl font-bold tabular-nums", wholesaleMode ? "text-warning" : "text-primary")}>
+              <span data-testid="cart-total" className={cn("text-xl font-bold tabular-nums", wholesaleMode ? "text-warning" : "text-primary")}>
                 {formatCurrency(totalInCurrency, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
               </span>
             </div>
@@ -2476,7 +2482,7 @@ export function CartPanel({
               <Button variant="outline" className="flex-1 text-foreground" onClick={() => setShowCashDialog(false)} disabled={isSaving}>
                 {t('common.cancel')}
               </Button>
-              <Button className="flex-1 bg-success hover:bg-success/90" onClick={confirmCashSale} disabled={isSaving} aria-busy={isSaving}>
+              <Button data-testid="cash-confirm" className="flex-1 bg-success hover:bg-success/90" onClick={confirmCashSale} disabled={isSaving} aria-busy={isSaving}>
                 <Check className={cn('w-4 h-4', isSaving && 'animate-spin')} />
                 {isSaving ? (t('common.saving') || 'جاري الحفظ...') : (t('common.confirm') || 'تأكيد')}
               </Button>
@@ -2618,6 +2624,7 @@ export function CartPanel({
                 {t('common.cancel')}
               </Button>
               <Button
+                data-testid="debt-confirm"
                 className="flex-1 bg-warning hover:bg-warning/90 text-warning-foreground"
                 disabled={isSaving}
                 aria-busy={isSaving}

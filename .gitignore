@@ -55,3 +55,7 @@ test_plan_extracted.md
 .env.local
 .env.*.local
 !.env.example
+
+# E2E script output
+.e2e-profile/
+e2e-results/

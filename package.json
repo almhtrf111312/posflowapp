@@ -13,6 +13,7 @@
     "electron:dev": "set NODE_ENV=development && electron electron/main.js",
     "electron:build": "set NODE_ENV=production && cd electron && electron-builder",
     "electron:build:portable": "set NODE_ENV=production && cd electron && electron-builder --win portable",
+    "e2e": "node scripts/e2e/flowpos-e2e.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "version:bump": "node scripts/bump-version.js",

@@ -5,6 +5,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { encryptBackupV2, decryptBackupAny } from './backup-encryption';
 import { generateBackupData } from './auto-backup';
+import { getAccountKeyMaterial } from './account-encryption-key';
 
 const BUCKET_NAME = 'backups';
 const MAX_BACKUPS = 10;
@@ -36,7 +37,10 @@ export const uploadCloudBackup = async (data?: object): Promise<boolean> => {
     }
 
     const backupData = data || await generateBackupData();
-    const encrypted = await encryptBackupV2(backupData, userId);
+    // The secret is the random per-account key stored server-side (owner-only RLS), not the public user id.
+    // Falls back to the user id only when the key cannot be fetched, so a backup is never skipped.
+    const keyMaterial = await getAccountKeyMaterial(userId);
+    const encrypted = await encryptBackupV2(backupData, keyMaterial || userId);
     const fileName = `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.hpbk`;
     const filePath = `${userId}/${fileName}`;
 
@@ -107,6 +111,12 @@ export const downloadCloudBackup = async (path: string): Promise<object | null> 
 
     const text = await data.text();
     const uid = await getUserId();
+    // Newer backups use the account key; older ones used the user id. Try both so every existing backup stays readable.
+    const keyMaterial = uid ? await getAccountKeyMaterial(uid) : null;
+    if (keyMaterial) {
+      const viaAccountKey = await decryptBackupAny(text, keyMaterial);
+      if (viaAccountKey) return viaAccountKey;
+    }
     return await decryptBackupAny(text, uid || '');
   } catch (error) {
     console.error('Cloud backup download failed:', error);

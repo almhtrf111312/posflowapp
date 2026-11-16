@@ -264,7 +264,7 @@ export function MaintenancePanel({
             servicePrice,
             selectedCurrency.code,
             servicePriceInCurrency,
-            matchedCustomer?.id,
+            invoice.id,
             `خدمة صيانة - ${effectiveName} - ${invoice.id}`
           );
         } catch (err) {

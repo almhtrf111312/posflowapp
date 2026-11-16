@@ -57,7 +57,7 @@ export async function processCashSaleBundleFromQueue(
   data: { operationId?: string; bundle: CashSaleBundle }
 ): Promise<boolean> {
   const { bundle } = data;
-  console.log('[CashSale] Processing queued bundle for:', bundle.customerName);
+  console.log('[CashSale] Processing queued bundle');
 
   try {
     const operationId = data.operationId;
@@ -92,7 +92,7 @@ export async function processCashSaleBundleFromQueue(
       if (bundle.customerId) {
         linkInvoiceToCustomerCloud(sale.invoiceNumber, bundle.customerId).catch(() => {});
       } else if (bundle.customerName && bundle.customerName !== 'عميل نقدي' && bundle.customerName !== 'زبون عام') {
-        console.warn(`[CashSale] Invoice ${sale.invoiceNumber} for "${bundle.customerName}" has no customerId. Name-based resolution skipped.`);
+        console.warn(`[CashSale] Invoice ${sale.invoiceNumber} has no customerId. Name-based resolution skipped.`);
       }
     }
 

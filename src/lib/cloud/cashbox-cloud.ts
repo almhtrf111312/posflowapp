@@ -61,14 +61,18 @@ export const openShiftCloud = async (params: {
 
   const ownerId = (await getOwnerIdForInsert()) || userId;
 
+  const openingBalance = Number.isFinite(params.openingBalance) && params.openingBalance > 0
+    ? roundCurrency(params.openingBalance)
+    : 0;
+
   const payload: Record<string, unknown> = {
     id: params.shiftId || crypto.randomUUID(),
     user_id: ownerId,
     cashier_id: params.cashierId || userId,
     cashier_name: params.cashierName || null,
     opened_at: new Date().toISOString(),
-    opening_balance: roundCurrency(params.openingBalance),
-    expected_balance: roundCurrency(params.openingBalance),
+    opening_balance: openingBalance,
+    expected_balance: openingBalance,
     reconciliation_status: 'open' as const,
   };
 
@@ -96,49 +100,53 @@ export const closeShiftCloud = async (params: {
   const userId = await ensureUserId();
   if (!userId) return false;
 
-  // المحاولة الأولى: الإقفال الذري والتسوية التلقائية عبر الخادم
+  const actualBalance = roundCurrency(params.actualBalance);
+  const varianceReason = params.varianceReason || null;
+
+  // The server computes the expected balance and the variance from the shift transactions.
+  // There is no direct table write: on failure the same atomic call is queued for retry.
   try {
     const { data, error } = await sb.rpc('close_cash_shift_atomic', {
       _shift_id: params.shiftId,
-      _actual_balance: roundCurrency(params.actualBalance),
-      _variance_reason: params.varianceReason || null,
+      _actual_balance: actualBalance,
+      _variance_reason: varianceReason,
     });
-    if (!error && (data as { success?: boolean })?.success) {
-      return true;
-    }
-    if (error) {
-      console.warn('[cashbox-cloud] close_cash_shift_atomic RPC error, falling back:', error.message);
-    }
-  } catch (rpcErr) {
-    console.warn('[cashbox-cloud] close_cash_shift_atomic failed, falling back:', rpcErr);
-  }
-
-  // الاحتياط المحلي وغير المتصل: التحديث المباشر للجدول والإضافة للطابور
-  const variance = roundCurrency(params.actualBalance - params.expectedBalance);
-  const status: CloudShift['reconciliation_status'] =
-    Math.abs(variance) < 0.01 ? 'matched' : (params.varianceReason ? 'matched' : 'unmatched');
-
-  const payload = {
-    closed_at: new Date().toISOString(),
-    expected_balance: roundCurrency(params.expectedBalance),
-    actual_balance: roundCurrency(params.actualBalance),
-    variance,
-    variance_reason: params.varianceReason || null,
-    reconciliation_status: status,
-  };
-
-  try {
-    const { error } = await sb
-      .from('cash_shifts')
-      .update(payload)
-      .eq('id', params.shiftId);
     if (error) throw error;
-    return true;
+    if ((data as { success?: boolean } | null)?.success) return true;
+    throw new Error('close_cash_shift_atomic returned no success flag');
   } catch (e) {
-    console.warn('[cashbox-cloud] close shift failed, queued:', e);
-    try { addToQueue('shift_close', { shiftId: params.shiftId, ...payload, userId }); } catch { /* noop */ }
+    console.warn('[cashbox-cloud] atomic shift close failed, queued for retry:', e);
+    try {
+      addToQueue('shift_close', { shiftId: params.shiftId, actualBalance, varianceReason }, 10);
+    } catch { /* noop */ }
     return false;
   }
+};
+
+/**
+ * Idempotent write of one shift transaction.
+ * `row.id` is generated once by the caller and reused on every retry, so a lost response never duplicates cash.
+ * The table also has a unique index on (shift_id, type, reference_id).
+ */
+export const writeShiftTransactionRow = async (row: Record<string, unknown>): Promise<void> => {
+  const attempt = (payload: Record<string, unknown>) =>
+    sb.from('shift_transactions').upsert(payload, { onConflict: 'id', ignoreDuplicates: true });
+
+  const { error } = await attempt(row);
+  if (!error) return;
+  if (error.code !== '23505') throw error;
+
+  // Another row already holds this (shift, type, reference).
+  const type = String(row.type || '');
+  // A sale is referenced by its unique operation id and a debt payment by its unique payment id
+  // (the server may already have written it): this is the same movement, nothing to add.
+  if (type === 'sale' || type === 'debt_payment') return;
+
+  // Other types may legitimately repeat a reference in one shift (two withdrawals by one partner,
+  // two partial refunds of one invoice): keep the movement under a distinct reference.
+  const suffix = String(row.id || '').slice(0, 8) || Date.now().toString(36);
+  const { error: retryError } = await attempt({ ...row, reference_id: `${String(row.reference_id ?? '')}#${suffix}` });
+  if (retryError && retryError.code !== '23505') throw retryError;
 };
 
 export const addShiftTransactionCloud = async (params: {
@@ -157,6 +165,7 @@ export const addShiftTransactionCloud = async (params: {
   const ownerId = (await getOwnerIdForInsert()) || userId;
 
   const payload: Record<string, unknown> = {
+    id: crypto.randomUUID(),
     shift_id: params.shiftId,
     user_id: ownerId,
     type: params.type,
@@ -169,8 +178,7 @@ export const addShiftTransactionCloud = async (params: {
   if (params.exchangeRate !== undefined) payload.exchange_rate = params.exchangeRate;
 
   try {
-    const { error } = await sb.from('shift_transactions').insert(payload);
-    if (error) throw error;
+    await writeShiftTransactionRow(payload);
     return true;
   } catch (e) {
     console.warn('[cashbox-cloud] tx insert failed, queued:', e);

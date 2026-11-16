@@ -254,7 +254,7 @@ export const addCustomerCloud = async (
   );
   
   if (duplicate) {
-    console.warn('[addCustomerCloud] Customer with same name already exists:', customer.name);
+    console.warn('[addCustomerCloud] Customer with same name already exists');
     return null;
   }
   

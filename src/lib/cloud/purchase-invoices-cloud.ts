@@ -1,6 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 import { supabase } from '@/integrations/supabase/client';
-import { isNoInventoryMode } from '@/lib/store-type-config';
 import { round8 } from '@/lib/money-engine';
 import { emitEvent, EVENTS } from '@/lib/events';
 import { getOwnerIdForInsert, getCurrentUserId } from '@/lib/supabase-store';
@@ -356,244 +355,25 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
  }
  
  // Finalize purchase invoice and update product stock
- export async function finalizePurchaseInvoiceCloud(invoiceId: string): Promise<boolean> {
-   const { data: { user } } = await supabase.auth.getUser();
-   if (!user) return false;
- 
-   // استخدام owner_id لضمان عزل الصلاحيات عند إنشاء منتجات جديدة
-   const ownerId = await getOwnerIdForInsert() || user.id;
+export async function finalizePurchaseInvoiceCloud(invoiceId: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
 
-   // Get invoice and items
-   const { invoice, items } = await loadPurchaseInvoiceWithItems(invoiceId);
-   if (!invoice || items.length === 0) return false;
- 
-    // Start transaction-like operations
-    try {
-      const noInventory = isNoInventoryMode();
+  // Snapshot of the items, used only for the local cache update below (writes nothing)
+  const { invoice, items } = await loadPurchaseInvoiceWithItems(invoiceId);
+  if (!invoice || items.length === 0) return false;
 
-      // For each item, create or update product
-      for (const item of items) {
-        if (item.product_id) {
-          if (noInventory) {
-            // في وضع الفرن: فقط تحديث سعر التكلفة وسجل الشراء بدون زيادة الكمية
-            const { data: product } = await supabase
-              .from('products')
-              .select('purchase_history')
-              .eq('id', item.product_id)
-              .single();
+  // One atomic server transaction: product linking/creation, WAC, stock, history and status.
+  // A thrown error means nothing was applied; a retry on a finalized invoice is a no-op.
+  const { data: rpcData, error: rpcError } = await (supabase as any).rpc('finalize_purchase_invoice_atomic', {
+    _invoice_id: invoiceId,
+  });
+  if (rpcError) throw rpcError;
 
-            if (product) {
-              const purchaseHistory = Array.isArray(product.purchase_history) 
-                ? product.purchase_history 
-                : [];
-              
-              purchaseHistory.push({
-                invoice_id: invoiceId,
-                invoice_number: invoice.invoice_number,
-                supplier_name: invoice.supplier_name,
-                date: invoice.invoice_date,
-                quantity: item.quantity,
-                cost_price: item.cost_price,
-                added_at: new Date().toISOString()
-              });
+  const result = (rpcData || {}) as { success?: boolean; already_finalized?: boolean };
+  if (!result.success) return false;
 
-              await supabase
-                .from('products')
-                .update({
-                  cost_price: item.cost_price,
-                  purchase_history: purchaseHistory
-                })
-                .eq('id', item.product_id);
-            }
-          } else {
-            // Update existing product quantity + stock
-            const { data: product } = await supabase
-              .from('products')
-              .select('quantity, cost_price, purchase_history')
-              .eq('id', item.product_id)
-              .single();
-  
-            if (product) {
-              // ⚖️ الكمية والتكلفة (المتوسط المرجح) تُحسب ذرياً في الخادم — المخزون السالب يُغطّى بسعر الشراء الجديد أولاً
-              // حفظ تكلفة ما قبل الشراء في سطر البند لضمان العكس الدقيق لاحقاً
-              await supabase
-                .from('purchase_invoice_items')
-                .update({ cost_price_before: product.cost_price })
-                .eq('id', item.id);
-
-              const { error: wacErr } = await (supabase as any).rpc('receive_stock_wac', {
-                _product_id: item.product_id,
-                _quantity: item.quantity,
-                _unit_cost: item.cost_price || 0,
-                _reference: `purchase_invoice:${invoice.invoice_number}`,
-              });
-              if (wacErr) throw wacErr;
-              const purchaseHistory = Array.isArray(product.purchase_history) 
-                ? product.purchase_history 
-                : [];
-              
-              purchaseHistory.push({
-                invoice_id: invoiceId,
-                invoice_number: invoice.invoice_number,
-                supplier_name: invoice.supplier_name,
-                date: invoice.invoice_date,
-                quantity: item.quantity,
-                cost_price: item.cost_price,
-                added_at: new Date().toISOString()
-              });
-  
-              await supabase
-                .from('products')
-                .update({ purchase_history: purchaseHistory })
-                .eq('id', item.product_id);
-            }
-          }
-        } else {
-          // Check if product already exists by barcode or name
-          interface ProductRow { id: string; quantity: number; cost_price: number; purchase_history: unknown[] }
-          let existingProduct: ProductRow | null = null;
-          if (item.barcode?.trim()) {
-            const { data } = await supabase
-              .from('products')
-              .select('id, quantity, cost_price, purchase_history')
-              .eq('user_id', ownerId)
-              .eq('barcode', item.barcode.trim())
-              .maybeSingle();
-            existingProduct = data as unknown as ProductRow | null;
-          }
-          if (!existingProduct && item.product_name?.trim()) {
-            const { data } = await supabase
-              .from('products')
-              .select('id, quantity, cost_price, purchase_history')
-              .eq('user_id', ownerId)
-              .ilike('name', item.product_name.trim())
-              .maybeSingle();
-            existingProduct = data as unknown as ProductRow | null;
-          }
-
-          if (existingProduct) {
-            // ربط البند بالمنتج وحفظ تكلفة ما قبل الشراء فورياً
-            await supabase
-              .from('purchase_invoice_items')
-              .update({
-                product_id: existingProduct.id,
-                cost_price_before: existingProduct.cost_price
-              })
-              .eq('id', item.id);
-
-            if (noInventory) {
-              const purchaseHistory = Array.isArray(existingProduct.purchase_history)
-                ? existingProduct.purchase_history
-                : [];
-
-              purchaseHistory.push({
-                invoice_id: invoiceId,
-                invoice_number: invoice.invoice_number,
-                supplier_name: invoice.supplier_name,
-                date: invoice.invoice_date,
-                quantity: item.quantity,
-                cost_price: item.cost_price,
-                added_at: new Date().toISOString()
-              });
-
-              await supabase
-                .from('products')
-                .update({
-                  cost_price: item.cost_price,
-                  purchase_history: purchaseHistory as unknown as import('@/integrations/supabase/types').Json
-                })
-                .eq('id', existingProduct.id);
-            } else {
-              // ⚖️ استدعاء دالة receive_stock_wac الموحدة لضمان القفل الذري وتوثيق stock_movements
-              const { error: wacErr } = await (supabase as any).rpc('receive_stock_wac', {
-                _product_id: existingProduct.id,
-                _quantity: item.quantity,
-                _unit_cost: item.cost_price || 0,
-                _reference: `purchase_invoice:${invoice.invoice_number}`,
-              });
-              if (wacErr) throw wacErr;
-
-              const purchaseHistory = Array.isArray(existingProduct.purchase_history)
-                ? existingProduct.purchase_history
-                : [];
-
-              purchaseHistory.push({
-                invoice_id: invoiceId,
-                invoice_number: invoice.invoice_number,
-                supplier_name: invoice.supplier_name,
-                date: invoice.invoice_date,
-                quantity: item.quantity,
-                cost_price: item.cost_price,
-                added_at: new Date().toISOString()
-              });
-
-              await supabase
-                .from('products')
-                .update({
-                  purchase_history: purchaseHistory as unknown as import('@/integrations/supabase/types').Json
-                })
-                .eq('id', existingProduct.id);
-            }
-          } else {
-            // Create new product with safe defaults
-            const newProductData: Record<string, unknown> = {
-              user_id: ownerId,
-              name: item.product_name,
-              barcode: item.barcode || null,
-              category: item.category || null,
-              quantity: noInventory ? 99999 : item.quantity,
-              cost_price: item.cost_price,
-              sale_price: item.sale_price || item.cost_price,
-              min_stock_level: 5,
-              purchase_history: [{
-                invoice_id: invoiceId,
-                invoice_number: invoice.invoice_number,
-                supplier_name: invoice.supplier_name,
-                date: invoice.invoice_date,
-                quantity: item.quantity,
-                cost_price: item.cost_price,
-                added_at: new Date().toISOString()
-              }]
-            };
-
-            const { data: newProduct } = await supabase
-              .from('products')
-              .insert({
-                user_id: ownerId,
-                name: item.product_name,
-                barcode: item.barcode || null,
-                category: item.category || null,
-                quantity: noInventory ? 99999 : item.quantity,
-                cost_price: item.cost_price,
-                sale_price: item.sale_price || item.cost_price,
-                min_stock_level: 5,
-                purchase_history: [{
-                  invoice_id: invoiceId,
-                  invoice_number: invoice.invoice_number,
-                  supplier_name: invoice.supplier_name,
-                  date: invoice.invoice_date,
-                  quantity: item.quantity,
-                  cost_price: item.cost_price,
-                  added_at: new Date().toISOString()
-                }] as unknown as import('@/integrations/supabase/types').Json
-              })
-              .select()
-              .single();
-
-            // Update item with new product_id
-            if (newProduct) {
-              await supabase
-                .from('purchase_invoice_items')
-                .update({
-                  product_id: newProduct.id,
-                  cost_price_before: 0
-                })
-                .eq('id', item.id);
-            }
-          }
-        }
-      }
- 
+  if (!result.already_finalized) {
      // ⚖️ تحديث المخزون والتكلفة WAC محلياً وفورياً
      for (const item of items) {
        if (!item.product_id) continue;
@@ -639,25 +419,15 @@ export async function loadPurchaseInvoiceWithItems(invoiceId: string): Promise<{
          console.warn('[PurchaseInvoices] Local WAC update error:', e);
        }
      }
-     emitEvent(EVENTS.PRODUCTS_UPDATED, null);
+  }
 
-     invalidatePurchaseInvoicesCache();
-     emitEvent(EVENTS.PURCHASES_UPDATED, null);
+  emitEvent(EVENTS.PRODUCTS_UPDATED, null);
+  invalidatePurchaseInvoicesCache();
+  emitEvent(EVENTS.PURCHASES_UPDATED, null);
+  return true;
+}
 
-     // Update invoice status
-     await supabase
-       .from('purchase_invoices')
-       .update({ status: 'finalized' })
-       .eq('id', invoiceId);
-
-     return true;
-   } catch (error) {
-     console.error('Error finalizing purchase invoice:', error);
-     return false;
-   }
- }
- 
- // Delete purchase invoice with full inventory deduction and financial reversal
+// Delete purchase invoice with full inventory deduction and financial reversal
  /**
  * إلغاء فاتورة المشتريات ذرياً عبر الخادم (Atomic Compensation Reversal)
  * يمنع الحذف المادي بـ DELETE تنفيذاً للقاعدة المالية الصارمة،

@@ -626,13 +626,29 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
   const rawSlot1 = settings?.slot1Code || settings?.syncSettings?.slot1Code;
   const rawSlot2 = settings?.slot2Code || settings?.syncSettings?.slot2Code;
 
+  // Older settings were saved without slot codes. When no slot is named, recover the store's own
+  // currencies (primary first, then the enabled ones) instead of silently falling back to USD only.
+  const legacySlotCandidates: string[] = [];
+  if (!rawSlot1 && !rawSlot2) {
+    const addCandidate = (value: unknown) => {
+      const code = String(value || '').trim().toUpperCase();
+      if (!code || code === 'USD' || code === 'TRY' || code === 'SYP') return;
+      if (!/^[A-Z]{3}$/.test(code)) return;
+      if (!legacySlotCandidates.includes(code)) legacySlotCandidates.push(code);
+    };
+    addCandidate(rawPrimary);
+    Object.keys(enabledMap).forEach(key => { if (enabledMap[key] === true) addCandidate(key); });
+  }
+
+  const legacySlot1 = symbolsMap.TRY || namesMap.TRY ? detectCurrencyCodeFromMeta(symbolsMap.TRY, namesMap.TRY, '') : '';
   const slot1Code = rawSlot1 && String(rawSlot1).toUpperCase() !== 'USD'
     ? String(rawSlot1).trim().toUpperCase()
-    : (symbolsMap.TRY || namesMap.TRY ? detectCurrencyCodeFromMeta(symbolsMap.TRY, namesMap.TRY, '') : '');
+    : (legacySlot1 || legacySlotCandidates.shift() || '');
 
+  const legacySlot2 = symbolsMap.SYP || namesMap.SYP ? detectCurrencyCodeFromMeta(symbolsMap.SYP, namesMap.SYP, '') : '';
   const slot2Code = rawSlot2 && String(rawSlot2).toUpperCase() !== 'USD'
     ? String(rawSlot2).trim().toUpperCase()
-    : (symbolsMap.SYP || namesMap.SYP ? detectCurrencyCodeFromMeta(symbolsMap.SYP, namesMap.SYP, '') : '');
+    : (legacySlot2 || legacySlotCandidates.find(code => code !== slot1Code) || '');
 
   // القائمة البيضاء الصارمة للبطاقات الثلاث فقط
   const allowedSlotCodes = new Set<string>(['USD']);

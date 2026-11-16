@@ -10,6 +10,35 @@ const http = require('http');
 const crypto = require('crypto');
 const { ipcMain, net } = require('electron');
 
+// Navigation and external-link policy
+const APP_WEB_ORIGIN = 'https://flowpospro.lovable.app';
+const DEV_ORIGIN = 'http://localhost:5173';
+const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:', 'tel:', 'whatsapp:', 'tg:']);
+
+const isDevRun = () => process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+
+/** True only when the parsed origin is the app itself (a substring match on the URL is not enough). */
+function isAppOrigin(rawUrl) {
+  try {
+    const origin = new URL(rawUrl).origin;
+    return origin === APP_WEB_ORIGIN || (isDevRun() && origin === DEV_ORIGIN);
+  } catch {
+    return false;
+  }
+}
+
+/** Open a link in the system browser only for known-safe schemes. */
+function openExternalSafely(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (EXTERNAL_PROTOCOLS.has(parsed.protocol)) {
+      shell.openExternal(parsed.toString());
+    }
+  } catch {
+    // ignore malformed URLs
+  }
+}
+
 function loadGoogleDesktopConfig() {
   try {
     const raw = fs.readFileSync(path.join(__dirname, 'google-desktop.json'), 'utf8');
@@ -248,9 +277,9 @@ function createWindow() {
     
     // Allow external URLs
     if (parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:') {
-      if (!navigationUrl.includes('flowpospro.lovable.app')) {
+      if (!isAppOrigin(navigationUrl)) {
         event.preventDefault();
-        shell.openExternal(navigationUrl);
+        openExternalSafely(navigationUrl);
       }
       return;
     }
@@ -322,7 +351,7 @@ function createWindow() {
 
   // Handle external links
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openExternalSafely(url);
     return { action: 'deny' };
   });
 }
@@ -330,7 +359,9 @@ function createWindow() {
 // Register custom protocol handler for SPA
 app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media' || permission === 'camera' || permission === 'microphone') {
+    const requestingUrl = (webContents && typeof webContents.getURL === 'function') ? webContents.getURL() : '';
+    const fromApp = requestingUrl.startsWith('file://') || isAppOrigin(requestingUrl);
+    if (fromApp && (permission === 'media' || permission === 'camera' || permission === 'microphone')) {
       callback(true);
       return;
     }

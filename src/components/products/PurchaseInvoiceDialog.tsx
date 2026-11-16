@@ -43,7 +43,7 @@ import {
 import { PurchaseInvoiceItemForm } from './PurchaseInvoiceItemForm';
 import { useImageUpload } from '@/hooks/use-image-upload';
 import { supabase } from '@/integrations/supabase/client';
-import { addToQueue } from '@/lib/sync-queue';
+import { addToQueue, extractErrorMessage, isNetworkSyncError } from '@/lib/sync-queue';
 import { emitEvent, EVENTS } from '@/lib/events';
 import { checkRealInternetAccess } from '@/hooks/use-network-status';
 import { addProductCloud } from '@/lib/cloud/products-cloud';
@@ -416,6 +416,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
           sale_price: item.sale_price,
           product_id: item.product_id,
         })),
+        existingInvoiceId: isOfflineInvoice ? undefined : currentInvoice.id,
       });
       setLoading(false);
       deductFromCapital();
@@ -452,8 +453,14 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         toast.error(t('common.error'));
       }
     } catch (error) {
-      console.error('Finalize error, queueing:', error);
-      // Fallback: queue on network error
+      setLoading(false);
+      const message = extractErrorMessage(error);
+      if (!isNetworkSyncError(message)) {
+        console.error('Finalize error:', message);
+        toast.error(message || t('common.error'));
+        return;
+      }
+      console.warn('Finalize failed on network, queueing');
       addToQueue('purchase_invoice', {
         invoiceNumber: currentInvoice.invoice_number,
         supplierName: currentInvoice.supplier_name,
@@ -470,8 +477,8 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
           sale_price: item.sale_price,
           product_id: item.product_id,
         })),
+        existingInvoiceId: currentInvoice.id,
       });
-      setLoading(false);
       deductFromCapital();
       await recordShiftCashWithdrawal();
       toast.success(t('purchaseInvoice.finalized') + ' (queued)', { icon: '📴' });

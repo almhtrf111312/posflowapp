@@ -367,6 +367,14 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
 
   // Finish Wizard & Save All Settings
   const handleFinish = async () => {
+    // Opening cash must be zero or a positive finite amount
+    const openingCashInput = String(openingCash ?? '').trim();
+    const openingCashValue = openingCashInput === '' ? 0 : Number(openingCashInput);
+    if (!Number.isFinite(openingCashValue) || openingCashValue < 0) {
+      toast.error('رصيد افتتاح الصندوق يجب أن يكون صفراً أو مبلغاً موجباً');
+      return;
+    }
+
     const finalStoreName = storeName.trim() || 'متجري';
 
     // 1. Seed categories if enabled and store categories are empty
@@ -407,6 +415,9 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
         logo: storeLogo,
       },
       primaryCurrency: primaryCurrency || prevSettings.primaryCurrency || 'USD',
+      // The two extra currency slots must be named explicitly: currency normalization reads slot1Code/slot2Code
+      slot1Code: sec1Code && sec1Code !== 'USD' ? sec1Code : prevSettings.slot1Code,
+      slot2Code: sec2Code && sec2Code !== 'USD' && sec2Code !== sec1Code ? sec2Code : prevSettings.slot2Code,
       currencyNames: {
         ...(prevSettings.currencyNames || {}),
         USD: prevSettings.currencyNames?.USD || 'دولار',
@@ -473,7 +484,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     }
 
     // 4. Opening Cash Float / Shift
-    const amount = parseFloat(openingCash) || 0;
+    const amount = openingCashValue;
     const existingActiveShift = getActiveShift();
     if (!existingActiveShift && (openFirstShift || amount > 0)) {
       try {

@@ -168,7 +168,7 @@ export async function processDebtSaleWithOfflineSupport(
       if (bundle.customerId) {
         await linkInvoiceToCustomerCloud(sale.invoiceNumber, bundle.customerId).catch(() => {});
       } else {
-        console.warn(`[DebtSale] Debt invoice ${sale.invoiceNumber} for "${bundle.customerName}" has no customerId. Name-based resolution skipped.`);
+        console.warn(`[DebtSale] Debt invoice ${sale.invoiceNumber} has no customerId. Name-based resolution skipped.`);
       }
     }
     

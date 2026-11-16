@@ -84,6 +84,21 @@ export const getCurrentUserId = (): string | null => {
   return null;
 };
 
+const TENANT_KEY_PREFIX = 'hp_tenant_of_';
+
+/** Remember which store (owner id) a user belongs to. Survives sign-out on purpose: the sync queue uses it for isolation. */
+const rememberTenant = (userId: string, ownerId: string): void => {
+  try { localStorage.setItem(TENANT_KEY_PREFIX + userId, ownerId); } catch { /* ignore */ }
+};
+
+/** Store (owner id) of the current user if it is already known, without any network call. */
+export const getKnownTenantId = (): string | null => {
+  if (currentOwnerId) return currentOwnerId;
+  const userId = getCurrentUserId();
+  if (!userId) return null;
+  try { return localStorage.getItem(TENANT_KEY_PREFIX + userId); } catch { return null; }
+};
+
 export const getCurrentUserName = (): string | null => {
   try {
     const cached = localStorage.getItem('hyperpos_session_cache');
@@ -187,11 +202,13 @@ export const getOwnerIdForInsert = async (): Promise<string | null> => {
     // If admin or boss, or if owner_id is missing, user is their own owner
     if (data.role === 'admin' || data.role === 'boss' || !data.owner_id) {
       currentOwnerId = userId;
+      rememberTenant(userId, userId);
       return userId;
     }
 
     // If staff (cashier, distributor, etc.) with owner_id, use owner_id
     currentOwnerId = data.owner_id;
+    rememberTenant(userId, data.owner_id);
     console.log('[getOwnerIdForInsert] Staff owner_id:', currentOwnerId);
     return data.owner_id;
 
@@ -243,8 +260,10 @@ const MAX_PAGINATION_ROWS = 50000;
 export async function fetchFromSupabase<T = unknown>(
   tableName: string,
   orderBy?: { column: string; ascending?: boolean },
-  timeoutMs: number = 3800
+  timeoutMs: number = 3800,
+  options?: { strict?: boolean }
 ): Promise<T[]> {
+  const strict = options?.strict === true;
   const userId = getCurrentUserId();
   if (!userId) {
     console.warn(`fetchFromSupabase: No user ID for ${tableName}`);
@@ -263,6 +282,9 @@ export async function fetchFromSupabase<T = unknown>(
     if (orderBy) {
       query = query.order(orderBy.column, { ascending: orderBy.ascending ?? false });
     }
+    if (strict) {
+      query = query.order('id', { ascending: true });
+    }
 
     const res = await withTimeout(
       Promise.resolve(query),
@@ -273,11 +295,13 @@ export async function fetchFromSupabase<T = unknown>(
     const error = res?.error;
 
     if (error) {
+      if (strict) throw new Error(`[Supabase] Failed to fetch ${tableName}: ${error.message || String(error)}`);
       console.warn(`[Supabase] Warning/timeout fetching ${tableName}:`, error);
       return [];
     }
 
     if (!data || !Array.isArray(data)) {
+      if (strict) throw new Error(`[Supabase] Empty response while fetching ${tableName}`);
       return [];
     }
 
@@ -295,12 +319,19 @@ export async function fetchFromSupabase<T = unknown>(
       if (orderBy) {
         pageQuery = pageQuery.order(orderBy.column, { ascending: orderBy.ascending ?? false });
       }
+      if (strict) {
+        pageQuery = pageQuery.order('id', { ascending: true });
+      }
 
       const pageRes = await withTimeout(
         Promise.resolve(pageQuery),
         timeoutMs,
         { data: null, error: new Error(`Timeout fetching page at offset ${offset} for ${tableName}`) } as any
       );
+
+      if (strict && (pageRes?.error || !pageRes?.data || !Array.isArray(pageRes.data))) {
+        throw new Error(`[Supabase] Incomplete fetch for ${tableName} at offset ${offset}`);
+      }
 
       if (pageRes?.error || !pageRes?.data || !Array.isArray(pageRes.data) || pageRes.data.length === 0) {
         break;
@@ -317,6 +348,7 @@ export async function fetchFromSupabase<T = unknown>(
 
     return allData;
   } catch (error) {
+    if (strict) throw error;
     console.warn(`[Supabase] Error fetching ${tableName}:`, error);
     return [];
   }

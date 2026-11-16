@@ -8,6 +8,15 @@ import { finalizePurchaseInvoiceCloud } from './purchase-invoices-cloud';
 import { getOwnerIdForInsert, filterTablePayload } from '@/lib/supabase-store';
 import { extractErrorMessage } from '@/lib/sync-queue';
 
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+/** Finalize through the atomic server function; a false result must keep the operation in the queue. */
+async function finalizeOrThrow(invoiceId: string): Promise<void> {
+  const ok = await finalizePurchaseInvoiceCloud(invoiceId);
+  if (!ok) throw new Error('فشل اعتماد فاتورة المشتريات على الخادم');
+}
+
 interface QuickPurchaseData {
   productName: string;
   quantity: number;
@@ -39,6 +48,8 @@ interface PurchaseInvoiceData {
     sale_price?: number;
     product_id?: string;
   }>;
+  /** The invoice already exists in the cloud (created online as a draft): finalize it instead of creating a new one. */
+  existingInvoiceId?: string;
 }
 
 export async function processQuickPurchaseFromQueue(data: QuickPurchaseData): Promise<boolean> {
@@ -229,7 +240,7 @@ export async function processQuickPurchaseFromQueue(data: QuickPurchaseData): Pr
   return true;
 }
 
-export async function processPurchaseInvoiceFromQueue(data: PurchaseInvoiceData): Promise<boolean> {
+export async function processPurchaseInvoiceFromQueue(data: PurchaseInvoiceData, operationId?: string): Promise<boolean> {
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) {
     throw new Error('المستخدم غير مسجل الدخول لمزامنة فاتورة المشتريات');
@@ -238,59 +249,91 @@ export async function processPurchaseInvoiceFromQueue(data: PurchaseInvoiceData)
   // استخدام owner_id لضمان عزل الصلاحيات
   const ownerId = await getOwnerIdForInsert() || user.id;
 
-  // Create the invoice
-  const invPayload = filterTablePayload('purchase_invoices', {
-    user_id: ownerId,
-    invoice_number: data.invoiceNumber,
-    supplier_name: data.supplierName,
-    supplier_company: data.supplierCompany || null,
-    invoice_date: data.invoiceDate,
-    expected_items_count: 0,
-    expected_total_quantity: 0,
-    expected_grand_total: 0,
-    actual_items_count: data.items.length,
-    actual_total_quantity: data.items.reduce((s, i) => s + i.quantity, 0),
-    actual_grand_total: data.items.reduce((s, i) => s + i.quantity * i.cost_price, 0),
-    status: 'draft',
-    notes: data.notes || null,
-    image_url: data.imageUrl || null,
-  });
+  // Stable invoice id: the existing cloud invoice when there is one, otherwise the queue operation id.
+  // Either way a retry never creates a second invoice, and the queued items are the source of truth.
+  const stableId = isUuid(data.existingInvoiceId)
+    ? data.existingInvoiceId
+    : (isUuid(operationId) ? operationId : undefined);
+  let invoiceId: string | undefined;
 
-  const { data: invoice, error: invError } = await supabase
-    .from('purchase_invoices')
-    .insert(invPayload as never)
-    .select()
-    .single();
-
-  if (invError || !invoice) {
-    throw new Error(`فشل إنشاء فاتورة المشتريات: ${extractErrorMessage(invError)}`);
-  }
-
-  // Add all items
-  for (const item of data.items) {
-    const itemPayload = filterTablePayload('purchase_invoice_items', {
-      invoice_id: invoice.id,
-      product_name: item.product_name,
-      barcode: item.barcode || null,
-      category: item.category || null,
-      quantity: item.quantity,
-      cost_price: item.cost_price,
-      sale_price: item.sale_price || 0,
-      total_cost: item.quantity * item.cost_price,
-      product_id: item.product_id || null,
-    });
-
-    const { error } = await supabase
-      .from('purchase_invoice_items')
-      .insert(itemPayload as never);
-
-    if (error) {
-      throw new Error(`فشل إضافة بند الفاتورة (${item.product_name}): ${extractErrorMessage(error)}`);
+  if (stableId) {
+    const { data: existing, error: existingErr } = await supabase
+      .from('purchase_invoices')
+      .select('id, status')
+      .eq('id', stableId)
+      .maybeSingle();
+    if (existingErr) {
+      throw new Error(`تعذر التحقق من فاتورة المشتريات: ${extractErrorMessage(existingErr)}`);
+    }
+    if (existing) {
+      if (existing.status === 'finalized') return true;
+      // A previous attempt created the invoice but did not finish: rebuild its items
+      const { error: clearErr } = await supabase
+        .from('purchase_invoice_items')
+        .delete()
+        .eq('invoice_id', stableId);
+      if (clearErr) {
+        throw new Error(`تعذر تنظيف بنود الفاتورة: ${extractErrorMessage(clearErr)}`);
+      }
+      invoiceId = stableId;
     }
   }
 
-  // Finalize (updates product stock/history)
-  await finalizePurchaseInvoiceCloud(invoice.id);
+  if (!invoiceId) {
+    // Create the invoice
+    const invPayload = filterTablePayload('purchase_invoices', {
+      ...(stableId ? { id: stableId } : {}),
+      user_id: ownerId,
+      invoice_number: data.invoiceNumber,
+      supplier_name: data.supplierName,
+      supplier_company: data.supplierCompany || null,
+      invoice_date: data.invoiceDate,
+      expected_items_count: 0,
+      expected_total_quantity: 0,
+      expected_grand_total: 0,
+      actual_items_count: data.items.length,
+      actual_total_quantity: data.items.reduce((s, i) => s + i.quantity, 0),
+      actual_grand_total: data.items.reduce((s, i) => s + i.quantity * i.cost_price, 0),
+      status: 'draft',
+      notes: data.notes || null,
+      image_url: data.imageUrl || null,
+    });
 
+    const { data: invoice, error: invError } = await supabase
+      .from('purchase_invoices')
+      .insert(invPayload as never)
+      .select()
+      .single();
+
+    if (invError || !invoice) {
+      throw new Error(`فشل إنشاء فاتورة المشتريات: ${extractErrorMessage(invError)}`);
+    }
+    invoiceId = invoice.id;
+  }
+
+  const itemRows = data.items.map(item => filterTablePayload('purchase_invoice_items', {
+    invoice_id: invoiceId,
+    product_name: item.product_name,
+    barcode: item.barcode || null,
+    category: item.category || null,
+    quantity: item.quantity,
+    cost_price: item.cost_price,
+    sale_price: item.sale_price || 0,
+    total_cost: item.quantity * item.cost_price,
+    product_id: item.product_id || null,
+  }));
+
+  if (itemRows.length === 0) {
+    throw new Error('Invalid item: purchase invoice has no items');
+  }
+
+  const { error: itemsError } = await supabase
+    .from('purchase_invoice_items')
+    .insert(itemRows as never);
+  if (itemsError) {
+    throw new Error(`فشل إضافة بنود الفاتورة: ${extractErrorMessage(itemsError)}`);
+  }
+
+  await finalizeOrThrow(invoiceId as string);
   return true;
 }

@@ -230,6 +230,9 @@ export const openShift = (
   primaryCurrency?: string,
   exchangeRate?: number
 ): Shift => {
+  // A shift never opens with a negative or non-finite float
+  const safeOpeningCash = Number.isFinite(openingCash) && openingCash > 0 ? openingCash : 0;
+
   const shifts = loadShifts();
 
   // Close any existing open shifts first
@@ -242,7 +245,7 @@ export const openShift = (
   const newShift: Shift = {
     id: generateUUID(),
     openedAt: new Date().toISOString(),
-    openingCash: roundCurrency(openingCash),
+    openingCash: roundCurrency(safeOpeningCash),
     userId,
     userName,
     status: 'open',
@@ -252,7 +255,7 @@ export const openShift = (
     withdrawalsTotal: 0,
     cogsTotal: 0,           // ✅ جديد
     grossProfitTotal: 0,    // ✅ جديد
-    currencies: initShiftCurrencies(openingCash, currencyOpenings),
+    currencies: initShiftCurrencies(safeOpeningCash, currencyOpenings),
     currency: primaryCurrency || 'USD',
     exchange_rate: exchangeRate || 1,
   };
@@ -263,7 +266,7 @@ export const openShift = (
   // Update cashbox state
   const state = loadCashboxState();
   state.activeShiftId = newShift.id;
-  state.currentBalance = roundCurrency(openingCash);
+  state.currentBalance = roundCurrency(safeOpeningCash);
   state.lastUpdated = new Date().toISOString();
   saveCashboxState(state);
 
@@ -405,13 +408,15 @@ export const updateCashboxBalance = (
 /**
  * Add sales to current shift مع بيانات الربح والعملة
  * ✅ يعمل بدون وردية الآن، ويسجل COGS والربح الإجمالي وتفصيل العملات
+ * referenceId: the sale operation id (same value as invoices.operation_id)
  */
 export const addSalesToShift = (
   amount: number,
   grossProfit: number = 0,
   cogs: number = 0,
   currency: ShiftCurrency = 'USD',
-  currencyAmount?: number
+  currencyAmount?: number,
+  referenceId?: string
 ): void => {
   const roundedAmount = roundCurrency(amount);
   const roundedProfit = roundCurrency(grossProfit);
@@ -453,6 +458,7 @@ export const addSalesToShift = (
           amount: roundedAmount,
           currency,
           currencyAmount: roundedCurrAmount,
+          referenceId,
           notes: 'مبيعات نقدية',
         }).catch(() => {});
       }).catch(() => {});

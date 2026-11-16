@@ -452,7 +452,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           return await processQuickPurchaseFromQueue((operation.data as unknown) as Parameters<typeof processQuickPurchaseFromQueue>[0]);
         }
         if (operation.type === 'purchase_invoice') {
-          return await processPurchaseInvoiceFromQueue((operation.data as unknown) as Parameters<typeof processPurchaseInvoiceFromQueue>[0]);
+          return await processPurchaseInvoiceFromQueue((operation.data as unknown) as Parameters<typeof processPurchaseInvoiceFromQueue>[0], operation.id);
         }
         if (operation.type === 'invoice_refund') {
           const invoiceNumber = (operation.data as { invoiceNumber: string }).invoiceNumber;

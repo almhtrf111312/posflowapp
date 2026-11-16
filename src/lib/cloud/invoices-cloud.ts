@@ -469,7 +469,7 @@ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
     let cloudInvoices = await fetchFromSupabase<CloudInvoice>('invoices', {
       column: 'created_at',
       ascending: false,
-    });
+    }, 3800, { strict: true });
 
     // If cloud returned empty, check local cache
     if (cloudInvoices.length === 0) {
@@ -490,13 +490,27 @@ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
     // Load invoice items in batches (avoids one request per invoice / N+1)
     const itemsByInvoice = new Map<string, Record<string, unknown>[]>();
     const ids = cloudInvoices.map(c => c.id);
-    const BATCH = 150;
+    // One request per batch used to be capped silently at the server row limit (1000 rows):
+    // invoices past the cap came back with no items. Each batch is now read page by page.
+    const BATCH = 100;
+    const ITEMS_PAGE = 1000;
     const batches: string[][] = [];
     for (let i = 0; i < ids.length; i += BATCH) batches.push(ids.slice(i, i + BATCH));
     const batchResults = await Promise.all(batches.map(async (batch) => {
-      const { data, error } = await sb.from('invoice_items').select('*').in('invoice_id', batch);
-      if (error) throw error;
-      return (data || []) as Record<string, unknown>[];
+      const rows: Record<string, unknown>[] = [];
+      for (let from = 0; ; from += ITEMS_PAGE) {
+        const { data, error } = await sb
+          .from('invoice_items')
+          .select('*')
+          .in('invoice_id', batch)
+          .order('id', { ascending: true })
+          .range(from, from + ITEMS_PAGE - 1);
+        if (error) throw error;
+        const page = (data || []) as Record<string, unknown>[];
+        rows.push(...page);
+        if (page.length < ITEMS_PAGE) break;
+      }
+      return rows;
     }));
     for (const rows of batchResults) {
       for (const row of rows) {

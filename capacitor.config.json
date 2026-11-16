@@ -9,7 +9,7 @@
   },
   "server": {
     "androidScheme": "https",
-    "cleartext": true
+    "cleartext": false
   },
   "plugins": {
     "Camera": {

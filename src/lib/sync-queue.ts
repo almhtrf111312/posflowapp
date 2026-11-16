@@ -11,10 +11,28 @@ import { addToHistory, updateHistoryStatus } from './sync-history';
 import { isGuestDemoMode } from './demo-data';
 import { isCloudWriteBlocked } from './subscription-lock';
 import { isOperationCancelled } from './cancellation-registry';
+import { getKnownTenantId, getOwnerIdForInsert } from './supabase-store';
 
 // Storage key
 const SYNC_QUEUE_KEY = 'sync_queue';
 const SYNC_QUEUE_NAMESPACE = 'hp_sync';
+
+/**
+ * An operation tagged with a store is visible only to a session of that store.
+ * Untagged operations (queued by older versions) stay visible to everyone.
+ */
+const isVisibleOperation = (op: QueuedOperation, tenantId: string | null): boolean =>
+  !op?.tenantId || (!!tenantId && op.tenantId === tenantId);
+
+/** Operations hidden from this session (another store's): never shown, never uploaded, never dropped. */
+const readHiddenOperations = (tenantId: string | null): QueuedOperation[] => {
+  try {
+    const stored = secureGet<QueuedOperation[]>(SYNC_QUEUE_KEY, { namespace: SYNC_QUEUE_NAMESPACE }) || [];
+    return stored.filter(op => !isVisibleOperation(op, tenantId));
+  } catch {
+    return [];
+  }
+};
 
 // ============= Types =============
 
@@ -65,6 +83,8 @@ export interface QueuedOperation {
   createdAt: string;
   lastAttempt?: string;
   dependsOn?: string;
+  /** Store (owner id) that created the operation. Missing on operations queued by older versions. */
+  tenantId?: string;
 }
 
 /**
@@ -198,6 +218,7 @@ export const mergePendingQueue = () => {
 
 export const loadQueue = (): QueuedOperation[] => {
     try {
+      const tenantId = getKnownTenantId();
       const queue = secureGet<QueuedOperation[]>(SYNC_QUEUE_KEY, { namespace: SYNC_QUEUE_NAMESPACE }) || [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -220,7 +241,7 @@ export const loadQueue = (): QueuedOperation[] => {
       return operation;
     });
     if (recovered) secureSet(SYNC_QUEUE_KEY, normalized, { namespace: SYNC_QUEUE_NAMESPACE });
-    return normalized;
+    return normalized.filter(op => isVisibleOperation(op, tenantId));
   } catch (error) {
     console.error('Error loading sync queue:', error);
     return [];
@@ -232,7 +253,8 @@ export const loadQueue = (): QueuedOperation[] => {
  */
 const saveQueue = (queue: QueuedOperation[]): void => {
   try {
-    secureSet(SYNC_QUEUE_KEY, queue, { namespace: SYNC_QUEUE_NAMESPACE });
+    const hidden = readHiddenOperations(getKnownTenantId());
+    secureSet(SYNC_QUEUE_KEY, hidden.length ? [...hidden, ...queue] : queue, { namespace: SYNC_QUEUE_NAMESPACE });
     emitEvent(EVENTS.SYNC_QUEUE_UPDATED, getQueueStatus());
   } catch (error) {
     console.error('Error saving sync queue:', error);
@@ -291,8 +313,9 @@ export const addToQueue = (
     status: 'pending',
     createdAt: new Date().toISOString(),
     dependsOn: (data?.dependsOn as string) || undefined,
+    tenantId: getKnownTenantId() || undefined,
   };
-  
+
   localStorage.setItem('hyperpos_sync_pending_' + operation.id, JSON.stringify(operation));
     setTimeout(mergePendingQueue, 0);
   
@@ -478,6 +501,12 @@ export const processQueue = async (
     return { processed: 0, failed: 0 };
   }
 
+  // The store of this session must be known before anything is uploaded; otherwise the
+  // isolation filter in loadQueue cannot tell this store's operations from another's.
+  if (!getKnownTenantId()) {
+    try { await getOwnerIdForInsert(); } catch { /* resolved on the next run */ }
+  }
+
   // لا توجد إنترنت فعلي: نؤجل الطابور كاملاً دون استهلاك أي محاولة
   if (syncNetworkHooks?.isOffline()) {
     console.log('[SyncQueue] Internet unreachable - deferring queue without counting retries');
@@ -649,7 +678,12 @@ export const retryFailedOperations = (): number => {
  * مسح الطابور
  */
 export const clearQueue = (): void => {
-  secureRemove(SYNC_QUEUE_KEY, { namespace: SYNC_QUEUE_NAMESPACE });
+  const hidden = readHiddenOperations(getKnownTenantId());
+  if (hidden.length) {
+    secureSet(SYNC_QUEUE_KEY, hidden, { namespace: SYNC_QUEUE_NAMESPACE });
+  } else {
+    secureRemove(SYNC_QUEUE_KEY, { namespace: SYNC_QUEUE_NAMESPACE });
+  }
   emitEvent(EVENTS.SYNC_QUEUE_UPDATED, getQueueStatus());
 };
 

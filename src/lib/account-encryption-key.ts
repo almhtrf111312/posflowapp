@@ -97,3 +97,18 @@ export async function decryptWithAccountKey(key: CryptoKey, envelope: string): P
   );
   return new TextDecoder().decode(plain);
 }
+
+/**
+ * Raw key material (base64) of the account key, used as the secret for cloud backup encryption.
+ * Creates the key on first use. Returns null when the table cannot be reached.
+ */
+export async function getAccountKeyMaterial(userId: string): Promise<string | null> {
+  try {
+    await ensureAccountEncryptionKey(userId);
+    const { data, error } = await db.from(TABLE).select('key_material').eq('user_id', userId).maybeSingle();
+    if (error || !data?.key_material) return null;
+    return String(data.key_material);
+  } catch {
+    return null;
+  }
+}

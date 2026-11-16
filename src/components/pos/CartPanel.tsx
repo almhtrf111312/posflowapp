@@ -939,7 +939,8 @@ export function CartPanel({
         discountedProfit,
         totalCOGS,
         (receivedCurrencyCode as any) || 'USD',
-        netCashReceivedInCurrency
+        netCashReceivedInCurrency,
+        operationId
       );
       recordActivity();
 
@@ -1351,7 +1352,8 @@ export function CartPanel({
           downPaymentProfit,
           downPaymentCOGS,
           (receivedCurrencyCode as any) || 'USD',
-          downPaymentSnapshot * (activeReceivedCurrency.rate || 1)
+          downPaymentSnapshot * (activeReceivedCurrency.rate || 1),
+          operationId
         );
       }
 

@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { QueuedOperation } from '@/lib/sync-queue';
 import { filterTablePayload, getOwnerIdForInsert } from '@/lib/supabase-store';
 import { invalidatePartnersCache } from './partners-cloud';
+import { writeShiftTransactionRow } from './cashbox-cloud';
 
 type LooseSupabase = SupabaseClient<any, 'public', any>;
 const sb = supabase as unknown as LooseSupabase;
@@ -17,6 +18,9 @@ async function assertSuccess(request: PromiseLike<{ error: { message?: string; d
   }
   return true;
 }
+
+const isUuid = (value: unknown): value is string =>
+  typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
 export async function processGenericQueuedOperation(operation: QueuedOperation): Promise<boolean> {
   const data = operation.data;
@@ -49,16 +53,31 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       );
     }
     case 'shift_close': {
-      const { shiftId, userId: _userId, uniqueKey: _uniqueKey, ...updates } = data;
+      const shiftId = String(data.shiftId || '');
       if (!shiftId) throw new Error('Missing shift id');
-      const cleanUpdates = filterTablePayload('cash_shifts', updates);
-      return assertSuccess(sb.from('cash_shifts').update(cleanUpdates).eq('id', String(shiftId)));
+      // Older queued payloads carried client-computed columns (actual_balance, variance_reason).
+      // The close always goes through the atomic server function, which recomputes expected balance and variance.
+      const actualBalance = Number(data.actualBalance ?? data.actual_balance ?? 0);
+      const rawReason = data.varianceReason ?? data.variance_reason ?? null;
+      const { data: closeResult, error: closeError } = await sb.rpc('close_cash_shift_atomic', {
+        _shift_id: shiftId,
+        _actual_balance: Number.isFinite(actualBalance) ? actualBalance : 0,
+        _variance_reason: rawReason ? String(rawReason) : null,
+      });
+      if (closeError) throw new Error(closeError.message);
+      if (!(closeResult as { success?: boolean } | null)?.success) {
+        throw new Error('فشل إقفال الوردية على الخادم');
+      }
+      return true;
     }
     case 'shift_transaction': {
       const cleanData = filterTablePayload('shift_transactions', data);
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');
-      return assertSuccess(sb.from('shift_transactions').insert({ ...cleanData, user_id: ownerId }));
+      // Older queued rows have no id: the queue operation id keeps retries idempotent
+      const rowId = isUuid(cleanData.id) ? cleanData.id : (isUuid(operation.id) ? operation.id : undefined);
+      await writeShiftTransactionRow({ ...cleanData, ...(rowId ? { id: rowId } : {}), user_id: ownerId });
+      return true;
     }
     case 'expense': {
       const cleanData = filterTablePayload('expenses', data);

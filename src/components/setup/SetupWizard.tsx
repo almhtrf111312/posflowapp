@@ -5,7 +5,6 @@ import {
   Percent,
   Users,
   Palette,
-  CheckCircle2,
   ArrowLeft,
   ArrowRight,
   Upload,
@@ -148,7 +147,8 @@ const getInitialCurrencies = () => {
 
 export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   const { isRTL, direction } = useLanguage();
-  const { mode: themeMode, setMode: setThemeMode } = useTheme();
+  const { mode: storedThemeMode, setMode: setThemeMode } = useTheme();
+  const [themeMode, setDraftThemeMode] = useState(storedThemeMode);
 
   // Check if we are in preview mode or if setup was already previously completed
   const isAlreadySetup = typeof isPreview === 'boolean'
@@ -156,7 +156,12 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     : (localStorage.getItem('hyperpos_setup_complete') === 'true' && sessionStorage.getItem('hyperpos_just_signed_up') !== 'true');
 
   const [step, setStep] = useState(1);
-  const totalSteps = 5;
+  const totalSteps = 6;
+  const lastRequiredStep = 2;
+  const [acceptedOptionalSteps, setAcceptedOptionalSteps] = useState<Set<number>>(() => new Set());
+  const savingRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(new Set([1]));
 
   const activeTabRef = useRef<HTMLButtonElement | null>(null);
@@ -164,6 +169,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
 
   // Auto-scroll the active stepper button into view on mobile
   useEffect(() => {
+    contentRef.current?.scrollTo(0, 0);
     if (activeTabRef.current && tabsContainerRef.current) {
       activeTabRef.current.scrollIntoView({
         behavior: 'smooth',
@@ -203,8 +209,8 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   const [phoneChecking, setPhoneChecking] = useState(false);
   const [phoneTelegramOpen, setPhoneTelegramOpen] = useState(false);
 
-  // Step 2: Currencies & Pricing (Flexible Dynamic Multi-Currency)
-  const initialCurrencies = getInitialCurrencies();
+  // Optional currencies and pricing
+  const [initialCurrencies] = useState(getInitialCurrencies);
   const [primaryCurrency, setPrimaryCurrency] = useState(initialCurrencies.primaryCurrency);
 
   // Secondary Currency 1
@@ -221,7 +227,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   const [sec2Symbol, setSec2Symbol] = useState(initialCurrencies.c2.symbol);
   const [sec2Rate, setSec2Rate] = useState<number>(initialCurrencies.c2.rate);
 
-  // Step 3: Sales, Tax, Thermal Printing & Barcode
+  // Sales and optional printing and barcode settings
   const [taxEnabled, setTaxEnabled] = useState(() => {
     const s = getInitialStoredSettings();
     return s?.taxEnabled ?? false;
@@ -259,17 +265,17 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     return s?.printSettings?.autoPrint ?? false;
   });
 
-  // Step 4: Partners & Profits
+  // Optional partners
   const [hasPartners, setHasPartners] = useState<'no' | 'yes'>('no');
   const [partners, setPartners] = useState<PartnerItem[]>([
     { id: '1', name: '', phone: '', capital: 0, sharePercentage: 50 },
   ]);
 
-  // Step 5: Typography, Appearance & Opening Cash Float
+  // Optional appearance and opening float
   const [selectedFont, setSelectedFont] = useState<AppFontId>(() => getStoredAppFont());
   const [selectedScale, setSelectedScale] = useState<UIScaleId>(() => getStoredUIScale());
   const [openingCash, setOpeningCash] = useState<string>('0');
-  const [openFirstShift, setOpenFirstShift] = useState(true);
+  const [openFirstShift, setOpenFirstShift] = useState(false);
 
   // Load existing settings on mount and sync missing fields from cloud if available
   useEffect(() => {
@@ -366,7 +372,10 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   };
 
   // Finish Wizard & Save All Settings
-  const handleFinish = async () => {
+  const saveSetup = async (optionalSteps: ReadonlySet<number>) => {
+    const saveCurrencies = optionalSteps.has(3);
+    const saveDevices = optionalSteps.has(4);
+    const saveAppearance = optionalSteps.has(6);
     const finalStoreName = storeName.trim() || 'متجري';
 
     // 1. Seed categories if enabled and store categories are empty
@@ -406,45 +415,49 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
         address: storeAddress.trim(),
         logo: storeLogo,
       },
-      primaryCurrency: primaryCurrency || prevSettings.primaryCurrency || 'USD',
-      currencyNames: {
-        ...(prevSettings.currencyNames || {}),
-        USD: prevSettings.currencyNames?.USD || 'دولار',
-        [sec1Code]: sec1Name.trim() || sec1Code,
-        [sec2Code]: sec2Name.trim() || sec2Code,
-      },
-      currencySymbols: {
-        ...(prevSettings.currencySymbols || {}),
-        USD: prevSettings.currencySymbols?.USD || '$',
-        [sec1Code]: sec1Symbol.trim() || sec1Code,
-        [sec2Code]: sec2Symbol.trim() || sec2Code,
-      },
-      exchangeRates: {
-        ...(prevSettings.exchangeRates || {}),
-        USD: '1',
-        [sec1Code]: String(sec1Rate || 1),
-        [sec2Code]: String(sec2Rate || 1),
-      },
-      enabledCurrencies: {
-        ...(prevSettings.enabledCurrencies || {}),
-        USD: true,
-        [sec1Code]: sec1Enabled,
-        [sec2Code]: sec2Enabled,
-      },
+      primaryCurrency: saveCurrencies ? primaryCurrency : (prevSettings.primaryCurrency || initialCurrencies.primaryCurrency),
+      ...(saveCurrencies ? {
+        currencyNames: {
+          ...(prevSettings.currencyNames || {}),
+          USD: prevSettings.currencyNames?.USD || 'دولار',
+          [sec1Code]: sec1Name.trim() || sec1Code,
+          [sec2Code]: sec2Name.trim() || sec2Code,
+        },
+        currencySymbols: {
+          ...(prevSettings.currencySymbols || {}),
+          USD: prevSettings.currencySymbols?.USD || '$',
+          [sec1Code]: sec1Symbol.trim() || sec1Code,
+          [sec2Code]: sec2Symbol.trim() || sec2Code,
+        },
+        exchangeRates: {
+          ...(prevSettings.exchangeRates || {}),
+          USD: '1',
+          [sec1Code]: String(sec1Rate || 1),
+          [sec2Code]: String(sec2Rate || 1),
+        },
+        enabledCurrencies: {
+          ...(prevSettings.enabledCurrencies || {}),
+          USD: true,
+          [sec1Code]: sec1Enabled,
+          [sec2Code]: sec2Enabled,
+        },
+      } : {}),
       taxEnabled,
       taxRate: taxEnabled ? Number(taxRate || 0) : 0,
       discountPercentEnabled,
       discountFixedEnabled,
-      barcodeScanMode: barcodeDevice === 'manual' ? 'search' : barcodeScanMode,
-      barcodeDeviceType: barcodeDevice,
-      printSettings: {
-        ...(prevSettings.printSettings || {}),
-        paperSize,
-        footerText: receiptFooter.trim(),
-        autoPrint: printAutoAfterSale,
-        showLogo: !!storeLogo,
-        showTaxNumber: taxEnabled,
-      },
+      ...(saveDevices ? {
+        barcodeScanMode: barcodeDevice === 'manual' ? 'search' : barcodeScanMode,
+        barcodeDeviceType: barcodeDevice,
+        printSettings: {
+          ...(prevSettings.printSettings || {}),
+          paperSize,
+          footerText: receiptFooter.trim(),
+          autoPrint: printAutoAfterSale,
+          showLogo: !!storeLogo,
+          showTaxNumber: taxEnabled,
+        },
+      } : {}),
     };
 
     // 3. Local Storage save
@@ -466,8 +479,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
         inclusive: prevTax.inclusive ?? false,
         name: prevTax.name || 'ضريبة القيمة المضافة'
       }));
-      localStorage.setItem('hyperpos_barcode_device', barcodeDevice);
-      localStorage.setItem('hyperpos_setup_complete', 'true');
+      if (saveDevices) localStorage.setItem('hyperpos_barcode_device', barcodeDevice);
     } catch (e) {
       console.warn('[SetupWizard] Failed to save to localStorage:', e);
     }
@@ -475,7 +487,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     // 4. Opening Cash Float / Shift
     const amount = parseFloat(openingCash) || 0;
     const existingActiveShift = getActiveShift();
-    if (!existingActiveShift && (openFirstShift || amount > 0)) {
+    if (saveAppearance && openFirstShift && !existingActiveShift) {
       try {
         const uid = getCurrentUserId() || 'offline_admin';
         const uname = getCurrentUserName() || 'المدير';
@@ -486,7 +498,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     }
 
     // 5. Partners save if enabled
-    if (hasPartners === 'yes') {
+    if (optionalSteps.has(5) && hasPartners === 'yes') {
       const valid = partners.filter(p => p.name.trim());
       if (valid.length > 0) {
         const now = new Date().toISOString();
@@ -537,19 +549,29 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
         phone: storePhone.trim(),
         address: storeAddress.trim(),
         logo_url: storeLogo,
-        primary_currency: primaryCurrency,
-        exchange_rates: {
-          ...existingCloudRates,
-          USD: 1,
-          [sec1Code]: sec1Rate || 1,
-          [sec2Code]: sec2Rate || 1,
-        },
+        ...(saveCurrencies ? {
+          primary_currency: newSettings.primaryCurrency,
+          exchange_rates: {
+            ...existingCloudRates,
+            USD: 1,
+            [sec1Code]: sec1Rate || 1,
+            [sec2Code]: sec2Rate || 1,
+          },
+        } : {}),
         tax_enabled: taxEnabled,
         tax_rate: taxEnabled ? Number(taxRate || 0) : 0,
       });
     } catch (e) {
       console.warn('[SetupWizard] Cloud settings save fallback:', e);
     }
+
+    if (saveAppearance) {
+      setStoredAppFont(selectedFont);
+      setStoredUIScale(selectedScale);
+      setThemeMode(themeMode);
+    }
+
+    try { localStorage.setItem('hyperpos_setup_complete', 'true'); } catch {}
 
     // 7. Dispatch system events so POS, Sidebar, and Themes update immediately
     emitEvent(EVENTS.SETTINGS_UPDATED, newSettings);
@@ -562,6 +584,43 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     onComplete();
   };
 
+  const finishSetup = async (includeFinalStep = false) => {
+    if (savingRef.current || phoneChecking || step < lastRequiredStep) return;
+    if (!phoneClaimedFor || phoneClaimedFor !== storePhone.trim()) {
+      setStep(1);
+      toast.error('تحقّق من رقم الهاتف قبل إنهاء الإعداد');
+      return;
+    }
+
+    const optionalSteps = new Set(acceptedOptionalSteps);
+    if (includeFinalStep) optionalSteps.add(totalSteps);
+    savingRef.current = true;
+    setIsSaving(true);
+    try {
+      await saveSetup(optionalSteps);
+    } catch (error) {
+      console.error('[SetupWizard] Save failed:', error);
+      toast.error('تعذّر إكمال الإعداد، حاول مرة أخرى');
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
+  };
+
+  const goToNextStep = (acceptOptionalStep = true) => {
+    if (step > lastRequiredStep) {
+      setAcceptedOptionalSteps(previous => {
+        const next = new Set(previous);
+        if (acceptOptionalStep) next.add(step);
+        else next.delete(step);
+        return next;
+      });
+    }
+    const nextStep = step + 1;
+    setVisitedSteps(previous => new Set([...previous, nextStep]));
+    setStep(nextStep);
+  };
+
   const storeTypesList = [
     { id: 'grocery', name: 'بقالة وسوبرماركت', icon: ShoppingBag, desc: 'مواد غذائية واستهلاكية وتجزئة سريعة' },
     { id: 'phones', name: 'هواتف وإلكترونيات', icon: Smartphone, desc: 'أجهزة، إكسسوارات، بطاقات، وخدمات' },
@@ -572,41 +631,12 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   ];
 
   const stepsMeta = [
-    { 
-      num: 1, 
-      label: 'المتجر', 
-      fullTitle: 'هوية المتجر وبيانات الفاتورة',
-      desc: 'اسم المحل والشعار ونوع النشاط',
-      icon: Store 
-    },
-    { 
-      num: 2, 
-      label: 'العملات', 
-      fullTitle: 'العملات الرئيسية وأسعار الصرف', 
-      desc: 'العملة الأساسية وأسعار التحويل',
-      icon: Coins 
-    },
-    { 
-      num: 3, 
-      label: 'المبيعات والطباعة', 
-      fullTitle: 'المبيعات والطباعة الحرارية والباركود', 
-      desc: 'الضريبة والخصومات ومقاس الورق',
-      icon: Receipt 
-    },
-    { 
-      num: 4, 
-      label: 'الشركاء', 
-      fullTitle: 'إدارة الشركاء ورأس المال', 
-      desc: 'حصص الشركاء ونسب الأرباح',
-      icon: Users 
-    },
-    { 
-      num: 5, 
-      label: 'المظهر والصندوق', 
-      fullTitle: 'المظهر العام ورصيد الصندوق الافتتاحي', 
-      desc: 'الخط والسمة ورصيد البداية',
-      icon: Palette 
-    },
+    { num: 1, label: 'المتجر', fullTitle: 'بيانات المتجر والفاتورة', icon: Store },
+    { num: 2, label: 'المبيعات', fullTitle: 'الضريبة والخصومات', icon: Receipt },
+    { num: 3, label: 'العملات', fullTitle: 'العملات وأسعار الصرف', icon: Coins },
+    { num: 4, label: 'الأجهزة', fullTitle: 'الطباعة والباركود', icon: Printer },
+    { num: 5, label: 'الشركاء', fullTitle: 'الشركاء ورأس المال', icon: Users },
+    { num: 6, label: 'المظهر والصندوق', fullTitle: 'المظهر ورصيد الافتتاح', icon: Palette },
   ];
 
   return (
@@ -625,16 +655,12 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                   معالج الترحيب والإعداد الأولي
                 </h1>
                 <p className="text-xs text-muted-foreground">
-                  تهيئة متجرك خطوة بخطوة للعمل بأعلى احترافية
+                  اضبط بيانات المتجر والبيع، ثم أكمل ما تحتاجه من الإعدادات الاختيارية.
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="text-xs font-bold px-3 py-1 rounded-full bg-primary/15 text-primary border border-primary/20">
-                خطوة {step} من {totalSteps}
-              </div>
-
               {/* زر إغلاق / خروج بدون حفظ (Preview Mode) */}
               {isAlreadySetup && (
                 <button
@@ -658,16 +684,14 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                   الخطوة {step} من {totalSteps}:
                 </span>
                 <span className="text-primary font-bold truncate">
-                  {stepsMeta[step - 1]?.fullTitle || stepsMeta[step - 1]?.label}
+                  {stepsMeta[step - 1]?.fullTitle}
+                  {step > lastRequiredStep && ' · اختياري'}
                 </span>
               </div>
-              <span className="text-[11px] font-bold text-muted-foreground tabular-nums px-2.5 py-0.5 rounded-full bg-muted/60 border border-border/50 shrink-0">
-                {Math.round((step / totalSteps) * 100)}%
-              </span>
             </div>
 
             {/* Linear Progress Bar */}
-            <div className="h-1.5 w-full bg-muted/60 rounded-full overflow-hidden p-0.5">
+            <div role="progressbar" aria-label="التقدّم في الإعداد" aria-valuemin={1} aria-valuemax={totalSteps} aria-valuenow={step} className="h-1.5 w-full bg-muted/60 rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-[width] duration-300 ease-out shadow-sm shadow-primary/25"
                 style={{ width: `${(step / totalSteps) * 100}%` }}
@@ -678,7 +702,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
           {/* Stepper Tabs Bar - Clean, Non-overlapping, Responsive */}
           <div 
             ref={tabsContainerRef}
-            className="flex sm:grid sm:grid-cols-5 items-stretch gap-1.5 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth py-1 px-0.5 -mx-0.5"
+            className="flex sm:grid sm:grid-cols-6 items-stretch gap-1.5 sm:gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth py-1 px-0.5 -mx-0.5"
           >
             {stepsMeta.map((s) => {
               const Icon = s.icon;
@@ -691,7 +715,8 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                   key={s.num}
                   ref={isActive ? activeTabRef : null}
                   type="button"
-                  disabled={!isAccessible}
+                  disabled={!isAccessible || isSaving || phoneChecking}
+                  aria-current={isActive ? 'step' : undefined}
                   onClick={() => {
                     if (isAccessible) setStep(s.num);
                   }}
@@ -732,7 +757,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-7 space-y-6 flex-1 min-h-[27rem] overflow-y-auto">
+        <div ref={contentRef} className="p-4 sm:p-7 space-y-5 flex-1 min-h-0 overflow-y-auto">
           
           {/* STEP 1: هوية المتجر وبيانات الفاتورة وقوالب التصنيفات */}
           {step === 1 && (
@@ -808,7 +833,9 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                   <label className="text-xs font-bold text-foreground">
                     رقم الهاتف (إلزامي) <span className="text-destructive">*</span>
                   </label>
-                  <PhoneInput value={storePhone} onChange={setStorePhone} />
+                  <PhoneInput value={storePhone} onChange={(phone) => {
+                    if (!phoneChecking && !phoneTelegramOpen) setStorePhone(phone);
+                  }} />
                 </div>
 
                 <div className="space-y-1.5">
@@ -904,8 +931,80 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
             </div>
           )}
 
-          {/* STEP 2: إعداد العملات المرن والديناميكي وأسعار الصرف */}
+          {/* STEP 2: إعدادات المبيعات */}
           {step === 2 && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                  <Receipt className="w-5 h-5 text-primary" />
+                  إعدادات البيع الأساسية
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  اضبط الضريبة والخصومات المستخدمة في شاشة البيع.
+                </p>
+              </div>
+
+              {/* Tax Settings */}
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <Percent className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground">ضريبة القيمة المضافة (VAT)</p>
+                      <p className="text-[11px] text-muted-foreground">احتساب الضريبة بشكل تلقائي على الفاتورة</p>
+                    </div>
+                  </div>
+                  <Switch checked={taxEnabled} onCheckedChange={setTaxEnabled} />
+                </div>
+
+                {taxEnabled && (
+                  <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 animate-in fade-in duration-150">
+                    <label className="text-xs font-bold text-foreground shrink-0">
+                      نسبة الضريبة المئوية:
+                    </label>
+                    <div className="flex items-center gap-1.5 w-32">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={taxRate || ''}
+                        onChange={(e) => setTaxRate(Number(e.target.value))}
+                        className="h-8 text-xs font-bold text-center"
+                      />
+                      <span className="text-xs font-bold text-muted-foreground">%</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Discounts Toggles */}
+              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
+                <p className="text-xs font-bold text-foreground">صلاحيات الخصومات في شاشة البيع</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background border border-border/60">
+                    <span className="text-xs font-medium">السماح بالخصم المئوي (%)</span>
+                    <Switch
+                      checked={discountPercentEnabled}
+                      onCheckedChange={setDiscountPercentEnabled}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background border border-border/60">
+                    <span className="text-xs font-medium">السماح بالخصم المالي المباشر</span>
+                    <Switch
+                      checked={discountFixedEnabled}
+                      onCheckedChange={setDiscountFixedEnabled}
+                    />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* STEP 3: إعداد العملات المرن والديناميكي وأسعار الصرف */}
+          {step === 3 && (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
@@ -1162,75 +1261,13 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
             </div>
           )}
 
-          {/* STEP 3: إعدادات المبيعات والضريبة والطباعة الحرارية والباركود */}
-          {step === 3 && (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-                  <Receipt className="w-5 h-5 text-primary" />
-                  المبيعات والضريبة وإعدادات الطباعة والباركود
-                </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  تحكم بخصائص الفوترة، مقاس ورق الطابعة، وسلوك ماسح الباركود
-                </p>
-              </div>
-
-              {/* Tax Settings */}
-              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <Percent className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-foreground">ضريبة القيمة المضافة (VAT)</p>
-                      <p className="text-[11px] text-muted-foreground">احتساب الضريبة بشكل تلقائي على الفاتورة</p>
-                    </div>
-                  </div>
-                  <Switch checked={taxEnabled} onCheckedChange={setTaxEnabled} />
-                </div>
-
-                {taxEnabled && (
-                  <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 animate-in fade-in duration-150">
-                    <label className="text-xs font-bold text-foreground shrink-0">
-                      نسبة الضريبة المئوية:
-                    </label>
-                    <div className="flex items-center gap-1.5 w-32">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={taxRate || ''}
-                        onChange={(e) => setTaxRate(Number(e.target.value))}
-                        className="h-8 text-xs font-bold text-center"
-                      />
-                      <span className="text-xs font-bold text-muted-foreground">%</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Discounts Toggles */}
-              <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3">
-                <p className="text-xs font-bold text-foreground">صلاحيات الخصومات في شاشة البيع</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background border border-border/60">
-                    <span className="text-xs font-medium">السماح بالخصم المئوي (%)</span>
-                    <Switch
-                      checked={discountPercentEnabled}
-                      onCheckedChange={setDiscountPercentEnabled}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-background border border-border/60">
-                    <span className="text-xs font-medium">السماح بالخصم المالي المباشر</span>
-                    <Switch
-                      checked={discountFixedEnabled}
-                      onCheckedChange={setDiscountFixedEnabled}
-                    />
-                  </div>
-                </div>
-              </div>
-
+          {/* STEP 4: الطباعة والباركود */}
+          {step === 4 && (
+            <div className="space-y-5">
+              <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                <Printer className="w-5 h-5 text-primary" />
+                الطباعة والباركود
+              </h2>
               {/* Thermal Printer Settings (إعدادات الفاتورة والطباعة الحرارية) */}
               <div className="p-4 rounded-2xl bg-muted/30 border border-border/60 space-y-3.5">
                 <div className="flex items-center gap-2">
@@ -1392,8 +1429,8 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
             </div>
           )}
 
-          {/* STEP 4: الشركاء ورأس المال */}
-          {step === 4 && (
+          {/* STEP 5: الشركاء ورأس المال */}
+          {step === 5 && (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
@@ -1530,8 +1567,8 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
             </div>
           )}
 
-          {/* STEP 5: الخطوط وحجم الواجهة والمظهر ورصيد الصندوق الافتتاحي */}
-          {step === 5 && (
+          {/* STEP 6: الخطوط وحجم الواجهة والمظهر ورصيد الصندوق الافتتاحي */}
+          {step === 6 && (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
@@ -1558,10 +1595,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                       <button
                         key={f.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedFont(f.id);
-                          setStoredAppFont(f.id);
-                        }}
+                        onClick={() => setSelectedFont(f.id)}
                         className={cn(
                           "py-2.5 px-3 rounded-xl border text-right transition-colors flex items-center justify-between cursor-pointer",
                           isSelected
@@ -1599,10 +1633,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                       <button
                         key={scale.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedScale(scale.id);
-                          setStoredUIScale(scale.id);
-                        }}
+                        onClick={() => setSelectedScale(scale.id)}
                         className={cn(
                           "py-2 px-1 rounded-xl border text-center transition-[colors,transform] cursor-pointer",
                           isSelected
@@ -1626,7 +1657,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
-                    onClick={(e) => setThemeMode('light', e)}
+                    onClick={() => setDraftThemeMode('light')}
                     className={cn(
                       "flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 transition-colors cursor-pointer",
                       themeMode === 'light'
@@ -1646,7 +1677,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
 
                   <button
                     type="button"
-                    onClick={(e) => setThemeMode('dark', e)}
+                    onClick={() => setDraftThemeMode('dark')}
                     className={cn(
                       "flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 transition-colors cursor-pointer",
                       themeMode === 'dark'
@@ -1710,13 +1741,6 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 </p>
               </div>
 
-              {/* Ready banner */}
-              <div className="p-3.5 bg-success/10 border border-success/30 rounded-2xl flex items-center gap-3 text-success">
-                <CheckCircle2 className="w-5 h-5 shrink-0" />
-                <span className="text-xs font-bold">
-                  أنت الآن جاهز بالكامل! اضغط على زر البدء لحفظ الإعدادات وبدء استخدام Flow POS مباشرة.
-                </span>
-              </div>
             </div>
           )}
 
@@ -1740,6 +1764,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
               <Button
                 type="button"
                 variant="outline"
+                disabled={isSaving || phoneChecking}
                 onClick={() => setStep(step - 1)}
                 className="w-full sm:w-auto h-10 px-5 rounded-xl text-xs font-bold cursor-pointer"
               >
@@ -1750,13 +1775,24 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
           </div>
 
           {/* Forward / Finish buttons */}
-          <div className="w-full sm:w-auto flex items-center gap-2">
+          <div className="w-full sm:w-auto flex flex-wrap items-center gap-2">
+            {step === lastRequiredStep && (
+              <Button type="button" className="flex-1 sm:flex-none" disabled={isSaving} onClick={() => void finishSetup()}>
+                {isSaving ? 'جارٍ الحفظ…' : 'حفظ وبدء البيع'}
+              </Button>
+            )}
+            {step > lastRequiredStep && (
+              <Button type="button" variant="ghost" disabled={isSaving}
+                onClick={() => step === totalSteps ? void finishSetup() : goToNextStep(false)}>
+                {step === totalSteps ? 'تخطّي وبدء البيع' : 'تخطّي هذه الخطوة'}
+              </Button>
+            )}
             {step < totalSteps ? (
               <Button
                 type="button"
-                disabled={phoneChecking}
+                disabled={phoneChecking || isSaving}
                 onClick={async () => {
-                  if (step === 1 && phoneClaimedFor !== storePhone.trim()) {
+                  if (step === 1 && (!phoneClaimedFor || phoneClaimedFor !== storePhone.trim())) {
                     const phone = storePhone.trim();
                     if (!phone) {
                       toast.error('رقم الهاتف إلزامي', { description: 'أدخل رقم هاتفك لإكمال إنشاء الحساب.' });
@@ -1784,30 +1820,22 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                     }
                     setPhoneClaimedFor(phone);
                   }
-                  const nextStep = step + 1;
-                  setVisitedSteps(prev => new Set([...prev, nextStep]));
-                  setStep(nextStep);
+                  goToNextStep();
                 }}
-                className="w-full sm:w-auto h-10 px-6 rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm shadow-primary/20 cursor-pointer"
+                className="flex-1 sm:flex-none h-10 px-4 rounded-xl text-xs font-bold"
+                variant={step === lastRequiredStep ? 'outline' : 'default'}
               >
-                التالي
+                {step === lastRequiredStep ? 'الإعدادات الاختيارية' : 'التالي'}
                 {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
               </Button>
             ) : (
               <Button
                 type="button"
-                disabled={visitedSteps.size < totalSteps}
-                onClick={handleFinish}
-                className={cn(
-                  "w-full sm:w-auto h-10 px-7 rounded-xl text-xs font-bold bg-success hover:bg-success/90 text-success-foreground shadow-md shadow-success/20 cursor-pointer",
-                  visitedSteps.size < totalSteps
-                    ? "opacity-50 cursor-not-allowed pointer-events-none"
-                    : "animate-pulse"
-                )}
-                title={visitedSteps.size < totalSteps ? 'يرجى مراجعة كافة الخطوات أولاً' : ''}
+                disabled={isSaving}
+                onClick={() => void finishSetup(true)}
+                className="w-full sm:w-auto h-10 px-5 rounded-xl text-xs font-bold"
               >
-                <Sparkles className="w-4 h-4" />
-                ابدأ العمل الآن (حفظ وبدء البيع)
+                {isSaving ? 'جارٍ الحفظ…' : 'حفظ وبدء البيع'}
               </Button>
             )}
           </div>
@@ -1828,3 +1856,4 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     </div>
   );
 }
+

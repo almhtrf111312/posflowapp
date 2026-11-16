@@ -1,8 +1,14 @@
 /**
  * Secure Storage Module
- * Provides encryption for sensitive data stored in localStorage
- * Uses AES-like XOR encryption with dynamic keys and integrity verification
+ * Encrypts data cached in localStorage with ChaCha20 + HMAC-SHA256 (see local-cipher.ts).
+ * Values written by older versions (XOR, format v1) are still readable and are rewritten on first read.
+ *
+ * The key is a random per-installation secret kept in localStorage, so this protects against casual
+ * reading and against editing or moving stored values; it is not a hardware-backed keystore.
+ * Never make a trust or authorization decision from local storage alone.
  */
+
+import { open as openBox, seal as sealBox, sha256, utf8 } from './local-cipher';
 
 const PERSISTENT_KEY_STORAGE = 'hp_device_id';
 
@@ -39,14 +45,7 @@ export const getDeviceKey = (): string => {
   return newKey;
 };
 
-// Generate a timestamp-based salt
-const generateSalt = (): string => {
-  const array = new Uint8Array(8);
-  crypto.getRandomValues(array);
-  return Date.now().toString(36) + Array.from(array).map(b => b.toString(36)).join('');
-};
-
-// Simple hash function for integrity check
+// Legacy v1 integrity hash (read path only)
 const simpleHash = (str: string): string => {
   let hash = 5381;
   for (let i = 0; i < str.length; i++) {
@@ -55,7 +54,7 @@ const simpleHash = (str: string): string => {
   return Math.abs(hash).toString(36);
 };
 
-// XOR encrypt with multi-layer keys
+// Legacy v1 XOR (read path only)
 const xorEncrypt = (data: string, keys: string[]): string => {
   let result = data;
   for (const key of keys) {
@@ -81,13 +80,16 @@ export interface SecureStorageOptions {
 
 interface StoredData {
   v: number; // version
-  s: string; // salt
+  s?: string; // salt (v1 only)
   d: string; // encrypted data
-  h: string; // hash for integrity
+  h?: string; // integrity hash (v1 only)
+  n?: string; // nonce (v2)
+  t?: string; // authentication tag (v2)
   e?: number; // expiration timestamp
 }
 
-const CURRENT_VERSION = 1;
+const LEGACY_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 // Legacy key that used to be hardcoded in the bundle. Kept ONLY so existing
 // stored values can still be decrypted; never used to encrypt new values.
@@ -113,6 +115,17 @@ const getAppSecret = (): string => {
   }
 };
 
+let cachedMasterKey: { secret: string; key: Uint8Array } | null = null;
+
+/** 32-byte key derived from the per-installation secret. */
+const getMasterKey = (): Uint8Array => {
+  const secret = getAppSecret();
+  if (!cachedMasterKey || cachedMasterKey.secret !== secret) {
+    cachedMasterKey = { secret, key: sha256(utf8(`hp-secure-storage-v2|${secret}`)) };
+  }
+  return cachedMasterKey.key;
+};
+
 /**
  * Securely store data with encryption
  */
@@ -132,32 +145,24 @@ export const secureSet = (key: string, data: unknown, options: SecureStorageOpti
       return false;
     }
     
-    const salt = generateSalt();
-    const deviceKey = getDeviceKey();
-    
-    // Multi-layer encryption
-    const keys = [getAppSecret(), deviceKey, salt];
-    const encrypted = xorEncrypt(dataString, keys);
-    
-    // Base64 encode for safe storage
-    const encoded = btoa(unescape(encodeURIComponent(encrypted)));
-    
-    // Create integrity hash
-    const hash = simpleHash(dataString + salt);
-    
+    const namespace = options.namespace || 'hp_sec';
+    const storageKey = `${namespace}_${key}`;
+
+    // Authenticated encryption; the storage key name is bound into the tag
+    const box = sealBox(getMasterKey(), dataString, storageKey);
+
     const stored: StoredData = {
       v: CURRENT_VERSION,
-      s: salt,
-      d: encoded,
-      h: hash,
+      n: box.n,
+      d: box.c,
+      t: box.t,
     };
     
     if (options.expiresIn) {
       stored.e = Date.now() + options.expiresIn;
     }
     
-    const namespace = options.namespace || 'hp_sec';
-    localStorage.setItem(`${namespace}_${key}`, JSON.stringify(stored));
+    localStorage.setItem(storageKey, JSON.stringify(stored));
     return true;
   } catch (error) {
     console.error('SecureStorage set error:', error);
@@ -176,18 +181,29 @@ export const secureGet = <T = unknown>(key: string, options: SecureStorageOption
     
     const stored: StoredData = JSON.parse(raw);
     
-    // Check version compatibility
-    if (stored.v !== CURRENT_VERSION) {
-      // Handle migration if needed
-      console.warn('SecureStorage version mismatch');
-    }
-    
+    const storageKey = `${namespace}_${key}`;
+
     // Check expiration
     if (stored.e && Date.now() > stored.e) {
-      localStorage.removeItem(`${namespace}_${key}`);
+      localStorage.removeItem(storageKey);
       return null;
     }
-    
+
+    if (stored.v === CURRENT_VERSION) {
+      const plain = openBox(getMasterKey(), { n: stored.n || '', c: stored.d, t: stored.t || '' }, storageKey);
+      if (plain === null) {
+        console.error('SecureStorage integrity check failed');
+        return null;
+      }
+      return JSON.parse(plain) as T;
+    }
+
+    if (stored.v !== LEGACY_VERSION || !stored.s) {
+      console.warn('SecureStorage: unknown stored format');
+      return null;
+    }
+
+    // Legacy v1 (XOR) value written by an older version
     const deviceKey = getDeviceKey();
     const decoded = decodeURIComponent(escape(atob(stored.d)));
     
@@ -204,7 +220,17 @@ export const secureGet = <T = unknown>(key: string, options: SecureStorageOption
       return null;
     }
     
-    return JSON.parse(decrypted) as T;
+    const value = JSON.parse(decrypted) as T;
+
+    // Rewrite in the current format, keeping the original expiry
+    try {
+      const box = sealBox(getMasterKey(), decrypted, storageKey);
+      const upgraded: StoredData = { v: CURRENT_VERSION, n: box.n, d: box.c, t: box.t };
+      if (stored.e) upgraded.e = stored.e;
+      localStorage.setItem(storageKey, JSON.stringify(upgraded));
+    } catch { /* keep the legacy value; it stays readable */ }
+
+    return value;
   } catch (error) {
     console.error('SecureStorage get error:', error);
     return null;

@@ -627,7 +627,7 @@ export function CartPanel({
     setIsSaving(true);
 
     // 🎫 بوابة تذكرة الأوفلاين
-    const leaseGate = canSellOffline();
+    const leaseGate = await canSellOffline();
     if (!leaseGate.allowed) {
       if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
@@ -1051,7 +1051,7 @@ export function CartPanel({
     setIsSaving(true);
 
     // 🎫 بوابة تذكرة الأوفلاين
-    const leaseGate = canSellOffline();
+    const leaseGate = await canSellOffline();
     if (!leaseGate.allowed) {
       if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
@@ -2717,3 +2717,4 @@ export function CartPanel({
     </>
   );
 }
+

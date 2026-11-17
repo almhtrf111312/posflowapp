@@ -45,6 +45,7 @@ export async function verifySignedLease(lease: OfflineLease | null): Promise<boo
       && p.device_id === lease.deviceId;
     if (!consistent) { failedSignature = lease.edSignature; return false; }
     verifiedSignature = lease.edSignature;
+    if (failedSignature === lease.edSignature) failedSignature = null;
     return true;
   } catch {
     failedSignature = lease.edSignature;
@@ -258,6 +259,10 @@ export async function fetchOfflineLease(): Promise<OfflineLease | null> {
 // ─── تقييم حالة التذكرة ────────────────────────────────────────────
 
 export function getOfflineLeaseStatus(): OfflineLeaseStatus {
+  return evaluateOfflineLease(getStoredLease());
+}
+
+function evaluateOfflineLease(lease: OfflineLease | null): OfflineLeaseStatus {
   const ok: OfflineLeaseStatus = {
     allowed: true, legacy: false, reason: null, message: '',
     remainingDays: null, remainingInvoices: null,
@@ -268,8 +273,6 @@ export function getOfflineLeaseStatus(): OfflineLeaseStatus {
     return { ...ok, allowed: false, reason: 'tampered', message: BLOCK_MESSAGES.tampered };
   }
 
-  const lease = getStoredLease();
-
   // 2. لا تذكرة بعد (تثبيت قديم لم يتصل منذ الترقية) — نمط التوافق السابق
   if (!lease) {
     return { ...ok, legacy: true };
@@ -277,9 +280,7 @@ export function getOfflineLeaseStatus(): OfflineLeaseStatus {
 
   // 2.5 تذكرة v2: يجب أن يكون توقيعها صالحاً — أي تعديل يدوي يكسر التوقيع
   if (lease.edSignature) {
-    if (failedSignature === lease.edSignature) {
-      return { ...ok, allowed: false, reason: 'tampered', message: BLOCK_MESSAGES.tampered };
-    }
+    if (failedSignature === lease.edSignature) return invalidSignedLeaseStatus();
     if (verifiedSignature !== lease.edSignature) void verifySignedLease(lease);
   }
 
@@ -305,9 +306,21 @@ export function getOfflineLeaseStatus(): OfflineLeaseStatus {
  * بوابة البيع: متصل بالإنترنت = مسموح دائماً (الخادم يحكم).
  * دون اتصال = يخضع لحالة التذكرة.
  */
-export function canSellOffline(): OfflineLeaseStatus {
+function invalidSignedLeaseStatus(): OfflineLeaseStatus {
+  return {
+    allowed: false, legacy: false, reason: 'tampered',
+    message: 'تعذّر التحقق من توقيع تذكرة العمل دون اتصال. يرجى الاتصال بالإنترنت لتجديدها.',
+    remainingDays: null, remainingInvoices: null,
+  };
+}
+
+export async function canSellOffline(): Promise<OfflineLeaseStatus> {
   if (typeof navigator !== 'undefined' && !isAppOffline()) {
     return { allowed: true, legacy: false, reason: null, message: '', remainingDays: null, remainingInvoices: null };
   }
-  return getOfflineLeaseStatus();
+  const lease = getStoredLease();
+  if ((lease?.edSignature || lease?.signedPayload) && !(await verifySignedLease(lease))) {
+    return invalidSignedLeaseStatus();
+  }
+  return evaluateOfflineLease(lease);
 }

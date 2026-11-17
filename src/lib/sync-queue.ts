@@ -11,7 +11,7 @@ import { addToHistory, updateHistoryStatus } from './sync-history';
 import { isGuestDemoMode } from './demo-data';
 import { isCloudWriteBlocked } from './subscription-lock';
 import { isOperationCancelled } from './cancellation-registry';
-import { getKnownTenantId, getOwnerIdForInsert } from './supabase-store';
+import { getCurrentUserId, getKnownTenantId, getOwnerIdForInsert } from './supabase-store';
 
 // Storage key
 const SYNC_QUEUE_KEY = 'sync_queue';
@@ -19,10 +19,10 @@ const SYNC_QUEUE_NAMESPACE = 'hp_sync';
 
 /**
  * An operation tagged with a store is visible only to a session of that store.
- * Untagged operations (queued by older versions) stay visible to everyone.
+ * Legacy operations without a known store or creator are retained for manual reconciliation.
  */
 const isVisibleOperation = (op: QueuedOperation, tenantId: string | null): boolean =>
-  !op?.tenantId || (!!tenantId && op.tenantId === tenantId);
+  !!tenantId && op?.tenantId === tenantId;
 
 /** Operations hidden from this session (another store's): never shown, never uploaded, never dropped. */
 const readHiddenOperations = (tenantId: string | null): QueuedOperation[] => {
@@ -85,6 +85,7 @@ export interface QueuedOperation {
   dependsOn?: string;
   /** Store (owner id) that created the operation. Missing on operations queued by older versions. */
   tenantId?: string;
+  createdByUserId?: string;
 }
 
 /**
@@ -207,8 +208,7 @@ export const mergePendingQueue = () => {
       keysToDelete.push(key);
     }
   }
-  if (merged) {
-    saveQueue(queue);
+  if (merged && saveQueue(queue)) {
     keysToDelete.forEach(k => {
       const id = k.replace('hyperpos_sync_pending_', '');
       if (queue.find(x => x.id === id)) localStorage.removeItem(k);
@@ -232,7 +232,13 @@ export const loadQueue = (): QueuedOperation[] => {
       if (!queue.length) return [];
     const staleBefore = Date.now() - 5 * 60 * 1000;
     let recovered = false;
-    const normalized = queue.map(operation => {
+    const normalized = queue.map(stored => {
+      let operation = stored;
+      if (!operation.tenantId && tenantId && operation.createdByUserId &&
+          operation.createdByUserId === getCurrentUserId()) {
+        operation = { ...operation, tenantId };
+        recovered = true;
+      }
       const lastAttempt = operation.lastAttempt ? Date.parse(operation.lastAttempt) : 0;
       if (operation.status === 'processing' && (!lastAttempt || lastAttempt < staleBefore)) {
         recovered = true;
@@ -251,13 +257,15 @@ export const loadQueue = (): QueuedOperation[] => {
 /**
  * حفظ الطابور في التخزين الآمن
  */
-const saveQueue = (queue: QueuedOperation[]): void => {
+const saveQueue = (queue: QueuedOperation[]): boolean => {
   try {
     const hidden = readHiddenOperations(getKnownTenantId());
-    secureSet(SYNC_QUEUE_KEY, hidden.length ? [...hidden, ...queue] : queue, { namespace: SYNC_QUEUE_NAMESPACE });
-    emitEvent(EVENTS.SYNC_QUEUE_UPDATED, getQueueStatus());
+    const saved = secureSet(SYNC_QUEUE_KEY, [...hidden, ...queue], { namespace: SYNC_QUEUE_NAMESPACE });
+    if (saved) emitEvent(EVENTS.SYNC_QUEUE_UPDATED, getQueueStatus());
+    return saved;
   } catch (error) {
     console.error('Error saving sync queue:', error);
+    return false;
   }
 };
 
@@ -314,6 +322,7 @@ export const addToQueue = (
     createdAt: new Date().toISOString(),
     dependsOn: (data?.dependsOn as string) || undefined,
     tenantId: getKnownTenantId() || undefined,
+    createdByUserId: getCurrentUserId() || undefined,
   };
 
   localStorage.setItem('hyperpos_sync_pending_' + operation.id, JSON.stringify(operation));
@@ -413,7 +422,9 @@ export const updateOperationStatus = (
 export const removeFromQueue = (operationId: string): void => {
   const queue = loadQueue();
   const filtered = queue.filter(op => op.id !== operationId);
-  saveQueue(filtered);
+  if (saveQueue(filtered)) {
+    try { localStorage.removeItem('hyperpos_sync_pending_' + operationId); } catch { /* keep the recovery copy */ }
+  }
 };
 
 /** إعادة عملية واحدة لحالة الانتظار حتى تُعاد محاولتها فوراً ووضعها في بداية الطابور */
@@ -501,10 +512,13 @@ export const processQueue = async (
     return { processed: 0, failed: 0 };
   }
 
-  // The store of this session must be known before anything is uploaded; otherwise the
-  // isolation filter in loadQueue cannot tell this store's operations from another's.
+  const sessionUserId = getCurrentUserId();
   if (!getKnownTenantId()) {
     try { await getOwnerIdForInsert(); } catch { /* resolved on the next run */ }
+  }
+  const sessionTenant = getKnownTenantId();
+  if (!sessionUserId || !sessionTenant || isProcessing || getCurrentUserId() !== sessionUserId) {
+    return { processed: 0, failed: 0 };
   }
 
   // لا توجد إنترنت فعلي: نؤجل الطابور كاملاً دون استهلاك أي محاولة
@@ -549,6 +563,8 @@ export const processQueue = async (
     };
     
     for (const operation of pending) {
+      if (getCurrentUserId() !== sessionUserId || getKnownTenantId() !== sessionTenant) break;
+      if (!isVisibleOperation(operation, sessionTenant)) continue;
       // إذا كانت العملية تعتمد على عملية أب ما زالت معلقة في الطابور، نؤجل معالجتها لمنع حدوث خطأ نهائي
       if (operation.dependsOn) {
         const parentPending = pending.some(
@@ -576,6 +592,7 @@ export const processQueue = async (
       
       try {
         const success = await processor(operation);
+        if (getCurrentUserId() !== sessionUserId || getKnownTenantId() !== sessionTenant) break;
         
         if (success) {
           removeFromQueue(operation.id);
@@ -742,6 +759,7 @@ export const addToQueueIfNotExists = (
   
   return addToQueue(type, { ...data, uniqueKey }, maxRetries);
 };
+
 
 
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,20 +28,15 @@ import {
   Barcode
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
 import { addToQueue } from '@/lib/sync-queue';
+import { getKnownTenantId, getOwnerIdForInsert } from '@/lib/supabase-store';
 import { emitEvent, EVENTS } from '@/lib/events';
-import { checkRealInternetAccess } from '@/hooks/use-network-status';
+import { useCloudSyncContext } from '@/providers/CloudSyncProvider';
 import { useImageUpload } from '@/hooks/use-image-upload';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { NativeCameraPreview } from '@/components/camera/NativeCameraPreview';
-import { addProductCloud, updateProductCloud } from '@/lib/cloud/products-cloud';
-import { isNoInventoryMode } from '@/lib/store-type-config';
-import { cn, formatNumber, formatMoney } from '@/lib/utils';
-import { addWithdrawalFromShift } from '@/lib/cashbox-store';
-import { addActivityLog } from '@/lib/activity-log';
+import { cn, formatNumber } from '@/lib/utils';
+import { getActiveShift } from '@/lib/cashbox-store';
 import { getCategoryNamesCloud, getCategoryNamesLocalFirst } from '@/lib/cloud/categories-cloud';
 
 interface QuickPurchaseDialogProps {
@@ -266,37 +261,37 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
   const totalCostInCurrency = costNum * qtyNum;
   const totalCost = costNumUSD * qtyNum;
 
-  // Submit Handler
+  const { isOnline, syncNow } = useCloudSyncContext();
+  const submitting = useRef(false);
   const handleSubmit = async () => {
-    if (!productName.trim()) {
-      toast.error(language === 'en' ? 'Product name is required' : 'يرجى إدخال اسم المنتج');
-      return;
-    }
-    if (!costPrice || costNum < 0) {
-      toast.error(language === 'en' ? 'Please specify a valid cost price' : 'يرجى تحديد سعر الشراء بشكل صحيح');
+    if (submitting.current) return;
+    if (!productName.trim() || !costPrice || !Number.isFinite(costNumUSD) || costNumUSD < 0 ||
+        !Number.isFinite(qtyNum) || qtyNum <= 0) {
+      toast.error(language === 'en' ? 'Enter a product name, valid cost and quantity' : 'أدخل اسم الصنف وسعر شراء وكمية صالحين');
       return;
     }
 
+    const shiftId = paymentMethod === 'cash' && totalCost > 0 ? getActiveShift()?.id : undefined;
+    if (paymentMethod === 'cash' && totalCost > 0 && !shiftId) {
+      toast.error(language === 'en' ? 'Open a cash shift before recording a cash purchase' : 'افتح وردية قبل تسجيل شراء نقدي');
+      return;
+    }
+    submitting.current = true;
     setLoading(true);
-
-    const hasInternet = await checkRealInternetAccess(2500);
-
-    // Offline Handling
-    if (!hasInternet) {
-      if (paymentMethod === 'cash') {
-        addWithdrawalFromShift(totalCost, 'USD');
+    try {
+      if (!getKnownTenantId() && isOnline) await getOwnerIdForInsert();
+      if (!getKnownTenantId()) {
+        toast.error(language === 'en' ? 'Connect to confirm the store before saving this purchase' : 'اتصل بالإنترنت لتأكيد المتجر قبل حفظ الشراء');
+        return;
       }
-
-      addToQueue('quick_purchase', {
+      const operationId = crypto.randomUUID();
+      const operation = addToQueue('quick_purchase', {
+        operationId,
         productName: productName.trim(),
         quantity: qtyNum,
         costPrice: costNumUSD,
-        totalCost,
         paymentMethod,
-        currency_code: inputCurrency,
-        exchange_rate: currentRate,
-        currency_symbol: currencySymbol,
-        total_in_currency: totalCostInCurrency,
+        shiftId,
         imageUrl: imageUrl || undefined,
         barcode: barcode.trim() || undefined,
         category: category || undefined,
@@ -304,238 +299,32 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
         wholesalePrice: wholesaleNumUSD,
         minStockLevel: Number.parseInt(minStockLevel) || 5,
         expiryDate: expiryDate || undefined,
+        trackByUnit,
+        bulkUnit,
+        smallUnit,
+        conversionFactor: Number.parseInt(conversionFactor) || 1,
+        bulkCostPrice: bulkCostNumUSD,
+        bulkSalePrice: bulkSaleNumUSD,
         productId: selectedProduct?.id,
-      });
-
-      toast.success((t('purchases.quickAdded') || 'تمت إضافة المشتريات بنجاح') + ' (offline)', { icon: '📴' });
-      emitEvent(EVENTS.PURCHASES_UPDATED);
-      emitEvent(EVENTS.PRODUCTS_UPDATED);
-      onSuccess?.();
-      onOpenChange(false);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('يرجى تسجيل الدخول أولاً');
+      }, 10);
+      if (operation.status === 'failed') {
+        toast.error(operation.error || 'تعذر وضع الشراء في قائمة المزامنة');
         return;
       }
 
-      let targetProductId = selectedProduct?.id;
-
-      // 1. If not selected, check if a product with same barcode or exact name exists
-      if (!targetProductId) {
-        if (barcode.trim()) {
-          const { data: byBarcode } = await supabase
-            .from('products')
-            .select('id, quantity, cost_price, sale_price, purchase_history')
-            .eq('barcode', barcode.trim())
-            .maybeSingle();
-
-          if (byBarcode) {
-            targetProductId = byBarcode.id;
-          }
-        }
-        if (!targetProductId && productName.trim()) {
-          const { data: byName } = await supabase
-            .from('products')
-            .select('id, quantity, cost_price, sale_price, purchase_history')
-            .ilike('name', productName.trim())
-            .maybeSingle();
-
-          if (byName) {
-            targetProductId = byName.id;
-          }
-        }
-      }
-
-      const invoiceNumber = `QP-${Date.now()}`;
-      const today = new Date().toISOString().split('T')[0];
-
-      // 2. Either update existing product stock or insert brand new product with all rich details
-      if (targetProductId) {
-        // Fetch current product to calculate weighted cost and append history
-        const { data: existingProd } = await supabase
-          .from('products')
-          .select('quantity, cost_price, purchase_history')
-          .eq('id', targetProductId)
-          .single();
-
-        let wacSuccess = false;
-        if (!isNoInventoryMode()) {
-          try {
-            const { error: wacErr } = await (supabase as unknown as LooseSupabase).rpc('receive_stock_wac', {
-              _product_id: targetProductId,
-              _quantity: qtyNum,
-              _unit_cost: costNumUSD,
-              _reference: 'شراء سريع: ' + productName.trim(),
-            });
-            if (!wacErr) {
-              wacSuccess = true;
-            } else {
-              console.warn('[QuickPurchase] receive_stock_wac RPC error, using client fallback:', wacErr);
-            }
-          } catch (e) {
-            console.warn('[QuickPurchase] receive_stock_wac failed, using client fallback:', e);
-          }
-        }
-
-        const purchaseHistory = Array.isArray(existingProd?.purchase_history)
-          ? [...existingProd.purchase_history]
-          : [];
-
-        purchaseHistory.push({
-          invoice_id: invoiceNumber,
-          invoice_number: invoiceNumber,
-          supplier_name: productName.trim(),
-          date: today,
-          quantity: qtyNum,
-          cost_price: costNumUSD,
-          added_at: new Date().toISOString(),
-        });
-
-        const updates: Record<string, unknown> = {
-          purchase_history: purchaseHistory,
-          updated_at: new Date().toISOString(),
-        };
-
-        // If RPC failed or in no-inventory mode, update stock and cost from client fallback
-        if (!wacSuccess) {
-          const currentQty = existingProd?.quantity || 0;
-          const currentCost = Number(existingProd?.cost_price) || 0;
-          const newQty = isNoInventoryMode() ? 99999 : currentQty + qtyNum;
-          const avgCost = newQty > 0 && costNumUSD > 0
-            ? Math.round(((currentQty * currentCost) + (qtyNum * costNumUSD)) / (currentQty + qtyNum) * 100000000) / 100000000
-            : costNumUSD;
-          updates.quantity = newQty;
-          updates.cost_price = avgCost;
-        }
-
-        if (saleNumUSD > 0) updates.sale_price = saleNumUSD;
-        if (category) updates.category = category;
-        if (barcode.trim()) updates.barcode = barcode.trim();
-        if (expiryDate) updates.expiry_date = expiryDate;
-        if (imageUrl) updates.image_url = imageUrl;
-        if (wholesaleNumUSD !== undefined) {
-          updates.custom_fields = {
-            ...((selectedProduct?.custom_fields as Record<string, unknown>) || {}),
-            wholesalePrice: wholesaleNumUSD,
-          };
-        }
-
-        await (supabase as unknown as LooseSupabase).from('products').update(updates).eq('id', targetProductId);
-      } else {
-        // Create brand new product with all rich fields directly!
-        const createdProduct = await addProductCloud({
-          name: productName.trim(),
-          barcode: barcode.trim(),
-          category: category.trim(),
-          costPrice: costNumUSD,
-          salePrice: saleNumUSD,
-          wholesalePrice: wholesaleNumUSD,
-          quantity: isNoInventoryMode() ? 99999 : qtyNum,
-          minStockLevel: Number.parseInt(minStockLevel) || 5,
-          expiryDate: expiryDate || undefined,
-          image: imageUrl || undefined,
-          trackByUnit,
-          bulkUnit,
-          smallUnit,
-          conversionFactor: Number.parseInt(conversionFactor) || 1,
-          bulkCostPrice: bulkCostNumUSD,
-          bulkSalePrice: bulkSaleNumUSD,
-        });
-
-        if (createdProduct) {
-          targetProductId = createdProduct.id;
-        }
-      }
-
-      // 3. Create purchase invoice
-      const { data: invoice, error: invError } = await supabase
-        .from('purchase_invoices')
-        .insert({
-          user_id: user.id,
-          invoice_number: invoiceNumber,
-          supplier_name: productName.trim(),
-          invoice_date: today,
-          expected_items_count: 1,
-          expected_total_quantity: qtyNum,
-          expected_grand_total: totalCost,
-          actual_items_count: 1,
-          actual_total_quantity: qtyNum,
-          actual_grand_total: totalCost,
-          status: 'finalized',
-          image_url: imageUrl || null,
-        })
-        .select()
-        .single();
-
-      if (invError) throw invError;
-
-      // 4. Create purchase invoice item with product link
-      await supabase
-        .from('purchase_invoice_items')
-        .insert({
-          invoice_id: invoice.id,
-          product_id: targetProductId || null,
-          product_name: productName.trim(),
-          barcode: barcode.trim() || null,
-          category: category.trim() || null,
-          quantity: qtyNum,
-          cost_price: costNumUSD,
-          sale_price: saleNumUSD,
-          total_cost: totalCost,
-        });
-
-      // 5. خصم النقدية من الصندوق والوردية النشطة إذا كان الدفع نقداً من الدرج
-      if (paymentMethod === 'cash') {
-        addWithdrawalFromShift(totalCost, 'USD');
-        if (user) {
-          addActivityLog(
-            'expense',
-            user.id,
-            user.email || 'كاشير',
-            `شراء سريع نقداً من الصندوق (${productName.trim()}): ${formatMoney(totalCost)}`,
-            { totalCost, productName: productName.trim(), type: 'quick_purchase' }
-          );
-        }
-      }
-
-      toast.success(t('purchases.quickAdded') || 'تمت إضافة الفاتورة وتحديث المخزون بنجاح');
+      const synced = operation.status === 'completed' ||
+        (isOnline && (await syncNow(true, operation.id)).targetSuccess === true);
+      if (synced) toast.success(t('purchases.quickAdded') || 'تم حفظ فاتورة الشراء');
+      else toast.info(language === 'en' ? 'Purchase queued for synchronization' : 'حُفظ الشراء في قائمة المزامنة');
       emitEvent(EVENTS.PURCHASES_UPDATED);
       emitEvent(EVENTS.PRODUCTS_UPDATED);
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error adding quick purchase:', error);
-      // إذا كان الدفع نقداً، نخصم من الصندوق المحلي لمنع عجز الدرج حتى في حالة الانتظار
-      if (paymentMethod === 'cash') {
-        addWithdrawalFromShift(totalCost, 'USD');
-      }
-      // Fallback to queue on error
-      addToQueue('quick_purchase', {
-        productName: productName.trim(),
-        quantity: qtyNum,
-        costPrice: costNum,
-        totalCost,
-        paymentMethod,
-        imageUrl: imageUrl || undefined,
-        barcode: barcode.trim() || undefined,
-        category: category || undefined,
-        salePrice: saleNum > 0 ? saleNum : costNum,
-        wholesalePrice: wholesaleNum > 0 ? wholesaleNum : undefined,
-        minStockLevel: Number.parseInt(minStockLevel) || 5,
-        expiryDate: expiryDate || undefined,
-        productId: selectedProduct?.id,
-      });
-      toast.success((t('purchases.quickAdded') || 'تم حفظ الفاتورة في قائمة الانتظار') + ' (queued)', { icon: '📴' });
-      emitEvent(EVENTS.PURCHASES_UPDATED);
-      emitEvent(EVENTS.PRODUCTS_UPDATED);
-      onSuccess?.();
-      onOpenChange(false);
+      console.error('Unable to save quick purchase:', error);
+      toast.error(language === 'en' ? 'Check pending purchases before trying again' : 'تحقق من قائمة المزامنة قبل إعادة المحاولة');
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
@@ -1102,3 +891,4 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
     </>
   );
 }
+

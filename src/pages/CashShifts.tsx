@@ -11,6 +11,7 @@ import {
   Shift
 } from '@/lib/cashbox-store';
 import { EVENTS } from '@/lib/events';
+import { loadQueue } from '@/lib/sync-queue';
 import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
@@ -263,6 +264,15 @@ export default function CashShifts() {
   // Handle close shift
   const handleCloseShift = () => closeShiftGuard.run(async () => {
     if (!openShift) return;
+
+    const hasPendingCashPurchase = loadQueue().some(operation =>
+      operation.type === 'quick_purchase' && operation.status !== 'completed' &&
+      operation.data.paymentMethod === 'cash' && operation.data.shiftId === openShift.id
+    );
+    if (hasPendingCashPurchase) {
+      toast.error('زامن المشتريات النقدية المعلّقة لهذه الوردية قبل الإقفال.');
+      return;
+    }
 
     if (!hasAnyClosingInput) {
       toast.error(t('cashShifts.enterValidAmount'));

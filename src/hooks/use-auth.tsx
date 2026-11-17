@@ -228,6 +228,7 @@ const clearAllUserSessionCaches = async () => {
       if (key && (key.startsWith('hyperpos_') || key.startsWith('flowpos_') || key.startsWith('fps_swr_'))) {
         // استثناء إعدادات اللغة والثيم والحساب وبصمة الجهاز المحفوظة الضرورية
         if (
+          !key.startsWith('hyperpos_sync_pending_') &&
           key !== 'hyperpos_language' &&
           key !== 'hyperpos_theme' &&
           key !== 'hyperpos_stay_logged_in' &&

@@ -275,7 +275,8 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('hyperpos_') && 
+      if (key && key.startsWith('hyperpos_') &&
+          !key.startsWith('hyperpos_sync_pending_') && 
           key !== 'hyperpos_language' && 
           key !== LAST_USER_KEY &&
           key !== 'hyperpos_stay_logged_in' &&

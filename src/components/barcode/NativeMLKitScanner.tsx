@@ -351,7 +351,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
       onClick={handleScreenTap}
     >
       {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 pt-[calc(max(env(safe-area-inset-top),1.5rem)+0.5rem)] z-[9999] bg-gradient-to-b from-black/80 to-transparent">
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 pt-[calc(max(var(--app-safe-top,0px),1.5rem)+0.5rem)] z-[9999] bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center gap-2 text-white">
           <ScanLine className="w-5 h-5" />
           <span className="text-sm font-semibold">مسح الباركود</span>

@@ -50,7 +50,7 @@ export function DeviceBanGate({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100000] bg-background flex items-center justify-center p-6 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]"
+      className="fixed inset-0 z-[100000] bg-background flex items-center justify-center p-6 pt-[calc(var(--app-safe-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]"
       dir="rtl"
     >
       <div className="max-w-sm w-full text-center space-y-4 rounded-2xl border border-destructive/40 bg-card p-6 shadow-2xl">

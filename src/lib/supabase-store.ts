@@ -781,21 +781,32 @@ export async function saveStoreSettingsDirect(settings: Record<string, unknown>)
         };
       }
 
-      // Update existing
-      let { error } = await sb
-        .from('stores')
-        .update(payloadToSave)
-        .eq('user_id', ownerId);
-
-      // Graceful fallback if primary_currency column does not exist in stores schema cache
-      if (error && payloadToSave.primary_currency && (String(error.message || '').includes('primary_currency') || (error as any).code === 'PGRST204')) {
-        const fallbackPayload = { ...payloadToSave };
-        delete fallbackPayload.primary_currency;
-        const retry = await sb
-          .from('stores')
-          .update(fallbackPayload)
-          .eq('user_id', ownerId);
-        error = retry.error;
+      // Update existing: مهلة زمنية كي لا يبقى الرفع معلقاً، وتجاهل أي عمود غير موجود في مخطط الكاش
+      // ثم التحقق من أن الصف تحدّث فعلاً (RLS قد يعيد 0 صفوف دون خطأ)
+      let attemptPayload: Record<string, unknown> = { ...payloadToSave };
+      let error: { message?: string; code?: string } | null = null;
+      let updatedRows = 0;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const res = await withTimeout(
+          sb.from('stores').update(attemptPayload).eq('user_id', ownerId).select('id'),
+          20000
+        ) as { data?: unknown[] | null; error?: { message?: string; code?: string } | null };
+        error = res.error || null;
+        updatedRows = Array.isArray(res.data) ? res.data.length : 0;
+        if (!error) break;
+        const msg = String(error.message || '');
+        const missing = msg.match(/'([A-Za-z0-9_]+)' column/)?.[1]
+          || (msg.includes('primary_currency') ? 'primary_currency' : null);
+        if ((error.code === 'PGRST204' || msg.includes('schema cache')) && missing && missing in attemptPayload) {
+          console.warn('[StoreSettings] Dropping unknown column and retrying:', missing);
+          delete attemptPayload[missing];
+          continue;
+        }
+        break;
+      }
+      if (!error && updatedRows === 0) {
+        console.error('[StoreSettings] Update matched 0 rows (RLS or missing store row)');
+        return false;
       }
 
       if (error) {

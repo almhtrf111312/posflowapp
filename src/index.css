@@ -1787,7 +1787,7 @@ html.barcode-scanner-active .product-details-dialog * {
   [data-sonner-toaster] {
     right: 8px !important;
     left: 8px !important;
-    top: calc(env(safe-area-inset-top, 0px) + 56px) !important;
+    top: calc(var(--app-safe-top, 0px) + 56px) !important;
   }
 
   [data-sonner-toast] {
@@ -2104,7 +2104,7 @@ html {
     left: 0 !important;
     right: 0 !important;
     margin-inline: auto !important;
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(100dvh - var(--app-safe-top, 0px)) !important;
     padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)) !important;
     transform: translateY(0) !important;
   }
@@ -3001,4 +3001,22 @@ html.dark.theme-soft {
 
 .theme-soft :is(.fade-in, .fade-in-up, .animate-pulse, .animate-bounce, .blob-bg) {
   animation: none !important;
+}
+
+
+/* ───── المنطقة الآمنة العلوية: المحتوى يبدأ دائماً تحت شريط حالة أندرويد ───── */
+:root {
+  --app-safe-top: max(env(safe-area-inset-top, 0px), var(--native-status-bar-height, 0px));
+}
+
+/* النوافذ الجانبية والعلوية (Sheet) تبدأ تحت الشريط بدل أن تختفي أزرارها خلفه */
+[data-sheet-side="left"],
+[data-sheet-side="right"],
+[data-sheet-side="top"] {
+  padding-top: calc(var(--app-safe-top) + 1.5rem);
+}
+[data-sheet-side="left"].p-0,
+[data-sheet-side="right"].p-0,
+[data-sheet-side="top"].p-0 {
+  padding-top: var(--app-safe-top);
 }

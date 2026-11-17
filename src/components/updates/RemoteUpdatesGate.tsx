@@ -125,7 +125,7 @@ export function RemoteUpdatesGate() {
   if (status.state === 'locked' && !isBoss) {
     return (
       <div
-        className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
+        className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-sm flex items-center justify-center p-4 pt-[calc(var(--app-safe-top,0px)+1rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
         dir="rtl"
       >
         <div className="max-w-sm w-full text-center space-y-4 rounded-2xl border border-destructive/40 bg-card p-6 shadow-2xl">
@@ -158,7 +158,7 @@ export function RemoteUpdatesGate() {
     <>
       {status.state === 'forced' && !forcedDismissed && (
         <div
-          className="fixed inset-0 z-[150] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
+          className="fixed inset-0 z-[150] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 pt-[calc(var(--app-safe-top,0px)+1rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
           dir="rtl"
         >
           <div className="max-w-sm w-full text-center space-y-3 rounded-2xl border border-warning/40 bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
@@ -188,7 +188,7 @@ export function RemoteUpdatesGate() {
       )}
       {banners.length > 0 && (
         <div
-          className="fixed top-[calc(env(safe-area-inset-top,0px)+0.75rem)] inset-x-3 z-[140] space-y-2.5 max-w-lg mx-auto pointer-events-none"
+          className="fixed top-[calc(var(--app-safe-top,0px)+0.75rem)] inset-x-3 z-[140] space-y-2.5 max-w-lg mx-auto pointer-events-none"
           dir="rtl"
         >
           {banners.map(b => (

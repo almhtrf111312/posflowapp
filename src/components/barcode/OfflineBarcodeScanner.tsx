@@ -302,7 +302,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
   return createPortal(
     <div className="scanner-ui-overlay fixed inset-0 z-[99999] bg-black flex flex-col">
       {/* Header — floating over camera */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 pt-[calc(max(env(safe-area-inset-top),1.5rem)+0.5rem)] z-[9999]">
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 pt-[calc(max(var(--app-safe-top,0px),1.5rem)+0.5rem)] z-[9999]">
         <div className="flex items-center gap-2 text-white">
           <ScanLine className="w-5 h-5" />
           <span className="text-sm font-semibold">مسح الباركود</span>

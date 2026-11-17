@@ -271,7 +271,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
         {...(isMobile && !isOpen ? { inert: '' } : {})}
         className={cn(
           "fixed z-[80] transition-all duration-300 ease-in-out flex flex-col",
-          "bg-sidebar pt-[env(safe-area-inset-top)]",
+          "bg-sidebar pt-[var(--app-safe-top,0px)]",
           isMobile 
             ? cn(
                 "top-0 h-[100dvh] w-72 max-w-[85vw]",
@@ -541,10 +541,10 @@ export function MobileMenuTrigger({ onClick }: { onClick: () => void }) {
       data-tour="mobile-menu-trigger"
       onClick={onClick}
       className={cn(
-        "fixed top-[calc(0.75rem+env(safe-area-inset-top))] z-40 md:hidden",
+        "fixed top-[calc(0.75rem+var(--app-safe-top,0px))] z-40 md:hidden",
         "w-11 h-11 bg-background",
         "text-foreground flex items-center justify-center shadow-sm",
-        "hover:bg-muted active:scale-95 transition-[transform,colors] duration-150 relative",
+        "hover:bg-muted active:scale-95 transition-[transform,colors] duration-150",
         isRTL 
           ? "right-0 left-auto rounded-l-xl border-y border-l border-border" 
           : "left-0 right-auto rounded-r-xl border-y border-r border-border"

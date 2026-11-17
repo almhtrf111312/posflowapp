@@ -12,12 +12,16 @@ import "./index.css";
 import { initErrorRadar, captureError } from "./lib/error-radar";
 import { wipeTrialDataOnBoot, initTrialLifecycle } from "./lib/trial-wipe";
 import { applyStoredThemeEarly } from "./hooks/use-theme";
+import { initSafeArea } from "./lib/safe-area";
 
 // Initialize Error Radar listeners as early as possible
 initErrorRadar();
 
 // الثيم يُطبَّق قبل أي رسم (كان يُطبَّق بعد أول إطار فيظهر وميض داكن ثم فاتح)
 applyStoredThemeEarly();
+
+// ارتفاع شريط الحالة يُقاس مرة واحدة ليبدأ كل محتوى تحت البطارية والواي فاي
+initSafeArea();
 
 // Initialize font, scale, performance mode, and language layout immediately on startup
 applyAppFontToDOM(getStoredAppFont());

@@ -67,6 +67,35 @@ async function sendTelegramMessage(botToken: string, chatId: string | number, te
   }
 }
 
+// تهريب محارف Markdown (الإصدار القديم) كي لا تكسر أسماء المستخدمين أو رسائل الأخطاء تنسيق الرسالة
+function escapeMd(value: unknown): string {
+  return String(value ?? "").replace(/([_*`\[])/g, "\\$1");
+}
+
+// لوحة الأزرار الدائمة للبوت (تبقى ظاهرة بعد الربط)
+const MAIN_KEYBOARD = {
+  keyboard: [
+    [{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }],
+    [{ text: "🔄 إعادة تعيين جهازي (/reset_device)" }],
+    [{ text: "ℹ️ حالة حسابي (/status)" }, { text: "❓ مساعدة (/help)" }],
+  ],
+  resize_keyboard: true,
+  one_time_keyboard: false,
+};
+
+const HELP_TEXT =
+  "❓ *مساعدة بوت Flow POS Pro*\n" +
+  "━━━━━━━━━━━━━━\n" +
+  "📱 *ربط الحساب*\n" +
+  "اضغط «مشاركة رقم الهاتف للتحقق» لربط حسابك برقمك المسجل في النظام.\n\n" +
+  "🔐 *استعادة كلمة المرور*\n" +
+  "اطلب الرمز من شاشة الدخول في التطبيق وسيصلك هنا خلال ثوانٍ، وهو صالح 10 دقائق.\n\n" +
+  "🔄 *نقل الحساب لهاتف جديد*\n" +
+  "اضغط «إعادة تعيين جهازي». يُسمح بذلك مرة كل 5 أيام.\n\n" +
+  "ℹ️ *حالة حسابي*\n" +
+  "اضغط «حالة حسابي» لمعرفة هل الحساب مربوط بهذه المحادثة.\n\n" +
+  "🛡️ لا تشارك أي رمز مع أحد، فلن يطلبه منك أي موظف.";
+
 function formatAuthPasswordError(errorMsg: string): string {
   const msg = errorMsg.toLowerCase();
   if (msg.includes("weak") || msg.includes("different one") || msg.includes("easy to guess")) {
@@ -151,19 +180,45 @@ serve(async (req) => {
         await sendTelegramMessage(
           botToken,
           chatId,
-          "👋 مرحباً بك في بوت الخدمة الذاتية لنظام *Flow POS Pro*.\n\n" +
-            "🔐 يمكنك من هنا:\n" +
-            "1️⃣ استلام رموز استعادة كلمة المرور لحسابك فوراً.\n" +
-            "2️⃣ تصفير جهازك المسجل ونقل الحساب لهاتفك الجديد (مرة كل 5 أيام).\n\n" +
-            "📱 للبدء، اضغط على زر *«مشاركة رقم الهاتف للتحقق»* أدناه لربط حسابك:",
-          {
-            keyboard: [
-              [{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }],
-              [{ text: "🔄 إعادة تعيين جهازي (/reset_device)" }],
-            ],
-            resize_keyboard: true,
-            one_time_keyboard: false,
-          },
+          "👋 *مرحباً بك في Flow POS Pro*\n" +
+            "بوت الخدمة الذاتية لحسابك\n" +
+            "━━━━━━━━━━━━━━\n" +
+            "من هنا يمكنك:\n" +
+            "🔐 استلام رموز استعادة كلمة المرور فوراً\n" +
+            "🔄 نقل حسابك لهاتف جديد (مرة كل 5 أيام)\n" +
+            "🛡️ استلام التنبيهات الأمنية لحسابك\n\n" +
+            "📱 للبدء اضغط *«مشاركة رقم الهاتف للتحقق»* في الأسفل.\n" +
+            "❓ للمساعدة أرسل /help",
+          MAIN_KEYBOARD,
+        );
+        return new Response("OK", { status: 200 });
+      }
+
+      // -------------------------------------------------------------
+      // أمر المساعدة
+      // -------------------------------------------------------------
+      if (typeof message.text === "string" && (message.text.trim().startsWith("/help") || message.text.includes("مساعدة (/help)"))) {
+        await sendTelegramMessage(botToken, chatId, HELP_TEXT, MAIN_KEYBOARD);
+        return new Response("OK", { status: 200 });
+      }
+
+      // -------------------------------------------------------------
+      // أمر حالة الحساب: هل هذه المحادثة مربوطة بحساب؟
+      // -------------------------------------------------------------
+      if (typeof message.text === "string" && (message.text.trim().startsWith("/status") || message.text.includes("حالة حسابي"))) {
+        const { data: linked } = await serviceClient
+          .from("profiles")
+          .select("full_name")
+          .eq("telegram_chat_id", chatId.toString())
+          .maybeSingle();
+        await sendTelegramMessage(
+          botToken,
+          chatId,
+          linked
+            ? `✅ *حسابك مربوط*\n\nالحساب: *${escapeMd(linked.full_name || "المستخدم")}*\n\n` +
+                "ستصلك رموز الاستعادة والتنبيهات الأمنية في هذه المحادثة."
+            : "⚠️ *حسابك غير مربوط بعد*\n\nاضغط «مشاركة رقم الهاتف للتحقق» لربط حسابك.",
+          MAIN_KEYBOARD,
         );
         return new Response("OK", { status: 200 });
       }
@@ -193,10 +248,7 @@ serve(async (req) => {
             chatId,
             "⚠️ *حسابك غير مربوط بالبوت بعد*:\n\n" +
               "يرجى الضغط أولاً على *«مشاركة رقم الهاتف للتحقق»* أو إرسال /start لربط حسابك برقم الهاتف المسجل في النظام، ثم طلب تصفير الجهاز.",
-            {
-              keyboard: [[{ text: "📱 مشاركة رقم الهاتف للتحقق", request_contact: true }]],
-              resize_keyboard: true,
-            },
+            MAIN_KEYBOARD,
           );
           return new Response("OK", { status: 200 });
         }
@@ -217,18 +269,18 @@ serve(async (req) => {
 
         // 3. رسالة واضحة بحسب نتيجة الدالة: مهلة أمنية أم غياب ترخيص أم خطأ آخر
         if (!resetRes.success) {
-          const accountName = profile.full_name || "المستخدم";
+          const accountName = escapeMd(profile.full_name || "المستخدم");
           const cooldown = resetRes.cooldown === true;
 
           const message = cooldown
             ? `⏳ *تعذّر نقل الحساب مؤقتاً*\n\n` +
               `الحساب: *${accountName}*\n\n` +
-              `${resetRes.error}\n\n` +
+              `${escapeMd(resetRes.error)}\n\n` +
               `🛡️ لحماية الحساب، يُسمح بفك ارتباط الجهاز مرة واحدة كل 5 أيام. ` +
               `إذا كان النقل ضرورياً قبل انتهاء المهلة، تواصل مع إدارة النظام.`
             : `⚠️ *تعذّر فك ارتباط الجهاز*\n\n` +
               `الحساب: *${accountName}*\n\n` +
-              `${resetRes.error}\n\n` +
+              `${escapeMd(resetRes.error)}\n\n` +
               `ℹ️ هذه الرسالة لا تعني بالضرورة وجود مهلة 5 أيام. ` +
               `تحقق من وجود ترخيص فعال للحساب أو تواصل مع إدارة النظام.`;
 
@@ -241,7 +293,7 @@ serve(async (req) => {
           botToken,
           chatId,
           `✅ *تم فك ارتباط الجهاز بنجاح!*\n\n` +
-            `الحساب: *${profile.full_name || "المستخدم"}*\n\n` +
+            `الحساب: *${escapeMd(profile.full_name || "المستخدم")}*\n\n` +
             `تم إلغاء ربط الجهاز السابق لهذا الحساب. يمكنك الآن فتح التطبيق ` +
             `وتسجيل الدخول من هاتفك الجديد، وسيُربط الترخيص بهذا الجهاز عند أول دخول ناجح.`,
         );
@@ -308,19 +360,19 @@ serve(async (req) => {
             console.warn("[TelegramAuth] Warning updating user_metadata:", metaErr);
           }
 
-          const userName = matchedProfile.full_name || "مستخدم النظام";
+          const userName = escapeMd(matchedProfile.full_name || "مستخدم النظام");
           await sendTelegramMessage(
             botToken,
             chatId,
             `✅ *تم ربط حسابك بنجاح!*\n\nأهلاً بك يا *${userName}* في نظام *Flow POS Pro*.\n\nتم اعتماد هذا الحساب لاستلام رموز استعادة كلمة المرور والتنبيهات الأمنية لحسابك بنجاح.`,
-            { remove_keyboard: true },
+            MAIN_KEYBOARD,
           );
         } else {
           console.log(`[TelegramAuth] No profile matched for shared contact`);
           await sendTelegramMessage(
             botToken,
             chatId,
-            `❌ *لم يتم العثور على حساب مسجل بهذا الرقم* (\`${rawPhone}\`).\n\nيرجى التأكد من تسجيل رقم هاتفك داخل ملفك الشخصي في نظام Flow POS Pro، أو التواصل مع مدير النظام لتحديث رقم هاتفك.`,
+            `❌ *لم يتم العثور على حساب مسجل بهذا الرقم* (\`${String(rawPhone).replace(/`/g, "")}\`).\n\nيرجى التأكد من تسجيل رقم هاتفك داخل ملفك الشخصي في نظام Flow POS Pro، أو التواصل مع مدير النظام لتحديث رقم هاتفك.`,
             { remove_keyboard: true },
           );
         }

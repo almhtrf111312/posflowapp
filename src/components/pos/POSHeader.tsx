@@ -34,7 +34,7 @@ export function POSHeader({
   const supportUnread = useSupportUnread();
 
   return (
-    <header className="h-auto min-h-[calc(3.5rem+env(safe-area-inset-top,0px))] md:min-h-20 flex items-center justify-between px-3 md:px-6 sticky top-0 z-20 pt-[env(safe-area-inset-top,0px)] shrink-0 bg-background/95 shadow-xs border-b border-border/40 transition-[transform,opacity] duration-300">
+    <header className="h-auto min-h-[calc(3.5rem+var(--app-safe-top,0px))] md:min-h-20 flex items-center justify-between px-3 md:px-6 sticky top-0 z-20 pt-[var(--app-safe-top,0px)] shrink-0 bg-background/95 shadow-xs border-b border-border/40 transition-[transform,opacity] duration-300">
       {/* جهة اليمين (RTL): زر القائمة المدمج + عنوان نقطة البيع */}
       <div className="flex items-center gap-2 min-w-0 overflow-hidden">
         {/* زر فتح القائمة الجانبية المدمج للموبايل بدلاً من الزر العائم */}

@@ -22,7 +22,7 @@ input, textarea {
 
 @layer base {
   :root {
-    /* HyperPOS Dark Theme - Professional POS System */
+    /* PosFlow Dark Theme - Professional POS System */
     --background: 222 47% 6%;
     --foreground: 210 40% 98%;
 

@@ -1,6 +1,6 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
- * Cancellation Registry - FlowPOS Pro
+ * Cancellation Registry - PosFlow
  * =====================================
  * سجل الإلغاء والتعويض الدائم للعمليات غير المكتملة أو غير المزامنة.
  * 

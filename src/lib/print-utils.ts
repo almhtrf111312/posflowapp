@@ -1,8 +1,8 @@
 import { sanitizePrintHtml } from './print-sanitize';
-// Print utilities for HyperPOS
+// Print utilities for PosFlow
 // Uses hidden iframe approach for better Android/WebView compatibility
 
-const SETTINGS_KEY = 'hyperpos_settings_v1';
+const SETTINGS_KEY = 'posflow_settings_v1';
 
 export interface StoreSettings {
   name: string;
@@ -37,14 +37,14 @@ export function getStoreSettings(): StoreSettings {
   try {
     const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     return {
-      name: settings.storeSettings?.name || 'HyperPOS Store',
+      name: settings.storeSettings?.name || 'PosFlow Store',
       phone: settings.storeSettings?.phone || '',
       email: settings.storeSettings?.email || '',
       address: settings.storeSettings?.address || '',
       logo: settings.storeSettings?.logo || '',
     };
   } catch {
-    return { name: 'HyperPOS Store', phone: '', email: '', address: '', logo: '' };
+    return { name: 'PosFlow Store', phone: '', email: '', address: '', logo: '' };
   }
 }
 

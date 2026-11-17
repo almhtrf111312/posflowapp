@@ -33,7 +33,7 @@ import {
 } from './printer/bluetooth-printer';
 import { FlowPosPrinter } from './printer/flowpos-printer';
 
-const SETTINGS_KEY = 'hyperpos_settings_v1';
+const SETTINGS_KEY = 'posflow_settings_v1';
 
 export interface StoreSettings {
   name: string;
@@ -67,14 +67,14 @@ export function getStoreSettings(): StoreSettings {
   try {
     const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     return {
-      name: settings.storeSettings?.name || 'HyperPOS Store',
+      name: settings.storeSettings?.name || 'PosFlow Store',
       phone: settings.storeSettings?.phone || '',
       email: settings.storeSettings?.email || '',
       address: settings.storeSettings?.address || '',
       logo: settings.storeSettings?.logo || '',
     };
   } catch {
-    return { name: 'HyperPOS Store', phone: '', email: '', address: '', logo: '' };
+    return { name: 'PosFlow Store', phone: '', email: '', address: '', logo: '' };
   }
 }
 
@@ -426,7 +426,7 @@ export function generateReceiptHTML(invoice: PrintableInvoice): string {
     <div class="footer">
       ${escapeHtml(printSettings.footer)}
       <br/>
-      <small style="color: #999;">FlowPOS Pro</small>
+      <small style="color: #999;">PosFlow</small>
       ${isGuestDemoMode() ? `
         <div style="margin-top: 10px; padding: 6px; border: 2px dashed #e11d48; color: #e11d48; font-weight: bold; font-size: 13px; text-align: center; border-radius: 4px; background: #fff1f2;">
           ⚠️ نسخة تجريبية - Flow POS Pro ⚠️
@@ -542,7 +542,7 @@ export async function connectAndTestBluetoothPrinter(
  * Compatibility helper for existing callers
  */
 export async function htmlToEscPosRaster(htmlContent: string, paperWidth: '58mm' | '80mm' | 'A4'): Promise<Uint8Array> {
-  const lines: ReceiptLine[] = [{ text: 'FlowPOS Pro Print', align: 'center', bold: true }];
+  const lines: ReceiptLine[] = [{ text: 'PosFlow Print', align: 'center', bold: true }];
   const parts = await buildReceiptParts(lines, paperWidth === '58mm' ? '58mm' : '80mm');
   return parts[0] || new Uint8Array([0x1b, 0x40]);
 }

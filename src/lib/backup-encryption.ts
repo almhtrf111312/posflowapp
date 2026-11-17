@@ -1,9 +1,9 @@
 /**
- * Simple XOR + Base64 encryption for HyperPOS backups
+ * Simple XOR + Base64 encryption for PosFlow backups
  * This provides basic obfuscation for backup files
  */
 
-const ENCRYPTION_KEY = 'HyperPOS2024SecureBackup';
+const ENCRYPTION_KEY = 'PosFlow2024SecureBackup';
 const BACKUP_PREFIX = 'HPBK_';
 
 /**
@@ -57,7 +57,7 @@ export const decryptBackup = (encryptedData: string): object | null => {
 };
 
 /**
- * Check if a string is an encrypted HyperPOS backup
+ * Check if a string is an encrypted PosFlow backup
  */
 export const isEncryptedBackup = (data: string): boolean => {
   return data.startsWith(BACKUP_PREFIX);

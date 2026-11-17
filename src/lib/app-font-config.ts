@@ -24,9 +24,9 @@ export function getAppFontStorageKey(): string {
 }
 
 export const APP_FONT_STORAGE_KEY = 'flowpos_font';
-export const LEGACY_APP_FONT_STORAGE_KEY = 'hyperpos_app_font';
+export const LEGACY_APP_FONT_STORAGE_KEY = 'posflow_app_font';
 export const DEFAULT_APP_FONT_ID: AppFontId = 'cairo';
-export const APP_FONT_CHANGED_EVENT = 'hyperpos:app_font_changed';
+export const APP_FONT_CHANGED_EVENT = 'posflow:app_font_changed';
 
 export const APP_FONTS: readonly AppFontOption[] = [
   {
@@ -93,7 +93,7 @@ export function getStoredAppFont(): AppFontId {
       stored = localStorage.getItem(LEGACY_APP_FONT_STORAGE_KEY);
     }
     if (!stored) {
-      const rawSettings = localStorage.getItem('hyperpos_settings_v1');
+      const rawSettings = localStorage.getItem('posflow_settings_v1');
       if (rawSettings) {
         const parsed = JSON.parse(rawSettings);
         stored = parsed?.appFont || parsed?.font_family;

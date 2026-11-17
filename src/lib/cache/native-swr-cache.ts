@@ -1,7 +1,7 @@
 /**
  * Native SWR (Stale-While-Revalidate) Cache Engine
  * يضمن ظهور البيانات في أقل من 1 ميلي ثانية حتى بعد إغلاق التطبيق لأيام
- * FlowPOS Pro - Ultra-Fast Native Feel Architecture
+ * PosFlow - Ultra-Fast Native Feel Architecture
  */
 
 export interface CacheEntry<T> {

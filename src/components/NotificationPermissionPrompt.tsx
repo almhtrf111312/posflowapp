@@ -35,7 +35,7 @@ export function NotificationPermissionPrompt() {
     if (!user?.id) return;
     if (HIDDEN_PATHS.some(p => location.pathname.startsWith(p))) return;
     try {
-      if (localStorage.getItem('hyperpos_setup_complete') !== 'true' && !localStorage.getItem('hyperpos_settings_v1')) return;
+      if (localStorage.getItem('posflow_setup_complete') !== 'true' && !localStorage.getItem('posflow_settings_v1')) return;
       const dismissedAt = Number(localStorage.getItem(DISMISSED_KEY) || 0);
       if (dismissedAt && Date.now() - dismissedAt < REMIND_AFTER_MS) return;
     } catch {
@@ -84,7 +84,7 @@ export function NotificationPermissionPrompt() {
           </div>
           <AlertDialogTitle className="text-start">فعّل الإشعارات لتبقى على اطلاع</AlertDialogTitle>
           <AlertDialogDescription className="text-start">
-            يستخدم FlowPOS Pro الإشعارات فقط للأمور المهمة لعمل متجرك:
+            يستخدم PosFlow الإشعارات فقط للأمور المهمة لعمل متجرك:
           </AlertDialogDescription>
         </AlertDialogHeader>
 

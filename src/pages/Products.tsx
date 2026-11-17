@@ -361,7 +361,7 @@ export default function Products() {
     window.addEventListener(EVENTS.STORE_TYPE_CHANGED, handleFieldsUpdated);
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.includes('hyperpos_product_fields') || e.key?.includes('hyperpos_custom_fields')) {
+      if (e.key?.includes('posflow_product_fields') || e.key?.includes('posflow_custom_fields')) {
         reloadFieldsConfig();
       }
     };
@@ -382,9 +382,9 @@ export default function Products() {
    * AUTOMATIC FORM PERSISTENCE
    * Save form data to localStorage so it survives Android Process Death
    */
-  const FORM_STORAGE_KEY = 'hyperpos_product_form_temp';
+  const FORM_STORAGE_KEY = 'posflow_product_form_temp';
   // Temporary key for image restored via appRestoredResult (may arrive before form restore)
-  const RESTORED_IMAGE_KEY = 'hyperpos_restored_image_temp';
+  const RESTORED_IMAGE_KEY = 'posflow_restored_image_temp';
 
   /*
    * Handle Photo Restoration from Android Process Death
@@ -636,8 +636,8 @@ export default function Products() {
   useEffect(() => {
     const processPendingBarcode = () => {
       try {
-        const pendingBarcode = localStorage.getItem('hyperpos_pending_scan');
-        const pendingScanTarget = localStorage.getItem('hyperpos_scan_target') || 'form';
+        const pendingBarcode = localStorage.getItem('posflow_pending_scan');
+        const pendingScanTarget = localStorage.getItem('posflow_scan_target') || 'form';
         if (pendingBarcode) {
           const cleanBarcode = pendingBarcode.trim();
           console.log('[Products] Found pending barcode on mount:', cleanBarcode, 'target:', pendingScanTarget);
@@ -661,8 +661,8 @@ export default function Products() {
           }
 
           // مسح البيانات المعلقة فقط بعد المعالجة الناجحة
-          localStorage.removeItem('hyperpos_pending_scan');
-          localStorage.removeItem('hyperpos_scan_target');
+          localStorage.removeItem('posflow_pending_scan');
+          localStorage.removeItem('posflow_scan_target');
           toast.success('تم قراءة الباركود', { description: cleanBarcode });
         }
       } catch (e) {
@@ -678,14 +678,14 @@ export default function Products() {
       const barcode = (e as CustomEvent).detail;
       if (barcode && typeof barcode === 'string') {
         console.log('[Products] Received barcode-restored event:', barcode);
-        const target = localStorage.getItem('hyperpos_scan_target') || 'form';
+        const target = localStorage.getItem('posflow_scan_target') || 'form';
         if (target === 'search') {
           setSearchQuery(barcode.trim());
         } else {
           setFormData(prev => ({ ...prev, barcode: barcode.trim() }));
         }
-        localStorage.removeItem('hyperpos_pending_scan');
-        localStorage.removeItem('hyperpos_scan_target');
+        localStorage.removeItem('posflow_pending_scan');
+        localStorage.removeItem('posflow_scan_target');
         toast.success('تم قراءة الباركود', { description: barcode.trim() });
       }
     };
@@ -1414,7 +1414,7 @@ export default function Products() {
   const openBarcodeScannerForForm = () => {
     setScanTarget('form');
     // حفظ scanTarget في localStorage لاستعادته بعد Activity Recreation
-    try { localStorage.setItem('hyperpos_scan_target', 'form'); } catch { /* ignore */ }
+    try { localStorage.setItem('posflow_scan_target', 'form'); } catch { /* ignore */ }
     setScannerOpen(true);
   };
 
@@ -2352,7 +2352,7 @@ export default function Products() {
                 className="h-10 w-10 flex-shrink-0"
                 onClick={() => {
                   setScanTarget(mainTab === 'archive' ? 'archive' : 'search');
-                  try { localStorage.setItem('hyperpos_scan_target', mainTab === 'archive' ? 'archive' : 'search'); } catch { /* ignore */ }
+                  try { localStorage.setItem('posflow_scan_target', mainTab === 'archive' ? 'archive' : 'search'); } catch { /* ignore */ }
                   setScannerOpen(true);
                 }}
                 title={mainTab === 'archive' ? t('products.scanBarcodeArchive') : undefined}

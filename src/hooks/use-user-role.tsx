@@ -57,7 +57,7 @@ function buildStateFromRole(role: AppRole, ownerId: string, isDemo = false): Use
 function getCachedRole(userId: string): { role: AppRole; ownerId: string } | null {
   try {
     // Remove any legacy plain-text entry
-    localStorage.removeItem('hyperpos_user_role_cache');
+    localStorage.removeItem('posflow_user_role_cache');
 
     const parsed = secureGet<{ userId: string; role: AppRole; ownerId: string }>(
       ROLE_CACHE_KEY,

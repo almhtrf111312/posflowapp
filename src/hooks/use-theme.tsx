@@ -33,7 +33,7 @@ export function getThemeStorageKey(): string {
 }
 
 export const THEME_STORAGE_KEY = 'flowpos_theme';
-export const LEGACY_THEME_STORAGE_KEY = 'hyperpos_theme_v1';
+export const LEGACY_THEME_STORAGE_KEY = 'posflow_theme_v1';
 
 // Theme color definitions with HSL values
 export const themeColors: Record<ThemeColor, { name: string; nameAr: string; primary: string; accent: string }> = {

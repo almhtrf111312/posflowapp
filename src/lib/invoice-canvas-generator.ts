@@ -237,7 +237,7 @@ export async function generateInvoiceCanvas(data: InvoiceCanvasData): Promise<HT
   const rawCurrency = (data.currency_code || data.currency || '').toUpperCase();
   const effectiveSymbol = resolveInvoiceCurrencySymbol(rawCurrency, rawSymbol);
 
-  const storeName = data.storeName || storeSettings.name || 'FlowPOS Pro';
+  const storeName = data.storeName || storeSettings.name || 'PosFlow';
   const storePhone = data.storePhone || storeSettings.phone || '';
   const storeAddress = data.storeAddress || storeSettings.address || '';
   const storeLogoUrl = data.storeLogo || storeSettings.logo || '';
@@ -732,7 +732,7 @@ export async function generateInvoiceCanvas(data: InvoiceCanvasData): Promise<HT
   ctx.font = `11px ${FONT_FAMILY}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('FlowPOS Pro • نظام إدارة نقاط البيع والمبيعات', LOGICAL_WIDTH / 2, bottomBarY + 16);
+  ctx.fillText('PosFlow • نظام إدارة نقاط البيع والمبيعات', LOGICAL_WIDTH / 2, bottomBarY + 16);
 
   if (isGuestDemoMode()) {
     ctx.save();
@@ -771,7 +771,7 @@ export async function generateDebtStatementCanvas(data: DebtStatementCanvasData)
   const storeSettings = getStoreSettings();
   const printSettings = getPrintSettings();
 
-  const storeName = data.storeName || storeSettings.name || 'FlowPOS Pro';
+  const storeName = data.storeName || storeSettings.name || 'PosFlow';
   const storePhone = data.storePhone || storeSettings.phone || '';
   const storeAddress = data.storeAddress || storeSettings.address || '';
   const storeLogoUrl = data.storeLogo || storeSettings.logo || '';
@@ -1068,7 +1068,7 @@ export async function generateDebtStatementCanvas(data: DebtStatementCanvasData)
   const bottomBarY = footerY + 70;
   ctx.fillStyle = '#94a3b8';
   ctx.font = `11px ${FONT_FAMILY}`;
-  ctx.fillText('FlowPOS Pro • نظام إدارة نقاط البيع والمبيعات', LOGICAL_WIDTH / 2, bottomBarY + 12);
+  ctx.fillText('PosFlow • نظام إدارة نقاط البيع والمبيعات', LOGICAL_WIDTH / 2, bottomBarY + 12);
 
   return canvas;
 }

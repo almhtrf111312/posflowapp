@@ -1,8 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
-const GW = 'https://connector-gateway.lovable.dev/github';
-const REPO = 'repos/almhtrf111312/hyperpos-companion';
+const GW = 'https://api.github.com';
+const REPO = `repos/${Deno.env.get('GITHUB_REPO') ?? 'almhtrf111312/posflowapp'}`;
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -19,12 +19,12 @@ Deno.serve(async (req) => {
     const { data: isBoss } = await admin.rpc('is_boss', { _user_id: user.id });
     if (!isBoss) return json({ error: 'للمدير العام فقط' }, 403);
 
-    const LK = Deno.env.get('LOVABLE_API_KEY'), GK = Deno.env.get('GITHUB_API_KEY');
-    if (!LK || !GK) return json({ error: 'ربط GitHub غير مهيأ' }, 500);
+    const GK = Deno.env.get('GITHUB_TOKEN');
+    if (!GK) return json({ error: 'ربط GitHub غير مهيأ' }, 500);
     const gh = async (method: string, path: string, body?: unknown) => {
       const r = await fetch(`${GW}/${REPO}/${path}`, {
         method,
-        headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${LK}`, 'X-Connection-Api-Key': GK, 'Content-Type': 'application/json' },
+        headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${GK}`, 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined,
       });
       const t = await r.text();

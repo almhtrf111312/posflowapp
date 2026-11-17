@@ -1,7 +1,7 @@
 import { emitEvent, EVENTS } from './events';
 import { loadPartners, savePartners, ExpenseRecord } from './partners-store';
 
-const EXPENSES_STORAGE_KEY = 'hyperpos_expenses_v1';
+const EXPENSES_STORAGE_KEY = 'posflow_expenses_v1';
 
 // Fix #17: Enhanced expense types with categories
 export type ExpenseCategory = 'operational' | 'payroll' | 'utilities' | 'maintenance' | 'marketing' | 'other';

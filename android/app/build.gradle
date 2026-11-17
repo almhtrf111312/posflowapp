@@ -4,7 +4,7 @@ android {
     namespace = "com.flowpos.pro"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.flowpos.pro"
+        applicationId "com.posflow.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         

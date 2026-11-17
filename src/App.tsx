@@ -134,11 +134,11 @@ const AppContent = () => {
   // تفريغ السلة وحالتها من التخزين عند تشغيل التطبيق بالكامل (Cold Start) لضمان بدء السلة مغلقة دائماً
   useEffect(() => {
     try {
-      localStorage.removeItem('hyperpos_temp_cart');
-      localStorage.removeItem('hyperpos_cart_open');
-      sessionStorage.removeItem('hyperpos_cart_open');
-      localStorage.removeItem('hyperpos_cart_customer');
-      localStorage.removeItem('hyperpos_cart_discount');
+      localStorage.removeItem('posflow_temp_cart');
+      localStorage.removeItem('posflow_cart_open');
+      sessionStorage.removeItem('posflow_cart_open');
+      localStorage.removeItem('posflow_cart_customer');
+      localStorage.removeItem('posflow_cart_discount');
     } catch (e) {
       console.warn('[App] Failed to clear cart storage on startup:', e);
     }
@@ -195,10 +195,10 @@ const AppContent = () => {
   const [setupComplete, setSetupComplete] = useState<boolean>(() => {
     try {
       // Prioritize new signup flag over existing device settings
-      if (sessionStorage.getItem('hyperpos_just_signed_up') === 'true') {
-        return localStorage.getItem('hyperpos_setup_complete') === 'true';
+      if (sessionStorage.getItem('posflow_just_signed_up') === 'true') {
+        return localStorage.getItem('posflow_setup_complete') === 'true';
       }
-      return localStorage.getItem('hyperpos_setup_complete') === 'true' || !!localStorage.getItem('hyperpos_settings_v1');
+      return localStorage.getItem('posflow_setup_complete') === 'true' || !!localStorage.getItem('posflow_settings_v1');
     } catch { return true; }
   });
 
@@ -206,12 +206,12 @@ const AppContent = () => {
   useEffect(() => {
     const checkState = () => {
       try {
-        const isNew = sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
+        const isNew = sessionStorage.getItem('posflow_just_signed_up') === 'true';
         if (isNew) {
           // إذا كان المستخدم في جلسة إنشاء حساب جديد، لا تقم بضبط setupComplete إلى true من خلال أحداث المزامنة
           return;
         } else {
-          setSetupComplete(localStorage.getItem('hyperpos_setup_complete') === 'true' || !!localStorage.getItem('hyperpos_settings_v1'));
+          setSetupComplete(localStorage.getItem('posflow_setup_complete') === 'true' || !!localStorage.getItem('posflow_settings_v1'));
         }
       } catch {}
     };
@@ -224,8 +224,8 @@ const AppContent = () => {
   const [manualShowSetup, setManualShowSetup] = useState(false);
   useEffect(() => {
     const handleOpenWizard = () => setManualShowSetup(true);
-    window.addEventListener('hyperpos:open-setup-wizard', handleOpenWizard);
-    return () => window.removeEventListener('hyperpos:open-setup-wizard', handleOpenWizard);
+    window.addEventListener('posflow:open-setup-wizard', handleOpenWizard);
+    return () => window.removeEventListener('posflow:open-setup-wizard', handleOpenWizard);
   }, []);
 
   // Handle reset mode
@@ -235,11 +235,11 @@ const AppContent = () => {
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && (key.startsWith('hyperpos') || key === 'setup_complete') &&
-              key !== 'hyperpos_privacy_accepted' &&
-              key !== 'hyperpos_privacy_version' &&
-              key !== 'hyperpos_language' &&
-              key !== 'hyperpos_theme') {
+          if (key && (key.startsWith('posflow') || key === 'setup_complete') &&
+              key !== 'posflow_privacy_accepted' &&
+              key !== 'posflow_privacy_version' &&
+              key !== 'posflow_language' &&
+              key !== 'posflow_theme') {
             keysToRemove.push(key);
           }
         }
@@ -311,7 +311,7 @@ const AppContent = () => {
 
             if (scanResult) {
               console.log('[App Restored] Barcode scan result:', scanResult);
-              localStorage.setItem('hyperpos_pending_scan', scanResult);
+              localStorage.setItem('posflow_pending_scan', scanResult);
 
               // Emit custom event for immediate handling
               window.dispatchEvent(new CustomEvent('barcode-restored', {
@@ -337,7 +337,7 @@ const AppContent = () => {
   // Handle new signup setup flow with explicit state guarding
   const isNewSignup = (() => {
     try {
-      return sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
+      return sessionStorage.getItem('posflow_just_signed_up') === 'true';
     } catch { return false; }
   })();
 
@@ -423,16 +423,16 @@ const AppContent = () => {
       // 2b. Role is cashier: Cashiers do not initialize a store
       if (effectiveRole === 'cashier') {
         try {
-          sessionStorage.removeItem('hyperpos_just_signed_up');
-          localStorage.setItem('hyperpos_setup_complete', 'true');
+          sessionStorage.removeItem('posflow_just_signed_up');
+          localStorage.setItem('posflow_setup_complete', 'true');
         } catch {}
       } else if (!setupComplete) {
         // 2c. Store owners (boss/admin) or offline fallback -> display SetupWizard
         return (
           <SetupWizard onComplete={() => {
             try {
-              sessionStorage.removeItem('hyperpos_just_signed_up');
-              localStorage.setItem('hyperpos_setup_complete', 'true');
+              sessionStorage.removeItem('posflow_just_signed_up');
+              localStorage.setItem('posflow_setup_complete', 'true');
             } catch {}
             setSetupComplete(true);
             setManualShowSetup(false);

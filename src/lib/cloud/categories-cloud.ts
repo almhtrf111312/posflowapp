@@ -41,7 +41,7 @@ const getDefaultCategoryNames = (): string[] => {
 };
 
 // Local storage cache helpers
-const LOCAL_CACHE_KEY = 'hyperpos_categories_cache';
+const LOCAL_CACHE_KEY = 'posflow_categories_cache';
 
 const saveCategoriesLocally = (categories: Category[]) => {
   try {

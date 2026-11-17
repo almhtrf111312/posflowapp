@@ -4,8 +4,8 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { uploadCloudBackup } from './cloud-backup';
 import { formatDateTime } from './utils';
 
-const BACKUP_CONFIG_KEY = 'hyperpos_backup_config_v1';
-const LAST_ACTIVITY_KEY = 'hyperpos_last_activity_v1';
+const BACKUP_CONFIG_KEY = 'posflow_backup_config_v1';
+const LAST_ACTIVITY_KEY = 'posflow_last_activity_v1';
 const BACKUP_INTERVAL_HOURS = 3; // Backup every 3 hours if active
 const IDLE_BACKUP_INTERVAL_HOURS = 24; // Backup once daily if idle
 
@@ -88,7 +88,7 @@ export const isBackupNeeded = (): boolean => {
 // Get store settings for backup metadata
 const getStoreSettings = (): Record<string, unknown> => {
   try {
-    const stored = localStorage.getItem('hyperpos_settings');
+    const stored = localStorage.getItem('posflow_settings');
     if (stored) {
       return JSON.parse(stored);
     }
@@ -132,8 +132,8 @@ export const generateBackupData = async (): Promise<object> => {
   // Other local-only or less critical data from localStorage
   // Customers, Debts might be in Invoice Cloud or separate. 
   // Assuming Customers are separate? Let's check localStorage fallback for them.
-  const customers = tryParse('hyperpos_customers_v1') || [];
-  const debts = tryParse('hyperpos_debts_v1') || []; // If debts are cloud, should use loader. Assuming local fallback for now.
+  const customers = tryParse('posflow_customers_v1') || [];
+  const debts = tryParse('posflow_debts_v1') || []; // If debts are cloud, should use loader. Assuming local fallback for now.
 
   const backupData: Record<string, unknown> = {
     version: '2.1', // Bump version/
@@ -141,40 +141,40 @@ export const generateBackupData = async (): Promise<object> => {
     localTimestamp: formatDateTime(new Date().toISOString()),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     appName: 'FlowBOS Pro',
-    source: 'hyperpos_backup_cloud',
+    source: 'posflow_backup_cloud',
     storeInfo: storeSettings,
     data: {
       // Cloud Data
-      'hyperpos_invoices_v1': invoices,
-      'hyperpos_products_v1': products,
-      'hyperpos_partners_v1': partners,
-      'hyperpos_expenses_v1': expenses,
+      'posflow_invoices_v1': invoices,
+      'posflow_products_v1': products,
+      'posflow_partners_v1': partners,
+      'posflow_expenses_v1': expenses,
 
       // Warehouse Data (New)
-      'hyperpos_warehouses_v1': warehouses,
-      'hyperpos_warehouse_stock_v1': warehouseStock,
-      'hyperpos_stock_transfers_v1': stockTransfers,
+      'posflow_warehouses_v1': warehouses,
+      'posflow_warehouse_stock_v1': warehouseStock,
+      'posflow_stock_transfers_v1': stockTransfers,
 
       // Local/Legacy Data
-      'hyperpos_customers_v1': customers,
-      'hyperpos_debts_v1': debts,
-      'hyperpos_recurring_expenses_v1': tryParse('hyperpos_recurring_expenses_v1'),
-      'hyperpos_categories_v1': tryParse('hyperpos_categories_v1'),
-      'hyperpos_maintenance_v1': tryParse('hyperpos_maintenance_v1'),
+      'posflow_customers_v1': customers,
+      'posflow_debts_v1': debts,
+      'posflow_recurring_expenses_v1': tryParse('posflow_recurring_expenses_v1'),
+      'posflow_categories_v1': tryParse('posflow_categories_v1'),
+      'posflow_maintenance_v1': tryParse('posflow_maintenance_v1'),
 
       // Internal State
-      'hyperpos_cashbox_v1': tryParse('hyperpos_cashbox_v1'),
-      'hyperpos_shifts_v1': tryParse('hyperpos_shifts_v1'),
-      'hyperpos_capital_v1': tryParse('hyperpos_capital_v1'),
+      'posflow_cashbox_v1': tryParse('posflow_cashbox_v1'),
+      'posflow_shifts_v1': tryParse('posflow_shifts_v1'),
+      'posflow_capital_v1': tryParse('posflow_capital_v1'),
 
       // Configs
-      'hyperpos_settings': tryParse('hyperpos_settings'),
-      'hyperpos_settings_v1': tryParse('hyperpos_settings_v1'),
-      'hyperpos_exchange_rates_v1': tryParse('hyperpos_exchange_rates_v1'),
-      'hyperpos_custom_fields_config': tryParse('hyperpos_custom_fields_config'),
-      'hyperpos_product_fields_config': tryParse('hyperpos_product_fields_config'),
-      'hyperpos_backup_config_v1': tryParse('hyperpos_backup_config_v1'),
-      'hyperpos_activity_log': tryParse('hyperpos_activity_log'),
+      'posflow_settings': tryParse('posflow_settings'),
+      'posflow_settings_v1': tryParse('posflow_settings_v1'),
+      'posflow_exchange_rates_v1': tryParse('posflow_exchange_rates_v1'),
+      'posflow_custom_fields_config': tryParse('posflow_custom_fields_config'),
+      'posflow_product_fields_config': tryParse('posflow_product_fields_config'),
+      'posflow_backup_config_v1': tryParse('posflow_backup_config_v1'),
+      'posflow_activity_log': tryParse('posflow_activity_log'),
     },
     summary: {
       invoicesCount: invoices.length,
@@ -226,7 +226,7 @@ export const saveBackupLocally = async (): Promise<boolean> => {
       if (backups.length > 10) {
         backups.pop();
       }
-      localStorage.setItem('hyperpos_local_backups', JSON.stringify(backups));
+      localStorage.setItem('posflow_local_backups', JSON.stringify(backups));
     }
 
     return true;
@@ -239,7 +239,7 @@ export const saveBackupLocally = async (): Promise<boolean> => {
 // Load local backups list
 export const loadLocalBackups = (): Array<{ fileName: string; data: object; createdAt: string }> => {
   try {
-    const stored = localStorage.getItem('hyperpos_local_backups');
+    const stored = localStorage.getItem('posflow_local_backups');
     if (stored) {
       return JSON.parse(stored);
     }

@@ -1,5 +1,5 @@
 /**
- * Cashbox Cloud Store - FlowPOS Pro
+ * Cashbox Cloud Store - PosFlow
  * ==================================
  * مزامنة الورديات وحركات الصندوق إلى Supabase.
  * يعمل بشكل تكاملي مع cashbox-store المحلي (cache).

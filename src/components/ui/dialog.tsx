@@ -26,9 +26,9 @@ export function useIsScannerActive() {
         setActive(document.body.classList.contains('barcode-scanner-active'));
       }
     };
-    window.addEventListener('hyperpos:scanner-state', handleState);
+    window.addEventListener('posflow:scanner-state', handleState);
     return () => {
-      window.removeEventListener('hyperpos:scanner-state', handleState);
+      window.removeEventListener('posflow:scanner-state', handleState);
     };
   }, []);
 

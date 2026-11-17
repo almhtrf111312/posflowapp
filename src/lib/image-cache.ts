@@ -1,12 +1,12 @@
 /**
- * Image Cache - FlowPOS Pro
+ * Image Cache - PosFlow
  * =========================
  * نظام Cache-First لصور المنتجات
  * يحفظ الصور محلياً في Cache API عند تحميلها لأول مرة
  * ويعرضها من الكاش عند انقطاع الإنترنت
  */
 
-const IMAGE_CACHE_NAME = 'hyperpos-product-images-v1';
+const IMAGE_CACHE_NAME = 'posflow-product-images-v1';
 const MAX_CACHE_SIZE = 200; // الحد الأقصى لعدد الصور المخزنة
 
 /**

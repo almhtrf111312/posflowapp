@@ -62,7 +62,7 @@ export function StoreInfoSection({
           size="sm"
           className="h-8 text-xs rounded-lg border-primary/30 text-primary hover:bg-primary/10 shrink-0 font-bold"
           onClick={() => {
-            window.dispatchEvent(new CustomEvent('hyperpos:open-setup-wizard'));
+            window.dispatchEvent(new CustomEvent('posflow:open-setup-wizard'));
           }}
         >
           تشغيل المعالج

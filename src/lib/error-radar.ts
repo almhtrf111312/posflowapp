@@ -72,11 +72,11 @@ export interface QueuedErrorRadarLog extends ErrorRadarLog {
 // ثوابت التهيئة والتخزين المحلي
 const STORAGE_KEY = 'radar_error_logs';
 const STORAGE_NAMESPACE = 'hp_radar';
-const FALLBACK_STORAGE_KEY = 'hyperpos_error_radar_v1';
+const FALLBACK_STORAGE_KEY = 'posflow_error_radar_v1';
 
 // ثوابت طابور المزامنة الأوفلاين المنعزل
 const QUEUE_STORAGE_KEY = 'radar_sync_queue';
-const FALLBACK_QUEUE_KEY = 'hyperpos_radar_queue_v1';
+const FALLBACK_QUEUE_KEY = 'posflow_radar_queue_v1';
 
 // حدود التخزين والتدوير
 const MAX_LOGS = 100; // حد أقصى لسجلات الأرشيف المحلي

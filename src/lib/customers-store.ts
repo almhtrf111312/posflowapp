@@ -1,6 +1,6 @@
 import { emitEvent, EVENTS } from './events';
 
-const CUSTOMERS_STORAGE_KEY = 'hyperpos_customers_v1';
+const CUSTOMERS_STORAGE_KEY = 'posflow_customers_v1';
 
 export interface Customer {
   id: string;

@@ -82,15 +82,15 @@ const saveFileNative = async (
     // 1. Try Documents directory first
     try {
       const result = await Filesystem.writeFile({
-        path: `HyperPOS/${filename}`,
+        path: `PosFlow/${filename}`,
         data: content,
         directory: Directory.Documents,
         encoding: Encoding.UTF8,
         recursive: true,
       });
 
-      console.log('[FileDownload] Saved to Documents/HyperPOS:', result.uri);
-      return { success: true, path: 'Documents/HyperPOS', filename };
+      console.log('[FileDownload] Saved to Documents/PosFlow:', result.uri);
+      return { success: true, path: 'Documents/PosFlow', filename };
     } catch (documentsError) {
       console.warn('[FileDownload] Documents save failed, trying Downloads:', documentsError);
     }
@@ -123,7 +123,7 @@ const saveFileNative = async (
 
     await Share.share({
       title: filename,
-      text: 'نسخة احتياطية من HyperPOS',
+      text: 'نسخة احتياطية من PosFlow',
       url: cacheResult.uri,
       dialogTitle: 'حفظ النسخة الاحتياطية',
     });
@@ -215,7 +215,7 @@ export const getDownloadPath = (): string => {
 };
 
 /**
- * List backup files from native Documents/HyperPOS/ directory
+ * List backup files from native Documents/PosFlow/ directory
  */
 export interface NativeBackupFile {
   name: string;
@@ -229,7 +229,7 @@ export const listNativeBackups = async (): Promise<NativeBackupFile[]> => {
 
   try {
     const result = await Filesystem.readdir({
-      path: 'HyperPOS',
+      path: 'PosFlow',
       directory: Directory.Documents,
     });
 
@@ -245,7 +245,7 @@ export const listNativeBackups = async (): Promise<NativeBackupFile[]> => {
 
     return backups;
   } catch (error) {
-    console.log('[FileDownload] Cannot read HyperPOS directory:', error);
+    console.log('[FileDownload] Cannot read PosFlow directory:', error);
     return [];
   }
 };

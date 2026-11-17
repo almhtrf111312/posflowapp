@@ -4,7 +4,7 @@ import { roundCurrency, addCurrency, subtractCurrency } from './utils';
 import { loadPartners, savePartners, addCapital as addPartnerCapital } from './partners-store';
 import { addDepositToShift } from './cashbox-store';
 
-const CAPITAL_STORAGE_KEY = 'hyperpos_capital_v1';
+const CAPITAL_STORAGE_KEY = 'posflow_capital_v1';
 
 export type TransactionType = 'initial_capital' | 'partner_investment' | 'reinvestment' | 'withdrawal' | 'adjustment';
 

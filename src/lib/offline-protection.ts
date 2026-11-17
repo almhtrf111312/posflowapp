@@ -17,16 +17,16 @@ const ENCRYPTED_IDB_KEY = 'hp_encrypted_idb_backup';
 
 // localStorage keys to encrypt
 const SENSITIVE_KEYS = [
-  'hyperpos_products',
-  'hyperpos_invoices',
-  'hyperpos_customers',
-  'hyperpos_debts',
-  'hyperpos_expenses',
-  'hyperpos_maintenance_v1',
-  'hyperpos_partners',
-  'hyperpos_categories',
-  'hyperpos_capital',
-  'hyperpos_cashbox',
+  'posflow_products',
+  'posflow_invoices',
+  'posflow_customers',
+  'posflow_debts',
+  'posflow_expenses',
+  'posflow_maintenance_v1',
+  'posflow_partners',
+  'posflow_categories',
+  'posflow_capital',
+  'posflow_cashbox',
 ];
 
 /** Record a successful server contact */

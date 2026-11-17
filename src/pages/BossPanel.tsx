@@ -95,7 +95,6 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SystemDiagnostics } from '@/components/settings/SystemDiagnostics';
 import { ErrorRadarPanel } from '@/components/boss/ErrorRadarPanel';
-import { BossAIAssistant } from '@/components/boss/BossAIAssistant';
 import { BossReleasesPanel } from '@/components/boss/BossReleasesPanel';
 import { BossPlansManager } from '@/components/boss/BossPlansManager';
 import { BossPaymentMethodsManager } from '@/components/boss/BossPaymentMethodsManager';
@@ -1264,11 +1263,11 @@ export default function BossPanel() {
 
         const message = encodeURIComponent(
           `مرحباً ${activationDialog.owner.full_name || 'عزيزي العميل'}!\n\n` +
-          `كود تفعيل FlowPOS Pro الخاص بك:\n` +
+          `كود تفعيل PosFlow الخاص بك:\n` +
           `${selectedCode.code}\n\n` +
           `مدة الترخيص: ${selectedCode.duration_days} يوم\n` +
           `عدد الكاشيرات: ${selectedCode.max_cashiers}\n\n` +
-          `رابط التطبيق: https://propos.lovable.app`
+          `رابط التطبيق: https://posflowapp.pages.dev`
         );
 
         window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
@@ -1671,16 +1670,6 @@ export default function BossPanel() {
               <div className="text-xs font-bold text-muted-foreground flex items-center gap-1.5 px-2">
                 <span>لوحة تحكم البوس</span>
               </div>
-              {/* كبسولة المساعد الذكي المستقلة في الأعلى */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { setActiveTab('more'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className="h-8 gap-1.5 text-xs font-bold rounded-xl border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>المستشار الذكي</span>
-              </Button>
             </>
           )}
         </div>
@@ -2927,18 +2916,6 @@ export default function BossPanel() {
                   <MessageCircle className="w-4 h-4" />
                   تعديل قنوات التواصل
                 </Button>
-              </CardContent>
-            </Card>
-            {/* المساعد الذكي للبوس */}
-            <Card className="border border-border/80 shadow-sm rounded-2xl overflow-hidden">
-              <CardHeader className="p-4 md:px-6 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-b border-border/50">
-                <CardTitle className="flex items-center gap-2.5 text-base md:text-lg font-bold">
-                  <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
-                  <span>المساعد الذكي للبوس (Boss AI Assistant)</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 md:p-6">
-                <BossAIAssistant />
               </CardContent>
             </Card>
           </div>

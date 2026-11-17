@@ -48,7 +48,7 @@ export async function sendBossTelegramChatAlert(
     const { bot_token, chat_id } = config;
 
     const text = [
-      '🔔 <b>رسالة جديدة من عميل في FlowPOS Pro</b>',
+      '🔔 <b>رسالة جديدة من عميل في PosFlow</b>',
       `👤 <b>العميل:</b> ${escapeHtml(clientName || 'غير مسجل')}`,
       `📱 <b>الهاتف:</b> <code>${escapeHtml(clientPhone || 'غير متوفر')}</code>`,
       refCode ? `🎫 <b>مرجع الطلب:</b> <code>${escapeHtml(refCode)}</code>` : '',

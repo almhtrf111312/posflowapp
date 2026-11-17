@@ -58,7 +58,7 @@ export interface StockTransferItem {
 }
 
 // Local storage cache helpers
-const LOCAL_CACHE_KEY = 'hyperpos_warehouses_cache';
+const LOCAL_CACHE_KEY = 'posflow_warehouses_cache';
 
 const saveWarehousesLocally = (warehouses: Warehouse[]) => {
   try {
@@ -75,13 +75,13 @@ const loadWarehousesLocally = (): Warehouse[] | null => {
 
 const saveWarehouseStockLocally = (warehouseId: string, stock: WarehouseStock[]) => {
   try {
-    localStorage.setItem(`hyperpos_warehouse_stock_cache_${warehouseId}`, JSON.stringify(stock));
+    localStorage.setItem(`posflow_warehouse_stock_cache_${warehouseId}`, JSON.stringify(stock));
   } catch { /* ignore */ }
 };
 
 export const loadWarehouseStockLocally = (warehouseId: string): WarehouseStock[] | null => {
   try {
-    const data = localStorage.getItem(`hyperpos_warehouse_stock_cache_${warehouseId}`);
+    const data = localStorage.getItem(`posflow_warehouse_stock_cache_${warehouseId}`);
     return data ? JSON.parse(data) : null;
   } catch { return null; }
 };
@@ -431,7 +431,7 @@ export const loadStockTransfersCloud = async (): Promise<StockTransfer[]> => {
   // Offline: return local cache
   if (!navigator.onLine) {
     try {
-      const data = localStorage.getItem('hyperpos_stock_transfers_cache');
+      const data = localStorage.getItem('posflow_stock_transfers_cache');
       if (data) return JSON.parse(data);
     } catch { /* ignore */ }
     return [];
@@ -443,7 +443,7 @@ export const loadStockTransfersCloud = async (): Promise<StockTransfer[]> => {
   });
 
   try {
-    localStorage.setItem('hyperpos_stock_transfers_cache', JSON.stringify(transfers));
+    localStorage.setItem('posflow_stock_transfers_cache', JSON.stringify(transfers));
   } catch { /* ignore */ }
 
   return transfers;
@@ -611,7 +611,7 @@ export const cancelStockTransferCloud = async (transferId: string): Promise<bool
   return true;
 };
 
-const LOCAL_ALL_STOCKS_CACHE_KEY = 'hyperpos_all_warehouse_stocks_cache';
+const LOCAL_ALL_STOCKS_CACHE_KEY = 'posflow_all_warehouse_stocks_cache';
 
 // Load all warehouse stocks locally (0ms, no network)
 export const loadAllWarehouseStocksLocalFirst = (): WarehouseStock[] => {

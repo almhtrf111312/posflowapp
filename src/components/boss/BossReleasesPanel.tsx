@@ -361,7 +361,7 @@ export function BossReleasesPanel() {
       const { error } = await supabase.functions.invoke('publish-telegram-release', {
         body: {
           version: `v${CURRENT_VERSION_NAME}`,
-          title: `تحديث FlowPOS Pro v${CURRENT_VERSION_NAME} متاح الآن`,
+          title: `تحديث PosFlow v${CURRENT_VERSION_NAME} متاح الآن`,
           notes: customMessage,
           download_url: updateUrl,
         },

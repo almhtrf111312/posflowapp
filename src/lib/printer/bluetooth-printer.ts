@@ -50,7 +50,7 @@ export async function printParts(address: string, parts: Uint8Array[]): Promise<
 
 export async function printTestPage(address: string, paper: PaperWidth): Promise<void> {
   const lines: ReceiptLine[] = [
-    { text: 'FlowPOS Pro', align: 'center', bold: true, size: 1.4 },
+    { text: 'PosFlow', align: 'center', bold: true, size: 1.4 },
     { text: 'Printer test', align: 'center' },
     { text: new Date().toLocaleString(), align: 'center' },
     { text: '--------------------------------', align: 'center' },

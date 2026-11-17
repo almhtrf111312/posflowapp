@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * FlowPOS Pro - Unified Version Bump Script
+ * PosFlow - Unified Version Bump Script
  * =========================================
  * Single source of truth: version.json
  * Automatically increments BOTH versionName (patch) AND versionCode (build) on every edit.
@@ -74,7 +74,7 @@ function bumpSemver(versionStr, type) {
 }
 
 function main() {
-  console.log('\n🚀 FlowPOS Pro - Unified Version Bump Tool\n');
+  console.log('\n🚀 PosFlow - Unified Version Bump Tool\n');
 
   if (!fs.existsSync(VERSION_FILE)) {
     console.error('❌ Error: version.json not found at', VERSION_FILE);

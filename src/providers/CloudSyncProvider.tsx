@@ -30,8 +30,8 @@ import {
   DEFAULT_UNIFIED_SETTINGS,
 } from '@/lib/store-settings-sync';
 
-const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
-const LAST_USER_KEY = 'hyperpos_last_user_id';
+const SETTINGS_STORAGE_KEY = 'posflow_settings_v1';
+const LAST_USER_KEY = 'posflow_last_user_id';
 
 // فترة إعادة المحاولة الدورية التلقائية في الخلفية: 45 ثانية عند وجود عمليات معلقة
 const PERIODIC_RETRY_INTERVAL_MS = 30 * 1000;
@@ -123,7 +123,7 @@ interface CloudSyncProviderProps {
   children: ReactNode;
 }
 
-const PAUSE_KEY = 'hyperpos_sync_paused';
+const PAUSE_KEY = 'posflow_sync_paused';
 
 export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { user, isLoading: authLoading } = useAuth();
@@ -275,18 +275,18 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('hyperpos_') &&
-          !key.startsWith('hyperpos_sync_pending_') && 
-          key !== 'hyperpos_language' && 
+      if (key && key.startsWith('posflow_') &&
+          !key.startsWith('posflow_sync_pending_') && 
+          key !== 'posflow_language' && 
           key !== LAST_USER_KEY &&
-          key !== 'hyperpos_stay_logged_in' &&
-          key !== 'hyperpos_session_cache' &&
-          key !== 'hyperpos_theme' &&
-          key !== 'hyperpos_setup_complete' &&
-          key !== 'hyperpos_privacy_accepted' &&
-          key !== 'hyperpos_privacy_version' &&
-          key !== 'hyperpos_recurring_expenses_v1' &&
-          key !== 'hyperpos_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند تغيير المستخدم
+          key !== 'posflow_stay_logged_in' &&
+          key !== 'posflow_session_cache' &&
+          key !== 'posflow_theme' &&
+          key !== 'posflow_setup_complete' &&
+          key !== 'posflow_privacy_accepted' &&
+          key !== 'posflow_privacy_version' &&
+          key !== 'posflow_recurring_expenses_v1' &&
+          key !== 'posflow_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند تغيير المستخدم
           key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
           key !== 'flowpos_persistent_hardware_id') { // 👈 حماية البصمة الاحتياطية الدائمة
         keysToRemove.push(key);
@@ -315,9 +315,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // سحب الإعدادات بحماية Anti-Overwrite Guard (Pull-Before-Push) دون أي رفع تلقائي
       await pullStoreSettingsWithGuard();
 
-      const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
+      const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('posflow_just_signed_up') === 'true';
       if (!isJustSignedUp) {
-        localStorage.setItem('hyperpos_setup_complete', 'true');
+        localStorage.setItem('posflow_setup_complete', 'true');
       }
 
       setLastSyncTime(new Date().toISOString());
@@ -489,9 +489,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
       // ✅ استخدام pullStoreSettingsWithGuard لمنع الكتابة العكسية للإعدادات السحابية القديمة فوق التعديلات المحلية الأحدث
       await pullStoreSettingsWithGuard();
-      const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
+      const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('posflow_just_signed_up') === 'true';
       if (!isJustSignedUp) {
-        localStorage.setItem('hyperpos_setup_complete', 'true');
+        localStorage.setItem('posflow_setup_complete', 'true');
       }
 
       emitEvent(EVENTS.PRODUCTS_UPDATED);

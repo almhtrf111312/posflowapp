@@ -206,7 +206,7 @@ let cacheTimestamp = 0;
 const CACHE_TTL = 30000;
 
 // Local storage key for offline fallback
-const LOCAL_INVOICES_CACHE_KEY = 'hyperpos_invoices_cache';
+const LOCAL_INVOICES_CACHE_KEY = 'posflow_invoices_cache';
 
 // Save invoices to localStorage for offline access
 const saveInvoicesToLocalCache = (invoices: Invoice[]) => {
@@ -1375,7 +1375,7 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
     const pending = getPendingOperations();
     const persistedSymbols = (() => {
       try {
-        const s = localStorage.getItem('hyperpos_settings_v1');
+        const s = localStorage.getItem('posflow_settings_v1');
         if (s) {
           const parsed = JSON.parse(s);
           return parsed.currencySymbols as Record<string, string> | undefined;

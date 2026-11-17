@@ -121,7 +121,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { ReportCurrencyBanner } from '@/components/reports/ReportCurrencyBanner';
 
 export type ReportDisplayMode = 'smart' | 'professional';
-const REPORT_DISPLAY_MODE_KEY = 'hyperpos_reports_display_mode_v1';
+const REPORT_DISPLAY_MODE_KEY = 'posflow_reports_display_mode_v1';
 
 function readReportDisplayMode(): ReportDisplayMode {
   return 'smart';
@@ -845,18 +845,18 @@ function ReportsContent() {
 
   const getStoreInfo = () => {
     try {
-      const stored = localStorage.getItem('hyperpos_settings_v1') || localStorage.getItem('hyperpos_settings');
+      const stored = localStorage.getItem('posflow_settings_v1') || localStorage.getItem('posflow_settings');
       if (stored) {
         const settings = JSON.parse(stored);
         return {
-          name: settings.storeSettings?.name || settings.storeName || 'HyperPOS',
+          name: settings.storeSettings?.name || settings.storeName || 'PosFlow',
           phone: settings.storeSettings?.phone || settings.storePhone,
           address: settings.storeSettings?.address || settings.storeAddress,
           logo: settings.storeSettings?.logo || settings.logoUrl
         };
       }
     } catch { /* ignore */ }
-    return { name: 'HyperPOS' };
+    return { name: 'PosFlow' };
   };
 
   // Helpers: apply same filters used in the visible report
@@ -2196,7 +2196,7 @@ function ReportsContent() {
     const report = `📊 تقرير المصاريف - ${partnerName}\n📅 الفترة: ${dateRange.from} إلى ${dateRange.to}\n💱 عملة التقرير: ${reportCurr.name} (${reportCurr.symbol})\n\n💰 إجمالي المصاريف المشتركة: ${formatReportAmount(partnerTotal)}\n\n📋 التفاصيل:\n${partnerExpenses.map(exp => {
       const dist = exp.distributions.find(d => d.partnerName === partnerName);
       return `• ${exp.date} - ${exp.typeLabel}: ${formatReportAmount(dist?.amount || 0)}`;
-    }).join('\n')}\n\n---\nتم إنشاء التقرير بواسطة HyperPOS`;
+    }).join('\n')}\n\n---\nتم إنشاء التقرير بواسطة PosFlow`;
     window.open(`https://wa.me/?text=${encodeURIComponent(report)}`, '_blank');
     toast.success(t('reports.shareWhatsapp'));
   };

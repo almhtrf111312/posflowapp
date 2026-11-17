@@ -1,7 +1,7 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 import { isLocalOnlyMode } from '@/lib/subscription-lock';
 /**
- * Sync Recovery - FlowPOS Pro
+ * Sync Recovery - PosFlow
  * ===========================
  * إنقاذ وإلغاء العمليات العالقة في طابور المزامنة بأمان محاسبي وذري:
  * - الفصل بين إلغاء عملية غير متصلة (لم تصل السحابة) واسترداد فاتورة مؤكدة بالسحابة
@@ -432,7 +432,7 @@ export const discardStuckOperation = async (operationQueueId: string): Promise<D
     // 7. إزالة العملية من الطابور ومسح التخزين المؤقت المعلق
     removeFromQueue(operation.id);
     try {
-      localStorage.removeItem('hyperpos_sync_pending_' + operation.id);
+      localStorage.removeItem('posflow_sync_pending_' + operation.id);
     } catch {}
 
     updateHistoryStatus(operation.id, 'failed', 'تم إلغاء البيع وعكس آثاره المحاسبية بنجاح');

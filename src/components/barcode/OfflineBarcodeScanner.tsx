@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { playBeep } from '@/lib/sound-utils';
 import { setScannerTransparency } from './NativeMLKitScanner';
 
-export const PENDING_BARCODE_KEY = 'hyperpos_pending_scan';
+export const PENDING_BARCODE_KEY = 'posflow_pending_scan';
 
 interface OfflineBarcodeScannerProps {
   isOpen: boolean;

@@ -7,7 +7,7 @@
 
 import { emitEvent, EVENTS } from '@/lib/events';
 
-export const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
+export const SETTINGS_STORAGE_KEY = 'posflow_settings_v1';
 
 /**
  * Synchronously retrieves stored store settings from local storage.

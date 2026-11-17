@@ -41,7 +41,7 @@ import {
 import { enqueueStoreSettingsUpdate } from '@/lib/sync-queue';
 import { emitEvent, EVENTS } from '@/lib/events';
 
-export const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
+export const SETTINGS_STORAGE_KEY = 'posflow_settings_v1';
 
 export interface StoreInfo {
   name: string;
@@ -206,7 +206,7 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
       const themeKey = getThemeStorageKey();
       let rawTheme = localStorage.getItem(themeKey);
       if (!rawTheme) {
-        rawTheme = localStorage.getItem('hyperpos_theme_v1');
+        rawTheme = localStorage.getItem('posflow_theme_v1');
       }
       if (rawTheme) {
         const pt = JSON.parse(rawTheme);
@@ -232,7 +232,7 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
     let localDesign: 'classic' | 'unified_pro' = 'classic';
     try {
       const designKey = `flowpos_layout_${getPlatformStoragePrefix()}`;
-      const d = localStorage.getItem(designKey) || localStorage.getItem('hyperpos_dashboard_design_v1');
+      const d = localStorage.getItem(designKey) || localStorage.getItem('posflow_dashboard_design_v1');
       if (d === 'unified_pro' || d === 'classic') localDesign = d;
     } catch {
       // ignore
@@ -613,7 +613,7 @@ export function applySettingsToRuntime(settings: UnifiedStoreSettings): void {
 
     // مفاتيح التشغيل القديمة يجب أن تتبع النسخة الموحدة أيضاً عند السحب من السحابة.
     if (typeof settings.notificationSettings.durationSeconds === 'number') {
-      localStorage.setItem('hyperpos_toast_duration', String(settings.notificationSettings.durationSeconds * 1000));
+      localStorage.setItem('posflow_toast_duration', String(settings.notificationSettings.durationSeconds * 1000));
     }
     if (typeof settings.backupSettings.cloudAutoUpload === 'boolean') {
       localStorage.setItem('hp_cloud_auto_backup', String(settings.backupSettings.cloudAutoUpload));
@@ -630,7 +630,7 @@ export function applySettingsToRuntime(settings: UnifiedStoreSettings): void {
     // 4. تطبيق حقول المنتجات والحقول المخصصة
     if (settings.productFieldsConfig) {
       try {
-        localStorage.setItem('hyperpos_product_fields_v1', JSON.stringify(settings.productFieldsConfig));
+        localStorage.setItem('posflow_product_fields_v1', JSON.stringify(settings.productFieldsConfig));
         emitEvent(EVENTS.PRODUCT_FIELDS_UPDATED, settings.productFieldsConfig);
       } catch {
         // ignore
@@ -638,7 +638,7 @@ export function applySettingsToRuntime(settings: UnifiedStoreSettings): void {
     }
     if (settings.customFields && Array.isArray(settings.customFields)) {
       try {
-        localStorage.setItem('hyperpos_custom_fields_v1', JSON.stringify(settings.customFields));
+        localStorage.setItem('posflow_custom_fields_v1', JSON.stringify(settings.customFields));
         emitEvent(EVENTS.CUSTOM_FIELDS_UPDATED, settings.customFields);
       } catch {
         // ignore
@@ -701,9 +701,9 @@ export function buildCloudStorePayload(
   }
   // تفضيلات كانت محلية فقط: عملة عرض التقارير وعملة الإدخال لكل حقل مالي
   try {
-    const reportCurrency = localStorage.getItem('hyperpos_report_currency');
+    const reportCurrency = localStorage.getItem('posflow_report_currency');
     if (reportCurrency) mergedSync.reportCurrency = reportCurrency;
-    const rawPrefs = localStorage.getItem('hyperpos_money_input_prefs_v1');
+    const rawPrefs = localStorage.getItem('posflow_money_input_prefs_v1');
     if (rawPrefs) mergedSync.moneyInputPrefs = JSON.parse(rawPrefs);
   } catch { /* ignore */ }
   if (Array.isArray(settings.customFields)) {
@@ -741,10 +741,10 @@ export const applyCloudStoreSettings = (cloudSettings: any) => {
   try {
     const sync = cloudSettings?.sync_settings || {};
     if (typeof sync.reportCurrency === 'string' && sync.reportCurrency) {
-      localStorage.setItem('hyperpos_report_currency', sync.reportCurrency);
+      localStorage.setItem('posflow_report_currency', sync.reportCurrency);
     }
     if (sync.moneyInputPrefs && typeof sync.moneyInputPrefs === 'object') {
-      localStorage.setItem('hyperpos_money_input_prefs_v1', JSON.stringify(sync.moneyInputPrefs));
+      localStorage.setItem('posflow_money_input_prefs_v1', JSON.stringify(sync.moneyInputPrefs));
     }
   } catch { /* ignore */ }
   // كل منصة تستعيد ملفها فقط؛ لا يتغير حجم الهاتف من حفظ إعدادات الكمبيوتر.
@@ -754,7 +754,7 @@ export const applyCloudStoreSettings = (cloudSettings: any) => {
     if (theme && typeof theme === 'object' && (theme.mode === 'dark' || theme.mode === 'light')) {
       const newValue = JSON.stringify(theme);
       localStorage.setItem(getThemeStorageKey(), newValue);
-      localStorage.setItem('hyperpos_theme_v1', newValue);
+      localStorage.setItem('posflow_theme_v1', newValue);
       applyTheme(theme.mode, theme.color);
       applyThemeStyle(normalizeThemeStyle(theme.style));
       applyBlurTheme(theme.blur, theme.mode, theme.transparency);
@@ -950,7 +950,7 @@ export async function saveUnifiedStoreSettings(
     };
   }
 
-  // 5. المزامنة في الخلفية (Offline-First الفوري 0ms كمعيار افتراضي لنظام FlowPOS Pro)
+  // 5. المزامنة في الخلفية (Offline-First الفوري 0ms كمعيار افتراضي لنظام PosFlow)
   if (!options?.waitCloud) {
     // إطلاق المزامنة السحابية بشكل هادئ في الخلفية دون حظر واجهة المستخدم
     (async () => {

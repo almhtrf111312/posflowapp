@@ -1,5 +1,5 @@
 /**
- * Cash Sale Handler - FlowPOS Pro
+ * Cash Sale Handler - PosFlow
  * ================================
  * معالج البيع النقدي مع دعم العمل Offline
  * يضمن حفظ الفاتورة محلياً ومزامنتها لاحقاً

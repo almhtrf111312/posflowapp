@@ -112,7 +112,7 @@ interface POSProduct {
 
 
 
-const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
+const SETTINGS_STORAGE_KEY = 'posflow_settings_v1';
 
 
 
@@ -288,17 +288,17 @@ export interface HeldCart {
 
 }
 
-const HELD_CARTS_KEY = 'hyperpos_held_carts_v1';
+const HELD_CARTS_KEY = 'posflow_held_carts_v1';
 
-const CART_STORAGE_KEY = 'hyperpos_temp_cart';
+const CART_STORAGE_KEY = 'posflow_temp_cart';
 
-const CART_OPEN_KEY = 'hyperpos_cart_open';
+const CART_OPEN_KEY = 'posflow_cart_open';
 
-const CART_CUSTOMER_KEY = 'hyperpos_cart_customer';
+const CART_CUSTOMER_KEY = 'posflow_cart_customer';
 
-const CART_DISCOUNT_KEY = 'hyperpos_cart_discount';
+const CART_DISCOUNT_KEY = 'posflow_cart_discount';
 
-const PENDING_BARCODE_KEY = 'hyperpos_pending_scan';
+const PENDING_BARCODE_KEY = 'posflow_pending_scan';
 
 // Note: PENDING_BARCODE_KEY is also exported from OfflineBarcodeScanner for consistency
 

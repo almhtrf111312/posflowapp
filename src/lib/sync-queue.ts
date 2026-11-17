@@ -1,5 +1,5 @@
 /**
- * Sync Queue - FlowPOS Pro
+ * Sync Queue - PosFlow
  * ========================
  * نظام طابور التزامن الذكي للعمل offline-first
  * يحفظ العمليات محلياً أولاً ثم يرفعها للسحابة
@@ -203,14 +203,14 @@ export const mergePendingQueue = () => {
   const keysToDelete = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith('hyperpos_sync_pending_')) {
+    if (key && key.startsWith('posflow_sync_pending_')) {
       merged = true;
       keysToDelete.push(key);
     }
   }
   if (merged && saveQueue(queue)) {
     keysToDelete.forEach(k => {
-      const id = k.replace('hyperpos_sync_pending_', '');
+      const id = k.replace('posflow_sync_pending_', '');
       if (queue.find(x => x.id === id)) localStorage.removeItem(k);
     });
   }
@@ -222,7 +222,7 @@ export const loadQueue = (): QueuedOperation[] => {
       const queue = secureGet<QueuedOperation[]>(SYNC_QUEUE_KEY, { namespace: SYNC_QUEUE_NAMESPACE }) || [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith('hyperpos_sync_pending_')) {
+        if (key && key.startsWith('posflow_sync_pending_')) {
           try {
             const op = JSON.parse(localStorage.getItem(key) || 'null');
             if (op && !queue.find(x => x.id === op.id)) queue.push(op);
@@ -325,7 +325,7 @@ export const addToQueue = (
     createdByUserId: getCurrentUserId() || undefined,
   };
 
-  localStorage.setItem('hyperpos_sync_pending_' + operation.id, JSON.stringify(operation));
+  localStorage.setItem('posflow_sync_pending_' + operation.id, JSON.stringify(operation));
     setTimeout(mergePendingQueue, 0);
   
   // Track in history for UI display
@@ -377,7 +377,7 @@ export const enqueueStoreSettingsUpdate = (
     existingOp.timestamp = new Date().toISOString();
     saveQueue(queue);
     try {
-      localStorage.setItem('hyperpos_sync_pending_' + existingOp.id, JSON.stringify(existingOp));
+      localStorage.setItem('posflow_sync_pending_' + existingOp.id, JSON.stringify(existingOp));
     } catch {
       // ignore
     }
@@ -423,7 +423,7 @@ export const removeFromQueue = (operationId: string): void => {
   const queue = loadQueue();
   const filtered = queue.filter(op => op.id !== operationId);
   if (saveQueue(filtered)) {
-    try { localStorage.removeItem('hyperpos_sync_pending_' + operationId); } catch { /* keep the recovery copy */ }
+    try { localStorage.removeItem('posflow_sync_pending_' + operationId); } catch { /* keep the recovery copy */ }
   }
 };
 
@@ -582,7 +582,7 @@ export const processQueue = async (
       if (isOperationCancelled(opKey) || (bInv && isOperationCancelled(String(bInv)))) {
         console.warn(`[SyncQueue] Skipping upload for cancelled operation: ${operation.id} (${opKey})`);
         removeFromQueue(operation.id);
-        try { localStorage.removeItem('hyperpos_sync_pending_' + operation.id); } catch {}
+        try { localStorage.removeItem('posflow_sync_pending_' + operation.id); } catch {}
         updateHistoryStatus(operation.id, 'failed', 'تم إلغاء العملية محلياً ومنع رفعها للسحابة');
         continue;
       }

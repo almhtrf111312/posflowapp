@@ -1,4 +1,4 @@
-name: Build FlowPOS Pro Windows
+name: Build PosFlow Windows
 
 on:
   workflow_dispatch:
@@ -54,7 +54,7 @@ jobs:
           VERSION_CODE=$(node -p "require('./version.json').versionCode")
           SEMVER_VERSION=$(node -p "const p = String(require('./version.json').versionName).split('.'); while(p.length < 3) p.push('0'); p.slice(0, 3).join('.')")
 
-          node -e "const fs = require('fs'); if (fs.existsSync('./package.json')) { const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); pkg.main = 'electron/main.js'; pkg.version = '$SEMVER_VERSION'; pkg.description = 'FlowPOS Pro Point of Sale System'; pkg.author = 'FlowPOS Pro'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n'); }"
+          node -e "const fs = require('fs'); if (fs.existsSync('./package.json')) { const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); pkg.main = 'electron/main.js'; pkg.version = '$SEMVER_VERSION'; pkg.description = 'PosFlow Point of Sale System'; pkg.author = 'PosFlow'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n'); }"
 
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
@@ -89,7 +89,7 @@ jobs:
           cat > electron-builder.json << 'EOF'
           {
             "appId": "app.flowpos.pro",
-            "productName": "FlowPOS Pro",
+            "productName": "PosFlow",
             "asar": true,
             "compression": "maximum",
             "directories": {
@@ -123,7 +123,7 @@ jobs:
               "allowToChangeInstallationDirectory": true,
               "createDesktopShortcut": true,
               "createStartMenuShortcut": true,
-              "shortcutName": "FlowPOS Pro"
+              "shortcutName": "PosFlow"
             }
           }
           EOF

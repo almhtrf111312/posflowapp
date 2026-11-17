@@ -1,6 +1,6 @@
 // ✅ مفاتيح التخزين المحلي مرتبطة بـ userId لمنع تداخل بيانات الورديات
 // عند تبديل الكاشير على نفس الجهاز — كل مستخدم لديه قسم عزل خاص به.
-// SECURITY FIX: الثابتة القديمة كانت hyperpos_cashbox_v1 / hyperpos_shifts_v1
+// SECURITY FIX: الثابتة القديمة كانت posflow_cashbox_v1 / posflow_shifts_v1
 // ولم تتضمن userId مما يتسبب في مسح ورديات الكاشير الأول عند تسجيل دخول آخر.
 import { getCurrentUserId } from './supabase-store';
 import { emitEvent, EVENTS } from './events';
@@ -14,17 +14,17 @@ const addCur = (a: number, b: number, code: string) => roundForCurrency((a || 0)
 const subCur = (a: number, b: number, code: string) => roundForCurrency((a || 0) - (b || 0), code);
 
 // المفاتيح القديمة (للتوافق مع البيانات المخزنة سابقاً — تُقرأ كـ fallback)
-const LEGACY_CASHBOX_KEY = 'hyperpos_cashbox_v1';
-const LEGACY_SHIFTS_KEY = 'hyperpos_shifts_v1';
+const LEGACY_CASHBOX_KEY = 'posflow_cashbox_v1';
+const LEGACY_SHIFTS_KEY = 'posflow_shifts_v1';
 
 // مفاتيح ديناميكية مرتبطة بـ userId
 const getCashboxKey = () => {
   const uid = getCurrentUserId();
-  return uid ? `hyperpos_cashbox_u_${uid}` : LEGACY_CASHBOX_KEY;
+  return uid ? `posflow_cashbox_u_${uid}` : LEGACY_CASHBOX_KEY;
 };
 const getShiftsKey = () => {
   const uid = getCurrentUserId();
-  return uid ? `hyperpos_shifts_u_${uid}` : LEGACY_SHIFTS_KEY;
+  return uid ? `posflow_shifts_u_${uid}` : LEGACY_SHIFTS_KEY;
 };
 
 export type AdjustmentType = 'surplus' | 'shortage';

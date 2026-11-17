@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 export type PerformanceModePref = 'auto' | 'full' | 'lite';
 export type EffectivePerformanceMode = 'full' | 'lite';
 
-const PERF_MODE_STORAGE_KEY = 'hyperpos_perf_mode_v1';
+const PERF_MODE_STORAGE_KEY = 'posflow_perf_mode_v1';
 
 export function detectLowEndDevice(): boolean {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
@@ -71,7 +71,7 @@ export function setPerformanceModePref(pref: PerformanceModePref): EffectivePerf
   }
   const effective = applyPerformanceModeToDOM(pref);
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('hyperpos:perf-mode-changed', { detail: { pref, effective } }));
+    window.dispatchEvent(new CustomEvent('posflow:perf-mode-changed', { detail: { pref, effective } }));
   }
   return effective;
 }
@@ -95,8 +95,8 @@ export function usePerformanceMode() {
         setEffective(resolveEffectivePerformanceMode(p));
       }
     };
-    window.addEventListener('hyperpos:perf-mode-changed', handler as EventListener);
-    return () => window.removeEventListener('hyperpos:perf-mode-changed', handler as EventListener);
+    window.addEventListener('posflow:perf-mode-changed', handler as EventListener);
+    return () => window.removeEventListener('posflow:perf-mode-changed', handler as EventListener);
   }, []);
 
   return {

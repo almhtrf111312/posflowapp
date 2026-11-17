@@ -6,7 +6,7 @@ import { playBeep } from '@/lib/sound-utils';
 import { ScanLine, X, Flashlight, Loader2, ZoomIn, ZoomOut, AlertTriangle, Keyboard, RotateCcw, Check } from 'lucide-react';
 
 // Key used to persist the scanned barcode across potential app restarts
-export const PENDING_BARCODE_KEY = 'hyperpos_pending_scan';
+export const PENDING_BARCODE_KEY = 'posflow_pending_scan';
 
 interface NativeMLKitScannerProps {
   isOpen: boolean;
@@ -39,7 +39,7 @@ export function setScannerTransparency(active: boolean) {
   document.body.classList.toggle('barcode-scanner-active', active);
 
   try {
-    window.dispatchEvent(new CustomEvent('hyperpos:scanner-state', { detail: { active } }));
+    window.dispatchEvent(new CustomEvent('posflow:scanner-state', { detail: { active } }));
   } catch (e) {
     console.warn('[Scanner] Event dispatch error:', e);
   }

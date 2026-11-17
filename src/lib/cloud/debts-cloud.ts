@@ -108,7 +108,7 @@ function toDebt(cloud: CloudDebt & { cashier_name?: string }): Debt {
 }
 
 // Local storage cache helpers
-const LOCAL_CACHE_KEY = 'hyperpos_debts_cache';
+const LOCAL_CACHE_KEY = 'posflow_debts_cache';
 
 const saveDebtsLocally = (debts: Debt[]) => {
   try {

@@ -6,23 +6,23 @@
     <script>
       (function() {
         try {
-          var font = localStorage.getItem('hyperpos_app_font');
+          var font = localStorage.getItem('posflow_app_font');
           if (font) font = font.trim().replace(/^['"]|['"]$/g, '');
           if (!font || !['cairo', 'tajawal', 'ibm-plex', 'almarai', 'readex'].includes(font)) {
             font = 'cairo';
           }
           document.documentElement.setAttribute('data-font', font);
-          var lang = localStorage.getItem('hyperpos_language');
+          var lang = localStorage.getItem('posflow_language');
           if (!lang || !['ar', 'en'].includes(lang)) {
-            localStorage.setItem('hyperpos_language', 'ar');
+            localStorage.setItem('posflow_language', 'ar');
             lang = 'ar';
           }
           // Paired UI Scale Map matching UI_SCALE_MAP in src/lib/ui-scale-config.ts
           // DEFAULT_UI_SCALE_ID = '100' (14px)
-          var scale = localStorage.getItem('hyperpos_ui_scale');
+          var scale = localStorage.getItem('posflow_ui_scale');
           if (!scale) {
             try {
-              var rawSettings = localStorage.getItem('hyperpos_settings_v1');
+              var rawSettings = localStorage.getItem('posflow_settings_v1');
               if (rawSettings) {
                 var parsed = JSON.parse(rawSettings);
                 scale = parsed && (parsed.uiScale || (parsed.sync_settings && parsed.sync_settings.uiScale));
@@ -52,7 +52,7 @@
     <style>
       html, body { background-color: var(--boot-bg, #f4f6fb); }
     </style>
-    <title>FlowPOS Pro - نظام إدارة محاسبي متكامل</title>
+    <title>PosFlow - نظام إدارة محاسبي متكامل</title>
     
     <!-- Font Preloads (font-display: swap & zero FOIT) -->
     <link rel="preload" href="/fonts/5-SLXVc1nY6HkvangtZmpQdkhzfH5lkSscQyyS4J0.woff2" as="font" type="font/woff2" crossorigin />
@@ -62,19 +62,17 @@
     <link rel="icon" type="image/png" href="/app-icon.png" />
     <link rel="apple-touch-icon" href="/app-icon.png" />
     <meta name="description" content="نظام إدارة محاسبي متكامل لمحلات الهواتف والصيانة والمحلات التجارية" />
-    <meta name="author" content="FlowPOS Pro" />
+    <meta name="author" content="PosFlow" />
     <meta name="theme-color" content="#f4f6fb" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <meta property="og:title" content="FlowPOS Pro - نظام إدارة محاسبي متكامل" />
+    <meta property="og:title" content="PosFlow - نظام إدارة محاسبي متكامل" />
     <meta property="og:description" content="نظام إدارة محاسبي متكامل لمحلات الهواتف والصيانة والمحلات التجارية" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@FlowPOSPro" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
   </head>
 
   <body>

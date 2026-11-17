@@ -63,7 +63,7 @@ setInterval(() => {
 export function getSavedToastDuration(): number {
   if (typeof window === 'undefined') return 3000;
   try {
-    const saved = localStorage.getItem('hyperpos_toast_duration');
+    const saved = localStorage.getItem('posflow_toast_duration');
     if (saved) {
       const val = Number(saved);
       if (!isNaN(val) && val >= 500 && val <= 10000) return val;

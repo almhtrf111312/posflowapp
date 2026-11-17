@@ -1,7 +1,7 @@
-// Sound utilities for HyperPOS
+// Sound utilities for PosFlow
 // Plays sounds based on user settings
 
-const SETTINGS_KEY = 'hyperpos_settings_v1';
+const SETTINGS_KEY = 'posflow_settings_v1';
 
 // Extended Window interface for WebKit AudioContext
 interface ExtendedWindow extends Window {

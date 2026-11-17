@@ -98,7 +98,7 @@ export function GooglePhoneGate() {
         return;
       }
       try {
-        sessionStorage.setItem('hyperpos_just_signed_up', 'true');
+        sessionStorage.setItem('posflow_just_signed_up', 'true');
       } catch { /* ignore */ }
       // user_metadata.phone صار موجوداً → تُغلق البوابة تلقائياً
     } finally {

@@ -1,6 +1,6 @@
 import { emitEvent, EVENTS } from './events';
 
-const CATEGORIES_STORAGE_KEY = 'hyperpos_categories_v1';
+const CATEGORIES_STORAGE_KEY = 'posflow_categories_v1';
 
 export interface Category {
   id: string;

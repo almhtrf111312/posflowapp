@@ -37,11 +37,11 @@ import { toLocalDateString } from '@/lib/date-utils';
 import { computeProfitSummary } from '@/lib/profit-engine';
 import { loadProfitLedgerCloud } from '@/lib/cloud/profit-ledger-cloud';
 
-const DASHBOARD_CACHE_KEY = 'hyperpos_dashboard_stats_cache_v1';
+const DASHBOARD_CACHE_KEY = 'posflow_dashboard_stats_cache_v1';
 
 const getCapitalSettings = () => {
   try {
-    const raw = localStorage.getItem('hyperpos_settings_v1');
+    const raw = localStorage.getItem('posflow_settings_v1');
     if (!raw) return { trackCapital: false, initialCapital: 0 };
     const parsed = JSON.parse(raw);
     const trackCapital = Boolean(
@@ -64,16 +64,16 @@ const getCapitalSettings = () => {
 
 export default function Dashboard({ embedded }: { embedded?: boolean }) {
   const [dashboardDesign, setDashboardDesign] = useState<'classic' | 'unified_pro'>(() => {
-    return (localStorage.getItem('hyperpos_dashboard_design_v1') as 'classic' | 'unified_pro') || 'classic';
+    return (localStorage.getItem('posflow_dashboard_design_v1') as 'classic' | 'unified_pro') || 'classic';
   });
 
   useEffect(() => {
     const handler = () => {
-      const current = (localStorage.getItem('hyperpos_dashboard_design_v1') as 'classic' | 'unified_pro') || 'classic';
+      const current = (localStorage.getItem('posflow_dashboard_design_v1') as 'classic' | 'unified_pro') || 'classic';
       setDashboardDesign(current);
     };
-    window.addEventListener('hyperpos:design-changed', handler);
-    return () => window.removeEventListener('hyperpos:design-changed', handler);
+    window.addEventListener('posflow:design-changed', handler);
+    return () => window.removeEventListener('posflow:design-changed', handler);
   }, []);
 
   const { t, language, isRTL } = useLanguage();

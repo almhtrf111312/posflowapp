@@ -2,7 +2,7 @@ import { emitEvent, EVENTS } from './events';
 import { safeSave } from './safe-storage';
 import { toast } from '@/lib/sonner-bridge';
 
-const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
+const PRODUCTS_STORAGE_KEY = 'posflow_products_v1';
 
 export interface Product {
   id: string;

@@ -7,51 +7,51 @@ import { deleteAllUserData } from './supabase-store';
 import { clearProductsIDB } from './indexeddb-cache';
 
 export const STORAGE_KEYS_TO_CLEAR = [
-  'hyperpos_products_v1',
-  'hyperpos_invoices_v1', 
-  'hyperpos_purchase_invoices_v1',
-  'hyperpos_maintenance_v1',
-  'hyperpos_services_v1',
-  'hyperpos_customers_v1',
-  'hyperpos_debts_v1',
-  'hyperpos_expenses_v1',
-  'hyperpos_recurring_expenses_v1',
-  'hyperpos_partners_v1',
-  'hyperpos_cashbox_v1',
-  'hyperpos_shifts_v1',
-  'hyperpos_capital_v1',
-  'hyperpos_demo_loaded_v2',
-  'hyperpos_profit_records_v1',
-  'hyperpos_expense_records_v1',
-  'hyperpos_warehouses_v1',
-  'hyperpos_stock_transfers_v1',
-  'hyperpos_held_carts_v1',
-  'hyperpos_temp_cart',
-  'hyperpos_cart_customer',
-  'hyperpos_cart_discount',
-  'hyperpos_refund_meta_v1',
-  'hyperpos_dashboard_stats_cache_v1',
-  'hyperpos_pending_scan',
-  'hyperpos_scan_target',
-  'hyperpos_product_form_temp',
-  'hyperpos_restored_image_temp',
-  'hyperpos_categories_v1',
+  'posflow_products_v1',
+  'posflow_invoices_v1', 
+  'posflow_purchase_invoices_v1',
+  'posflow_maintenance_v1',
+  'posflow_services_v1',
+  'posflow_customers_v1',
+  'posflow_debts_v1',
+  'posflow_expenses_v1',
+  'posflow_recurring_expenses_v1',
+  'posflow_partners_v1',
+  'posflow_cashbox_v1',
+  'posflow_shifts_v1',
+  'posflow_capital_v1',
+  'posflow_demo_loaded_v2',
+  'posflow_profit_records_v1',
+  'posflow_expense_records_v1',
+  'posflow_warehouses_v1',
+  'posflow_stock_transfers_v1',
+  'posflow_held_carts_v1',
+  'posflow_temp_cart',
+  'posflow_cart_customer',
+  'posflow_cart_discount',
+  'posflow_refund_meta_v1',
+  'posflow_dashboard_stats_cache_v1',
+  'posflow_pending_scan',
+  'posflow_scan_target',
+  'posflow_product_form_temp',
+  'posflow_restored_image_temp',
+  'posflow_categories_v1',
 ];
 
 const PRESERVED_KEYS = new Set([
-  'hyperpos_language',
-  'hyperpos_theme',
-  'hyperpos_stay_logged_in',
-  'hyperpos_session_cache',
-  'hyperpos_setup_complete',
-  'hyperpos_privacy_accepted',
-  'hyperpos_privacy_version',
-  'hyperpos_clear_version',
-  'hyperpos_settings_layout_mode',
+  'posflow_language',
+  'posflow_theme',
+  'posflow_stay_logged_in',
+  'posflow_session_cache',
+  'posflow_setup_complete',
+  'posflow_privacy_accepted',
+  'posflow_privacy_version',
+  'posflow_clear_version',
+  'posflow_settings_layout_mode',
 ]);
 
 // Version key to track if data has been cleared
-const CLEAR_VERSION_KEY = 'hyperpos_clear_version';
+const CLEAR_VERSION_KEY = 'posflow_clear_version';
 const CURRENT_CLEAR_VERSION = '4'; // Increment this to trigger a new clear
 
 /**
@@ -65,7 +65,7 @@ export const clearIndexedDBData = async (): Promise<void> => {
   }
 
   if (typeof window !== 'undefined' && window.indexedDB) {
-    const dbsToDelete = ['hyperpos_cache', 'flowpos_images_cache', 'hyperpos_cache_db'];
+    const dbsToDelete = ['posflow_cache', 'flowpos_images_cache', 'posflow_cache_db'];
     for (const dbName of dbsToDelete) {
       try {
         const req = indexedDB.deleteDatabase(dbName);
@@ -95,7 +95,7 @@ export const clearLocalStorageData = (): void => {
       // Do not touch preserved settings
       if (PRESERVED_KEYS.has(key)) continue;
 
-      if (key.startsWith('hyperpos_')) {
+      if (key.startsWith('posflow_')) {
         keysToRemove.push(key);
       }
     }
@@ -109,13 +109,13 @@ export const clearLocalStorageData = (): void => {
     });
 
     // إعادة تعيين الصندوق لصفر
-    localStorage.setItem('hyperpos_cashbox_v1', JSON.stringify({
+    localStorage.setItem('posflow_cashbox_v1', JSON.stringify({
       currentBalance: 0,
       lastUpdated: new Date().toISOString(),
     }));
 
     // إعادة تعيين رأس المال لصفر
-    localStorage.setItem('hyperpos_capital_v1', JSON.stringify({
+    localStorage.setItem('posflow_capital_v1', JSON.stringify({
       initialCapital: 0,
       currentCapital: 0,
       totalInvestments: 0,
@@ -164,7 +164,7 @@ export const clearAllUserData = () => {
  * 2. مسح جميع مفاتيح localStorage ومخازن IndexedDB التابعة للبيانات فوراً بعد نجاح الاستدعاء
  */
 export const clearAllDataCompletely = async (): Promise<boolean> => {
-  const PENDING_CLOUD_CLEAR_KEY = 'hyperpos_pending_cloud_clear';
+  const PENDING_CLOUD_CLEAR_KEY = 'posflow_pending_cloud_clear';
   const isOnline = typeof navigator !== 'undefined' ? !isLocalDataMode() : true;
 
   try {
@@ -207,7 +207,7 @@ export const clearAllDataCompletely = async (): Promise<boolean> => {
  * تنفيذ مسح السحابة المعلق (يُستدعى عند عودة الإنترنت)
  */
 export const executePendingCloudClear = async (): Promise<void> => {
-  const PENDING_CLOUD_CLEAR_KEY = 'hyperpos_pending_cloud_clear';
+  const PENDING_CLOUD_CLEAR_KEY = 'posflow_pending_cloud_clear';
   const isPending = localStorage.getItem(PENDING_CLOUD_CLEAR_KEY);
   
   if (!isPending) return;

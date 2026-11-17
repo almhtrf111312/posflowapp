@@ -71,7 +71,7 @@ import { isGuestDemoMode } from '@/lib/demo-data';
  }
  
 // Local storage cache helpers
-const LOCAL_CACHE_KEY = 'hyperpos_purchase_invoices_cache';
+const LOCAL_CACHE_KEY = 'posflow_purchase_invoices_cache';
 
 let purchaseInvoicesCache: PurchaseInvoice[] | null = null;
 let purchaseCacheTimestamp = 0;

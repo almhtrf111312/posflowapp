@@ -159,7 +159,7 @@ export async function sendLocalNotification(
             id: notifId,
             title,
             body,
-            summaryText: 'FlowPOS Pro',
+            summaryText: 'PosFlow',
             channelId: targetChannel.id,
             smallIcon: 'ic_launcher',
             extra,
@@ -202,7 +202,7 @@ export async function initAndroidNotificationChannel() {
     }
     await LocalNotifications.createChannel({
       id: ANDROID_CHANNEL_ID,
-      name: 'FlowPOS Pro Notifications',
+      name: 'PosFlow Notifications',
       description: 'إشعارات المبيعات والعمليات الفورية',
       importance: 5,
       visibility: 1,
@@ -230,7 +230,7 @@ export async function triggerAndroidSystemNotification(payload: {
             id: notificationId,
             title: payload.title,
             body: payload.body,
-            summaryText: payload.subText || 'FlowPOS Pro',
+            summaryText: payload.subText || 'PosFlow',
             channelId: ANDROID_CHANNEL_ID,
             schedule: { at: new Date(Date.now() + 50), allowWhileIdle: true },
           },

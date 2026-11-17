@@ -349,11 +349,11 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   // Share debt via native share (works on Android)
   const handleShareDebt = async (debt: Debt) => {
     // Load store settings
-    let storeName = 'FlowPOS Pro';
+    let storeName = 'PosFlow';
     let storePhone = '';
     let currencySymbol = '$';
     try {
-      const settingsRaw = localStorage.getItem('hyperpos_settings_v1');
+      const settingsRaw = localStorage.getItem('posflow_settings_v1');
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
         storeName = settings.storeSettings?.name || storeName;

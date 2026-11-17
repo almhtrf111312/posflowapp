@@ -237,7 +237,7 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
     });
   };
 
-  const effectiveLastSyncTime = cloudContext?.lastSyncTime || queueStatus.lastSyncTime || (typeof window !== 'undefined' ? localStorage.getItem('hyperpos_last_sync_time') : null);
+  const effectiveLastSyncTime = cloudContext?.lastSyncTime || queueStatus.lastSyncTime || (typeof window !== 'undefined' ? localStorage.getItem('posflow_last_sync_time') : null);
   const formattedLastSync = formatLastSyncTime(effectiveLastSyncTime, isRTL);
 
   const sortedHistory = [...history].sort((a, b) => {

@@ -193,7 +193,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
   const allowedPages = profile?.allowed_pages as string[] | null;
 
   const [showContactInSidebar, setShowContactInSidebar] = useState(() => {
-    try { return localStorage.getItem('hyperpos_contact_sidebar') === 'true'; } catch { return false; }
+    try { return localStorage.getItem('posflow_contact_sidebar') === 'true'; } catch { return false; }
   });
   useEffect(() => {
     if (isGuestDemoMode()) return; // 100% offline in guest demo mode - no Supabase calls
@@ -203,7 +203,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
       try {
         const show = JSON.parse(data.value)._show_in_sidebar === 'true';
         setShowContactInSidebar(show);
-        localStorage.setItem('hyperpos_contact_sidebar', String(show));
+        localStorage.setItem('posflow_contact_sidebar', String(show));
       } catch { /* ignore */ }
     });
     return () => { cancelled = true; };
@@ -297,7 +297,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
             <div className="flex flex-col items-center gap-2">
               <img 
                 src={appIconUrl} 
-                alt="FlowPOS Pro" 
+                alt="PosFlow" 
                 className="w-10 h-10 rounded-xl object-cover shadow-md"
               />
               <div className="flex flex-col items-center gap-1.5">
@@ -317,12 +317,12 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                 <div className="flex items-center gap-2.5">
                   <img 
                     src={appIconUrl} 
-                    alt="FlowPOS Pro" 
+                    alt="PosFlow" 
                     className="w-9 h-9 rounded-xl object-cover shadow-md flex-shrink-0"
                   />
                   <div className="min-w-0">
                     <StoreTypeBadge storeType={storeType} t={t} />
-                    <h1 className="font-bold text-sm text-foreground leading-tight tracking-tight">FlowPOS Pro</h1>
+                    <h1 className="font-bold text-sm text-foreground leading-tight tracking-tight">PosFlow</h1>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">

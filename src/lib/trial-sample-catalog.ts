@@ -5,7 +5,7 @@ import { getStatus, type Product } from '@/lib/products-store';
 import type { Category } from '@/lib/categories-store';
 
 const POS_VIEW_MODE_KEY = 'pos_view_mode';
-const LEGACY_THEME_KEY = 'hyperpos_theme_v1';
+const LEGACY_THEME_KEY = 'posflow_theme_v1';
 const TRIAL_THEME = JSON.stringify({ mode: 'light', color: 'orange', blur: false, transparency: 0, style: 'standard' });
 
 /** نقطة البيع تتحقق من أن معرّف كل صنف UUID صالح (validateCartProducts)، لذلك تُولَّد المعرّفات بصيغة UUID v4 ثابتة */

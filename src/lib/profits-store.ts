@@ -1,6 +1,6 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
- * Profits Store - FlowPOS Pro
+ * Profits Store - PosFlow
  * ===========================
  * سجل الأرباح المركزي - يتتبع الربح الإجمالي وتكلفة البضاعة المباعة
  * 
@@ -13,8 +13,8 @@ import { emitEvent, EVENTS } from './events';
 import { addCurrency, subtractCurrency, round8 as roundCurrency } from './utils';
 
 // Storage keys
-const PROFIT_RECORDS_KEY = 'hyperpos_profit_records_v1';
-const EXPENSE_RECORDS_KEY = 'hyperpos_expense_records_v1';
+const PROFIT_RECORDS_KEY = 'posflow_profit_records_v1';
+const EXPENSE_RECORDS_KEY = 'posflow_expense_records_v1';
 
 // ============= Types =============
 

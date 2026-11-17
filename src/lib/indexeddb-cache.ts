@@ -2,7 +2,7 @@
 // Provides instant loading and full offline capability for POS
 import { isNativeStorageSupported, getNativeDB } from './db/native-sqlite';
 
-const DB_NAME = 'hyperpos_cache';
+const DB_NAME = 'posflow_cache';
 const DB_VERSION = 2;
 const PRODUCTS_STORE = 'products';
 const META_STORE = 'meta';

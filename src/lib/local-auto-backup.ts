@@ -16,9 +16,9 @@ export interface LocalBackup {
   data: Record<string, unknown>;
 }
 
-const BACKUP_STORAGE_KEY = 'hyperpos_local_backups';
+const BACKUP_STORAGE_KEY = 'posflow_local_backups';
 const MAX_BACKUPS = 5;
-const BACKUP_EVENT = 'hyperpos_backup_updated';
+const BACKUP_EVENT = 'posflow_backup_updated';
 
 // Debounce to prevent rapid consecutive backups
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -31,7 +31,7 @@ function gatherBackupData(): Record<string, unknown> {
   const data: Record<string, unknown> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith('hyperpos_') && key !== BACKUP_STORAGE_KEY) {
+    if (key && key.startsWith('posflow_') && key !== BACKUP_STORAGE_KEY) {
       try {
         const raw = localStorage.getItem(key);
         if (raw) data[key] = JSON.parse(raw);

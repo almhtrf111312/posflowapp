@@ -330,12 +330,12 @@ export default function Invoices() {
   // ✅ حالة البضاعة المرتجعة مثبتة دائماً على 'good' (سليم) لتعود الكميات تلقائياً إلى المخزون
   const refundCondition: 'good' = 'good';
   const [refundMeta, setRefundMeta] = useState<Record<string, { condition: 'good' | 'damaged'; at: string; mode: string }>>(() => {
-    try { return JSON.parse(localStorage.getItem('hyperpos_refund_meta_v1') || '{}'); } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem('posflow_refund_meta_v1') || '{}'); } catch { return {}; }
   });
   const saveRefundMeta = (invoiceId: string, mode: 'full' | 'partial' = refundMode) => {
     setRefundMeta(prev => {
       const next = { ...prev, [invoiceId]: { condition: 'good' as const, at: new Date().toISOString(), mode } };
-      try { localStorage.setItem('hyperpos_refund_meta_v1', JSON.stringify(next)); } catch { /* ignore */ }
+      try { localStorage.setItem('posflow_refund_meta_v1', JSON.stringify(next)); } catch { /* ignore */ }
       return next;
     });
   };
@@ -1564,7 +1564,7 @@ export default function Invoices() {
   const handlePrint = (invoice: Invoice) => {
     // Dynamic store settings with proper defaults
     const storeDefaults = {
-      storeName: 'HyperPOS Store',
+      storeName: 'PosFlow Store',
       storeAddress: '',
       storePhone: '',
       storeLogo: '',
@@ -1575,7 +1575,7 @@ export default function Invoices() {
     let storeConfig = { ...storeDefaults };
 
     try {
-      const settingsRaw = localStorage.getItem('hyperpos_settings_v1');
+      const settingsRaw = localStorage.getItem('posflow_settings_v1');
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
         storeConfig = {
@@ -1845,13 +1845,13 @@ export default function Invoices() {
   const executeShareInvoice = async (invoice: Invoice, mode: 'image' | 'text' = 'image') => {
     setIsGeneratingShare(true);
     try {
-      let storeName = 'FlowPOS Pro';
+      let storeName = 'PosFlow';
       let storePhone = '';
       let storeAddress = '';
       let storeLogo = '';
 
       try {
-        const settingsRaw = localStorage.getItem('hyperpos_settings_v1');
+        const settingsRaw = localStorage.getItem('posflow_settings_v1');
         if (settingsRaw) {
           const settings = JSON.parse(settingsRaw);
           storeName = settings.storeSettings?.name || storeName;
@@ -1928,10 +1928,10 @@ export default function Invoices() {
 
   const handleCopyShareText = async (invoice: Invoice) => {
     try {
-      let storeName = 'FlowPOS Pro';
+      let storeName = 'PosFlow';
       let storePhone = '';
       try {
-        const settingsRaw = localStorage.getItem('hyperpos_settings_v1');
+        const settingsRaw = localStorage.getItem('posflow_settings_v1');
         if (settingsRaw) {
           const settings = JSON.parse(settingsRaw);
           storeName = settings.storeSettings?.name || storeName;

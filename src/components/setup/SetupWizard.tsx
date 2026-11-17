@@ -79,9 +79,9 @@ interface PartnerItem {
   sharePercentage: number;
 }
 
-const SETTINGS_KEY = 'hyperpos_settings_v1';
-const STORE_TYPE_KEY = 'hyperpos_store_type';
-const TAX_KEY = 'hyperpos_tax_settings';
+const SETTINGS_KEY = 'posflow_settings_v1';
+const STORE_TYPE_KEY = 'posflow_store_type';
+const TAX_KEY = 'posflow_tax_settings';
 
 const getInitialStoredSettings = (): Record<string, any> | null => {
   try {
@@ -153,7 +153,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   // Check if we are in preview mode or if setup was already previously completed
   const isAlreadySetup = typeof isPreview === 'boolean'
     ? isPreview
-    : (localStorage.getItem('hyperpos_setup_complete') === 'true' && sessionStorage.getItem('hyperpos_just_signed_up') !== 'true');
+    : (localStorage.getItem('posflow_setup_complete') === 'true' && sessionStorage.getItem('posflow_just_signed_up') !== 'true');
 
   const [step, setStep] = useState(1);
   const totalSteps = 6;
@@ -250,7 +250,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   });
   const [barcodeDevice, setBarcodeDevice] = useState<'camera' | 'scanner' | 'manual'>(() => {
     const s = getInitialStoredSettings();
-    return s?.barcodeDeviceType || (localStorage.getItem('hyperpos_barcode_device') as any) || 'camera';
+    return s?.barcodeDeviceType || (localStorage.getItem('posflow_barcode_device') as any) || 'camera';
   });
   const [paperSize, setPaperSize] = useState<'80mm' | '57mm'>(() => {
     const s = getInitialStoredSettings();
@@ -490,7 +490,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
         inclusive: prevTax.inclusive ?? false,
         name: prevTax.name || 'ضريبة القيمة المضافة'
       }));
-      if (saveDevices) localStorage.setItem('hyperpos_barcode_device', barcodeDevice);
+      if (saveDevices) localStorage.setItem('posflow_barcode_device', barcodeDevice);
     } catch (e) {
       console.warn('[SetupWizard] Failed to save to localStorage:', e);
     }
@@ -582,7 +582,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
       setThemeMode(themeMode);
     }
 
-    try { localStorage.setItem('hyperpos_setup_complete', 'true'); } catch {}
+    try { localStorage.setItem('posflow_setup_complete', 'true'); } catch {}
 
     // 7. Dispatch system events so POS, Sidebar, and Themes update immediately
     emitEvent(EVENTS.SETTINGS_UPDATED, newSettings);

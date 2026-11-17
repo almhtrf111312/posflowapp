@@ -273,7 +273,7 @@ export function PartnerProfitDetailedReport({ dateRange }: PartnerProfitDetailed
       });
     });
 
-    report += `\n---\nتم إنشاء التقرير بواسطة FlowPOS Pro`;
+    report += `\n---\nتم إنشاء التقرير بواسطة PosFlow`;
 
     await shareReport('تقرير أرباح الشركاء', report);
   };

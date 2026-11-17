@@ -1,5 +1,5 @@
 /**
- * HyperPOS Currency Configuration & Predefined Regional/Global Currencies
+ * PosFlow Currency Configuration & Predefined Regional/Global Currencies
  * =======================================================================
  * Contains predefined currencies for Gulf/Middle East, North Africa, and Global.
  * Allows users to easily select pre-filled currency symbols, names, and codes.
@@ -491,7 +491,7 @@ export function getActiveStoreCurrency(): ResolvedCurrencyMeta {
 /**
  * عملة التقارير: الدولار أو العملة الافتراضية للمتجر (من الكاش في الذاكرة)
  */
-export const REPORT_CURRENCY_KEY = 'hyperpos_report_currency';
+export const REPORT_CURRENCY_KEY = 'posflow_report_currency';
 
 export function getReportCurrency(): ResolvedCurrencyMeta {
   const state = getMoneyState();
@@ -606,7 +606,7 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
   let settings = rawSettings;
   if (!settings && typeof window !== 'undefined') {
     try {
-      const raw = window.localStorage.getItem('hyperpos_settings_v1');
+      const raw = window.localStorage.getItem('posflow_settings_v1');
       if (raw) settings = JSON.parse(raw);
     } catch {}
   }

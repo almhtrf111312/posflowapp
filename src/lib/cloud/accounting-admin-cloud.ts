@@ -60,8 +60,8 @@ export interface ClosePeriodResult {
   needsMigration?: boolean;
 }
 
-const CLOSURES_CACHE_KEY = 'hyperpos_period_closures_v1';
-const WRITEOFFS_CACHE_KEY = 'hyperpos_debt_writeoffs_v1';
+const CLOSURES_CACHE_KEY = 'posflow_period_closures_v1';
+const WRITEOFFS_CACHE_KEY = 'posflow_debt_writeoffs_v1';
 
 const numOrNull = (value: unknown): number | null => {
   if (value === null || value === undefined) return null;

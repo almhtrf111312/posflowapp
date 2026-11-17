@@ -1,7 +1,7 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
  * Global Background Sync & Cache Warmup Service
- * FlowPOS Pro
+ * PosFlow
  * 
  * Preloads and keeps Invoices, Customers, Debts, Purchases, Categories,
  * Warehouses, and Expenses warm in localStorage in the background.

@@ -16,7 +16,7 @@ export interface CustomField {
   showInDetails: boolean; // Show in product details
 }
 
-const CUSTOM_FIELDS_STORAGE_KEY = 'hyperpos_custom_fields_v1';
+const CUSTOM_FIELDS_STORAGE_KEY = 'posflow_custom_fields_v1';
 
 // Load custom fields from storage
 export const loadCustomFields = (): CustomField[] => {

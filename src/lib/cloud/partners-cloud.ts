@@ -175,7 +175,7 @@ function toCloudPartner(partner: Partial<Partner>): Record<string, unknown> {
 }
 
 // Local storage cache helpers
-const LOCAL_CACHE_KEY = 'hyperpos_partners_cache';
+const LOCAL_CACHE_KEY = 'posflow_partners_cache';
 
 const savePartnersLocally = (partners: Partner[]) => {
   try {

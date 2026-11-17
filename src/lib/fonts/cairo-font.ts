@@ -7,8 +7,8 @@ export const ARABIC_FONT_NAME = 'NotoSansArabic';
 let cachedRegularBase64: string | null = null;
 let cachedBoldBase64: string | null = null;
 
-const STORAGE_KEY_REGULAR = 'hyperpos_font_noto_reg_v1';
-const STORAGE_KEY_BOLD = 'hyperpos_font_noto_bold_v1';
+const STORAGE_KEY_REGULAR = 'posflow_font_noto_reg_v1';
+const STORAGE_KEY_BOLD = 'posflow_font_noto_bold_v1';
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);

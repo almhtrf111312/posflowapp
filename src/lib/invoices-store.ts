@@ -6,7 +6,7 @@ import { toast } from '@/lib/sonner-bridge';
 
 // Invoices store for managing all sales and maintenance invoices
 
-const INVOICES_STORAGE_KEY = 'hyperpos_invoices_v1';
+const INVOICES_STORAGE_KEY = 'posflow_invoices_v1';
 
 export type InvoiceType = 'sale' | 'maintenance';
 export type PaymentType = 'cash' | 'debt';
@@ -102,7 +102,7 @@ export const saveInvoices = (invoices: Invoice[]): boolean => {
 };
 
 // Fix #14: Sequential invoice numbering
-const INVOICE_COUNTER_KEY = 'hyperpos_invoice_counter_v1';
+const INVOICE_COUNTER_KEY = 'posflow_invoice_counter_v1';
 
 export const getNextInvoiceNumber = (): string => {
   try {

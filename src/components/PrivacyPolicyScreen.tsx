@@ -20,10 +20,10 @@ import { UIScaleId } from '@/lib/ui-scale-config';
 import { Language } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
-const PRIVACY_KEY = 'hyperpos_privacy_accepted';
+const PRIVACY_KEY = 'posflow_privacy_accepted';
 // Version 2: terms shown directly without button (v1 had a button)
 const PRIVACY_VERSION = '2';
-const PRIVACY_VERSION_KEY = 'hyperpos_privacy_version';
+const PRIVACY_VERSION_KEY = 'posflow_privacy_version';
 
 export function usePrivacyAccepted() {
   const [accepted, setAccepted] = useState(() => {

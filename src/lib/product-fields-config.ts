@@ -84,12 +84,12 @@ export const getDefaultFieldsByStoreType = (storeType: StoreType): ProductFields
   }
 };
 
-const PRODUCT_FIELDS_STORAGE_KEY = 'hyperpos_product_fields_v1';
+const PRODUCT_FIELDS_STORAGE_KEY = 'posflow_product_fields_v1';
 
 // Load user-defined field configuration from localStorage (for instant access)
 const currentStoreType = (): StoreType => {
   try {
-    const raw = localStorage.getItem('hyperpos_settings_v1');
+    const raw = localStorage.getItem('posflow_settings_v1');
     if (raw) return (JSON.parse(raw).storeSettings?.type || 'general') as StoreType;
   } catch { /* ignore */ }
   return 'general';
@@ -160,7 +160,7 @@ export const getEffectiveFieldsConfig = (): ProductFieldsConfig => {
 
   // Otherwise use store type defaults
   try {
-    const settingsRaw = localStorage.getItem('hyperpos_settings_v1');
+    const settingsRaw = localStorage.getItem('posflow_settings_v1');
     if (settingsRaw) {
       const settings = JSON.parse(settingsRaw);
       const storeType = settings.storeSettings?.type || 'general';

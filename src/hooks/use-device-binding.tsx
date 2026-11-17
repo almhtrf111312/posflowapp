@@ -26,8 +26,8 @@ interface DeviceCacheData {
 function saveDeviceCache(data: { isDeviceBlocked: boolean; deviceId: string | null; registeredDeviceId: string | null }) {
   try {
     // Remove any legacy plain-text entry
-    localStorage.removeItem('hyperpos_device_binding_cache_v1');
-    sessionStorage.removeItem('hyperpos_device_binding_cache_v1');
+    localStorage.removeItem('posflow_device_binding_cache_v1');
+    sessionStorage.removeItem('posflow_device_binding_cache_v1');
 
     secureSet(
       DEVICE_CACHE_KEY,
@@ -208,7 +208,7 @@ export function useDeviceBinding() {
 export function clearDeviceBindingCache() {
   try {
     secureRemove(DEVICE_CACHE_KEY, { namespace: DEVICE_NS });
-    localStorage.removeItem('hyperpos_device_binding_cache_v1');
-    sessionStorage.removeItem('hyperpos_device_binding_cache_v1');
+    localStorage.removeItem('posflow_device_binding_cache_v1');
+    sessionStorage.removeItem('posflow_device_binding_cache_v1');
   } catch { /* */ }
 }

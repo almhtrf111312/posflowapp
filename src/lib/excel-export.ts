@@ -61,11 +61,11 @@ const formatLocalDateTime = (): string => {
 // Get store info from settings
 const getStoreInfo = (): { name: string; phone?: string; address?: string } => {
   try {
-    const stored = localStorage.getItem('hyperpos_settings_v1') || localStorage.getItem('hyperpos_settings');
+    const stored = localStorage.getItem('posflow_settings_v1') || localStorage.getItem('posflow_settings');
     if (stored) {
       const settings = JSON.parse(stored);
       return {
-        name: settings.storeSettings?.name || 'FlowPOS Pro',
+        name: settings.storeSettings?.name || 'PosFlow',
         phone: settings.storeSettings?.phone,
         address: settings.storeSettings?.address,
       };
@@ -73,7 +73,7 @@ const getStoreInfo = (): { name: string; phone?: string; address?: string } => {
   } catch {
     // ignore
   }
-  return { name: 'FlowPOS Pro' };
+  return { name: 'PosFlow' };
 };
 
 // Normalize customer name for exports

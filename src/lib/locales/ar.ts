@@ -1,4 +1,4 @@
-// FlowPOS Pro — ترجمات اللغة (ar). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
+// PosFlow — ترجمات اللغة (ar). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
 const ar = {
   "printer.add": "إضافة طابعة بلوتوث",
   "printer.change": "تغيير الطابعة",
@@ -669,7 +669,7 @@ const ar = {
   'auth.logoutSuccess': 'تم تسجيل الخروج',
   'auth.invalidCredentials': 'بيانات الدخول غير صحيحة',
   'auth.passwordMismatch': 'كلمات المرور غير متطابقة',
-  'auth.welcome': 'مرحباً بك في FlowPOS Pro',
+  'auth.welcome': 'مرحباً بك في PosFlow',
   'auth.loginSubtitle': 'سجل دخولك للمتابعة',
   'auth.signupSubtitle': 'أنشئ حسابك الجديد',
   'auth.loading': 'جاري التحميل...',
@@ -2132,7 +2132,7 @@ const ar = {
   'license.enterCode': 'يرجى إدخال كود التفعيل',
   'license.invalidCode': 'كود التفعيل غير صالح',
   'license.whatsappHelp': 'مرحباً، أحتاج مساعدة بخصوص تفعيل التطبيق',
-  'license.welcome': 'مرحباً بك في FlowPOS Pro',
+  'license.welcome': 'مرحباً بك في PosFlow',
   'license.chooseActivation': 'اختر طريقة تفعيل التطبيق',
   'license.haveCode': 'لدي كود تفعيل',
   'license.haveCodeDesc': 'أدخل كود التفعيل للحصول على ترخيص كامل',
@@ -2140,7 +2140,7 @@ const ar = {
   'license.freeTrialDesc': 'جرب التطبيق مجاناً قبل الشراء',
   'license.getCodeContact': 'لتفعيل أو تجديد اشتراكك، تواصل معنا:',
   'license.signOutOther': 'تسجيل الخروج والدخول بحساب آخر',
-  'license.wantCode': 'أريد الحصول على كود تفعيل لتطبيق FlowPOS Pro',
+  'license.wantCode': 'أريد الحصول على كود تفعيل لتطبيق PosFlow',
   'license.trialEnded': 'انتهت الفترة التجريبية',
   'license.licenseExpired': 'انتهت صلاحية الترخيص',
   'license.activationRequired': 'التطبيق يحتاج تفعيل',
@@ -2338,7 +2338,7 @@ const ar = {
   'licenseManagement.days': ' يوم',
 
   // Device Blocked extra
-  'deviceBlocked.whatsappMessage': 'مرحباً، أحتاج مساعدة في إعادة تعيين جهازي المسجل في تطبيق FlowPOS Pro.',
+  'deviceBlocked.whatsappMessage': 'مرحباً، أحتاج مساعدة في إعادة تعيين جهازي المسجل في تطبيق PosFlow.',
 
   // Setup Wizard
   'setup.storeInfo': 'معلومات المتجر',
@@ -2400,11 +2400,8 @@ const ar = {
   // Help
   'help.title': 'المساعدة والميزات',
   'help.subtitle': 'نظام محاسبة شامل لجميع أنواع الأعمال',
-  'help.aiAssistant': 'المساعد الذكي',
-  'help.askAI': 'اسأل المساعد الذكي',
   'help.faq': 'الأسئلة الشائعة',
   'help.features': 'ميزات النظام',
-  'help.cantFindAnswer': 'لم تجد إجابة لسؤالك؟ اسأل المساعد الذكي مباشرة!',
   'help.available247': 'متاح على مدار الساعة للإجابة على جميع استفساراتك',
   'help.typeQuestion': 'اكتب سؤالك هنا...',
 

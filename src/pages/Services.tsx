@@ -74,7 +74,7 @@ interface RepairRequest {
   createdByName?: string;
 }
 
-const SERVICES_STORAGE_KEY = 'hyperpos_services_v1';
+const SERVICES_STORAGE_KEY = 'posflow_services_v1';
 
 // Helper to generate standard UUID
 const generateServiceUUID = (): string => {

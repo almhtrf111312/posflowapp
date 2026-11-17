@@ -21,7 +21,7 @@ import {
 type LooseSupabase = SupabaseClient<any, 'public', any>;
 const sb = supabase as unknown as LooseSupabase;
 
-export const RECURRING_EXPENSES_KEY = 'hyperpos_recurring_expenses_v1';
+export const RECURRING_EXPENSES_KEY = 'posflow_recurring_expenses_v1';
 
 // Local storage cache helpers
 export const saveRecurringExpensesLocally = (expenses: RecurringExpense[]) => {

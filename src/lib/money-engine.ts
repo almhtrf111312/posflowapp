@@ -31,10 +31,10 @@ export interface MoneyEngineState {
   version: number;
 }
 
-const SETTINGS_KEY = 'hyperpos_settings_v1';
-const SETTINGS_BACKUP_KEY = 'hyperpos_settings_v1_backup';
-const REPORT_CURRENCY_KEY = 'hyperpos_report_currency';
-const INPUT_PREFS_KEY = 'hyperpos_money_input_prefs_v1';
+const SETTINGS_KEY = 'posflow_settings_v1';
+const SETTINGS_BACKUP_KEY = 'posflow_settings_v1_backup';
+const REPORT_CURRENCY_KEY = 'posflow_report_currency';
+const INPUT_PREFS_KEY = 'posflow_money_input_prefs_v1';
 
 const ZERO_DECIMAL_CODES = new Set([
   'SYP', 'LBP', 'IQD', 'YER', 'DZD', 'JPY', 'IRR', 'KRW', 'VND', 'CLP', 'IDR',

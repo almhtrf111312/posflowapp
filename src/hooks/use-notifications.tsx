@@ -61,7 +61,7 @@ interface NotificationsContextType {
 
 export const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
-const ARCHIVED_STORAGE_KEY = 'hyperpos_archived_notifications';
+const ARCHIVED_STORAGE_KEY = 'posflow_archived_notifications';
 
 const loadArchivedFromStorage = (): Notification[] => {
   try {

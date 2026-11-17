@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * FlowPOS Pro — اختبار الضغط الشامل (≈1000 عملية متداخلة) — وضع صارم
+ * PosFlow — اختبار الضغط الشامل (≈1000 عملية متداخلة) — وضع صارم
  *
  * ماذا يفعل:
  *  - يتصل بنفس المتصفح المفتوح (Chrome/Chromium) عبر CDP ويكمل بنفس جلسة تسجيل الدخول.
@@ -126,7 +126,7 @@ try {
   browser = await chromium.connectOverCDP(CDP_URL);
   context = browser.contexts()[0];
   const pages = context.pages();
-  page = pages.find((p) => /#\/|localhost|lovable|flowpos/i.test(p.url())) || pages[0] || await context.newPage();
+  page = pages.find((p) => /#\/|localhost|pages.dev|flowpos/i.test(p.url())) || pages[0] || await context.newPage();
   attached = true;
   log('متصل بنفس المتصفح المفتوح عبر', CDP_URL, '— الصفحة:', page.url());
 } catch (e) {
@@ -944,7 +944,7 @@ if (exitCode !== 4) exitCode = incomplete ? 3 : (failedChecks.length || failures
 fs.writeFileSync(path.join(OUT, 'ledger.csv'), '﻿' + [['seq', 'time', 'scenario', 'kind', 'ref', 'detail', 'result'], ...ledger].map((r) => r.map(csvCell).join(',')).join('\n') + '\n');
 fs.writeFileSync(path.join(OUT, 'checks.json'), JSON.stringify({ checks, failures, coverage: cov }, null, 2));
 const report = [
-  `# تقرير اختبار الضغط — FlowPOS Pro`, ``,
+  `# تقرير اختبار الضغط — PosFlow`, ``,
   `- **الحكم:** ${verdict}`, `- البادئة: \`${PREFIX}\` | المتجر: ${originalStore?.name ?? '-'} | الاتصال: ${attached ? 'نفس المتصفح المفتوح (CDP)' : 'نافذة جديدة'}`,
   `- العمليات المنفذة: ${opCount} (المطلوب ${TARGET_OPS}) | الفحوص: ${checks.length - failedChecks.length}/${checks.length} ناجح | أخطاء تنفيذ: ${failures.length}`,
   `- البذرة: ${SEED} (نفس البذرة = نفس تسلسل العمليات)`, ``,

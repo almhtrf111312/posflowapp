@@ -93,7 +93,7 @@ const CURRENT_VERSION = 2;
 
 // Legacy key that used to be hardcoded in the bundle. Kept ONLY so existing
 // stored values can still be decrypted; never used to encrypt new values.
-const LEGACY_APP_SECRET = 'HyperPOS2024SecureStorage';
+const LEGACY_APP_SECRET = 'PosFlow2024SecureStorage';
 export const APP_SECRET_STORAGE = 'hp_app_secret';
 /** The same secret, encrypted by a hardware-backed key (Android Keystore). Present only on native Android. */
 export const WRAPPED_APP_SECRET_STORAGE = 'hp_app_secret_w';

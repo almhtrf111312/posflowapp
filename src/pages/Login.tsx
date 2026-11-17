@@ -50,7 +50,7 @@ export default function Login() {
     userEmail?: string;
   } | null>(() => {
     try {
-      const saved = sessionStorage.getItem('hyperpos_active_device_block');
+      const saved = sessionStorage.getItem('posflow_active_device_block');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -407,7 +407,7 @@ export default function Login() {
         };
 
         // حفظ الحالة محلياً في الجلسة حتى لا تختفي عند حدوث signOut
-        sessionStorage.setItem('hyperpos_active_device_block', JSON.stringify(blockData));
+        sessionStorage.setItem('posflow_active_device_block', JSON.stringify(blockData));
         setBlockedState(blockData);
 
         // تسجيل الخروج فوراً لتأمين الجلسة السحابية ومنع استهلاك التوكن
@@ -418,16 +418,16 @@ export default function Login() {
     }
 
     // For existing account logins, bypass setup wizard and onboarding tour.
-    // If the user arrived here from a new signup flow, preserve hyperpos_just_signed_up intact
+    // If the user arrived here from a new signup flow, preserve posflow_just_signed_up intact
     const isNewSignup = (() => {
       try {
-        return sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
+        return sessionStorage.getItem('posflow_just_signed_up') === 'true';
       } catch { return false; }
     })();
 
     if (!isNewSignup) {
       try {
-        localStorage.setItem('hyperpos_setup_complete', 'true');
+        localStorage.setItem('posflow_setup_complete', 'true');
       } catch {}
     }
 
@@ -439,8 +439,8 @@ export default function Login() {
   // حساب جوجل جديد: نفس مسار صفحة التسجيل (معالج الإعداد ثم ربط الجهاز داخل التطبيق)
   const handleGoogleNewAccount = async () => {
     try {
-      sessionStorage.setItem('hyperpos_just_signed_up', 'true');
-      localStorage.removeItem('hyperpos_setup_complete');
+      sessionStorage.setItem('posflow_just_signed_up', 'true');
+      localStorage.removeItem('posflow_setup_complete');
     } catch {}
     setIsLoading(false);
     toast.success(t('auth.signupSuccess'));
@@ -509,7 +509,7 @@ export default function Login() {
       toast.success(data.message || 'تم فك ارتباط الجهاز السابق بنجاح!');
       
       // مسح حالة الحظر
-      sessionStorage.removeItem('hyperpos_active_device_block');
+      sessionStorage.removeItem('posflow_active_device_block');
       setBlockedState(null);
 
       // تسجيل الدخول بالجهاز الجديد فوراً
@@ -551,10 +551,10 @@ export default function Login() {
         <div className="flex items-center gap-2.5">
           <img 
             src={appIconUrl} 
-            alt="FlowPOS Pro" 
+            alt="PosFlow" 
             className="w-10 h-10 rounded-2xl shadow-sm object-cover" 
           />
-          <span className="font-bold text-sm sm:text-base text-foreground tracking-tight">FlowPOS Pro</span>
+          <span className="font-bold text-sm sm:text-base text-foreground tracking-tight">PosFlow</span>
         </div>
 
         {/* زر اللغة الموحد والواضح تماماً — بعيداً عن حواف الشاشة والإشعارات */}
@@ -565,7 +565,7 @@ export default function Login() {
       <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center py-4 space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-            {t('auth.welcome') || 'مرحباً بك في FlowPOS Pro'}
+            {t('auth.welcome') || 'مرحباً بك في PosFlow'}
           </h1>
           <p className="text-sm text-muted-foreground">
             {t('auth.loginSubtitle') || 'سجل دخولك لإدارة مبيعاتك ومتجرك'}
@@ -969,7 +969,7 @@ export default function Login() {
                 type="button"
                 variant="ghost" 
                 onClick={() => {
-                  sessionStorage.removeItem('hyperpos_active_device_block');
+                  sessionStorage.removeItem('posflow_active_device_block');
                   setBlockedState(null);
                 }} 
                 className="w-full h-10 rounded-xl text-muted-foreground hover:text-foreground text-xs font-semibold cursor-pointer"

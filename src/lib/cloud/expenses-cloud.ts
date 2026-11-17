@@ -124,7 +124,7 @@ function toExpense(cloud: CloudExpense & { cashier_name?: string }): Expense {
 }
 
 // Local storage cache helpers
-const LOCAL_CACHE_KEY = 'hyperpos_expenses_cache';
+const LOCAL_CACHE_KEY = 'posflow_expenses_cache';
 
 const saveExpensesLocally = (expenses: Expense[]) => {
   try {

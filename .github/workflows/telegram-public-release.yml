@@ -113,7 +113,7 @@ jobs:
                 .filter((a) => !a.expired && /flowpos/i.test(a.name) && !/win|exe|setup/i.test(a.name))
                 .sort(byNewest)[0] || null;
               if (!art) {
-                throw new Error('لم يتم العثور على ملف APK جاهز مسبقاً! شغّل «Build FlowPOS Pro APK» مرة واحدة أولاً.');
+                throw new Error('لم يتم العثور على ملف APK جاهز مسبقاً! شغّل «Build PosFlow APK» مرة واحدة أولاً.');
               }
               console.log(`::warning::لا يوجد artifact باسم ${exactName}. سيتم استخدام أحدث APK متاح: ${art.name}`);
             }
@@ -147,7 +147,7 @@ jobs:
           cat > "$RUNNER_TEMP/tg/telegram-send-apk.cjs" <<'TGSCRIPT'
           #!/usr/bin/env node
           /**
-           * FlowPOS Pro — إرسال ملف APK إلى قناة تيليجرام
+           * PosFlow — إرسال ملف APK إلى قناة تيليجرام
            * ------------------------------------------------
            * يستخدمه كل من:
            *   - .github/workflows/telegram-public-release.yml

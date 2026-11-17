@@ -44,14 +44,12 @@ async function sha256b64url(text: string): Promise<string> {
 
 // Telegram message sender
 async function sendTelegramMessage(botToken: string, chatId: string | number, text: string, replyMarkup?: any) {
-  const url = `https://connector-gateway.lovable.dev/telegram/sendMessage`;
+  const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY") ?? ""}`,
-        "X-Connection-Api-Key": botToken,
       },
       body: JSON.stringify({
         chat_id: chatId,
@@ -132,7 +130,7 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const botToken = Deno.env.get("TELEGRAM_API_KEY");
+  const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? Deno.env.get("TELEGRAM_API_KEY");
   const botUsername = Deno.env.get("TELEGRAM_BOT_USERNAME") || "flowpos_helper_bot";
 
   if (!supabaseUrl || !supabaseServiceRoleKey) {

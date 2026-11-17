@@ -486,7 +486,7 @@
 }
 
 /* ==========================================================================
-   HyperPOS Western Numeral Protection: Inter Digits
+   PosFlow Western Numeral Protection: Inter Digits
    Forces Western digits (0-9) and key monetary/math symbols across the app
    ========================================================================== */
 @font-face {

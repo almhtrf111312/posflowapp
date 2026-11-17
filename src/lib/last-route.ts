@@ -1,4 +1,4 @@
-export const LAST_ROUTE_KEY = 'hyperpos_last_route';
+export const LAST_ROUTE_KEY = 'posflow_last_route';
 
 export function getCurrentAppRoute(): string {
   const hash = window.location.hash.replace(/^#/, '');

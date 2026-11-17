@@ -1,4 +1,4 @@
-// FlowPOS Pro — ترجمات اللغة (en). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
+// PosFlow — ترجمات اللغة (en). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
 import type { TranslationDict } from '../i18n';
 
 const en: TranslationDict = {
@@ -597,7 +597,7 @@ const en: TranslationDict = {
   'auth.logoutSuccess': 'Logged out',
   'auth.invalidCredentials': 'Invalid credentials',
   'auth.passwordMismatch': 'Passwords do not match',
-  'auth.welcome': 'Welcome to HyperPOS',
+  'auth.welcome': 'Welcome to PosFlow',
   'auth.loginSubtitle': 'Sign in to continue',
   'auth.signupSubtitle': 'Create your new account',
   'auth.loading': 'Loading...',
@@ -1851,7 +1851,7 @@ const en: TranslationDict = {
   'deviceBlocked.actionDesc': 'If you have changed your device or want to transfer the account, please contact support to reset the device.',
   'deviceBlocked.contactSupport': 'Contact Support via WhatsApp',
   'deviceBlocked.signOut': 'Sign out and try another account',
-  'deviceBlocked.whatsappMessage': 'Hello, I need help resetting my registered device in FlowPOS Pro app.',
+  'deviceBlocked.whatsappMessage': 'Hello, I need help resetting my registered device in PosFlow app.',
 
   // License Management
   'licenseManagement.title': 'License Management',
@@ -2268,8 +2268,8 @@ const en: TranslationDict = {
   'support.contact': 'Contact Support',
   'license.enterCode': 'Please enter activation code',
   'license.invalidCode': 'Invalid activation code',
-  'license.whatsappHelp': 'Hello, I need help activating FlowPOS Pro',
-  'license.welcome': 'Welcome to FlowPOS Pro',
+  'license.whatsappHelp': 'Hello, I need help activating PosFlow',
+  'license.welcome': 'Welcome to PosFlow',
   'license.chooseActivation': 'Choose how to activate the app',
   'license.haveCode': 'I have an activation code',
   'license.haveCodeDesc': 'Enter your activation code for full access',
@@ -2277,7 +2277,7 @@ const en: TranslationDict = {
   'license.freeTrialDesc': 'Try the app for free before buying',
   'license.getCodeContact': 'To activate or renew your subscription, contact us:',
   'license.signOutOther': 'Sign out and use another account',
-  'license.wantCode': 'I want to get an activation code for FlowPOS Pro',
+  'license.wantCode': 'I want to get an activation code for PosFlow',
   'license.trialEnded': 'Trial period ended',
   'license.licenseExpired': 'License expired',
   'license.activationRequired': 'App activation required',
@@ -2394,11 +2394,8 @@ const en: TranslationDict = {
   // Help
   'help.title': 'Help & Features',
   'help.subtitle': 'Comprehensive accounting system for all business types',
-  'help.aiAssistant': 'AI Assistant',
-  'help.askAI': 'Ask AI Assistant',
   'help.faq': 'FAQ',
   'help.features': 'System Features',
-  'help.cantFindAnswer': 'Can\'t find your answer? Ask the AI assistant directly!',
   'help.available247': 'Available 24/7 to answer all your questions',
   'help.typeQuestion': 'Type your question here...',
   'invoices.salesInvoices': 'Sales Invoices',

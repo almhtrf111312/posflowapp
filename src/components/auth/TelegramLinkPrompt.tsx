@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useAuth } from '@/hooks/use-auth';
 import { fetchTelegramLinked, getTelegramBotLink } from '@/lib/auth/phone-claim';
 
-const DISMISS_KEY = 'hyperpos_telegram_prompt_dismissed';
+const DISMISS_KEY = 'posflow_telegram_prompt_dismissed';
 
 export function TelegramLinkPrompt() {
   const { user } = useAuth();
@@ -24,7 +24,7 @@ export function TelegramLinkPrompt() {
     let justSignedUp = false;
     let dismissed = false;
     try {
-      justSignedUp = sessionStorage.getItem('hyperpos_just_signed_up') === 'true';
+      justSignedUp = sessionStorage.getItem('posflow_just_signed_up') === 'true';
       dismissed = sessionStorage.getItem(`${DISMISS_KEY}:${user.id}`) === '1';
     } catch { /* ignore */ }
     if (!justSignedUp || dismissed) return;

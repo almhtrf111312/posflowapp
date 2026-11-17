@@ -1,4 +1,4 @@
-// FlowPOS Pro — ترجمات اللغة (fa). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
+// PosFlow — ترجمات اللغة (fa). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
 import type { TranslationDict } from '../i18n';
 
 const fa: TranslationDict = {
@@ -1480,7 +1480,7 @@ const fa: TranslationDict = {
   'auth.logoutSuccess': 'خروج انجام شد',
   'auth.invalidCredentials': 'اطلاعات ورود نامعتبر',
   'auth.passwordMismatch': 'رمزهای عبور مطابقت ندارند',
-  'auth.welcome': 'به FlowPOS Pro خوش آمدید',
+  'auth.welcome': 'به PosFlow خوش آمدید',
   'auth.loginSubtitle': 'برای ادامه وارد شوید',
   'auth.signupSubtitle': 'حساب جدید خود را بسازید',
   'auth.loading': 'در حال بارگذاری...',
@@ -2591,8 +2591,8 @@ const fa: TranslationDict = {
   'support.contact': 'تماس با پشتیبانی فنی',
   'license.enterCode': 'لطفاً کد فعال‌سازی را وارد کنید',
   'license.invalidCode': 'کد فعال‌سازی نامعتبر',
-  'license.whatsappHelp': 'سلام، برای فعال‌سازی FlowPOS Pro به کمک نیاز دارم',
-  'license.welcome': 'به FlowPOS Pro خوش آمدید',
+  'license.whatsappHelp': 'سلام، برای فعال‌سازی PosFlow به کمک نیاز دارم',
+  'license.welcome': 'به PosFlow خوش آمدید',
   'license.chooseActivation': 'نحوه فعال‌سازی برنامه را انتخاب کنید',
   'license.haveCode': 'کد فعال‌سازی دارم',
   'license.haveCodeDesc': 'کد فعال‌سازی را برای دسترسی کامل وارد کنید',
@@ -2600,7 +2600,7 @@ const fa: TranslationDict = {
   'license.freeTrialDesc': 'قبل از خرید، برنامه را رایگان امتحان کنید',
   'license.getCodeContact': 'برای فعال‌سازی یا تمدید اشتراک با ما تماس بگیرید:',
   'license.signOutOther': 'خروج و استفاده از حساب دیگر',
-  'license.wantCode': 'می‌خواهم کد فعال‌سازی FlowPOS Pro دریافت کنم',
+  'license.wantCode': 'می‌خواهم کد فعال‌سازی PosFlow دریافت کنم',
   'license.trialEnded': 'دوره آزمایشی پایان یافت',
   'license.licenseExpired': 'مجوز منقضی شده',
   'license.activationRequired': 'فعال‌سازی برنامه الزامی است',
@@ -2796,7 +2796,7 @@ const fa: TranslationDict = {
   'deviceBlocked.actionDesc': 'اگر دستگاه خود را تغییر داده‌اید، با پشتیبانی تماس بگیرید.',
   'deviceBlocked.contactSupport': 'تماس با پشتیبانی از واتس‌اپ',
   'deviceBlocked.signOut': 'خروج و امتحان حساب دیگر',
-  'deviceBlocked.whatsappMessage': 'سلام، برای بازنشانی دستگاه ثبت‌شده در FlowPOS Pro به کمک نیاز دارم.',
+  'deviceBlocked.whatsappMessage': 'سلام، برای بازنشانی دستگاه ثبت‌شده در PosFlow به کمک نیاز دارم.',
 
   // Setup Wizard
   'setup.storeInfo': 'اطلاعات فروشگاه',
@@ -2849,11 +2849,8 @@ const fa: TranslationDict = {
   // Help
   'help.title': 'راهنما و ویژگی‌ها',
   'help.subtitle': 'سیستم حسابداری جامع برای همه کسب‌وکارها',
-  'help.aiAssistant': 'دستیار هوش مصنوعی',
-  'help.askAI': 'از دستیار هوش مصنوعی بپرسید',
   'help.faq': 'سؤالات متداول',
   'help.features': 'ویژگی‌های سیستم',
-  'help.cantFindAnswer': 'پاسخ سؤالتان را نمی‌یابید؟ مستقیم از دستیار بپرسید!',
   'help.available247': '۲۴ ساعته در دسترس برای پاسخ به سؤالات شما',
   'help.typeQuestion': 'سؤال خود را اینجا بنویسید...',
   'invoices.salesInvoices': 'فاکتورهای فروش',

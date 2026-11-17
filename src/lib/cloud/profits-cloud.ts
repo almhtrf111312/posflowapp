@@ -1,5 +1,5 @@
 /**
- * Profits Cloud Store - FlowPOS Pro
+ * Profits Cloud Store - PosFlow
  * ==================================
  * مزامنة سجلات الأرباح إلى Supabase مع fallback لـ sync-queue عند انقطاع الاتصال.
  * يعمل بشكل تكاملي مع profits-store المحلي (cache).

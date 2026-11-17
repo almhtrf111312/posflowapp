@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * FlowPOS Pro — اختبار آلي فعلي عبر المتصفح (Playwright)
+ * PosFlow — اختبار آلي فعلي عبر المتصفح (Playwright)
  *
  * يفتح التطبيق الحقيقي، ينشئ منتجات عبر فاتورة شراء، ينفّذ مبيعات نقدية وآجلة من نقطة البيع
  * (منها كرتونة + قطعة لنفس المنتج)، ثم يقارن ما حُفظ في قاعدة البيانات بدفتره الخارجي.
@@ -445,7 +445,7 @@ writeCsv('snapshots.csv', ['seq', 'time', 'checkpoint', 'page', 'field', 'value_
 const passed = checks.filter((c) => c.pass).length;
 const failed = checks.filter((c) => !c.pass);
 const report = [
-  `# تقرير الاختبار الآلي — FlowPOS Pro`,
+  `# تقرير الاختبار الآلي — PosFlow`,
   ``,
   `- **النتيجة:** ${failed.length === 0 && failures.length === 0 ? 'كل الفحوص نجحت' : `${failed.length} فحص فاشل، ${failures.length} خطوة لم تكتمل`}`,
   `- العنوان: ${BASE_URL}`,

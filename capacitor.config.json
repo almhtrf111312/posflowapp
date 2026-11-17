@@ -1,6 +1,6 @@
 {
-  "appId": "com.flowpos.pro",
-  "appName": "FlowPOS Pro",
+  "appId": "com.posflow.app",
+  "appName": "PosFlow",
   "webDir": "dist",
   "android": {
     "allowMixedContent": true,

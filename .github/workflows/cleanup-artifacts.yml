@@ -6,7 +6,7 @@ name: Cleanup old artifacts
 #   - أي ملفات أخرى: آخر 20 لكل فرع
 on:
   workflow_run:
-    workflows: ["Build FlowPOS Pro APK", "Build FlowPOS Pro Windows"]
+    workflows: ["Build PosFlow APK", "Build PosFlow Windows"]
     types: [completed]
   schedule:
     - cron: "17 3 * * *"

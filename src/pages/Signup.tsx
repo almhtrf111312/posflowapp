@@ -82,8 +82,8 @@ export default function Signup() {
 
 
     try {
-      sessionStorage.setItem('hyperpos_just_signed_up', 'true');
-      localStorage.removeItem('hyperpos_setup_complete');
+      sessionStorage.setItem('posflow_just_signed_up', 'true');
+      localStorage.removeItem('posflow_setup_complete');
     } catch {}
 
     toast.success(t('auth.signupSuccess'));
@@ -96,7 +96,7 @@ export default function Signup() {
         <CardHeader className="text-center space-y-4">
           <img 
             src={appIconUrl} 
-            alt="FlowPOS Pro" 
+            alt="PosFlow" 
             className="mx-auto w-16 h-16 rounded-2xl shadow-md object-cover" 
           />
           <div>

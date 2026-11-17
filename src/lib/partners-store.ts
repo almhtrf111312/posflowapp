@@ -1,6 +1,6 @@
 import { emitEvent, EVENTS } from './events';
 
-const PARTNERS_STORAGE_KEY = 'hyperpos_partners_v1';
+const PARTNERS_STORAGE_KEY = 'posflow_partners_v1';
 
 export interface CategoryShare {
   categoryId: string;

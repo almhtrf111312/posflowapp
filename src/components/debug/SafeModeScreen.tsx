@@ -6,15 +6,15 @@ export function SafeModeScreen() {
 
   const handleReset = () => {
     try {
-      // Clear all hyperpos keys
+      // Clear all posflow keys
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('hyperpos') || key === 'setup_complete') &&
-            key !== 'hyperpos_privacy_accepted' &&
-            key !== 'hyperpos_privacy_version' &&
-            key !== 'hyperpos_language' &&
-            key !== 'hyperpos_theme') {
+        if (key && (key.startsWith('posflow') || key === 'setup_complete') &&
+            key !== 'posflow_privacy_accepted' &&
+            key !== 'posflow_privacy_version' &&
+            key !== 'posflow_language' &&
+            key !== 'posflow_theme') {
           keysToRemove.push(key);
         }
       }

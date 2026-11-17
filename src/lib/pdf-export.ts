@@ -1,4 +1,4 @@
-// Professional PDF Export using jsPDF with Capacitor support - FlowPOS Pro
+// Professional PDF Export using jsPDF with Capacitor support - PosFlow
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Capacitor } from '@capacitor/core';
@@ -138,7 +138,7 @@ const savePDFNative = async (doc: jsPDF, fileName: string): Promise<void> => {
 // Get store logo from settings
 const getStoreLogo = (): string | null => {
   try {
-    const stored = localStorage.getItem('hyperpos_settings_v1') || localStorage.getItem('hyperpos_settings');
+    const stored = localStorage.getItem('posflow_settings_v1') || localStorage.getItem('posflow_settings');
     if (stored) {
       const settings = JSON.parse(stored);
       return settings.storeSettings?.logo || null;
@@ -647,7 +647,7 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
       doc.text(pageText, pageWidth - pageMargin, footerY, { align: 'right' });
     }
 
-    doc.text('FlowPOS Pro', pageWidth / 2, footerY, { align: 'center' });
+    doc.text('PosFlow', pageWidth / 2, footerY, { align: 'center' });
   }
 
   // Save the PDF based on platform

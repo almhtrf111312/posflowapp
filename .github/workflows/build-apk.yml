@@ -1,4 +1,4 @@
-name: Build FlowPOS Pro APK
+name: Build PosFlow APK
 
 on:
   push:
@@ -101,7 +101,7 @@ jobs:
           
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "Building FlowPOS Pro: v$VERSION_NAME (Build $VERSION_CODE)"
+          echo "Building PosFlow: v$VERSION_NAME (Build $VERSION_CODE)"
 
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit

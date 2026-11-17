@@ -1,5 +1,5 @@
 /**
- * Unified Transaction System - FlowPOS Pro
+ * Unified Transaction System - PosFlow
  * =========================================
  * هذا الملف يضمن ترابط جميع العمليات المالية:
  * - المبيعات ← المخزون + الصندوق + سجل الأرباح

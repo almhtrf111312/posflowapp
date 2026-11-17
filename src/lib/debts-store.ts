@@ -2,7 +2,7 @@ import { loadCustomers, saveCustomers } from './customers-store';
 import { emitEvent, EVENTS } from './events';
 import { updateInvoice } from './invoices-store';
 
-const DEBTS_STORAGE_KEY = 'hyperpos_debts_v1';
+const DEBTS_STORAGE_KEY = 'posflow_debts_v1';
 
 export type DebtStatus = 'due' | 'partially_paid' | 'overdue' | 'fully_paid';
 

@@ -240,8 +240,8 @@ let cacheTimestamp = 0;
 const CACHE_TTL = 300000; // 5 minutes — كافٍ لمنع إعادة الطلب السحابي في كل 10 ثوانٍ
 
 // Local storage key for offline fallback (legacy, kept as secondary fallback)
-const LOCAL_PRODUCTS_CACHE_KEY = 'hyperpos_products_cache';
-const LAST_SYNC_TIMESTAMP_KEY = 'hyperpos_products_last_sync';
+const LOCAL_PRODUCTS_CACHE_KEY = 'posflow_products_cache';
+const LAST_SYNC_TIMESTAMP_KEY = 'posflow_products_last_sync';
 
 // Save products to IndexedDB + localStorage as backup
 const saveToLocalCache = (products: Product[]) => {
@@ -812,13 +812,13 @@ export const refreshProductsFromCloud = async (): Promise<Product[]> => {
           await Promise.all(staleIds.map(id => deleteProductFromIDB(id)));
           // تحديث localStorage أيضاً
           try {
-            const cached = localStorage.getItem('hyperpos_products_cache');
+            const cached = localStorage.getItem('posflow_products_cache');
             if (cached) {
               const parsed = JSON.parse(cached);
               if (parsed && Array.isArray(parsed.products)) {
                 parsed.products = parsed.products.filter((p: { id: string }) => cloudIds.has(p.id));
                 parsed.timestamp = Date.now();
-                localStorage.setItem('hyperpos_products_cache', JSON.stringify(parsed));
+                localStorage.setItem('posflow_products_cache', JSON.stringify(parsed));
               }
             }
           } catch { /* noop */ }

@@ -6,28 +6,28 @@
  */
 
 const SETTINGS_VERSION = 3;
-const VERSION_KEY = 'hyperpos_settings_version';
+const VERSION_KEY = 'posflow_settings_version';
 
 // Keys to clear on version mismatch (stale config that should be refreshed)
 const KEYS_TO_CLEAR = [
-  'hyperpos_theme',
-  'hyperpos_theme_settings',
-  'hyperpos_product_fields_config',
-  'hyperpos_custom_fields_config',
-  'hyperpos_notification_settings',
-  'hyperpos_print_settings',
-  'hyperpos_store_type',
-  'hyperpos_sync_settings',
+  'posflow_theme',
+  'posflow_theme_settings',
+  'posflow_product_fields_config',
+  'posflow_custom_fields_config',
+  'posflow_notification_settings',
+  'posflow_print_settings',
+  'posflow_store_type',
+  'posflow_sync_settings',
 ];
 
 // Keys to NEVER clear (user session, operational settings & critical per-platform appearance data)
 // These are preserved across version bumps:
 // - sb-* (Supabase auth tokens)
-// - hyperpos_settings_v1 (Unified store settings with anti-overwrite timestamp)
+// - posflow_settings_v1 (Unified store settings with anti-overwrite timestamp)
 // - flowpos_theme_*, flowpos_font_*, flowpos_ui_scale_*, flowpos_layout_* (Platform-isolated appearance)
-// - hyperpos_products_*, hyperpos_customers_*, etc. (cached data)
-// - hyperpos_product_form_temp (form persistence)
-// - hyperpos_privacy_accepted, hyperpos_language
+// - posflow_products_*, posflow_customers_*, etc. (cached data)
+// - posflow_product_form_temp (form persistence)
+// - posflow_privacy_accepted, posflow_language
 
 /**
  * Check if local settings version is outdated and clear stale keys if so.

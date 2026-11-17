@@ -1,4 +1,4 @@
-// FlowPOS Pro — ترجمات اللغة (tr). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
+// PosFlow — ترجمات اللغة (tr). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
 import type { TranslationDict } from '../i18n';
 
 const tr: TranslationDict = {
@@ -433,7 +433,7 @@ const tr: TranslationDict = {
   'auth.logoutSuccess': 'Çıkış yapıldı',
   'auth.invalidCredentials': 'Geçersiz giriş bilgileri',
   'auth.passwordMismatch': 'Şifreler eşleşmiyor',
-  'auth.welcome': 'FlowPOS Pro\'ya Hoş Geldiniz',
+  'auth.welcome': 'PosFlow\'ya Hoş Geldiniz',
   'auth.loginSubtitle': 'Devam etmek için giriş yapın',
   'auth.signupSubtitle': 'Yeni hesabınızı oluşturun',
   'auth.loading': 'Yükleniyor...',
@@ -2081,7 +2081,7 @@ const tr: TranslationDict = {
   'license.enterCode': 'Lütfen aktivasyon kodunu girin',
   'license.invalidCode': 'Geçersiz aktivasyon kodu',
   'license.whatsappHelp': 'Merhaba, uygulama aktivasyonu hakkında yardıma ihtiyacım var',
-  'license.welcome': 'FlowPOS Pro\'ya Hoş Geldiniz',
+  'license.welcome': 'PosFlow\'ya Hoş Geldiniz',
   'license.chooseActivation': 'Uygulama aktivasyon yöntemini seçin',
   'license.haveCode': 'Aktivasyon kodum var',
   'license.haveCodeDesc': 'Tam lisans için aktivasyon kodunu girin',
@@ -2089,7 +2089,7 @@ const tr: TranslationDict = {
   'license.freeTrialDesc': 'Satın almadan önce uygulamayı ücretsiz deneyin',
   'license.getCodeContact': 'Aboneliğinizi etkinleştirmek veya yenilemek için bizimle iletişime geçin:',
   'license.signOutOther': 'Çıkış yap ve başka hesapla giriş yap',
-  'license.wantCode': 'FlowPOS Pro için aktivasyon kodu almak istiyorum',
+  'license.wantCode': 'PosFlow için aktivasyon kodu almak istiyorum',
   'license.trialEnded': 'Deneme Süresi Bitti',
   'license.licenseExpired': 'Lisans Süresi Doldu',
   'license.activationRequired': 'Uygulama Aktivasyon Gerekli',
@@ -2286,7 +2286,7 @@ const tr: TranslationDict = {
   'deviceBlocked.actionDesc': 'Cihazınızı değiştirdiyseniz veya hesabı taşımak istiyorsanız, cihazı sıfırlamak için lütfen destek ekibiyle iletişime geçin.',
   'deviceBlocked.contactSupport': 'WhatsApp ile Destek Ekibine Ulaşın',
   'deviceBlocked.signOut': 'Çıkış Yap ve Başka Hesap Dene',
-  'deviceBlocked.whatsappMessage': 'Merhaba, FlowPOS Pro uygulamasındaki kayıtlı cihazımı sıfırlamak için yardıma ihtiyacım var.',
+  'deviceBlocked.whatsappMessage': 'Merhaba, PosFlow uygulamasındaki kayıtlı cihazımı sıfırlamak için yardıma ihtiyacım var.',
 
   // License Management
   'licenseManagement.title': 'Lisans Yönetimi',
@@ -2341,11 +2341,8 @@ const tr: TranslationDict = {
   // Help
   'help.title': 'Yardım ve Özellikler',
   'help.subtitle': 'Tüm işletme türleri için kapsamlı muhasebe sistemi',
-  'help.aiAssistant': 'AI Asistan',
-  'help.askAI': 'Akıllı Asistana Sor',
   'help.faq': 'Sıkça Sorulan Sorular',
   'help.features': 'Sistem Özellikleri',
-  'help.cantFindAnswer': 'Sorunuza cevap bulamadınız mı? Yapay Zeka Asistanına doğrudan sorun!',
   'help.available247': 'Tüm sorularınızı yanıtlamak için 7/24 hizmetinizde',
   'help.typeQuestion': 'Sorunuzu buraya yazın...',
 

@@ -789,7 +789,7 @@ export default function StockTransfer() {
         </div>
 
         <div class="footer">
-          <p>FlowPOS Pro</p>
+          <p>PosFlow</p>
         </div>
       </body>
       </html>

@@ -16,7 +16,7 @@ export function useLicenseReminder() {
     if (!user?.id || licenseState.remainingDays === undefined || licenseState.remainingDays === null) return;
 
     const remaining = licenseState.remainingDays;
-    const storageKey = `hyperpos_license_milestone_${user.id}`;
+    const storageKey = `posflow_license_milestone_${user.id}`;
     let seenMilestones: number[] = [];
     try {
       seenMilestones = JSON.parse(localStorage.getItem(storageKey) || '[]');

@@ -215,11 +215,11 @@ export function PurchaseInvoiceViewDialog({
   const handleShareImage = async () => {
     if (!invoice) return;
 
-    let storeName = 'FlowPOS Pro';
+    let storeName = 'PosFlow';
     let storePhone = '';
     let storeAddress = '';
     try {
-      const raw = localStorage.getItem('hyperpos_settings_v1');
+      const raw = localStorage.getItem('posflow_settings_v1');
       if (raw) {
         const parsed = JSON.parse(raw);
         storeName = parsed.storeSettings?.name || storeName;

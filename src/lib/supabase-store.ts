@@ -56,7 +56,7 @@ export const setCurrentUserId = (userId: string | null) => {
 export const getCurrentUserId = (): string | null => {
   if (currentUserId) return currentUserId;
   try {
-    const cached = localStorage.getItem('hyperpos_session_cache');
+    const cached = localStorage.getItem('posflow_session_cache');
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed?.user?.id) {
@@ -101,7 +101,7 @@ export const getKnownTenantId = (): string | null => {
 
 export const getCurrentUserName = (): string | null => {
   try {
-    const cached = localStorage.getItem('hyperpos_session_cache');
+    const cached = localStorage.getItem('posflow_session_cache');
     if (cached) {
       const parsed = JSON.parse(cached);
       const name = parsed?.user?.user_metadata?.full_name || parsed?.user?.user_metadata?.name || parsed?.user?.email;

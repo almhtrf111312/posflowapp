@@ -1,5 +1,5 @@
 /**
- * UI Scale Configuration Manager for FlowPOS Pro
+ * UI Scale Configuration Manager for PosFlow
  * 
  * Controls root document fontSize proportionally across the entire app
  * (Base 100% = 14px root fontSize).
@@ -28,10 +28,10 @@ export function getUIScaleStorageKey(): string {
 }
 
 export const UI_SCALE_STORAGE_KEY = 'flowpos_ui_scale';
-export const LEGACY_UI_SCALE_STORAGE_KEY = 'hyperpos_ui_scale';
+export const LEGACY_UI_SCALE_STORAGE_KEY = 'posflow_ui_scale';
 export const DEFAULT_UI_SCALE_ID: UIScaleId = '100';
 export const DEFAULT_UI_SCALE_PX = '14px';
-export const UI_SCALE_CHANGED_EVENT = 'hyperpos:ui_scale_changed';
+export const UI_SCALE_CHANGED_EVENT = 'posflow:ui_scale_changed';
 
 /**
  * Master mapping between UI scale identifiers and root document font-size in pixels.
@@ -100,8 +100,8 @@ export const UI_SCALE_OPTIONS: readonly UIScaleOption[] = [
     labelEn: 'Standard / Balanced (100%)',
     badgeAr: 'الافتراضي القياسي',
     badgeEn: 'Default Standard',
-    descriptionAr: 'المقياس الأساسي المعتمد في FlowPOS Pro، متناسق ومريح لجميع الأجهزة',
-    descriptionEn: 'Default recommended scale for FlowPOS Pro, balanced for all screens',
+    descriptionAr: 'المقياس الأساسي المعتمد في PosFlow، متناسق ومريح لجميع الأجهزة',
+    descriptionEn: 'Default recommended scale for PosFlow, balanced for all screens',
   },
   {
     id: '110',
@@ -139,7 +139,7 @@ export function getStoredUIScale(): UIScaleId {
       stored = localStorage.getItem(LEGACY_UI_SCALE_STORAGE_KEY);
     }
     if (!stored) {
-      const rawSettings = localStorage.getItem('hyperpos_settings_v1');
+      const rawSettings = localStorage.getItem('posflow_settings_v1');
       if (rawSettings) {
         const parsed = JSON.parse(rawSettings);
         stored = parsed?.uiScale;

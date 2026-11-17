@@ -11,7 +11,7 @@ const crypto = require('crypto');
 const { ipcMain, net } = require('electron');
 
 // Navigation and external-link policy
-const APP_WEB_ORIGIN = 'https://flowpospro.lovable.app';
+const APP_WEB_ORIGIN = 'https://posflowapp.pages.dev';
 const DEV_ORIGIN = 'http://localhost:5173';
 const EXTERNAL_PROTOCOLS = new Set(['https:', 'http:', 'mailto:', 'tel:', 'whatsapp:', 'tg:']);
 
@@ -90,7 +90,7 @@ async function googleDesktopSignIn(nonceHashed) {
         const okState = reqUrl.searchParams.get('state') === state;
         const success = !err && !!gotCode && okState;
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-        res.end(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>FlowPOS Pro</title><body style="font-family:Segoe UI,Tahoma,sans-serif;background:#f5f7fb;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0"><div style="background:#fff;border-radius:18px;padding:28px 36px;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center"><h2>${success ? 'تم تسجيل الدخول' : 'تعذّر تسجيل الدخول'}</h2><p style="color:#4b5563">${success ? 'يمكنك إغلاق هذه الصفحة والعودة إلى FlowPOS Pro.' : 'ارجع إلى التطبيق وحاول مرة أخرى.'}</p></div></body></html>`);
+        res.end(`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>PosFlow</title><body style="font-family:Segoe UI,Tahoma,sans-serif;background:#f5f7fb;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0"><div style="background:#fff;border-radius:18px;padding:28px 36px;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center"><h2>${success ? 'تم تسجيل الدخول' : 'تعذّر تسجيل الدخول'}</h2><p style="color:#4b5563">${success ? 'يمكنك إغلاق هذه الصفحة والعودة إلى PosFlow.' : 'ارجع إلى التطبيق وحاول مرة أخرى.'}</p></div></body></html>`);
         clearTimeout(timer);
         server.close();
         if (success) resolve(gotCode); else reject(new Error(err || 'state mismatch'));
@@ -176,7 +176,7 @@ function createWindow() {
   // Load the application
   const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
   
-  console.log('=== FlowPOS Pro Electron ===');
+  console.log('=== PosFlow Electron ===');
   console.log('NODE_ENV:', process.env.NODE_ENV);
   console.log('isDev:', isDev);
   console.log('app.getAppPath():', app.getAppPath());
@@ -237,7 +237,7 @@ function createWindow() {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>FlowPOS Pro - Error</title>
+          <title>PosFlow - Error</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, segoe-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; }
             .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 500px; text-align: center; }
@@ -251,7 +251,7 @@ function createWindow() {
         <body>
           <div class="container">
             <h1>⚠️ خطأ في التحميل</h1>
-            <p><strong>FlowPOS Pro - Build Error</strong></p>
+            <p><strong>PosFlow - Build Error</strong></p>
             <p>لم يتم العثور على ملفات التطبيق المترجمة.</p>
             <p>The application build files were not found.</p>
             <p style="background: #f7fafc; padding: 12px; border-radius: 6px; margin: 20px 0; font-size: 14px;">
@@ -261,7 +261,7 @@ function createWindow() {
               الحل: شغّل <code>npm run build</code> قبل بناء النسخة المسطبة<br>
               Solution: Run <code>npm run build</code> before building the installer
             </p>
-            <button onclick="fetch('https://flowpospro.lovable.app').then(() => window.location.href = 'https://flowpospro.lovable.app').catch(() => alert('Could not reach online version'))">التحميل من الإنترنت / Load from Web</button>
+            <button onclick="fetch('https://posflowapp.pages.dev').then(() => window.location.href = 'https://posflowapp.pages.dev').catch(() => alert('Could not reach online version'))">التحميل من الإنترنت / Load from Web</button>
           </div>
         </body>
         </html>
@@ -302,7 +302,7 @@ function createWindow() {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>FlowPOS Pro - Loading Error</title>
+        <title>PosFlow - Loading Error</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, segoe-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; }
           .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 500px; text-align: center; }
@@ -322,7 +322,7 @@ function createWindow() {
           <p class="small">الرجاء التأكد من أن النسخة تم بناؤها بشكل صحيح</p>
           <p>
             <button onclick="location.reload()">إعادة محاولة / Retry</button>
-            <button onclick="fetch('https://flowpospro.lovable.app').then(() => window.location.href = 'https://flowpospro.lovable.app')">الإنترنت / Web</button>
+            <button onclick="fetch('https://posflowapp.pages.dev').then(() => window.location.href = 'https://posflowapp.pages.dev')">الإنترنت / Web</button>
           </p>
         </div>
       </body>

@@ -9,8 +9,8 @@ import { Customer } from './customers-store';
 import { Invoice, InvoiceItem, InvoiceStatus } from './invoices-store';
 import { Debt } from './debts-store';
 
-export const DEMO_MODE_KEY = 'hyperpos_is_demo_mode';
-export const DEMO_STARTED_AT_KEY = 'hyperpos_demo_started_at';
+export const DEMO_MODE_KEY = 'posflow_is_demo_mode';
+export const DEMO_STARTED_AT_KEY = 'posflow_demo_started_at';
 export const DEMO_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
@@ -400,7 +400,7 @@ export const injectGuestDemoData = async (): Promise<void> => {
   // 1. Mark demo mode active
   localStorage.setItem(DEMO_MODE_KEY, 'true');
   localStorage.setItem(DEMO_STARTED_AT_KEY, Date.now().toString());
-  localStorage.setItem('hyperpos_setup_complete', 'true');
+  localStorage.setItem('posflow_setup_complete', 'true');
 
   // 2. Mock demo user session & profile
   const demoUser = {
@@ -422,14 +422,14 @@ export const injectGuestDemoData = async (): Promise<void> => {
     user: demoUser,
   };
 
-  localStorage.setItem('hyperpos_session_cache', JSON.stringify({
+  localStorage.setItem('posflow_session_cache', JSON.stringify({
     user: demoUser,
     session: demoSession,
     expires_at: demoSession.expires_at,
     cached_at: Date.now(),
   }));
 
-  localStorage.setItem('hyperpos_cached_profile', JSON.stringify({
+  localStorage.setItem('posflow_cached_profile', JSON.stringify({
     id: 'demo-profile',
     user_id: 'guest-demo-user',
     full_name: 'مستخدم تجريبي (Demo)',
@@ -478,11 +478,11 @@ export const injectGuestDemoData = async (): Promise<void> => {
     trackCapital: true,
     initialCapital: 10000,
   };
-  localStorage.setItem('hyperpos_settings_v1', JSON.stringify(demoSettings));
+  localStorage.setItem('posflow_settings_v1', JSON.stringify(demoSettings));
 
   // 4. Products in localStorage and IndexedDB
-  localStorage.setItem('hyperpos_products_v1', JSON.stringify(demoProducts));
-  localStorage.setItem('hyperpos_products_cache', JSON.stringify({
+  localStorage.setItem('posflow_products_v1', JSON.stringify(demoProducts));
+  localStorage.setItem('posflow_products_cache', JSON.stringify({
     products: demoProducts,
     timestamp: Date.now(),
   }));
@@ -494,34 +494,34 @@ export const injectGuestDemoData = async (): Promise<void> => {
   }
 
   // 5. Customers in localStorage & cache
-  localStorage.setItem('hyperpos_customers_v1', JSON.stringify(demoCustomers));
-  localStorage.setItem('hyperpos_customers_cache', JSON.stringify(demoCustomers));
+  localStorage.setItem('posflow_customers_v1', JSON.stringify(demoCustomers));
+  localStorage.setItem('posflow_customers_cache', JSON.stringify(demoCustomers));
 
   // 6. Invoices in localStorage & cache
-  localStorage.setItem('hyperpos_invoices_v1', JSON.stringify(demoInvoices));
-  localStorage.setItem('hyperpos_invoices_cache', JSON.stringify({
+  localStorage.setItem('posflow_invoices_v1', JSON.stringify(demoInvoices));
+  localStorage.setItem('posflow_invoices_cache', JSON.stringify({
     invoices: demoInvoices,
     timestamp: Date.now(),
   }));
 
   // 7. Debts in localStorage & cache
-  localStorage.setItem('hyperpos_debts_v1', JSON.stringify(demoDebts));
-  localStorage.setItem('hyperpos_debts_cache', JSON.stringify(demoDebts));
+  localStorage.setItem('posflow_debts_v1', JSON.stringify(demoDebts));
+  localStorage.setItem('posflow_debts_cache', JSON.stringify(demoDebts));
 
   // 8. Categories
   const demoCategories = buildTrialCategories();
-  localStorage.setItem('hyperpos_categories_v1', JSON.stringify(demoCategories));
+  localStorage.setItem('posflow_categories_v1', JSON.stringify(demoCategories));
   applyTrialDisplayDefaults();
   localStorage.setItem('hp_trial_catalog_version', '2');
-  localStorage.setItem('hyperpos_categories_cache', JSON.stringify(demoCategories));
+  localStorage.setItem('posflow_categories_cache', JSON.stringify(demoCategories));
 
   // 9. Cashbox & Capital
-  localStorage.setItem('hyperpos_cashbox_v1', JSON.stringify({
+  localStorage.setItem('posflow_cashbox_v1', JSON.stringify({
     currentBalance: 500,
     lastUpdated: new Date().toISOString(),
   }));
 
-  localStorage.setItem('hyperpos_capital_v1', JSON.stringify({
+  localStorage.setItem('posflow_capital_v1', JSON.stringify({
     initialCapital: 10000,
     currentCapital: 10000,
     totalInvestments: 10000,
@@ -560,7 +560,7 @@ export const clearGuestDemoData = async (force: boolean = false): Promise<boolea
 
   // Absolute safety net: never clear if a real authenticated user is signed in!
   try {
-    const cached = localStorage.getItem('hyperpos_session_cache');
+    const cached = localStorage.getItem('posflow_session_cache');
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed?.user?.id && parsed.user.id !== 'guest-demo-user' && !force) {
@@ -587,22 +587,22 @@ export const clearGuestDemoData = async (force: boolean = false): Promise<boolea
   // Remove demo markers
   localStorage.removeItem(DEMO_MODE_KEY);
   localStorage.removeItem(DEMO_STARTED_AT_KEY);
-  localStorage.removeItem('hyperpos_session_cache');
-  localStorage.removeItem('hyperpos_cached_profile');
+  localStorage.removeItem('posflow_session_cache');
+  localStorage.removeItem('posflow_cached_profile');
 
   // Clear demo data keys
   const keysToRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key) continue;
-    if (key.startsWith('hyperpos_') &&
-        key !== 'hyperpos_language' &&
-        key !== 'hyperpos_theme' &&
-        key !== 'hyperpos_stay_logged_in' &&
-        key !== 'hyperpos_session_cache' &&
-        key !== 'hyperpos_setup_complete' &&
-        key !== 'hyperpos_privacy_accepted' &&
-        key !== 'hyperpos_privacy_version') {
+    if (key.startsWith('posflow_') &&
+        key !== 'posflow_language' &&
+        key !== 'posflow_theme' &&
+        key !== 'posflow_stay_logged_in' &&
+        key !== 'posflow_session_cache' &&
+        key !== 'posflow_setup_complete' &&
+        key !== 'posflow_privacy_accepted' &&
+        key !== 'posflow_privacy_version') {
       keysToRemove.push(key);
     }
   }

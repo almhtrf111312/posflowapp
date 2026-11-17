@@ -366,13 +366,13 @@ export function MaintenancePanel({
   const handleWhatsApp = () => {
     if (!validateForm()) return;
 
-    let storeName = 'HyperPOS Store';
+    let storeName = 'PosFlow Store';
     let storeAddress = '';
     let storePhone = '';
     let footer = 'شكراً لتعاملكم معنا!';
 
     try {
-      const settingsRaw = localStorage.getItem('hyperpos_settings_v1');
+      const settingsRaw = localStorage.getItem('posflow_settings_v1');
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
         storeName = settings.storeSettings?.name || storeName;

@@ -336,7 +336,7 @@ export function BossPlansManager() {
 
             <div className="space-y-1.5">
               <Label>رسالة التفعيل المخصصة (تصل العميل عند التفعيل)</Label>
-              <Textarea rows={2} value={formData.activation_message} onChange={e => setFormData({ ...formData, activation_message: e.target.value })} placeholder="تم تفعيل باقتك بنجاح! شكراً لاختيارك FlowPOS Pro." />
+              <Textarea rows={2} value={formData.activation_message} onChange={e => setFormData({ ...formData, activation_message: e.target.value })} placeholder="تم تفعيل باقتك بنجاح! شكراً لاختيارك PosFlow." />
             </div>
 
             <div className="flex items-center justify-between border rounded-xl p-3">

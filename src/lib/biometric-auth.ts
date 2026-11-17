@@ -2,7 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { BiometricAuth } from '@aparajita/capacitor-biometric-auth';
 
 /**
- * FlowPOS Pro - Unified Biometric & WebAuthn Authentication Engine
+ * PosFlow - Unified Biometric & WebAuthn Authentication Engine
  * Supports:
  *  1. Android / iOS native Capacitor Biometric Auth (@aparajita/capacitor-biometric-auth)
  *  2. Desktop / Browser / PWA / Electron platform biometrics via window.PublicKeyCredential (WebAuthn)
@@ -64,7 +64,7 @@ export async function registerBiometricCredential(userId: string, userName: stri
       publicKey: {
         challenge,
         rp: {
-          name: 'FlowPOS Pro',
+          name: 'PosFlow',
           ...(rpId ? { id: rpId } : {}),
         },
         user: {

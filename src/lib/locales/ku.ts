@@ -1,4 +1,4 @@
-// FlowPOS Pro — ترجمات اللغة (ku). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
+// PosFlow — ترجمات اللغة (ku). تُحمَّل عند الحاجة فقط لتخفيف حجم الإقلاع.
 import type { TranslationDict } from '../i18n';
 
 const ku: TranslationDict = {
@@ -654,7 +654,7 @@ const ku: TranslationDict = {
   'auth.logoutSuccess': 'دەرچوون سەرکەوتوو بوو',
   'auth.invalidCredentials': 'زانیاری چوونەژوورەوە هەڵەیە',
   'auth.passwordMismatch': 'وشە نهێنییەکان یەک ناگرنەوە',
-  'auth.welcome': 'بەخێربێیت بۆ FlowPOS Pro',
+  'auth.welcome': 'بەخێربێیت بۆ PosFlow',
   'auth.loginSubtitle': 'بچۆ ژوورەوە بۆ بەردەوامبوون',
   'auth.signupSubtitle': 'هەژماری نوێت دروست بکە',
   'auth.loading': 'چاوەڕوان بە...',
@@ -1963,8 +1963,8 @@ const ku: TranslationDict = {
   'support.contact': 'پەیوەندی بە پشتگیری تەکنیکی',
   'license.enterCode': 'تکایە کۆدی چالاک کردن بنووسە',
   'license.invalidCode': 'کۆدی چالاک کردن ناسەلامەتە',
-  'license.whatsappHelp': 'سڵاو، بۆ چالاک کردنی FlowPOS Pro یارمەتیم پێویستە',
-  'license.welcome': 'بەخێربێیت بۆ FlowPOS Pro',
+  'license.whatsappHelp': 'سڵاو، بۆ چالاک کردنی PosFlow یارمەتیم پێویستە',
+  'license.welcome': 'بەخێربێیت بۆ PosFlow',
   'license.chooseActivation': 'شێوازی چالاک کردنی بەرنامە هەڵبژێرە',
   'license.haveCode': 'کۆدی چالاک کردنم هەیە',
   'license.haveCodeDesc': 'کۆدی چالاک کردن بنووسە بۆ دەستڕاگەیشتنی تەواو',
@@ -1972,7 +1972,7 @@ const ku: TranslationDict = {
   'license.freeTrialDesc': 'پێش کڕین بەرنامەکە خۆڕایی تاقی بکەرەوە',
   'license.getCodeContact': 'بۆ چالاک کردن یان نوێکردنەوەی بەشداریکردنەکەت پەیوەندیمان پێ بکە:',
   'license.signOutOther': 'دەرچوون و بەکارهێنانی ئەکاونتی دیکە',
-  'license.wantCode': 'دەمەوێ کۆدی چالاک کردنی FlowPOS Pro وەربگرم',
+  'license.wantCode': 'دەمەوێ کۆدی چالاک کردنی PosFlow وەربگرم',
   'license.trialEnded': 'ماوەی تاقیکردنەوە کۆتایی هات',
   'license.licenseExpired': 'مۆڵەت بڕاوە',
   'license.activationRequired': 'چالاک کردنی بەرنامە پێویستە',
@@ -2149,7 +2149,7 @@ const ku: TranslationDict = {
   'deviceBlocked.actionDesc': 'ئەگەر ئامێرەکەت گۆڕیویت، پەیوەندی بە پشتیوانی بکە.',
   'deviceBlocked.contactSupport': 'پەیوەندی بە پشتیوانی لە ڕێگەی واتساپ',
   'deviceBlocked.signOut': 'دەرچوون و تاقیکردنەوەی ئەکاونتێکی دیکە',
-  'deviceBlocked.whatsappMessage': 'سڵاو، بۆ دووبارەکردنەوەی ئامێرم لە FlowPOS Pro یارمەتیم پێویستە.',
+  'deviceBlocked.whatsappMessage': 'سڵاو، بۆ دووبارەکردنەوەی ئامێرم لە PosFlow یارمەتیم پێویستە.',
   'setup.storeInfo': 'زانیارییەکانی فرۆشگا',
   'setup.storeName': 'ناوی فرۆشگا *',
   'setup.storeType': 'جۆری بزنس',
@@ -2198,11 +2198,8 @@ const ku: TranslationDict = {
   'setup.other': 'تر',
   'help.title': 'یارمەتی و تایبەتمەندیەکان',
   'help.subtitle': 'سیستەمی ژمێریاری تەواو بۆ هەموو جۆرە بزنسێک',
-  'help.aiAssistant': 'یارمەتیدەری زیرەکی دەستکرد',
-  'help.askAI': 'لە یارمەتیدەری زیرەکی دەستکرد بپرسە',
   'help.faq': 'پرسیارە باوەکان',
   'help.features': 'تایبەتمەندیەکانی سیستەم',
-  'help.cantFindAnswer': 'وەڵامی پرسیارەکەت نەدۆزیەوە؟ ڕاستەوخۆ بپرسە!',
   'help.available247': '٢٤ کاتژمێر بەردەستە بۆ وەڵامدانەوە',
   'help.typeQuestion': 'پرسیارەکەت ئێرە بنووسە...',
   'invoices.subtotal': 'کۆی پێش داشکاندن',

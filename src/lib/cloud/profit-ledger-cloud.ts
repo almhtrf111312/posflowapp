@@ -22,7 +22,7 @@ export interface ProfitLedger {
   fetchedAt: number;
 }
 
-const CACHE_KEY = 'hyperpos_profit_ledger_v1';
+const CACHE_KEY = 'posflow_profit_ledger_v1';
 const CACHE_TTL_MS = 20000;
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 50;

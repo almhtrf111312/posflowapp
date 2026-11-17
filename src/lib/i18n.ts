@@ -1,4 +1,4 @@
-// Internationalization (i18n) system for FlowPOS Pro
+// Internationalization (i18n) system for PosFlow
 export type Language = 'ar' | 'en' | 'tr' | 'fa' | 'ku';
 
 export interface LanguageInfo {
@@ -63,10 +63,10 @@ export function loadLanguage(lang: Language): Promise<void> {
 export function getCurrentLanguage(): Language {
   if (typeof window === 'undefined') return 'ar';
   try {
-    const stored = localStorage.getItem('hyperpos_language');
+    const stored = localStorage.getItem('posflow_language');
     if (stored && ENABLED_LANGUAGE_CODES.includes(stored as Language)) return stored as Language;
     // أول تشغيل أو لغة معطّلة محفوظة سابقاً: العربية وتُحفظ فوراً
-    localStorage.setItem('hyperpos_language', 'ar');
+    localStorage.setItem('posflow_language', 'ar');
   } catch {}
   return 'ar';
 }
@@ -74,7 +74,7 @@ export function getCurrentLanguage(): Language {
 export function setLanguage(lang: Language): void {
   void loadLanguage(lang);
   try {
-    localStorage.setItem('hyperpos_language', lang);
+    localStorage.setItem('posflow_language', lang);
   } catch {}
   const dir = languages.find(l => l.code === lang)?.direction || (lang === 'en' || lang === 'tr' ? 'ltr' : 'rtl');
   if (typeof document !== 'undefined') {

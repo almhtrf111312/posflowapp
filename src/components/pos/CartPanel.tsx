@@ -83,7 +83,7 @@ const isRepairStoreType = () => getCurrentStoreType() === 'repair';
 // Helper to retrieve fallback cost price from local product cache if item.costPrice is missing or 0
 const getFallbackCostPrice = (productId: string): number => {
   try {
-    const cached = localStorage.getItem('hyperpos_products_cache');
+    const cached = localStorage.getItem('posflow_products_cache');
     if (cached) {
       const parsed = JSON.parse(cached);
       const list = parsed.products || (Array.isArray(parsed) ? parsed : null);
@@ -320,7 +320,7 @@ export function CartPanel({
       return propIsMaintenanceEnabled;
     }
     try {
-      const raw = window.localStorage.getItem('hyperpos_settings_v1');
+      const raw = window.localStorage.getItem('posflow_settings_v1');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed?.hideMaintenanceSection) return false;
@@ -401,7 +401,7 @@ export function CartPanel({
   const [taxMode, setTaxMode] = useState<'net' | 'gross'>('net');
   const storeSettingsRaw = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem('hyperpos_settings_v1') || '{}');
+      return JSON.parse(localStorage.getItem('posflow_settings_v1') || '{}');
     } catch { return {}; }
   }, []);
   const storeTaxEnabled = storeSettingsRaw.taxEnabled ?? false;
@@ -1631,14 +1631,14 @@ export function CartPanel({
     }
 
     // Load store settings
-    let storeName = 'FlowPOS Pro';
+    let storeName = 'PosFlow';
     let storeAddress = '';
     let storePhone = '';
     let storeLogo = '';
     let footer = t('pos.receiptThanks') || 'شكراً لتعاملكم معنا!';
 
     try {
-      const settingsRaw = localStorage.getItem('hyperpos_settings_v1');
+      const settingsRaw = localStorage.getItem('posflow_settings_v1');
       if (settingsRaw) {
         const settings = JSON.parse(settingsRaw);
         storeName = settings.storeSettings?.name || storeName;

@@ -149,7 +149,7 @@ export interface SettingsTabItem {
   keywords?: string[];
 }
 
-const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
+const SETTINGS_STORAGE_KEY = 'posflow_settings_v1';
 
 // Type-safe settings interfaces
 interface SyncSettingsType {
@@ -385,14 +385,14 @@ export default function Settings() {
       setNotificationPerm(status);
 
       if (status === 'granted') {
-        localStorage.setItem('hyperpos_notifications_enabled', 'true');
+        localStorage.setItem('posflow_notifications_enabled', 'true');
         toast({ title: '✓ تم تفعيل الإشعارات بنجاح', description: 'ستصلك تنبيهات المبيعات والديون ونفاذ المخزون' });
         // إرسال إشعار تجريبي فوري حقيقي في شريط الإشعارات
-        await sendLocalNotification('FlowPOS Pro', '🎉 تنبيه تجريبي: نظام الإشعارات يعمل بنجاح!');
+        await sendLocalNotification('PosFlow', '🎉 تنبيه تجريبي: نظام الإشعارات يعمل بنجاح!');
       } else {
         toast({
           title: 'تنبيه الأذونات',
-          description: 'يرجى السماح بالإشعارات للتطبيق من إعدادات الهاتف (التطبيقات > FlowPOS Pro > الإشعارات)',
+          description: 'يرجى السماح بالإشعارات للتطبيق من إعدادات الهاتف (التطبيقات > PosFlow > الإشعارات)',
           variant: 'destructive'
         });
       }
@@ -403,7 +403,7 @@ export default function Settings() {
   };
 
   const handleSendTestNotification = async () => {
-    const success = await sendLocalNotification('FlowPOS Pro', '🎉 تنبيه تجريبي: نظام الإشعارات يعمل بنجاح!');
+    const success = await sendLocalNotification('PosFlow', '🎉 تنبيه تجريبي: نظام الإشعارات يعمل بنجاح!');
     if (success) {
       toast({
         title: '🎉 تم إرسال الإشعار التجريبي',
@@ -1250,7 +1250,7 @@ export default function Settings() {
     setInitialCapital(snap.initialCapital ?? 0);
     if (snap.productFieldsConfig) {
       setProductFieldsConfig({ ...snap.productFieldsConfig });
-      localStorage.setItem('hyperpos_product_fields_v1', JSON.stringify(snap.productFieldsConfig));
+      localStorage.setItem('posflow_product_fields_v1', JSON.stringify(snap.productFieldsConfig));
       emitEvent(EVENTS.PRODUCT_FIELDS_UPDATED, snap.productFieldsConfig);
     } else {
       setProductFieldsConfig(null);
@@ -1337,9 +1337,9 @@ export default function Settings() {
       // تطهير عملة التقارير إذا أصبحت معطلة
       if (typeof window !== 'undefined' && window.localStorage) {
         try {
-          const savedReportCur = window.localStorage.getItem('hyperpos_report_currency');
+          const savedReportCur = window.localStorage.getItem('posflow_report_currency');
           if (savedReportCur && cleanEnabledCurrencies[savedReportCur] !== true) {
-            window.localStorage.setItem('hyperpos_report_currency', 'USD');
+            window.localStorage.setItem('posflow_report_currency', 'USD');
           }
         } catch {}
       }
@@ -1404,10 +1404,10 @@ export default function Settings() {
         customFields: existingCustomFields,
       });
 
-      localStorage.setItem('hyperpos_toast_duration', String((notificationSettings.durationSeconds || 2) * 1000));
+      localStorage.setItem('posflow_toast_duration', String((notificationSettings.durationSeconds || 2) * 1000));
 
       if (productFieldsConfig) {
-        localStorage.setItem('hyperpos_product_fields_v1', JSON.stringify(productFieldsConfig));
+        localStorage.setItem('posflow_product_fields_v1', JSON.stringify(productFieldsConfig));
         emitEvent(EVENTS.PRODUCT_FIELDS_UPDATED, productFieldsConfig);
       }
       setProductFieldsChanged(false);
@@ -1525,7 +1525,7 @@ export default function Settings() {
       const { generateBackupData } = await import('@/lib/auto-backup');
       const backupData = await generateBackupData();
 
-      const storeName = storeSettings.name.replace(/[^a-zA-Z0-9أ-ي\s_-]/g, '').trim() || 'hyperpos';
+      const storeName = storeSettings.name.replace(/[^a-zA-Z0-9أ-ي\s_-]/g, '').trim() || 'posflow';
       const dateStr = new Date().toISOString().split('T')[0];
       const filename = `backup_${storeName}_${dateStr}.json`;
 
@@ -1719,7 +1719,7 @@ export default function Settings() {
       const { generateBackupData } = await import('@/lib/auto-backup');
       const backupData = await generateBackupData();
 
-      const filename = `hyperpos_export_${new Date().toISOString().split('T')[0]}.json`;
+      const filename = `posflow_export_${new Date().toISOString().split('T')[0]}.json`;
 
       // Use cross-platform download utility
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1761,7 +1761,7 @@ export default function Settings() {
       const now = new Date();
       const dateStr = now.toLocaleDateString('ar-SA');
       const timeStr = now.toLocaleTimeString('ar-SA');
-      const storeName = storeSettings.name || 'FlowPOS Pro';
+      const storeName = storeSettings.name || 'PosFlow';
       const storePhone = storeSettings.phone || '';
       const storeAddress = storeSettings.address || '';
       const paperSize = printSettings.paperSize || '80mm';
@@ -1813,7 +1813,7 @@ export default function Settings() {
           </div>
           <div class="footer">
             <p>${footer}</p>
-            <p style="margin-top: 4px; font-size: 9px; color: #888;">FlowPOS Pro • فحص استجابة الطابعة ناجح</p>
+            <p style="margin-top: 4px; font-size: 9px; color: #888;">PosFlow • فحص استجابة الطابعة ناجح</p>
           </div>
         </body>
         </html>
@@ -2057,7 +2057,7 @@ export default function Settings() {
                 </div>
                 {notificationPerm === 'denied' ? (
                   <p className="text-[11px] text-muted-foreground">
-                    تم رفض الإذن سابقاً. فعّله من إعدادات الهاتف: التطبيقات ← FlowPOS Pro ← الإشعارات.
+                    تم رفض الإذن سابقاً. فعّله من إعدادات الهاتف: التطبيقات ← PosFlow ← الإشعارات.
                   </p>
                 ) : (
                   <Button className="w-full sm:w-auto" onClick={() => void handleRequestNotificationPermission()}>
@@ -2144,7 +2144,7 @@ export default function Settings() {
                     value={[notificationSettings.durationSeconds ?? 2]}
                     onValueChange={([val]) => {
                       setNotificationSettings({ ...notificationSettings, durationSeconds: val });
-                      localStorage.setItem('hyperpos_toast_duration', String(val * 1000));
+                      localStorage.setItem('posflow_toast_duration', String(val * 1000));
                     }}
                     min={0.5}
                     max={3}
@@ -2441,9 +2441,9 @@ export default function Settings() {
           <div className="space-y-5">
             {/* App Identity */}
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
-              <img src={appIconUrl} alt="FlowPOS Pro" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
+              <img src={appIconUrl} alt="PosFlow" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
               <div>
-                <h2 className="text-xl font-bold text-foreground">FlowPOS Pro</h2>
+                <h2 className="text-xl font-bold text-foreground">PosFlow</h2>
                 <p className="text-sm text-muted-foreground">{isRTL ? 'نظام نقطة البيع المتكامل' : 'Integrated Point of Sale System'}</p>
               </div>
             </div>
@@ -2508,7 +2508,7 @@ export default function Settings() {
 
             {/* Footer */}
             <p className="text-center text-xs text-muted-foreground pb-2">
-              {isRTL ? 'جميع الحقوق محفوظة © ٢٠٢٦ FlowPOS Pro' : '© 2026 FlowPOS Pro. All rights reserved.'}
+              {isRTL ? 'جميع الحقوق محفوظة © ٢٠٢٦ PosFlow' : '© 2026 PosFlow. All rights reserved.'}
             </p>
           </div>
         );

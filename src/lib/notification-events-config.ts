@@ -1,5 +1,5 @@
 /**
- * Notification Events Configuration & Gatekeeper - FlowPOS Pro
+ * Notification Events Configuration & Gatekeeper - PosFlow
  * ============================================================
  * Provides granular event control for all in-app notifications.
  * Allows cashiers/managers to toggle specific notifications on/off.
@@ -148,7 +148,7 @@ export function getDefaultNotificationEvents(): Record<string, boolean> {
   return defaults;
 }
 
-const SETTINGS_KEY = 'hyperpos_settings_v1';
+const SETTINGS_KEY = 'posflow_settings_v1';
 
 /**
  * Check if a specific notification event is allowed to show

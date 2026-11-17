@@ -8,41 +8,41 @@ import { saveCategories } from '@/lib/categories-store';
 import { buildTrialCatalog, buildTrialCategories, applyTrialDisplayDefaults } from '@/lib/trial-sample-catalog';
 
 const WINDOW_START_KEY = 'hp_trial_window_start';
-const PRODUCTS_STORAGE_KEY = 'hyperpos_products_v1';
-const PRODUCTS_CACHE_KEY = 'hyperpos_products_cache';
-const CATEGORIES_CACHE_KEY = 'hyperpos_categories_cache';
+const PRODUCTS_STORAGE_KEY = 'posflow_products_v1';
+const PRODUCTS_CACHE_KEY = 'posflow_products_cache';
+const CATEGORIES_CACHE_KEY = 'posflow_categories_cache';
 const CATALOG_VERSION_KEY = 'hp_trial_catalog_version';
 const CATALOG_VERSION = '2';
 
 /** بادئات تُمسح من localStorage (بيانات الأعمال والكاش والطابور والتشخيص) */
-const WIPE_PREFIXES = ['hyperpos_', 'flowpos_', 'fps_swr_', 'hp_sync_', 'hp_audit_', 'hp_offline_', 'hp_radar_'];
+const WIPE_PREFIXES = ['posflow_', 'flowpos_', 'fps_swr_', 'hp_sync_', 'hp_audit_', 'hp_offline_', 'hp_radar_'];
 
 /** مفاتيح تبقى دائماً (داخل البادئات المحذوفة) */
 const PRESERVE_EXACT = new Set<string>([
-  'hyperpos_language',
-  'hyperpos_theme',
-  'hyperpos_theme_v1',
-  'hyperpos_device_id',
-  'hyperpos_stay_logged_in',
-  'hyperpos_setup_complete',
-  'hyperpos_settings_v1',
-  'hyperpos_session_cache',
-  'hyperpos_cached_profile',
-  'hyperpos_last_user_id',
-  'hyperpos_auto_login_attempted',
-  'hyperpos_privacy_accepted',
-  'hyperpos_privacy_version',
-  'hyperpos_license_cache_v1',
-  'hyperpos_user_role_cache',
-  'hyperpos_toast_duration',
-  'hyperpos_clear_version',
-  'hyperpos_seen_broadcasts',
+  'posflow_language',
+  'posflow_theme',
+  'posflow_theme_v1',
+  'posflow_device_id',
+  'posflow_stay_logged_in',
+  'posflow_setup_complete',
+  'posflow_settings_v1',
+  'posflow_session_cache',
+  'posflow_cached_profile',
+  'posflow_last_user_id',
+  'posflow_auto_login_attempted',
+  'posflow_privacy_accepted',
+  'posflow_privacy_version',
+  'posflow_license_cache_v1',
+  'posflow_user_role_cache',
+  'posflow_toast_duration',
+  'posflow_clear_version',
+  'posflow_seen_broadcasts',
   'flowpos_persistent_hardware_id',
 ]);
 
 /** بادئات تبقى: كاش الربط بالجهاز، وقفل التطبيق بالرمز، وطلب إعادة تعيين الرمز */
 const PRESERVE_PREFIXES = [
-  'hyperpos_device_binding_cache_v',
+  'posflow_device_binding_cache_v',
   'flowpos_app_lock_',
   'flowpos_pin_reset_required_',
 ];

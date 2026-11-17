@@ -8,7 +8,7 @@ import { isGuestDemoMode } from '@/lib/demo-data';
 import { pullStoreSettingsWithGuard } from '@/lib/store-settings-sync';
 import { isLocalOnlyMode } from '@/lib/subscription-lock';
 
-const SETTINGS_STORAGE_KEY = 'hyperpos_settings_v1';
+const SETTINGS_STORAGE_KEY = 'posflow_settings_v1';
 
 // Unified tables list for easier management and consistent owner-scoping
 const SYNC_TABLES = [

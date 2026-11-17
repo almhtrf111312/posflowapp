@@ -948,7 +948,7 @@ export const isNoInventoryMode = (storeType?: string): boolean => {
 // Get current store type from localStorage
 export const getCurrentStoreType = (): string => {
   try {
-    const raw = localStorage.getItem('hyperpos_settings_v1');
+    const raw = localStorage.getItem('posflow_settings_v1');
     if (raw) {
       const settings = JSON.parse(raw);
       return settings.storeSettings?.type || 'general';

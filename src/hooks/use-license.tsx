@@ -56,7 +56,7 @@ interface LicenseContextType extends LicenseState {
 
 const LicenseContext = createContext<LicenseContextType | undefined>(undefined);
 
-const LICENSE_CACHE_KEY = 'hyperpos_license_cache_v1';
+const LICENSE_CACHE_KEY = 'posflow_license_cache_v1';
 
 function saveLicenseCache(state: Omit<LicenseState, 'isLoading' | 'error'>, userId?: string) {
   try {

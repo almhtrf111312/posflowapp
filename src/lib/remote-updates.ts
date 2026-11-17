@@ -97,10 +97,10 @@ export function getSeenBroadcasts(): string[] {
   try {
     const raw = localStorage.getItem(SEEN_KEY);
     if (raw) return JSON.parse(raw);
-    const legacy = localStorage.getItem('hyperpos_seen_broadcasts');
+    const legacy = localStorage.getItem('posflow_seen_broadcasts');
     if (legacy) {
       localStorage.setItem(SEEN_KEY, legacy);
-      localStorage.removeItem('hyperpos_seen_broadcasts');
+      localStorage.removeItem('posflow_seen_broadcasts');
       return JSON.parse(legacy);
     }
     return [];

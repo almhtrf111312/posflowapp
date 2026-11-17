@@ -1,13 +1,13 @@
 {
   "name": "flowpos-pro",
   "version": "1.0.0",
-  "description": "FlowPOS Pro - نظام إدارة المبيعات والمخزون",
+  "description": "PosFlow - نظام إدارة المبيعات والمخزون",
   "main": "main.js",
   "author": "FlowPOS Team",
   "license": "MIT",
   "build": {
     "appId": "app.flowpos.pro",
-    "productName": "FlowPOS Pro",
+    "productName": "PosFlow",
     "directories": {
       "output": "../electron-dist"
     },
@@ -35,7 +35,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "FlowPOS Pro",
+      "shortcutName": "PosFlow",
       "installerIcon": "../resources/icon.png",
       "uninstallerIcon": "../resources/icon.png",
       "installerHeaderIcon": "../resources/icon.png",

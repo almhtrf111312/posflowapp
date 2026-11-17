@@ -72,7 +72,7 @@ function toCustomer(cloud: CloudCustomer): Customer {
 }
 
 // Local storage cache helpers
-const LOCAL_CACHE_KEY = 'hyperpos_customers_cache';
+const LOCAL_CACHE_KEY = 'posflow_customers_cache';
 
 const saveCustomersLocally = (customers: Customer[]) => {
   try {

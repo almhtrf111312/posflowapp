@@ -1,5 +1,5 @@
 /**
- * Comprehensive Accounting Logic Audit Suite for FlowPOS Pro
+ * Comprehensive Accounting Logic Audit Suite for PosFlow
  * Based on: "خطة اختبار شاملة للمنطق المحاسبي في FlowPOS" (October 2026)
  *
  * Covers:
@@ -990,7 +990,7 @@ console.log('\n--- SECTION 8: PURCHASES & WAC (PU1 - PU13) ---');
     expected: 'مخزون 20، والتكلفة تبقى 6 دون انخفاض',
     actual: `مخزون ${res.newStock}، تكلفة ${res.newCost}`,
     status: pass ? 'PASS' : 'FAIL',
-    designNote: 'في FlowPOS Pro: البضاعة المجانية بتكلفة 0 لا تخفض تكلفة المخزون لحماية هوامش الربح وفق الشرط الصريح IF _unit_cost = 0 THEN _nc := _c في دالة receive_stock_wac.',
+    designNote: 'في PosFlow: البضاعة المجانية بتكلفة 0 لا تخفض تكلفة المخزون لحماية هوامش الربح وفق الشرط الصريح IF _unit_cost = 0 THEN _nc := _c في دالة receive_stock_wac.',
   });
 }
 
@@ -1139,7 +1139,7 @@ console.log('\n--- SECTION 10: CASHBOX & SHIFTS ---');
 {
   recordResult({ id: 'SH1', category: 'الورديات والصندوق', description: 'مزامنة الوردية المفتوحة عبر الأجهزة وإعادة التحميل', expected: 'الوردية وأرقامها نفسها محفوظة سحابياً ومحلياً', actual: 'مزامنة فورية عبر cashbox-cloud و Dexie', status: 'PASS' });
   recordResult({ id: 'SH2', category: 'الورديات والصندوق', description: 'منع فتح وردية ثانية أثناء وجود وردية مفتوحة', expected: 'منع فتح وردية جديدة قبل إغلاق النشطة', actual: 'محمي بحالة getActiveShift', status: 'PASS' });
-  recordResult({ id: 'SH3', category: 'الورديات والصندوق', description: 'البيع بدون وردية مفتوحة', expected: 'تنبيه الكاشير لفتح وردية أو تسجيل بالحساب العام', actual: 'التطبيق يطلب فتح وردية قبل تفعيل سلة البيع', status: 'PASS', designNote: 'في FlowPOS Pro: يلزم فتح وردية نقدية لبدء عمليات البيع لضمان التدقيق المالي وضبط رصيد الدرج.' });
+  recordResult({ id: 'SH3', category: 'الورديات والصندوق', description: 'البيع بدون وردية مفتوحة', expected: 'تنبيه الكاشير لفتح وردية أو تسجيل بالحساب العام', actual: 'التطبيق يطلب فتح وردية قبل تفعيل سلة البيع', status: 'PASS', designNote: 'في PosFlow: يلزم فتح وردية نقدية لبدء عمليات البيع لضمان التدقيق المالي وضبط رصيد الدرج.' });
   recordResult({ id: 'SH4', category: 'الورديات والصندوق', description: 'تسجيل مصروفات متعددة العملات (USD, SYP, KWD)', expected: 'تسجيل القيمة الأصلية وسعر الصرف دون تقريب تعسفي', actual: 'مطابق للحقول الحديثة original_currency و exchange_rate', status: 'PASS' });
   recordResult({ id: 'SH5', category: 'الورديات والصندوق', description: 'تعديل أو حذف مصروف وأثره على الصندوق', expected: 'استرجاع رصيد الدرج وتحديث التقارير فورياً', actual: 'مطابق في cashbox-store و expenses-cloud', status: 'PASS' });
   recordResult({ id: 'SH6', category: 'الورديات والصندوق', description: 'المصروف الدوري المتكرر عند إعادة تشغيل التطبيق', expected: 'تنفيذ الدفع لمرة واحدة في موعد الاستحقاق دون تكرار', actual: 'useDueExpensesChecker يفحص التاريخ والختم الزمني', status: 'PASS' });

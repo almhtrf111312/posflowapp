@@ -90,9 +90,9 @@ export async function checkUserAccountStatus(userId: string, timeoutMs: number =
 }
 
 // Session persistence keys
-const STAY_LOGGED_IN_KEY = 'hyperpos_stay_logged_in';
-const SESSION_CACHE_KEY = 'hyperpos_session_cache';
-const AUTO_LOGIN_ATTEMPTED_KEY = 'hyperpos_auto_login_attempted';
+const STAY_LOGGED_IN_KEY = 'posflow_stay_logged_in';
+const SESSION_CACHE_KEY = 'posflow_session_cache';
+const AUTO_LOGIN_ATTEMPTED_KEY = 'posflow_auto_login_attempted';
 
 export interface Profile {
   id: string;
@@ -181,7 +181,7 @@ const getCachedSession = (): { user: User | null; session: Session | null } => {
       return { user: demoUser, session: demoSession };
     }
 
-    // 1. Check custom hyperpos_session_cache
+    // 1. Check custom posflow_session_cache
     const cached = localStorage.getItem(SESSION_CACHE_KEY);
     if (cached) {
       const data = JSON.parse(cached);
@@ -225,17 +225,17 @@ const clearAllUserSessionCaches = async () => {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith('hyperpos_') || key.startsWith('flowpos_') || key.startsWith('fps_swr_'))) {
+      if (key && (key.startsWith('posflow_') || key.startsWith('flowpos_') || key.startsWith('fps_swr_'))) {
         // استثناء إعدادات اللغة والثيم والحساب وبصمة الجهاز المحفوظة الضرورية
         if (
-          !key.startsWith('hyperpos_sync_pending_') &&
-          key !== 'hyperpos_language' &&
-          key !== 'hyperpos_theme' &&
-          key !== 'hyperpos_stay_logged_in' &&
-          key !== 'hyperpos_setup_complete' &&
-          key !== 'hyperpos_privacy_accepted' &&
-          key !== 'hyperpos_privacy_version' &&
-          key !== 'hyperpos_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند الخروج
+          !key.startsWith('posflow_sync_pending_') &&
+          key !== 'posflow_language' &&
+          key !== 'posflow_theme' &&
+          key !== 'posflow_stay_logged_in' &&
+          key !== 'posflow_setup_complete' &&
+          key !== 'posflow_privacy_accepted' &&
+          key !== 'posflow_privacy_version' &&
+          key !== 'posflow_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند الخروج
           key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
           key !== 'flowpos_persistent_hardware_id' && // 👈 حماية البصمة الاحتياطية الدائمة
           !key.startsWith('flowpos_app_lock_') && // 👈 حماية إعدادات وهاش قفل الأمان من المسح عند الخروج
@@ -288,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => cachedInitial.session);
   const [profile, setProfile] = useState<Profile | null>(() => {
     try {
-      const p = localStorage.getItem('hyperpos_cached_profile');
+      const p = localStorage.getItem('posflow_cached_profile');
       return p ? JSON.parse(p) : null;
     } catch { return null; }
   });
@@ -310,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       if (data) {
-        try { localStorage.setItem('hyperpos_cached_profile', JSON.stringify(data)); } catch { /* ignore storage error */ }
+        try { localStorage.setItem('posflow_cached_profile', JSON.stringify(data)); } catch { /* ignore storage error */ }
       }
       return data as Profile | null;
     } catch (err) {

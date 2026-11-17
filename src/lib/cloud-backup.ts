@@ -38,10 +38,10 @@ export const uploadCloudBackup = async (data?: object): Promise<boolean> => {
 
     const backupData = data || await generateBackupData();
     // The secret is the random per-account key stored server-side (owner-only RLS), not the public user id.
-    // Falls back to the user id only when the key cannot be fetched, so a backup is never skipped.
     const keyMaterial = await getAccountKeyMaterial(userId);
-    const encrypted = await encryptBackupV2(backupData, keyMaterial || userId);
-    const fileName = `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.hpbk`;
+    if (!keyMaterial) return false;
+    const encrypted = await encryptBackupV2({ ...backupData, appName: 'FlowBOS Pro' }, keyMaterial);
+    const fileName = `FlowBOS Pro - Backup - ${new Date().toISOString().replace(/[:.]/g, '-')}.hpbk`;
     const filePath = `${userId}/${fileName}`;
 
     const { error } = await supabase.storage
@@ -174,3 +174,4 @@ export const formatBackupSize = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 };
+

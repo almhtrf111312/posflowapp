@@ -10,6 +10,7 @@ import { Capacitor } from '@capacitor/core';
 export interface LocalBackup {
   id: string;
   reason: string;
+  appName?: string;
   timestamp: string;
   size: number; // bytes
   data: Record<string, unknown>;
@@ -43,18 +44,19 @@ function gatherBackupData(): Record<string, unknown> {
 }
 
 /**
- * Save backup to native filesystem (Documents/HyperPOS/backups/)
+ * Save backup to native filesystem (Documents/FlowBOS Pro/backups/)
  */
 async function saveToNativeFS(backup: LocalBackup): Promise<void> {
   try {
-    const { Filesystem, Directory } = await import('@capacitor/filesystem');
-    const filename = `backup_${backup.id}.json`;
+    const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+    const filename = `FlowBOS Pro - Backup - ${backup.id}.json`;
     const content = JSON.stringify(backup);
 
     await Filesystem.writeFile({
-      path: `HyperPOS/backups/${filename}`,
+      path: `FlowBOS Pro/backups/${filename}`,
       data: content,
       directory: Directory.Documents,
+      encoding: Encoding.UTF8,
       recursive: true,
     });
     console.log('[AutoBackup] Saved to native FS:', filename);
@@ -77,6 +79,7 @@ export function triggerAutoBackup(reason: string): void {
       const backup: LocalBackup = {
         id: Date.now().toString(36),
         reason,
+        appName: 'FlowBOS Pro',
         timestamp: new Date().toISOString(),
         size: new Blob([jsonStr]).size,
         data,
@@ -149,3 +152,4 @@ export function formatBackupSize(bytes: number): string {
 }
 
 export const BACKUP_UPDATED_EVENT = BACKUP_EVENT;
+

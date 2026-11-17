@@ -140,6 +140,7 @@ export const generateBackupData = async (): Promise<object> => {
     timestamp: new Date().toISOString(),
     localTimestamp: formatDateTime(new Date().toISOString()),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    appName: 'FlowBOS Pro',
     source: 'hyperpos_backup_cloud',
     storeInfo: storeSettings,
     data: {
@@ -199,7 +200,7 @@ const tryParse = (key: string) => {
 export const saveBackupLocally = async (): Promise<boolean> => {
   try {
     const backupData = await generateBackupData();
-    const fileName = `hyperpos_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const fileName = `FlowBOS Pro - Backup - ${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
 
     // Check if running on native platform
     const isNative = typeof window !== 'undefined' &&
@@ -207,7 +208,7 @@ export const saveBackupLocally = async (): Promise<boolean> => {
 
     if (isNative) {
       await Filesystem.writeFile({
-        path: `HyperPOS/backups/${fileName}`,
+        path: `FlowBOS Pro/backups/${fileName}`,
         data: JSON.stringify(backupData, null, 2),
         directory: Directory.Documents,
         encoding: Encoding.UTF8,
@@ -323,10 +324,11 @@ export const stopAutoBackup = (): void => {
 // Generate downloadable JSON backup for manual export
 export const generateDownloadableBackup = async (): Promise<{ data: string; fileName: string }> => {
   const backupData = await generateBackupData();
-  const fileName = `hyperpos_full_backup_${new Date().toISOString().split('T')[0]}.json`;
+  const fileName = `FlowBOS Pro - Full Backup - ${new Date().toISOString().split('T')[0]}.json`;
 
   return {
     data: JSON.stringify(backupData, null, 2),
     fileName,
   };
 };
+

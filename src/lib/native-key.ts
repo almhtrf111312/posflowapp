@@ -55,10 +55,9 @@ export async function initSecureStorageKey(): Promise<void> {
         localStorage.removeItem(APP_SECRET_STORAGE);
         return;
       }
-      // The keystore key is gone (should only happen with a wiped keystore): data sealed with
-      // the old secret cannot be read any more, so start a new one instead of locking the app.
-      console.error('[NativeKey] stored key could not be unwrapped; starting a new local key');
-      localStorage.removeItem(WRAPPED_APP_SECRET_STORAGE);
+      // Keep the wrapped key and encrypted data recoverable after a transient failure.
+      console.error('[NativeKey] stored key could not be unwrapped; preserving it for recovery');
+      return;
     }
 
     // First run on this version: move the existing secret (or a new one) under the keystore
@@ -75,3 +74,4 @@ export async function initSecureStorageKey(): Promise<void> {
     console.warn('[NativeKey] keystore protection not active:', error);
   }
 }
+

@@ -38,7 +38,7 @@ export function useUsersManagement() {
           id: 'demo-user-1',
           user_id: 'guest-demo-user',
           name: profile?.full_name || 'مدير الحساب التجريبي',
-          email: 'demo@flowpos.local',
+          email: 'demo@posflow.local',
           phone: '',
           role: 'admin',
           userType: 'cashier',

@@ -405,7 +405,7 @@ export const injectGuestDemoData = async (): Promise<void> => {
   // 2. Mock demo user session & profile
   const demoUser = {
     id: 'guest-demo-user',
-    email: 'guest@flowpos.demo',
+    email: 'guest@posflow.demo',
     role: 'authenticated',
     aud: 'authenticated',
     app_metadata: {},
@@ -445,7 +445,7 @@ export const injectGuestDemoData = async (): Promise<void> => {
       name: 'متجر فلو التجريبي',
       type: 'general',
       phone: '0999000111',
-      email: 'demo@flowpos.app',
+      email: 'demo@posflow.app',
       address: 'المعرض الرئيسي',
       logo: '',
     },

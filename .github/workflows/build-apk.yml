@@ -158,9 +158,9 @@ jobs:
           fi
 
           if [ -z "$KEY_ALIAS" ]; then
-            KEY_ALIAS=$(keytool -list -keystore android/app/posflow-release.keystore -storepass "$KEYSTORE_PASS" 2>/dev/null | grep -m 1 "PrivateKeyEntry" | awk -F',' '{print $1}' | tr -d ' ' || echo "flowpos_prod")
+            KEY_ALIAS=$(keytool -list -keystore android/app/posflow-release.keystore -storepass "$KEYSTORE_PASS" 2>/dev/null | grep -m 1 "PrivateKeyEntry" | awk -F',' '{print $1}' | tr -d ' ' || echo "posflow_prod")
             if [ -z "$KEY_ALIAS" ]; then
-              KEY_ALIAS="flowpos_prod"
+              KEY_ALIAS="posflow_prod"
             fi
           fi
 

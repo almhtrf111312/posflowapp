@@ -181,7 +181,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           });
           const type = String(n.type || '');
           if (type.startsWith('license')) {
-            window.dispatchEvent(new Event('flowpos:license-changed'));
+            window.dispatchEvent(new Event('posflow:license-changed'));
           }
           if (type.startsWith('license') || type === 'subscription_request') {
             showToast.info(n.title, { description: n.message });

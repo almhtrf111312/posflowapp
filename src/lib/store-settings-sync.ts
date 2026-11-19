@@ -231,7 +231,7 @@ export function loadUnifiedStoreSettings(): UnifiedStoreSettings {
     // قراءة نمط لوحة التحكم للمنصة الحالية
     let localDesign: 'classic' | 'unified_pro' = 'classic';
     try {
-      const designKey = `flowpos_layout_${getPlatformStoragePrefix()}`;
+      const designKey = `posflow_layout_${getPlatformStoragePrefix()}`;
       const d = localStorage.getItem(designKey) || localStorage.getItem('posflow_dashboard_design_v1');
       if (d === 'unified_pro' || d === 'classic') localDesign = d;
     } catch {

@@ -288,7 +288,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           key !== 'posflow_recurring_expenses_v1' &&
           key !== 'posflow_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند تغيير المستخدم
           key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
-          key !== 'flowpos_persistent_hardware_id') { // 👈 حماية البصمة الاحتياطية الدائمة
+          key !== 'posflow_persistent_hardware_id') { // 👈 حماية البصمة الاحتياطية الدائمة
         keysToRemove.push(key);
       }
     }

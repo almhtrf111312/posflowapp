@@ -447,8 +447,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   // إعادة فحص الترخيص فور وصول إشعار تفعيل/تجديد من لوحة الإدارة (دون إعادة تسجيل الدخول)
   useEffect(() => {
     const handleLicenseChanged = () => { checkLicense(); };
-    window.addEventListener('flowpos:license-changed', handleLicenseChanged);
-    return () => window.removeEventListener('flowpos:license-changed', handleLicenseChanged);
+    window.addEventListener('posflow:license-changed', handleLicenseChanged);
+    return () => window.removeEventListener('posflow:license-changed', handleLicenseChanged);
   }, [checkLicense]);
 
   // وضع التجربة المحلي: التجربة (غير المشتركة) لا ترفع بياناتها إلى السحابة

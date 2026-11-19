@@ -484,9 +484,9 @@ export default function POS() {
 
     };
 
-    window.addEventListener('flowpos:request-printer-pairing', handleRequestPairing);
+    window.addEventListener('posflow:request-printer-pairing', handleRequestPairing);
 
-    return () => window.removeEventListener('flowpos:request-printer-pairing', handleRequestPairing);
+    return () => window.removeEventListener('posflow:request-printer-pairing', handleRequestPairing);
 
   }, [isRTL]);
 

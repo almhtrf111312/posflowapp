@@ -34,7 +34,7 @@ interface DesktopGoogleBridge {
   signIn(nonceHashed: string): Promise<{ ok: true; idToken: string } | { ok: false; code: string; message: string }>;
 }
 const desktopBridge = (): DesktopGoogleBridge | null =>
-  typeof window !== 'undefined' ? ((window as unknown as { flowposGoogle?: DesktopGoogleBridge }).flowposGoogle ?? null) : null;
+  typeof window !== 'undefined' ? ((window as unknown as { posflowGoogle?: DesktopGoogleBridge }).posflowGoogle ?? null) : null;
 
 export const isNativeAndroid = (): boolean =>
   Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';

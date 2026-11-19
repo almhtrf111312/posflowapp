@@ -40,7 +40,7 @@ export function useNativeChatAlerts() {
         if (!error && unnotifiedMsgs && unnotifiedMsgs.length > 0) {
           for (const msg of unnotifiedMsgs) {
             await sendLocalNotification(
-              '📥 استفسار جديد من عميل FlowPOS',
+              '📥 استفسار جديد من عميل PosFlow',
               msg.message ? msg.message.substring(0, 120) : 'أرسل العميل مرفقاً جديداً',
               'critical',
               { action: 'open_support_chat', conversationId: msg.conversation_id }
@@ -74,7 +74,7 @@ export function useNativeChatAlerts() {
           if (!error && unnotifiedReplies && unnotifiedReplies.length > 0) {
             for (const msg of unnotifiedReplies) {
               await sendLocalNotification(
-                '💬 رد من الدعم الفني (FlowPOS)',
+                '💬 رد من الدعم الفني (PosFlow)',
                 msg.message ? msg.message.substring(0, 120) : 'تم إرسال إشعار تفعيل أو تحديث لحسابك',
                 'critical',
                 { action: 'open_support_chat', conversationId: msg.conversation_id }
@@ -129,7 +129,7 @@ export function useNativeChatAlerts() {
     LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
       const extra = notification.notification.extra;
       if (extra?.action === 'open_support_chat') {
-        window.dispatchEvent(new CustomEvent('flowpos:open-support-chat', { detail: extra }));
+        window.dispatchEvent(new CustomEvent('posflow:open-support-chat', { detail: extra }));
         navigate('/contact', { state: { openChat: true, conversationId: extra.conversationId } });
       }
     }).then((h) => {
@@ -166,7 +166,7 @@ export function useNativeChatAlerts() {
           // أ) إذا كان المستخدم الحالي هو المدير والرسالة من عميل
           if (isBoss && newMsg.sender_role === 'user') {
             await sendLocalNotification(
-              '📥 استفسار جديد من عميل FlowPOS',
+              '📥 استفسار جديد من عميل PosFlow',
               newMsg.message ? newMsg.message.substring(0, 120) : 'أرسل العميل مرفقاً جديداً',
               'critical',
               { action: 'open_support_chat', conversationId: newMsg.conversation_id }
@@ -182,7 +182,7 @@ export function useNativeChatAlerts() {
           // ب) إذا كان المستخدم الحالي عميلاً عادياً والرسالة من المدير/الدعم
           if (!isBoss && (newMsg.sender_role === 'boss' || newMsg.sender_role === 'admin')) {
             await sendLocalNotification(
-              '💬 رد من الدعم الفني (FlowPOS)',
+              '💬 رد من الدعم الفني (PosFlow)',
               newMsg.message ? newMsg.message.substring(0, 120) : 'تم إرسال إشعار تفعيل أو تحديث لحسابك',
               'critical',
               { action: 'open_support_chat', conversationId: newMsg.conversation_id }

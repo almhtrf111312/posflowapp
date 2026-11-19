@@ -114,42 +114,42 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   // حالة تفعيل القفل للمستخدم
   const [isLockEnabled, setIsLockEnabled] = useState<boolean>(() => {
     if (!userId) return false;
-    return localStorage.getItem(`flowpos_app_lock_${userId}_enabled`) === 'true';
+    return localStorage.getItem(`posflow_app_lock_${userId}_enabled`) === 'true';
   });
 
   // مهلة القفل بالثواني
   const [lockTimeout, setLockTimeout] = useState<number>(() => {
     if (!userId) return 0;
-    const val = localStorage.getItem(`flowpos_app_lock_${userId}_timeout`);
+    const val = localStorage.getItem(`posflow_app_lock_${userId}_timeout`);
     return val ? parseInt(val, 10) : 0;
   });
 
   // طول الرمز المخزن (افتراضياً 4 خانات)
   const [pinLength, setPinLength] = useState<number>(() => {
     if (!userId) return 4;
-    const val = localStorage.getItem(`flowpos_app_lock_${userId}_length`);
+    const val = localStorage.getItem(`posflow_app_lock_${userId}_length`);
     return val ? parseInt(val, 10) : 4;
   });
 
   // راية إلزام تعيين PIN جديد بعد نسيانه وتسجيل الدخول بكلمة المرور الماستر
   const [requiresPinSetup, setRequiresPinSetup] = useState<boolean>(() => {
     if (!userId) return false;
-    return localStorage.getItem(`flowpos_pin_reset_required_${userId}`) === 'true';
+    return localStorage.getItem(`posflow_pin_reset_required_${userId}`) === 'true';
   });
 
   // دعم وأجهزة البصمة المتاحة
   const [isBiometricAvailable, setIsBiometricAvailable] = useState<boolean>(false);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState<boolean>(() => {
     if (!userId) return false;
-    return localStorage.getItem(`flowpos_app_lock_${userId}_biometric_enabled`) === 'true';
+    return localStorage.getItem(`posflow_app_lock_${userId}_biometric_enabled`) === 'true';
   });
 
   // حالة القفل اللحظية - تهيئة متزامنة لمنع أي وميض بصري (Zero Flash)
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     if (!userId) return false;
-    const enabled = localStorage.getItem(`flowpos_app_lock_${userId}_enabled`) === 'true';
-    const hasHash = !!localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
-    const sessionUnlocked = sessionStorage.getItem(`flowpos_app_lock_${userId}_session_unlocked`) === 'true';
+    const enabled = localStorage.getItem(`posflow_app_lock_${userId}_enabled`) === 'true';
+    const hasHash = !!localStorage.getItem(`posflow_app_lock_${userId}_hash`);
+    const sessionUnlocked = sessionStorage.getItem(`posflow_app_lock_${userId}_session_unlocked`) === 'true';
     return enabled && hasHash && !sessionUnlocked;
   });
 
@@ -183,17 +183,17 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const resetRequired = localStorage.getItem(`flowpos_pin_reset_required_${userId}`) === 'true';
+    const resetRequired = localStorage.getItem(`posflow_pin_reset_required_${userId}`) === 'true';
     if (resetRequired) {
       // 🔒 مسح الرمز المنسي محلياً فوراً لمنع فتح التطبيق مكشوفاً
-      localStorage.removeItem(`flowpos_app_lock_${userId}_enabled`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_hash`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_salt`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_length`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_enabled`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
-      sessionStorage.removeItem(`flowpos_app_lock_${userId}_session_unlocked`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_enabled`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_hash`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_salt`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_length`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_biometric_enabled`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_biometric_cred_id`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_lockout_until`);
+      sessionStorage.removeItem(`posflow_app_lock_${userId}_session_unlocked`);
 
       setIsLockEnabled(false);
       setIsLocked(false);
@@ -214,12 +214,12 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
 
     setRequiresPinSetup(false);
 
-    const enabled = localStorage.getItem(`flowpos_app_lock_${userId}_enabled`) === 'true';
-    const hasHash = !!localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
-    const timeoutVal = localStorage.getItem(`flowpos_app_lock_${userId}_timeout`);
-    const lengthVal = localStorage.getItem(`flowpos_app_lock_${userId}_length`);
-    const bioVal = localStorage.getItem(`flowpos_app_lock_${userId}_biometric_enabled`) === 'true';
-    const sessionUnlocked = sessionStorage.getItem(`flowpos_app_lock_${userId}_session_unlocked`) === 'true';
+    const enabled = localStorage.getItem(`posflow_app_lock_${userId}_enabled`) === 'true';
+    const hasHash = !!localStorage.getItem(`posflow_app_lock_${userId}_hash`);
+    const timeoutVal = localStorage.getItem(`posflow_app_lock_${userId}_timeout`);
+    const lengthVal = localStorage.getItem(`posflow_app_lock_${userId}_length`);
+    const bioVal = localStorage.getItem(`posflow_app_lock_${userId}_biometric_enabled`) === 'true';
+    const sessionUnlocked = sessionStorage.getItem(`posflow_app_lock_${userId}_session_unlocked`) === 'true';
 
     setIsLockEnabled(enabled);
     setLockTimeout(timeoutVal ? parseInt(timeoutVal, 10) : 0);
@@ -227,13 +227,13 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     setIsBiometricEnabled(bioVal);
 
     // التحقق من انتهاء حظر التخمين المستمر
-    const savedLockout = localStorage.getItem(`flowpos_app_lock_${userId}_lockout_until`);
+    const savedLockout = localStorage.getItem(`posflow_app_lock_${userId}_lockout_until`);
     if (savedLockout) {
       const remainingMs = parseInt(savedLockout, 10) - Date.now();
       if (remainingMs > 0) {
         setLockoutRemainingSeconds(Math.ceil(remainingMs / 1000));
       } else {
-        localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
+        localStorage.removeItem(`posflow_app_lock_${userId}_lockout_until`);
       }
     }
 
@@ -250,7 +250,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       setLockoutRemainingSeconds((prev) => {
         if (prev <= 1) {
           if (userId) {
-            localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
+            localStorage.removeItem(`posflow_app_lock_${userId}_lockout_until`);
           }
           return 0;
         }
@@ -278,7 +278,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       const elapsedSeconds = (Date.now() - pausedAt) / 1000;
       if (elapsedSeconds >= lockTimeout) {
         setIsLocked(true);
-        sessionStorage.removeItem(`flowpos_app_lock_${userId}_session_unlocked`);
+        sessionStorage.removeItem(`posflow_app_lock_${userId}_session_unlocked`);
       }
       pauseTimestampRef.current = null;
     }, [userId, isLockEnabled, lockTimeout]),
@@ -287,7 +287,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   const lockApp = useCallback(() => {
     if (!userId || !isLockEnabled) return;
     setIsLocked(true);
-    sessionStorage.removeItem(`flowpos_app_lock_${userId}_session_unlocked`);
+    sessionStorage.removeItem(`posflow_app_lock_${userId}_session_unlocked`);
   }, [userId, isLockEnabled]);
 
   const unlockApp = useCallback(async (pin: string): Promise<boolean> => {
@@ -296,8 +296,8 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     // منع الإدخال أثناء سريان الحظر الزمني
     if (lockoutRemainingSeconds > 0) return false;
 
-    const salt = localStorage.getItem(`flowpos_app_lock_${userId}_salt`);
-    const storedHash = localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
+    const salt = localStorage.getItem(`posflow_app_lock_${userId}_salt`);
+    const storedHash = localStorage.getItem(`posflow_app_lock_${userId}_hash`);
 
     if (!salt || !storedHash) {
       console.warn('[AppLock] Security parameters missing or cleared. Enforcing strict Fail-Closed.');
@@ -311,8 +311,8 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       // رمز صحيح: إلغاء القفل وتصفير العدادات
       setIsLocked(false);
       setFailedAttempts(0);
-      sessionStorage.setItem(`flowpos_app_lock_${userId}_session_unlocked`, 'true');
-      localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
+      sessionStorage.setItem(`posflow_app_lock_${userId}_session_unlocked`, 'true');
+      localStorage.removeItem(`posflow_app_lock_${userId}_lockout_until`);
       return true;
     }
 
@@ -322,7 +322,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
 
     if (nextAttempts >= 5) {
       const cooldownUntil = Date.now() + 30000; // 30 ثانية
-      localStorage.setItem(`flowpos_app_lock_${userId}_lockout_until`, String(cooldownUntil));
+      localStorage.setItem(`posflow_app_lock_${userId}_lockout_until`, String(cooldownUntil));
       setLockoutRemainingSeconds(30);
       setFailedAttempts(0);
     }
@@ -334,14 +334,14 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
   const unlockWithBiometrics = useCallback(async (): Promise<boolean> => {
     if (!userId || !isBiometricEnabled || lockoutRemainingSeconds > 0) return false;
 
-    const credId = localStorage.getItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
+    const credId = localStorage.getItem(`posflow_app_lock_${userId}_biometric_cred_id`);
     const success = await authenticateBiometric(credId);
 
     if (success) {
       setIsLocked(false);
       setFailedAttempts(0);
-      sessionStorage.setItem(`flowpos_app_lock_${userId}_session_unlocked`, 'true');
-      localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
+      sessionStorage.setItem(`posflow_app_lock_${userId}_session_unlocked`, 'true');
+      localStorage.removeItem(`posflow_app_lock_${userId}_lockout_until`);
       return true;
     }
     return false;
@@ -353,14 +353,14 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       if (!userId) return false;
 
       if (!enabled) {
-        localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_enabled`);
-        localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
+        localStorage.removeItem(`posflow_app_lock_${userId}_biometric_enabled`);
+        localStorage.removeItem(`posflow_app_lock_${userId}_biometric_cred_id`);
         setIsBiometricEnabled(false);
         return true;
       }
 
       // لا يمكن تفعيل البصمة إذا كان قفل التطبيق معطلاً أو لا يوجد رمز PIN مخزن
-      const storedHash = localStorage.getItem(`flowpos_app_lock_${userId}_hash`);
+      const storedHash = localStorage.getItem(`posflow_app_lock_${userId}_hash`);
       if (!isLockEnabled || !storedHash) {
         console.warn('[AppLock] Cannot enable biometrics without an active PIN and App Lock.');
         return false;
@@ -368,7 +368,7 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
 
       // إذا تم تمرير PIN للتأكيد، نتحقق منه أولاً
       if (pin) {
-        const salt = localStorage.getItem(`flowpos_app_lock_${userId}_salt`);
+        const salt = localStorage.getItem(`posflow_app_lock_${userId}_salt`);
         if (!salt) return false;
         const calc = await computePinHash(salt, pin);
         if (calc !== storedHash) return false;
@@ -377,9 +377,9 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       // تسجيل بيانات اعتماد البصمة على الجهاز
       const credId = await registerBiometricCredential(userId, user?.email || 'User');
       if (credId) {
-        localStorage.setItem(`flowpos_app_lock_${userId}_biometric_cred_id`, credId);
+        localStorage.setItem(`posflow_app_lock_${userId}_biometric_cred_id`, credId);
       }
-      localStorage.setItem(`flowpos_app_lock_${userId}_biometric_enabled`, 'true');
+      localStorage.setItem(`posflow_app_lock_${userId}_biometric_enabled`, 'true');
       setIsBiometricEnabled(true);
       return true;
     },
@@ -392,14 +392,14 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     if (!config.enabled) {
       // 🔒 سياسة أمان صارمة: عند تعطيل القفل، يتم مسح الرمز المشفر والتمليح والبصمة بالكامل
       // بحيث يستحيل إعادة تفعيله إلا بإنشاء رمز PIN جديد تماماً
-      localStorage.removeItem(`flowpos_app_lock_${userId}_enabled`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_hash`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_salt`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_length`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_enabled`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_biometric_cred_id`);
-      localStorage.removeItem(`flowpos_app_lock_${userId}_lockout_until`);
-      sessionStorage.removeItem(`flowpos_app_lock_${userId}_session_unlocked`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_enabled`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_hash`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_salt`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_length`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_biometric_enabled`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_biometric_cred_id`);
+      localStorage.removeItem(`posflow_app_lock_${userId}_lockout_until`);
+      sessionStorage.removeItem(`posflow_app_lock_${userId}_session_unlocked`);
 
       setIsLockEnabled(false);
       setIsLocked(false);
@@ -408,8 +408,8 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       setFailedAttempts(0);
       setLockoutRemainingSeconds(0);
     } else {
-      localStorage.setItem(`flowpos_app_lock_${userId}_enabled`, 'true');
-      localStorage.setItem(`flowpos_app_lock_${userId}_timeout`, String(config.timeoutSeconds));
+      localStorage.setItem(`posflow_app_lock_${userId}_enabled`, 'true');
+      localStorage.setItem(`posflow_app_lock_${userId}_timeout`, String(config.timeoutSeconds));
 
       setIsLockEnabled(true);
       setLockTimeout(config.timeoutSeconds);
@@ -423,10 +423,10 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
     const salt = generateRandomSalt();
     const hash = await computePinHash(salt, cleanPin);
 
-    localStorage.setItem(`flowpos_app_lock_${userId}_salt`, salt);
-    localStorage.setItem(`flowpos_app_lock_${userId}_hash`, hash);
-    localStorage.setItem(`flowpos_app_lock_${userId}_length`, String(cleanPin.length));
-    localStorage.setItem(`flowpos_app_lock_${userId}_enabled`, 'true');
+    localStorage.setItem(`posflow_app_lock_${userId}_salt`, salt);
+    localStorage.setItem(`posflow_app_lock_${userId}_hash`, hash);
+    localStorage.setItem(`posflow_app_lock_${userId}_length`, String(cleanPin.length));
+    localStorage.setItem(`posflow_app_lock_${userId}_enabled`, 'true');
 
     setIsLockEnabled(true);
     setPinLength(cleanPin.length);
@@ -453,8 +453,8 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
         }
 
         // 3. مسح راية طلب إعادة التعيين وتفعيل الجلسة
-        localStorage.removeItem(`flowpos_pin_reset_required_${userId}`);
-        sessionStorage.setItem(`flowpos_app_lock_${userId}_session_unlocked`, 'true');
+        localStorage.removeItem(`posflow_pin_reset_required_${userId}`);
+        sessionStorage.setItem(`posflow_app_lock_${userId}_session_unlocked`, 'true');
         setRequiresPinSetup(false);
         return true;
       } catch (err) {

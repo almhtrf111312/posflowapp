@@ -65,7 +65,7 @@ export const clearIndexedDBData = async (): Promise<void> => {
   }
 
   if (typeof window !== 'undefined' && window.indexedDB) {
-    const dbsToDelete = ['posflow_cache', 'flowpos_images_cache', 'posflow_cache_db'];
+    const dbsToDelete = ['posflow_cache', 'posflow_images_cache', 'posflow_cache_db'];
     for (const dbName of dbsToDelete) {
       try {
         const req = indexedDB.deleteDatabase(dbName);

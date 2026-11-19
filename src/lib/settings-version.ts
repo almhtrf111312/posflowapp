@@ -24,7 +24,7 @@ const KEYS_TO_CLEAR = [
 // These are preserved across version bumps:
 // - sb-* (Supabase auth tokens)
 // - posflow_settings_v1 (Unified store settings with anti-overwrite timestamp)
-// - flowpos_theme_*, flowpos_font_*, flowpos_ui_scale_*, flowpos_layout_* (Platform-isolated appearance)
+// - posflow_theme_*, posflow_font_*, posflow_ui_scale_*, posflow_layout_* (Platform-isolated appearance)
 // - posflow_products_*, posflow_customers_*, etc. (cached data)
 // - posflow_product_form_temp (form persistence)
 // - posflow_privacy_accepted, posflow_language

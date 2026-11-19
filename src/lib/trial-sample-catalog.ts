@@ -83,7 +83,7 @@ export function buildTrialCatalog(): Product[] {
 export function applyTrialDisplayDefaults(): boolean {
   let changed = false;
   try {
-    for (const key of [`flowpos_theme_${getPlatformStoragePrefix()}`, LEGACY_THEME_KEY]) {
+    for (const key of [`posflow_theme_${getPlatformStoragePrefix()}`, LEGACY_THEME_KEY]) {
       if (localStorage.getItem(key) !== TRIAL_THEME) {
         localStorage.setItem(key, TRIAL_THEME);
         changed = true;

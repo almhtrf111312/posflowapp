@@ -15,7 +15,7 @@ const CATALOG_VERSION_KEY = 'hp_trial_catalog_version';
 const CATALOG_VERSION = '2';
 
 /** بادئات تُمسح من localStorage (بيانات الأعمال والكاش والطابور والتشخيص) */
-const WIPE_PREFIXES = ['posflow_', 'flowpos_', 'fps_swr_', 'hp_sync_', 'hp_audit_', 'hp_offline_', 'hp_radar_'];
+const WIPE_PREFIXES = ['posflow_', 'posflow_', 'fps_swr_', 'hp_sync_', 'hp_audit_', 'hp_offline_', 'hp_radar_'];
 
 /** مفاتيح تبقى دائماً (داخل البادئات المحذوفة) */
 const PRESERVE_EXACT = new Set<string>([
@@ -37,14 +37,14 @@ const PRESERVE_EXACT = new Set<string>([
   'posflow_toast_duration',
   'posflow_clear_version',
   'posflow_seen_broadcasts',
-  'flowpos_persistent_hardware_id',
+  'posflow_persistent_hardware_id',
 ]);
 
 /** بادئات تبقى: كاش الربط بالجهاز، وقفل التطبيق بالرمز، وطلب إعادة تعيين الرمز */
 const PRESERVE_PREFIXES = [
   'posflow_device_binding_cache_v',
-  'flowpos_app_lock_',
-  'flowpos_pin_reset_required_',
+  'posflow_app_lock_',
+  'posflow_pin_reset_required_',
 ];
 
 /** يمسح مفاتيح التخزين المحلي للتجربة. يرجع عدد المفاتيح المحذوفة. */
@@ -76,7 +76,7 @@ export async function wipeTrialDatabases(): Promise<void> {
 
   try {
     if (typeof indexedDB !== 'undefined') {
-      indexedDB.deleteDatabase('flowpos_images_cache');
+      indexedDB.deleteDatabase('posflow_images_cache');
     }
   } catch (err) {
     console.warn('[TrialWipe] Image cache wipe failed:', err);

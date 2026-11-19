@@ -745,7 +745,7 @@ export async function printInvoice(invoice: PrintableInvoice): Promise<boolean> 
   if (printerConfig.connectionType === 'bluetooth' && isNativeAndroid()) {
     if (!printerConfig.deviceAddress) {
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('flowpos:request-printer-pairing'));
+        window.dispatchEvent(new CustomEvent('posflow:request-printer-pairing'));
       }
       toast.warning('يرجى اختيار وإعداد طابعة البلوتوث أولاً من الإعدادات');
       return false;

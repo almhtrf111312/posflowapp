@@ -91,8 +91,8 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: 'FlowPOS Pro',
-        short_name: 'FlowPOS',
+        name: 'PosFlow',
+        short_name: 'PosFlow',
         description: 'نظام إدارة محاسبي متكامل',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',

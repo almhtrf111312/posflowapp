@@ -29,7 +29,7 @@ export function mapSystemLanguage(systemLang: string): 'ar' | 'en' | 'tr' | 'fa'
   if (baseLang === 'ar') return 'ar';
   if (baseLang === 'en') return 'en';
   // التركية والفارسية والكردية معطّلة مؤقتاً: تعود إلى العربية
-  return 'ar'; // Default to Arabic for FlowPOS
+  return 'ar'; // Default to Arabic for PosFlow
 }
 
 /**

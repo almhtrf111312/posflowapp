@@ -48,7 +48,7 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
         .eq('conversation_id', conversationId)
         .neq('sender_id', user.id)
         .then(() => {
-          window.dispatchEvent(new CustomEvent('flowpos:support-read'));
+          window.dispatchEvent(new CustomEvent('posflow:support-read'));
         });
     }
   }, [conversationId, user, isBoss]);
@@ -62,7 +62,7 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
         .eq('conversation_id', activeChatConvId)
         .neq('sender_id', user.id)
         .then(() => {
-          window.dispatchEvent(new CustomEvent('flowpos:support-read'));
+          window.dispatchEvent(new CustomEvent('posflow:support-read'));
         });
     }
   }, [activeChatConvId, user, isBoss]);

@@ -2,7 +2,7 @@
 // Creates a unique device identifier for device binding
 
 const DEVICE_ID_KEY = 'posflow_device_id';
-const BACKUP_DEVICE_ID_KEY = 'flowpos_persistent_hardware_id';
+const BACKUP_DEVICE_ID_KEY = 'posflow_persistent_hardware_id';
 
 // Helper to save device ID to both primary and persistent backup storages
 const persistDeviceId = (id: string): void => {

@@ -1,4 +1,4 @@
-export const PRINTER_CONFIG_KEY = 'flowpos_printer_config';
+export const PRINTER_CONFIG_KEY = 'posflow_printer_config';
 
 export interface PrinterConfig {
   connectionType: 'bluetooth' | 'wired_system';
@@ -27,7 +27,7 @@ export function saveStoredPrinterConfig(config: PrinterConfig): void {
   try {
     localStorage.setItem(PRINTER_CONFIG_KEY, JSON.stringify(config));
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('flowpos:printer-config-changed', { detail: config }));
+      window.dispatchEvent(new CustomEvent('posflow:printer-config-changed', { detail: config }));
     }
   } catch (e) {
     console.warn('[Printer] Failed to save printer config:', e);

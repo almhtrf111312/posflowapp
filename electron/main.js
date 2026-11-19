@@ -137,8 +137,8 @@ async function googleDesktopSignIn(nonceHashed) {
   }
 }
 
-ipcMain.on('flowpos:google-available', (event) => { event.returnValue = !!loadGoogleDesktopConfig(); });
-ipcMain.handle('flowpos:google-signin', (_event, nonceHashed) => googleDesktopSignIn(String(nonceHashed || '')));
+ipcMain.on('posflow:google-available', (event) => { event.returnValue = !!loadGoogleDesktopConfig(); });
+ipcMain.handle('posflow:google-signin', (_event, nonceHashed) => googleDesktopSignIn(String(nonceHashed || '')));
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {

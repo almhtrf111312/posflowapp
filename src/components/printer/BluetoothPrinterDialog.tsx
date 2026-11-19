@@ -25,7 +25,7 @@ import {
 import type { PaperWidth } from '@/lib/printer/receipt-escpos';
 
 /** مفتاح بيخلّي النافذة ترجع لنفس الخطوة إذا Android أعاد إنشاء الشاشة بعد صفحة تشغيل البلوتوث */
-export const PRINTER_FLOW_FLAG = 'flowpos_printer_flow';
+export const PRINTER_FLOW_FLAG = 'posflow_printer_flow';
 
 type Step = 'checking' | 'blocked' | 'list' | 'pair' | 'working' | 'done';
 type Readiness = Awaited<ReturnType<typeof checkReadiness>>;

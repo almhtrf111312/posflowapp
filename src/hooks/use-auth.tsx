@@ -163,7 +163,7 @@ const getCachedSession = (): { user: User | null; session: Session | null } => {
     if (isGuestDemoMode()) {
       const demoUser = {
         id: 'guest-demo-user',
-        email: 'guest@flowpos.demo',
+        email: 'guest@posflow.demo',
         role: 'authenticated',
         aud: 'authenticated',
         app_metadata: {},
@@ -225,7 +225,7 @@ const clearAllUserSessionCaches = async () => {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith('posflow_') || key.startsWith('flowpos_') || key.startsWith('fps_swr_'))) {
+      if (key && (key.startsWith('posflow_') || key.startsWith('posflow_') || key.startsWith('fps_swr_'))) {
         // استثناء إعدادات اللغة والثيم والحساب وبصمة الجهاز المحفوظة الضرورية
         if (
           !key.startsWith('posflow_sync_pending_') &&
@@ -237,9 +237,9 @@ const clearAllUserSessionCaches = async () => {
           key !== 'posflow_privacy_version' &&
           key !== 'posflow_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند الخروج
           key !== 'hp_device_id' &&              // 👈 حماية مفتاح أمان العتاد
-          key !== 'flowpos_persistent_hardware_id' && // 👈 حماية البصمة الاحتياطية الدائمة
-          !key.startsWith('flowpos_app_lock_') && // 👈 حماية إعدادات وهاش قفل الأمان من المسح عند الخروج
-          !key.startsWith('flowpos_pin_reset_required_') // 👈 حماية راية إلزام تعيين الـ PIN بعد نسيانه
+          key !== 'posflow_persistent_hardware_id' && // 👈 حماية البصمة الاحتياطية الدائمة
+          !key.startsWith('posflow_app_lock_') && // 👈 حماية إعدادات وهاش قفل الأمان من المسح عند الخروج
+          !key.startsWith('posflow_pin_reset_required_') // 👈 حماية راية إلزام تعيين الـ PIN بعد نسيانه
         ) {
           keysToRemove.push(key);
         }
@@ -262,7 +262,7 @@ const clearAllUserSessionCaches = async () => {
       const { clearProductsIDB } = await import('@/lib/indexeddb-cache');
       await clearProductsIDB();
       if (typeof window !== 'undefined' && window.indexedDB) {
-        window.indexedDB.deleteDatabase('flowpos_images_cache');
+        window.indexedDB.deleteDatabase('posflow_images_cache');
       }
       console.log('[Auth] Cleared IndexedDB and image cache');
     } catch (err) {

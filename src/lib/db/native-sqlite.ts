@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { initNativeSchema } from './schema';
 
-const DB_NAME = 'flowpos_local_db';
+const DB_NAME = 'posflow_local_db';
 let sqliteConnection: SQLiteConnection | null = null;
 let dbInstance: SQLiteDBConnection | null = null;
 let isInitialized = false;

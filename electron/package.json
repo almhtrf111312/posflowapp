@@ -1,12 +1,12 @@
 {
-  "name": "flowpos-pro",
+  "name": "posflow-pro",
   "version": "1.0.0",
   "description": "PosFlow - نظام إدارة المبيعات والمخزون",
   "main": "main.js",
-  "author": "FlowPOS Team",
+  "author": "PosFlow Team",
   "license": "MIT",
   "build": {
-    "appId": "app.flowpos.pro",
+    "appId": "app.posflow.pro",
     "productName": "PosFlow",
     "directories": {
       "output": "../electron-dist"
@@ -28,7 +28,7 @@
         }
       ],
       "icon": "../resources/icon.png",
-      "artifactName": "FlowPOS-Pro-Setup-${version}.exe"
+      "artifactName": "PosFlow-Setup-${version}.exe"
     },
     "nsis": {
       "oneClick": false,

@@ -84,11 +84,11 @@ export function useSupportUnread(): number {
     const handleLocalRead = () => {
       fetchUnread();
     };
-    window.addEventListener('flowpos:support-read', handleLocalRead);
+    window.addEventListener('posflow:support-read', handleLocalRead);
 
     return () => {
       supabase.removeChannel(channel);
-      window.removeEventListener('flowpos:support-read', handleLocalRead);
+      window.removeEventListener('posflow:support-read', handleLocalRead);
     };
   }, [fetchUnread, user?.id]);
 

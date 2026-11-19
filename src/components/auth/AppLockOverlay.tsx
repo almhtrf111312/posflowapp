@@ -412,7 +412,7 @@ export function AppLockOverlay() {
                     setExitConfirmStep(0);
                     // تعليم الجلسة بأن الدخول القادم يتطلب إعادة تعيين الـ PIN
                     if (user?.id) {
-                      localStorage.setItem(`flowpos_pin_reset_required_${user.id}`, 'true');
+                      localStorage.setItem(`posflow_pin_reset_required_${user.id}`, 'true');
                     }
                     await signOut();
                   }

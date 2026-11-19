@@ -24,10 +24,10 @@ export interface UIScaleOption {
 import { getPlatformStoragePrefix } from '@/lib/app-font-config';
 
 export function getUIScaleStorageKey(): string {
-  return `flowpos_ui_scale_${getPlatformStoragePrefix()}`;
+  return `posflow_ui_scale_${getPlatformStoragePrefix()}`;
 }
 
-export const UI_SCALE_STORAGE_KEY = 'flowpos_ui_scale';
+export const UI_SCALE_STORAGE_KEY = 'posflow_ui_scale';
 export const LEGACY_UI_SCALE_STORAGE_KEY = 'posflow_ui_scale';
 export const DEFAULT_UI_SCALE_ID: UIScaleId = '100';
 export const DEFAULT_UI_SCALE_PX = '14px';

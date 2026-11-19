@@ -29,10 +29,10 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function getThemeStorageKey(): string {
-  return `flowpos_theme_${getPlatformStoragePrefix()}`;
+  return `posflow_theme_${getPlatformStoragePrefix()}`;
 }
 
-export const THEME_STORAGE_KEY = 'flowpos_theme';
+export const THEME_STORAGE_KEY = 'posflow_theme';
 export const LEGACY_THEME_STORAGE_KEY = 'posflow_theme_v1';
 
 // Theme color definitions with HSL values

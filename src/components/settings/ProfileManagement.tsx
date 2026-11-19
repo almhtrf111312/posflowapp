@@ -562,7 +562,7 @@ export function ProfileManagement() {
                 checked={isLockEnabled}
                 onCheckedChange={async (checked) => {
                   if (checked) {
-                    const hasPin = !!localStorage.getItem(`flowpos_app_lock_${user?.id}_hash`);
+                    const hasPin = !!localStorage.getItem(`posflow_app_lock_${user?.id}_hash`);
                     if (!hasPin) {
                       toast.info('يرجى تعيين رمز PIN جديد لتفعيل قفل الأمان');
                       setShowPinDialog(true);

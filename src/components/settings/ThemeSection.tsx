@@ -181,7 +181,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
           >
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="font-bold text-xs sm:text-sm text-foreground">
-                {isRTL ? 'الافتراضي (FlowPOS Standard)' : 'FlowPOS Standard'}
+                {isRTL ? 'الافتراضي (PosFlow Standard)' : 'PosFlow Standard'}
               </span>
               {pendingStyle === 'standard' && (
                 <Check className="w-4 h-4 text-primary shrink-0" />

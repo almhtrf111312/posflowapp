@@ -808,8 +808,8 @@
   },
   {
     "type": "feature",
-    "ar": "v1.0.69 - تفعيل بوت تيليغرام (@flowpos_helper_bot) لربط الحساب واستعادة كلمة المرور عبر اتصال آمن.",
-    "en": "v1.0.69 - Telegram bot (@flowpos_helper_bot) enabled for account linking and password recovery over a secure connection."
+    "ar": "v1.0.69 - تفعيل بوت تيليغرام (@posflow_helper_bot) لربط الحساب واستعادة كلمة المرور عبر اتصال آمن.",
+    "en": "v1.0.69 - Telegram bot (@posflow_helper_bot) enabled for account linking and password recovery over a secure connection."
   },
   {
     "type": "feature",

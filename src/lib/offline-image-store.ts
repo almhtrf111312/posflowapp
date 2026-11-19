@@ -3,7 +3,7 @@
  * يحفظ صور المنتجات بصيغة Base64 Data URL في IndexedDB لضمان ظهورها بدون إنترنت
  */
 
-const DB_NAME = 'flowpos_images_cache';
+const DB_NAME = 'posflow_images_cache';
 const DB_VERSION = 1;
 const STORE_NAME = 'images';
 

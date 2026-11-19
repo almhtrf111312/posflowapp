@@ -2460,7 +2460,7 @@ export default function Settings() {
                   { label: isRTL ? 'الإصدار الحالي' : 'Current Version', value: `v${versionInfo.versionName}`, icon: '🏷️' },
                   { label: isRTL ? 'تاريخ الإصدار' : 'Release Date', value: releaseDateStr, icon: '📅' },
                   { label: isRTL ? 'المنصة' : 'Platform', value: 'Android / Web / Windows', icon: '📱' },
-                  { label: isRTL ? 'المطور' : 'Developer', value: 'FlowPOS Team', icon: '👨‍💻' },
+                  { label: isRTL ? 'المطور' : 'Developer', value: 'PosFlow Team', icon: '👨‍💻' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2">

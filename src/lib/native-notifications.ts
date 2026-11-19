@@ -5,19 +5,19 @@ export type NotificationChannelType = 'critical' | 'transactions' | 'system';
 
 export const NOTIFICATION_CHANNELS = {
   critical: {
-    id: 'flowpos_critical',
+    id: 'posflow_critical',
     name: 'التنبيهات الهامة والمخزون',
     description: 'إشعارات نفاذ المخزون والديون المستحقة وأمان الحساب',
     importance: 5, // High priority (heads-up notification)
   },
   transactions: {
-    id: 'flowpos_transactions',
+    id: 'posflow_transactions',
     name: 'المبيعات والإقفال',
     description: 'ملخصات البيع الكبرى وإقفال ورديات الكاشير',
     importance: 4,
   },
   system: {
-    id: 'flowpos_system',
+    id: 'posflow_system',
     name: 'حالة النظام والنسخ الاحتياطي',
     description: 'تنبيهات فشل النسخ الاحتياطي ومشاكل الاتصال بالسحابة',
     importance: 3,
@@ -189,7 +189,7 @@ export async function sendLocalNotification(
   return false;
 }
 
-const ANDROID_CHANNEL_ID = 'flowpos_high_priority_channel';
+const ANDROID_CHANNEL_ID = 'posflow_high_priority_channel';
 let channelInitialized = false;
 
 export async function initAndroidNotificationChannel() {

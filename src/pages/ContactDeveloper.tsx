@@ -44,8 +44,8 @@ export default function ContactDeveloper() {
 
   useEffect(() => {
     const handleOpenChat = () => setChatOpen(true);
-    window.addEventListener('flowpos:open-support-chat', handleOpenChat);
-    return () => window.removeEventListener('flowpos:open-support-chat', handleOpenChat);
+    window.addEventListener('posflow:open-support-chat', handleOpenChat);
+    return () => window.removeEventListener('posflow:open-support-chat', handleOpenChat);
   }, []);
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function ContactDeveloper() {
                 const { data, error } = await supabase.rpc('mark_all_support_messages_read');
                 if (error) throw error;
                 toast.success('تم تحديد كافة رسائل الدعم كمقروءة وتصفير الشارات');
-                window.dispatchEvent(new CustomEvent('flowpos:support-read'));
+                window.dispatchEvent(new CustomEvent('posflow:support-read'));
               } catch (err: any) {
                 toast.error('فشل في تحديث حالة الرسائل: ' + err.message);
               }

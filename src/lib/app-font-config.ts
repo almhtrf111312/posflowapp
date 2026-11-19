@@ -20,10 +20,10 @@ export function getPlatformStoragePrefix(): 'mobile' | 'desktop' | 'web' {
 }
 
 export function getAppFontStorageKey(): string {
-  return `flowpos_font_${getPlatformStoragePrefix()}`;
+  return `posflow_font_${getPlatformStoragePrefix()}`;
 }
 
-export const APP_FONT_STORAGE_KEY = 'flowpos_font';
+export const APP_FONT_STORAGE_KEY = 'posflow_font';
 export const LEGACY_APP_FONT_STORAGE_KEY = 'posflow_app_font';
 export const DEFAULT_APP_FONT_ID: AppFontId = 'cairo';
 export const APP_FONT_CHANGED_EVENT = 'posflow:app_font_changed';

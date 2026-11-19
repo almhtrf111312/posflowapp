@@ -87,9 +87,9 @@ import {
   isBluetoothSupported,
 } from '@/lib/native-print';
 import {
-  FlowPosPrinter,
+  PosFlowPrinter,
   isNativeAndroid,
-} from '@/lib/printer/flowpos-printer';
+} from '@/lib/printer/posflow-printer';
 import {
   clearSelectedPrinter,
   printTestPage,
@@ -669,7 +669,7 @@ export default function Settings() {
 
   useEffect(() => {
     if (printerConfig.connectionType === 'bluetooth' && printerConfig.deviceAddress && isNativeAndroid()) {
-      FlowPosPrinter.isConnected().then((r) => setIsPrinterConnected(Boolean(r?.connected))).catch(() => setIsPrinterConnected(false));
+      PosFlowPrinter.isConnected().then((r) => setIsPrinterConnected(Boolean(r?.connected))).catch(() => setIsPrinterConnected(false));
     }
   }, [printerConfig.connectionType, printerConfig.deviceAddress]);
 
@@ -712,7 +712,7 @@ export default function Settings() {
     setIsPrinterConnected(false);
     setShowUnpairDialog(false);
     try {
-      await FlowPosPrinter.disconnect();
+      await PosFlowPrinter.disconnect();
     } catch {}
     toast({
       title: t('common.saved'),

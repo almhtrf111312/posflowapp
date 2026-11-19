@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FlowPosPrinter, type PrinterDevice } from '@/lib/printer/flowpos-printer';
+import { PosFlowPrinter, type PrinterDevice } from '@/lib/printer/posflow-printer';
 import {
   checkReadiness,
   describePrinterError,
@@ -79,7 +79,7 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
     scanTokenRef.current += 1;
     setScanning(false);
     try {
-      await FlowPosPrinter.stopDiscovery();
+      await PosFlowPrinter.stopDiscovery();
     } catch {
       /* ما في بحث شغّال */
     }
@@ -95,15 +95,15 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
 
     let handle: PluginListenerHandle | null = null;
     try {
-      handle = await FlowPosPrinter.addListener('deviceFound', (d) => {
+      handle = await PosFlowPrinter.addListener('deviceFound', (d) => {
         if (token === scanTokenRef.current) upsert(d);
       });
 
-      const saved = await FlowPosPrinter.listPaired();
+      const saved = await PosFlowPrinter.listPaired();
       if (token !== scanTokenRef.current) return;
       saved.devices.forEach((d) => upsert({ ...d, paired: true }));
 
-      const res = await FlowPosPrinter.discover({ durationMs: 12000 });
+      const res = await PosFlowPrinter.discover({ durationMs: 12000 });
       if (token !== scanTokenRef.current) return;
       res.devices.forEach(upsert);
     } catch (e) {
@@ -178,7 +178,7 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
     setError(null);
     sessionStorage.setItem(PRINTER_FLOW_FLAG, 'await_bt');
     try {
-      const res = await FlowPosPrinter.enableBluetooth();
+      const res = await PosFlowPrinter.enableBluetooth();
       sessionStorage.removeItem(PRINTER_FLOW_FLAG);
       if (res.enabled) {
         await refreshReadiness();
@@ -196,7 +196,7 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
   const requestPermissions = async () => {
     setError(null);
     try {
-      await FlowPosPrinter.requestPermissions();
+      await PosFlowPrinter.requestPermissions();
       await refreshReadiness();
     } catch (e) {
       setError(describePrinterError(e));

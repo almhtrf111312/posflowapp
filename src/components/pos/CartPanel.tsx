@@ -51,7 +51,7 @@ import { distributeDetailedProfitCloud } from '@/lib/cloud/partners-cloud';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
 import { printHTML, printInvoice, PrintableInvoice, getStoreSettings, getPrintSettings } from '@/lib/native-print';
-import { isNativeAndroid } from '@/lib/printer/flowpos-printer';
+import { isNativeAndroid } from '@/lib/printer/posflow-printer';
 import { getStoredPrinterConfig } from '@/lib/printer/printer-config';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { playSaleComplete, playDebtRecorded } from '@/lib/sound-utils';

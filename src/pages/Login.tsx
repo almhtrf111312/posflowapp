@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/lib/sonner-bridge';
 import { applyTheme } from '@/hooks/use-theme';
@@ -44,6 +45,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDemoConfirm, setShowDemoConfirm] = useState(false);
   // 1. تعريف حالة الحظر مع قراءة القيمة الأولية من sessionStorage فوراً لمنع وميض الاختفاء
   const [blockedState, setBlockedState] = useState<{
     isBlocked: boolean;
@@ -661,13 +663,28 @@ export default function Login() {
           <Button
             type="button"
             variant="outline"
-            onClick={handleStartDemo}
+            onClick={() => setShowDemoConfirm(true)}
             disabled={isLoading}
             className="w-full h-12 rounded-2xl border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer text-sm"
           >
             <Sparkles className="w-4 h-4 text-primary" />
             <span>تجربة التطبيق بدون حساب (Demo Mode)</span>
           </Button>
+
+          <AlertDialog open={showDemoConfirm} onOpenChange={setShowDemoConfirm}>
+            <AlertDialogContent dir="rtl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>الدخول إلى وضع التجربة</AlertDialogTitle>
+                <AlertDialogDescription>
+                  بيانات وضع التجربة هي بيانات تجريبية فقط، وسيتم الاحتفاظ بها لمدة 24 ساعة ثم تُحذف. هل تريد المتابعة؟
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="gap-2 sm:gap-0">
+                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                <AlertDialogAction onClick={() => { setShowDemoConfirm(false); void handleStartDemo(); }}>موافق، ادخل</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Google sign-in (removable) — احذف هذا السطر لإخفاء الزر */}
           <GoogleSignInButton disabled={isLoading} stayLoggedIn={stayLoggedIn} onSignedIn={handleGoogleSignedIn} onNewAccount={handleGoogleNewAccount} />

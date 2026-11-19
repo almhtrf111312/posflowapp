@@ -1,3 +1,4 @@
+import { isSyncPendingSubscription, SYNC_PENDING_SUBSCRIPTION_SHORT } from '@/lib/subscription-lock';
 import { capsuleOuter, capsuleOuterScroll, capsuleItem, capsuleActive, capsuleIdle } from '@/components/ui/SegmentedCapsule';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -117,7 +118,7 @@ import { confirmPendingProfitCloud } from '@/lib/cloud/partners-cloud';
 import { processDebtPayment } from '@/lib/unified-transactions';
 import { logActivity } from '@/lib/activity-log';
 import { printHTML, printInvoice, PrintableInvoice } from '@/lib/native-print';
-import { isNativeAndroid } from '@/lib/printer/flowpos-printer';
+import { isNativeAndroid } from '@/lib/printer/posflow-printer';
 import { getStoredPrinterConfig } from '@/lib/printer/printer-config';
 import { shareInvoice, InvoiceShareData, generateInvoiceShareText, nativeShare } from '@/lib/native-share';
 import { useActionGuard } from '@/hooks/use-action-guard';
@@ -2414,7 +2415,7 @@ export default function Invoices() {
                             ? "bg-destructive/10 text-destructive border-destructive/20"
                             : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
                         )}>
-                          {invoice.sync_failed ? (t('invoices.syncFailed') || 'فشل الرفع ⚠️') : (t('invoices.syncPending') || 'قيد المزامنة ⏳')}
+                          {isSyncPendingSubscription() ? SYNC_PENDING_SUBSCRIPTION_SHORT : invoice.sync_failed ? (t('invoices.syncFailed') || 'فشل الرفع ⚠️') : (t('invoices.syncPending') || 'قيد المزامنة ⏳')}
                         </span>
                       )}
 
@@ -2520,7 +2521,7 @@ export default function Invoices() {
                           ? "bg-destructive/10 text-destructive border-destructive/20"
                           : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
                       )}>
-                        {selectedInvoice.sync_failed ? (t('invoices.syncFailed') || 'فشل الرفع ⚠️') : (t('invoices.syncPending') || 'قيد المزامنة ⏳')}
+                        {isSyncPendingSubscription() ? SYNC_PENDING_SUBSCRIPTION_SHORT : selectedInvoice.sync_failed ? (t('invoices.syncFailed') || 'فشل الرفع ⚠️') : (t('invoices.syncPending') || 'قيد المزامنة ⏳')}
                       </span>
                     )}
                   </div>

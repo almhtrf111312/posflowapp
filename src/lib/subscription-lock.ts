@@ -27,9 +27,20 @@ export function isCloudWriteBlocked(): boolean {
   }
 }
 
+export const CLOUD_WRITE_EVENT = 'hp-cloud-write-changed';
+export const SYNC_PENDING_SUBSCRIPTION_MESSAGE = 'المزامنة معلّقة حتى الاشتراك';
+export const SYNC_PENDING_SUBSCRIPTION_SHORT = 'معلّقة حتى الاشتراك';
+
+// الرفع للسحابة متوقف لأن الحساب غير مشترك: العناصر محفوظة محلياً وتُرفع بعد التفعيل
+export function isSyncPendingSubscription(): boolean {
+  return isCloudWriteBlocked() || isLocalOnlyMode();
+}
+
 export function setCloudWriteBlocked(blocked: boolean): void {
   try {
+    const previous = isCloudWriteBlocked();
     localStorage.setItem(CLOUD_WRITE_BLOCKED_KEY, blocked ? '1' : '0');
+    if (previous !== blocked) window.dispatchEvent(new Event(CLOUD_WRITE_EVENT));
   } catch {
     /* التخزين غير متاح: نتجاهل */
   }

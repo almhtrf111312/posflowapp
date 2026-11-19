@@ -1,4 +1,4 @@
-package com.flowpos.pro.security;
+package com.posflow.app.security;
 
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
@@ -23,11 +23,11 @@ import javax.crypto.spec.GCMParameterSpec;
  * wrap({ data: base64 }) -> { data: base64(iv + ciphertext) }
  * unwrap({ data: base64(iv + ciphertext) }) -> { data: base64 }
  */
-@CapacitorPlugin(name = "FlowPosKeystore")
-public class FlowPosKeystorePlugin extends Plugin {
+@CapacitorPlugin(name = "PosFlowKeystore")
+public class PosFlowKeystorePlugin extends Plugin {
 
     private static final String KEYSTORE = "AndroidKeyStore";
-    private static final String KEY_ALIAS = "flowpos_local_storage_key_v1";
+    private static final String KEY_ALIAS = "posflow_local_storage_key_v1";
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int IV_LENGTH = 12;
     private static final int TAG_BITS = 128;

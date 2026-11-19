@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { isSyncPendingSubscription, SYNC_PENDING_SUBSCRIPTION_MESSAGE } from '@/lib/subscription-lock';
 /**
  * مؤشر المزامنة في الخلفية - يظهر حالة المعالجة
  */
@@ -313,6 +314,10 @@ export function useSyncState() {
   };
 
   const failSync = (error = 'فشلت المزامنة', delay = 2000, triggerToast = false) => {
+    if (isSyncPendingSubscription()) {
+      error = SYNC_PENDING_SUBSCRIPTION_MESSAGE;
+      triggerToast = false;
+    }
     if (delayTimer) {
       clearTimeout(delayTimer);
       setDelayTimer(null);

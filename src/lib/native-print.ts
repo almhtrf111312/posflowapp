@@ -14,7 +14,7 @@ import { resolveInvoiceCurrencySymbol, getActiveCurrencyCode } from './currencie
 import { getEnabledCurrencies, formatAmount, fromUsd, toUsd } from './money-engine';
 import { isGuestDemoMode } from './demo-data';
 import { toast } from '@/lib/sonner-bridge';
-import { isNativeAndroid } from './printer/flowpos-printer';
+import { isNativeAndroid } from './printer/posflow-printer';
 import {
   PRINTER_CONFIG_KEY,
   getStoredPrinterConfig,
@@ -31,7 +31,7 @@ import {
   printTestPage,
   describePrinterError,
 } from './printer/bluetooth-printer';
-import { FlowPosPrinter } from './printer/flowpos-printer';
+import { PosFlowPrinter } from './printer/posflow-printer';
 
 const SETTINGS_KEY = 'posflow_settings_v1';
 
@@ -473,7 +473,7 @@ export function isBluetoothSupported(): boolean {
 export async function searchBluetoothPrinters(): Promise<BluetoothDevice[]> {
   if (isNativeAndroid()) {
     try {
-      const paired = await FlowPosPrinter.listPaired();
+      const paired = await PosFlowPrinter.listPaired();
       return (paired?.devices || []).map(d => ({ name: d.name, address: d.address }));
     } catch (e) {
       console.warn('[NativePrint] listPaired error:', e);

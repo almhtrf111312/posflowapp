@@ -25,5 +25,5 @@
 # Google sign-in (Credential Manager)
 -keep class androidx.credentials.playservices.** { *; }
 -keep class com.google.android.libraries.identity.googleid.** { *; }
--keep class com.flowpos.pro.auth.** { *; }
--keep class com.flowpos.pro.security.** { *; }
+-keep class com.posflow.app.auth.** { *; }
+-keep class com.posflow.app.security.** { *; }

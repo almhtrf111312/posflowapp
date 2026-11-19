@@ -544,11 +544,19 @@ export const processQueue = async (
       }
     }
     // ضمان رفع المنتجات المضافة أوفلاين أولاً قبل فواتير البيع لتفادي تعليق الفواتير
-    pending = pending.sort((a, b) => {
-      const aIsProdAdd = a.type === 'sale' && a.data?._operation === 'product_add' ? 0 : 1;
-      const bIsProdAdd = b.type === 'sale' && b.data?._operation === 'product_add' ? 0 : 1;
-      return aIsProdAdd - bIsProdAdd;
-    });
+    // الرفع من الأقدم إلى الأحدث (createdAt تصاعدياً) مع بقاء العملية المستهدفة أولاً
+    const firstTarget = targetOperationId ? pending.find(op => op.id === targetOperationId) : undefined;
+    const sortedRest = pending
+      .filter(op => op !== firstTarget)
+      .sort((a, b) => {
+        const aIsProdAdd = a.type === 'sale' && a.data?._operation === 'product_add' ? 0 : 1;
+        const bIsProdAdd = b.type === 'sale' && b.data?._operation === 'product_add' ? 0 : 1;
+        if (aIsProdAdd !== bIsProdAdd) return aIsProdAdd - bIsProdAdd;
+        const at = Date.parse(a.createdAt || a.timestamp) || 0;
+        const bt = Date.parse(b.createdAt || b.timestamp) || 0;
+        return at - bt;
+      });
+    pending = firstTarget ? [firstTarget, ...sortedRest] : sortedRest;
 
     console.log(`[SyncQueue] Processing ${pending.length} operations...`);
 

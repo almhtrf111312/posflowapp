@@ -1,4 +1,4 @@
-package com.flowpos.pro.auth;
+package com.posflow.app.auth;
 
 import android.os.CancellationSignal;
 
@@ -27,8 +27,8 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
  * تسجيل الدخول بجوجل عبر Credential Manager (بدون WebView، لذلك لا يُحظر).
  * قابل للإزالة: احذف هذا الملف + سطر registerPlugin في MainActivity + تبعيات googleid في build.gradle.
  */
-@CapacitorPlugin(name = "FlowPosGoogleAuth")
-public class FlowPosGoogleAuthPlugin extends Plugin {
+@CapacitorPlugin(name = "PosFlowGoogleAuth")
+public class PosFlowGoogleAuthPlugin extends Plugin {
 
     @PluginMethod
     public void signIn(final PluginCall call) {

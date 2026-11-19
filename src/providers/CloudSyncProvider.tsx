@@ -14,7 +14,7 @@ import { processQuickPurchaseFromQueue, processPurchaseInvoiceFromQueue } from '
 import { showToast } from '@/lib/toast-config';
 import { useNetworkStatus, checkRealInternetAccess, isAppOffline, isLocalDataMode } from '@/hooks/use-network-status';
 import { ensureAccountEncryptionKey } from '@/lib/account-encryption-key';
-import { LOCAL_MODE_EVENT, isLocalOnlyMode } from '@/lib/subscription-lock';
+import { LOCAL_MODE_EVENT, CLOUD_WRITE_EVENT, isLocalOnlyMode, isCloudWriteBlocked, isSyncPendingSubscription } from '@/lib/subscription-lock';
 import { processGenericQueuedOperation } from '@/lib/cloud/sync-operation-processor';
 import { warmupAllCaches } from '@/lib/cloud/cache-warmup';
 import { isGuestDemoMode } from '@/lib/demo-data';
@@ -184,8 +184,18 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
         setTimeout(() => { syncNowRef.current?.(true); }, 200);
       }
     };
+    const handleCloudWriteChange = () => {
+      if (!isCloudWriteBlocked() && !isLocalOnlyMode()) {
+        console.log('[CloudSync] Subscription active, uploading local data oldest-first');
+        setTimeout(() => { syncNowRef.current?.(true); }, 300);
+      }
+    };
     window.addEventListener(LOCAL_MODE_EVENT, handleModeChange);
-    return () => window.removeEventListener(LOCAL_MODE_EVENT, handleModeChange);
+    window.addEventListener(CLOUD_WRITE_EVENT, handleCloudWriteChange);
+    return () => {
+      window.removeEventListener(LOCAL_MODE_EVENT, handleModeChange);
+      window.removeEventListener(CLOUD_WRITE_EVENT, handleCloudWriteChange);
+    };
   }, [user]);
   
   // مراقبة عودة الاتصال بالإنترنت لتشغيل المزامنة التلقائية
@@ -516,7 +526,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     } catch (error) {
       console.error('Manual sync error:', error);
       // ✅ عرض سبب الفشل الحقيقي من الخادم إذا كان الجهاز متصلاً بالشبكة
-      if (!isAppOffline() && !forceDirect) {
+      if (!isAppOffline() && !forceDirect && !isSyncPendingSubscription()) {
         const friendlyError = formatSyncServerError(error);
         showToast.error('فشلت المزامنة', {
           description: friendlyError,

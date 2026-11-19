@@ -3,7 +3,7 @@
  *
  * للإيقاف السريع: اجعل GOOGLE_SIGN_IN_ENABLED = false (الزر يختفي فوراً).
  * للإزالة الكاملة: احذف هذا الملف + GoogleSignInButton.tsx + سطرين في Login.tsx
- * + FlowPosGoogleAuthPlugin.java وسطر تسجيله في MainActivity + تبعيات googleid في android/app/build.gradle
+ * + PosFlowGoogleAuthPlugin.java وسطر تسجيله في MainActivity + تبعيات googleid في android/app/build.gradle
  * + كتلة "Google sign-in" في electron/main.js و protocols في electron/package.json.
  */
 import { Capacitor, registerPlugin } from '@capacitor/core';
@@ -19,12 +19,12 @@ export const GOOGLE_ALLOWED_ROLES: ReadonlyArray<string> = ['admin', 'boss'];
 export const GOOGLE_WEB_CLIENT_ID: string =
   (import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID as string | undefined)?.trim() || '';
 
-interface FlowPosGoogleAuthPlugin {
+interface PosFlowGoogleAuthPlugin {
   signIn(options: { serverClientId: string; nonce?: string }): Promise<{ idToken: string; email?: string; displayName?: string }>;
   signOut(): Promise<void>;
 }
 
-const NativeGoogle = registerPlugin<FlowPosGoogleAuthPlugin>('FlowPosGoogleAuth');
+const NativeGoogle = registerPlugin<PosFlowGoogleAuthPlugin>('PosFlowGoogleAuth');
 
 export const isElectron = (): boolean =>
   typeof navigator !== 'undefined' && /electron/i.test(navigator.userAgent);

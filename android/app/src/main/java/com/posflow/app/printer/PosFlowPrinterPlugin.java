@@ -1,4 +1,4 @@
-package com.flowpos.pro.printer;
+package com.posflow.app.printer;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
@@ -45,7 +45,7 @@ import java.util.concurrent.Executors;
  * كل الطلبات الثقيلة (اتصال، كتابة) بتصير على thread خلفي، والـ UI ما بينحجب.
  */
 @CapacitorPlugin(
-    name = "FlowPosPrinter",
+    name = "PosFlowPrinter",
     permissions = {
         @Permission(alias = "bluetooth", strings = {
             Manifest.permission.BLUETOOTH_SCAN,
@@ -56,7 +56,7 @@ import java.util.concurrent.Executors;
         })
     }
 )
-public class FlowPosPrinterPlugin extends Plugin {
+public class PosFlowPrinterPlugin extends Plugin {
 
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     // ابدأ بـ 512. إذا الطابعة بتفقد بيانات أو بتطبع أحرف مشوّهة، خفّضه لـ 256

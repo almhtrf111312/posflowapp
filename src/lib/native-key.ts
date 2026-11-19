@@ -10,12 +10,12 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { APP_SECRET_STORAGE, WRAPPED_APP_SECRET_STORAGE, setRuntimeAppSecret } from './secure-storage';
 
-interface FlowPosKeystorePlugin {
+interface PosFlowKeystorePlugin {
   wrap(options: { data: string }): Promise<{ data: string }>;
   unwrap(options: { data: string }): Promise<{ data: string }>;
 }
 
-const Keystore = registerPlugin<FlowPosKeystorePlugin>('FlowPosKeystore');
+const Keystore = registerPlugin<PosFlowKeystorePlugin>('PosFlowKeystore');
 
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 

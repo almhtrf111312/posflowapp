@@ -1,3 +1,4 @@
+import { isSyncPendingSubscription, SYNC_PENDING_SUBSCRIPTION_SHORT } from '@/lib/subscription-lock';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -745,7 +746,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                       "text-[9px] px-1.5 py-0.5 rounded border font-semibold",
                       debt.sync_failed ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-primary/10 text-primary border-primary/20"
                     )}>
-                      {debt.sync_failed ? 'فشل المزامنة' : 'غير متزامنة'}
+                      {isSyncPendingSubscription() ? SYNC_PENDING_SUBSCRIPTION_SHORT : debt.sync_failed ? 'فشل المزامنة' : 'غير متزامنة'}
                     </span>
                   )}
                 </div>

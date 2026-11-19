@@ -1,4 +1,4 @@
-package com.flowpos.pro;
+package com.posflow.app;
 
 import android.content.Context;
 import android.content.Intent;
@@ -13,9 +13,9 @@ import android.webkit.WebView;
 import java.util.Locale;
 
 import com.getcapacitor.BridgeActivity;
-import com.flowpos.pro.printer.FlowPosPrinterPlugin;
-import com.flowpos.pro.auth.FlowPosGoogleAuthPlugin;
-import com.flowpos.pro.security.FlowPosKeystorePlugin;
+import com.posflow.app.printer.PosFlowPrinterPlugin;
+import com.posflow.app.auth.PosFlowGoogleAuthPlugin;
+import com.posflow.app.security.PosFlowKeystorePlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -31,9 +31,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        registerPlugin(FlowPosKeystorePlugin.class); // Keystore-wrapped local storage key
-        registerPlugin(FlowPosPrinterPlugin.class);
-        registerPlugin(FlowPosGoogleAuthPlugin.class); // Google sign-in (removable)
+        registerPlugin(PosFlowKeystorePlugin.class); // Keystore-wrapped local storage key
+        registerPlugin(PosFlowPrinterPlugin.class);
+        registerPlugin(PosFlowGoogleAuthPlugin.class); // Google sign-in (removable)
         super.onCreate(savedInstanceState);
 
         try {
@@ -52,7 +52,7 @@ public class MainActivity extends BridgeActivity {
                                 PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
                                 if (printManager != null) {
                                     PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter("FlowPOS_PrintJob");
-                                    printManager.print("FlowPOS Print", printAdapter, new PrintAttributes.Builder().build());
+                                    printManager.print("PosFlow Print", printAdapter, new PrintAttributes.Builder().build());
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();

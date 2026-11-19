@@ -15,7 +15,7 @@ export interface PrinterState {
   needsLocation: boolean;
 }
 
-export interface FlowPosPrinterPlugin {
+export interface PosFlowPrinterPlugin {
   getState(): Promise<PrinterState>;
   requestPermissions(): Promise<{ hasPermissions: boolean; hasLocation: boolean }>;
   enableBluetooth(): Promise<{ enabled: boolean; openedSettings?: boolean }>;
@@ -33,6 +33,6 @@ export interface FlowPosPrinterPlugin {
   ): Promise<PluginListenerHandle>;
 }
 
-export const FlowPosPrinter = registerPlugin<FlowPosPrinterPlugin>('FlowPosPrinter');
+export const PosFlowPrinter = registerPlugin<PosFlowPrinterPlugin>('PosFlowPrinter');
 
 export const isNativeAndroid = (): boolean => Capacitor.getPlatform() === 'android';

@@ -1,4 +1,4 @@
-import { FlowPosPrinter, isNativeAndroid, type PrinterDevice } from './flowpos-printer';
+import { PosFlowPrinter, isNativeAndroid, type PrinterDevice } from './posflow-printer';
 import { buildReceiptParts, toBase64, type PaperWidth, type ReceiptLine } from './receipt-escpos';
 import { getStoredPrinterConfig, saveStoredPrinterConfig } from './printer-config';
 
@@ -7,7 +7,7 @@ export type ReadinessReason = 'NOT_ANDROID' | 'NO_BLUETOOTH' | 'BT_OFF' | 'NO_PE
 export async function checkReadiness(): Promise<{ ok: true; reason?: undefined } | { ok: false; reason: ReadinessReason }> {
   if (!isNativeAndroid()) return { ok: false, reason: 'NOT_ANDROID' };
   try {
-    const s = await FlowPosPrinter.getState();
+    const s = await PosFlowPrinter.getState();
     if (!s.supported) return { ok: false, reason: 'NO_BLUETOOTH' };
     // الصلاحية أولاً: زر «تشغيل البلوتوث» بدون صلاحية كان يُغلق التطبيق على Android 12+
     if (!s.hasPermissions) return { ok: false, reason: 'NO_PERMISSION' };
@@ -21,8 +21,8 @@ export async function checkReadiness(): Promise<{ ok: true; reason?: undefined }
 
 /** الاقتران يصير عبر النظام. الرمز بيتمرر للـ plugin بالذاكرة فقط ولا بيتخزن. */
 export async function pairAndConnect(address: string, pin?: string): Promise<void> {
-  await FlowPosPrinter.pair({ address, pin: pin?.trim() || undefined });
-  await FlowPosPrinter.connect({ address });
+  await PosFlowPrinter.pair({ address, pin: pin?.trim() || undefined });
+  await PosFlowPrinter.connect({ address });
 }
 
 export function saveSelectedPrinter(device: PrinterDevice, paperWidth: PaperWidth): void {
@@ -44,7 +44,7 @@ export function clearSelectedPrinter(): void {
 /** يطبع أجزاء بالترتيب. كل جزء طلب منفصل، هيك حجم الـ bridge يبقى صغير. */
 export async function printParts(address: string, parts: Uint8Array[]): Promise<void> {
   for (const part of parts) {
-    await FlowPosPrinter.print({ address, data: toBase64(part) });
+    await PosFlowPrinter.print({ address, data: toBase64(part) });
   }
 }
 

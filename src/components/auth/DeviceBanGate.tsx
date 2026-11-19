@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { checkDeviceBanned, isDeviceBannedLocally } from '@/lib/device-ban';
 
-const DEVELOPER_URL = 'https://t.me/flowpospro';
+const DEVELOPER_URL = 'https://t.me/posflowapp';
 const RECHECK_MS = 5 * 60 * 1000;
 
 export function DeviceBanGate({ children }: { children: ReactNode }) {

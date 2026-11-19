@@ -142,11 +142,11 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "Decoding release keystore from secrets.ANDROID_KEYSTORE_BASE64..."
             CLEAN_B64=$(echo "$KEYSTORE_BASE64" | sed '/^-----/d' | tr -d '\r\n[:space:]')
-            echo "$CLEAN_B64" | base64 -d > android/app/flowpos-release.keystore 2>/dev/null || echo "$CLEAN_B64" | base64 -di > android/app/flowpos-release.keystore
+            echo "$CLEAN_B64" | base64 -d > android/app/posflow-release.keystore 2>/dev/null || echo "$CLEAN_B64" | base64 -di > android/app/posflow-release.keystore
           fi
 
-          if [ -f "android/app/flowpos-release.keystore" ]; then
-            if [ -n "$KEYSTORE_PASS" ] && keytool -list -keystore android/app/flowpos-release.keystore -storepass "$KEYSTORE_PASS" >/dev/null 2>&1; then
+          if [ -f "android/app/posflow-release.keystore" ]; then
+            if [ -n "$KEYSTORE_PASS" ] && keytool -list -keystore android/app/posflow-release.keystore -storepass "$KEYSTORE_PASS" >/dev/null 2>&1; then
               echo "✅ Using configured production keystore credentials."
             else
               echo "::error::Production keystore password (ANDROID_KEYSTORE_PASSWORD) is missing or invalid. Aborting build."
@@ -158,13 +158,13 @@ jobs:
           fi
 
           if [ -z "$KEY_ALIAS" ]; then
-            KEY_ALIAS=$(keytool -list -keystore android/app/flowpos-release.keystore -storepass "$KEYSTORE_PASS" 2>/dev/null | grep -m 1 "PrivateKeyEntry" | awk -F',' '{print $1}' | tr -d ' ' || echo "flowpos_prod")
+            KEY_ALIAS=$(keytool -list -keystore android/app/posflow-release.keystore -storepass "$KEYSTORE_PASS" 2>/dev/null | grep -m 1 "PrivateKeyEntry" | awk -F',' '{print $1}' | tr -d ' ' || echo "flowpos_prod")
             if [ -z "$KEY_ALIAS" ]; then
               KEY_ALIAS="flowpos_prod"
             fi
           fi
 
-          echo "KEYSTORE_PATH=flowpos-release.keystore" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PATH=posflow-release.keystore" >> "$GITHUB_ENV"
           echo "KEYSTORE_PASSWORD=$KEYSTORE_PASS" >> "$GITHUB_ENV"
           echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
           echo "KEY_PASSWORD=${KEY_PASS:-$KEYSTORE_PASS}" >> "$GITHUB_ENV"
@@ -173,14 +173,14 @@ jobs:
         shell: bash
         run: |
           echo "SHA-1 / SHA-256 of the release signing key (not secret):"
-          keytool -list -v -keystore android/app/flowpos-release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" | sed 's/^[[:space:]]*/  /' | tee -a "$GITHUB_STEP_SUMMARY" || true
+          keytool -list -v -keystore android/app/posflow-release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -E "SHA1:|SHA256:" | sed 's/^[[:space:]]*/  /' | tee -a "$GITHUB_STEP_SUMMARY" || true
 
       - name: Build signed release APK
         working-directory: android
         env:
           APP_VERSION_CODE: ${{ env.VERSION_CODE }}
           APP_VERSION_NAME: ${{ env.VERSION_NAME }}
-          KEYSTORE_PATH: flowpos-release.keystore
+          KEYSTORE_PATH: posflow-release.keystore
           KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ env.KEY_ALIAS }}
           KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
@@ -193,7 +193,7 @@ jobs:
         run: |
           RELEASE_DIR="android/app/build/outputs/apk/release"
           VERSION="${{ env.VERSION_NAME }}"
-          FINAL_APK="FlowPOS-v${VERSION}.apk"
+          FINAL_APK="PosFlow-v${VERSION}.apk"
           
           SRC_APK=$(ls $RELEASE_DIR/*.apk 2>/dev/null | head -n 1)
           if [ -z "$SRC_APK" ]; then
@@ -211,7 +211,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: FlowPOS-v${{ env.VERSION_NAME }}
+          name: PosFlow-v${{ env.VERSION_NAME }}
           path: ${{ env.FINAL_APK_PATH }}
           retention-days: 90
           compression-level: 6
@@ -239,10 +239,10 @@ jobs:
 
             const data = await res.json();
             const artifacts = (data.artifacts || [])
-              .filter(a => !a.expired && a.name.toLowerCase().includes("flowpos") && !/win|exe|setup/i.test(a.name))
+              .filter(a => !a.expired && a.name.toLowerCase().includes("posflow") && !/win|exe|setup/i.test(a.name))
               .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-            console.log(`📊 Found ${artifacts.length} active FlowPOS artifacts.`);
+            console.log(`📊 Found ${artifacts.length} active PosFlow artifacts.`);
             const KEEP_LIMIT = 30;
 
             if (artifacts.length > KEEP_LIMIT) {

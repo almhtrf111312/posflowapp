@@ -58,7 +58,7 @@ jobs:
           echo "🎯 Target Version: v$VERSION_NAME (Build $VERSION_CODE)"
 
       # سحب الـ APK الجاهز من Artifacts دون أي بناء:
-      #  1) يفضّل artifact باسم FlowPOS-v<الإصدار الحالي>
+      #  1) يفضّل artifact باسم PosFlow-v<الإصدار الحالي>
       #  2) وإن لم يوجد يأخذ أحدث APK (نفس سلوك النسخة القديمة) مع تحذير ظاهر في السجل
       #  3) يبحث عن ملف .apk داخل الـ zip بشكل متداخل (النسخة الجديدة كانت تقرأ المستوى الأول فقط)
       - name: Grab Ready APK Instantly (Skip Build)
@@ -101,7 +101,7 @@ jobs:
             const base = `https://api.github.com/repos/${REPO}/actions/artifacts`;
             let art = null;
 
-            const exactName = `FlowPOS-v${VERSION_NAME}`;
+            const exactName = `PosFlow-v${VERSION_NAME}`;
             const exact = await (await gh(`${base}?name=${encodeURIComponent(exactName)}&per_page=20`)).json();
             art = (exact.artifacts || []).filter((a) => !a.expired).sort(byNewest)[0] || null;
 
@@ -110,7 +110,7 @@ jobs:
             } else {
               const list = await (await gh(`${base}?per_page=100`)).json();
               art = (list.artifacts || [])
-                .filter((a) => !a.expired && /flowpos/i.test(a.name) && !/win|exe|setup/i.test(a.name))
+                .filter((a) => !a.expired && /posflow/i.test(a.name) && !/win|exe|setup/i.test(a.name))
                 .sort(byNewest)[0] || null;
               if (!art) {
                 throw new Error('لم يتم العثور على ملف APK جاهز مسبقاً! شغّل «Build PosFlow APK» مرة واحدة أولاً.');
@@ -130,7 +130,7 @@ jobs:
             const apk = findApk(path.join(dir, 'x'));
             if (!apk) throw new Error('ملف الـ APK غير موجود داخل الحزمة.');
 
-            const target = path.join(TMP, `FlowPOS-v${VERSION_NAME}.apk`);
+            const target = path.join(TMP, `PosFlow-v${VERSION_NAME}.apk`);
             fs.copyFileSync(apk, target);
             console.log(`📦 APK ready: ${target} (${(fs.statSync(target).size / 1024 / 1024).toFixed(2)} MB)`);
             fs.appendFileSync(GITHUB_ENV, `APK_PATH=${target}\n`);

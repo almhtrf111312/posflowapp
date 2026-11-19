@@ -88,7 +88,7 @@ jobs:
         run: |
           cat > electron-builder.json << 'EOF'
           {
-            "appId": "app.flowpos.pro",
+            "appId": "app.posflow.pro",
             "productName": "PosFlow",
             "asar": true,
             "compression": "maximum",
@@ -116,7 +116,7 @@ jobs:
                 }
               ],
               "icon": "resources/icon.png",
-              "artifactName": "FlowPOS-Pro-Setup-v${env.VERSION_NAME}.exe"
+              "artifactName": "PosFlow-Setup-v${env.VERSION_NAME}.exe"
             },
             "nsis": {
               "oneClick": false,
@@ -152,7 +152,7 @@ jobs:
       - name: Upload Windows Installer
         uses: actions/upload-artifact@v7
         with:
-          name: FlowPOS-Pro-Windows-v${{ env.VERSION_NAME }}
+          name: PosFlow-Windows-v${{ env.VERSION_NAME }}
           path: electron-dist/*.exe
           retention-days: 90
           compression-level: 0

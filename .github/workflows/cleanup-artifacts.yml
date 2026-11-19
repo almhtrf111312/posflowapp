@@ -37,7 +37,7 @@ jobs:
 
             const typeOf = (name) => {
               if (/windows/i.test(name)) return 'windows';
-              if (/^FlowPOS-v/i.test(name) || /apk/i.test(name)) return 'apk';
+              if (/^PosFlow-v/i.test(name) || /apk/i.test(name)) return 'apk';
               return 'other';
             };
             const keepFor = { windows: KEEP_WINDOWS, apk: KEEP_APK, other: KEEP_OTHER };

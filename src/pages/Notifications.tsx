@@ -70,7 +70,7 @@ export default function Notifications() {
 
   const releaseConfig = getCachedReleaseConfig();
   const latestBuildCode = releaseConfig.latest_version_code || releaseConfig.min_version_code || CURRENT_VERSION_CODE;
-  const updateUrl = releaseConfig.update_url || releaseConfig.telegram_url || 'https://t.me/flowpospro';
+  const updateUrl = releaseConfig.update_url || releaseConfig.telegram_url || 'https://t.me/posflowapp';
 
   // جلب إعلانات البث النشطة من السحابة ومزامنة المقروء
   const load = useCallback(async () => {

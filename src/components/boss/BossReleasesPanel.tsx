@@ -158,8 +158,8 @@ export function BossReleasesPanel() {
     try {
       const config = await fetchReleaseConfig();
       setCfg(config);
-      setUpdateUrl(config.update_url || 'https://t.me/flowpospro');
-      setTelegramUrl(config.telegram_url || 'https://t.me/flowpospro');
+      setUpdateUrl(config.update_url || 'https://t.me/posflowapp');
+      setTelegramUrl(config.telegram_url || 'https://t.me/posflowapp');
       setCustomMessage(config.message || 'يرجى التحديث للاستمرار في استخدام التطبيق بكفاءة وأمان.');
 
       if (config.min_version_code && config.min_version_code > 0) {

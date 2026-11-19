@@ -44,7 +44,7 @@ export async function fetchTelegramLinked(userId: string): Promise<boolean | nul
   }
 }
 
-const DEFAULT_BOT_LINK = 'https://t.me/flowpos_helper_bot';
+const DEFAULT_BOT_LINK = 'https://t.me/Posflowappbot';
 
 export async function getTelegramBotLink(): Promise<string> {
   try {

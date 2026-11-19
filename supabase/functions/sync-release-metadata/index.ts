@@ -66,8 +66,8 @@ Deno.serve(async (req) => {
       min_version_code: existingConfig.min_version_code ?? 0,
       grace_days: existingConfig.grace_days ?? 3,
       forced_since: existingConfig.forced_since ?? null,
-      update_url: existingConfig.update_url ?? 'https://t.me/flowpospro',
-      telegram_url: existingConfig.telegram_url ?? 'https://t.me/flowpospro',
+      update_url: existingConfig.update_url ?? 'https://t.me/posflowapp',
+      telegram_url: existingConfig.telegram_url ?? 'https://t.me/posflowapp',
       message: existingConfig.message ?? '',
       // الحقول المحدّثة تلقائياً من كل Push
       latest_version_code: Number(latest_version_code),

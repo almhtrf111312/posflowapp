@@ -194,52 +194,42 @@
 
 ```
 الفلسفة:
-  الخصم يقلل الإيرادات والهامش، لكن الربح الأساسي يبقى
+  الخصم يُخصم بالكامل من الإيراد، فيقلّل الربح بنفس قيمته (وليس بنسبة منه)
 
-الصيغة:
-  gross_profit_items = Σ(sale_price - cost_price) × quantity
-  
-  profit_impact_ratio = (discounted_total / subtotal)
-  
-  net_profit = gross_profit_items × profit_impact_ratio
+الصيغة (المعتمدة فعلياً في الخادم):
+  f = 1 + tax_rate/100   إذا كانت الضريبة شاملة، وإلا f = 1
+  net_revenue = (subtotal - discount) / f
+  net_profit  = net_revenue - COGS
 
 مثال:
-  subtotal = $500
+  subtotal = $500, COGS = $380  =>  gross_profit = $120
   discount = $50
-  discounted total = $450
-  profit_impact_ratio = 450 / 500 = 0.9 (90%)
-  
-  gross_profit_items = $120
-  net_profit = $120 × 0.9 = $108
-  
-  التفسير: خسرنا $12 من الأرباح بسبب الخصم
+  net_revenue = 500 - 50 = $450
+  net_profit  = 450 - 380 = $70
+
+  التفسير: الخصم $50 ينقص الربح $50 كاملة (120 - 50 = 70) وليس $12.
 ```
 
 ### 2.4 الربح مع تأثير الخصم (النموذج الثاني)
 
 ```
 الفلسفة:
-  الخصم يؤثر على كل منتج بنسبة متساوية
+  الخصم يُوزَّع على الأسطر بنسبة مبلغ كل سطر، ثم يُخصم من ربح كل سطر بكامل قيمته
 
 الخطوات:
 
-1. حساب الربح الإجمالي للمنتجات
-   total_profit = Σ(sale - cost) × qty = $120
+1. الربح الإجمالي للأسطر
+   gross_profit = Σ(sale - cost) × qty = $120
 
-2. حساب نسبة الخصم من الإجمالي
-   discount_ratio = discount / subtotal
-   = 50 / 500 = 0.1 (10%)
+2. حصة كل سطر من الخصم
+   line_discount = discount × (line_amount / subtotal)
 
-3. حساب تقليل الربح
-   profit_reduction = total_profit × discount_ratio
-   = 120 × 0.1 = $12
+3. ربح السطر الصافي (الضريبة غير الشاملة)
+   line_net_profit = line_amount - line_discount - line_cost
+   (الضريبة الشاملة: يُقسم (line_amount - line_discount) على f قبل طرح التكلفة)
 
-4. الربح النهائي
-   net_profit = total_profit - profit_reduction
-   = 120 - 12 = $108
-
-النتيجة نفسها من النموذج الأول!
-لكن الطريقة أفضل للفهم والتطبيق
+4. ربح الفاتورة
+   net_profit = Σ line_net_profit = 500 - 50 - 380 = $70
 ```
 
 ### 2.5 التكلفة الإجمالية للبضاعة المباعة (COGS)
@@ -459,7 +449,7 @@ Step 2: توزيع على العام من المتبقي
 الإلغاء الكامل للفاتورة
 ```
 
-### 5.2 المرتجع الجزئي (غير مدعوم حالياً)
+### 5.2 المرتجع الجزئي (مدعوم ذرياً على الخادم عبر `refund_invoice_partial_atomic`)
 
 ```
 الفاتورة الأصلية:
@@ -476,7 +466,7 @@ Step 2: توزيع على العام من المتبقي
   الفاتورة المتبقية: $400
   المخزون المستعاد: +1 unit
   من الصندوق: -$100
-  من الأرباح: -$40 (نسبي)
+  من الأرباح: ربح الأصناف المرتجعة فقط، ويُحتسب بنسبة الكمية المرتجعة بعد توزيع الخصم
 ```
 
 ---

@@ -64,9 +64,9 @@ The formulas reference does not describe this tax-inclusive mode. Use the execut
 - Net line profit (exclusive mode): `line_amount − line_discount − line_cost`.
 - Net invoice profit (exclusive mode): `subtotal − discount − COGS`.
 
-The reference shows two discount-impact models (2.3 and 2.4) that produce the same result: net profit equals gross profit multiplied by `discounted_total ÷ subtotal`, which is the same as subtracting the proportional share of the discount. The allocation in section 5 above matches the stored logic.
+Discount handling: the discount is subtracted in full from revenue, so it reduces profit by its full amount, not by a ratio of profit. With tax-inclusive pricing: `net_revenue = (subtotal − discount) ÷ (1 + tax_rate/100)`, and `net_profit = net_revenue − COGS`. This matches the server implementation and the allocation in section 5 above.
 
-Worked example: products with profits 40, 40, and 40 give a gross profit of 120. A discount of 50 on a subtotal of 500 reduces profit by 12 (10%), leaving 108.
+Worked example: subtotal 500, COGS 380 (gross profit 120). A discount of 50 gives net revenue 450 and net profit 70 (not 108).
 
 ## 6. Debts and settlements (formulas 3.1 to 3.3)
 

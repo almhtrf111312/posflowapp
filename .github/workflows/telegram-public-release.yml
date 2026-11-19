@@ -178,7 +178,7 @@ jobs:
           const VERSION_CODE = (process.env.VERSION_CODE || '').trim();
           const CUSTOM_NOTES = (process.env.CUSTOM_NOTES || '').trim();
 
-          const OFFICIAL_CHANNEL = '@flowpospro'; // نفس الاحتياطي الموجود في النسخة القديمة
+          const OFFICIAL_CHANNEL = '@posflowapp'; // نفس الاحتياطي الموجود في النسخة القديمة
           const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // حد Bot API لرفع الملفات
           const CAPTION_SAFE_LIMIT = 1000; // الحد الرسمي 1024 — نترك هامش أمان
           const MESSAGE_CHUNK = 3800; // الحد الرسمي 4096
@@ -430,7 +430,7 @@ jobs:
             if (useHtml) form.append('parse_mode', 'HTML');
             form.append(
               'reply_markup',
-              JSON.stringify({ inline_keyboard: [[{ text: '📢 قناة التحديثات الرسمية', url: 'https://t.me/flowpospro' }]] })
+              JSON.stringify({ inline_keyboard: [[{ text: '📢 قناة التحديثات الرسمية', url: 'https://t.me/posflowapp' }]] })
             );
             return { form };
           }

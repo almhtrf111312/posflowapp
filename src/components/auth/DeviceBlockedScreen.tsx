@@ -43,7 +43,7 @@ export function DeviceBlockedScreen() {
           </div>
 
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground leading-relaxed">
-            إذا مضت 5 أيام على ربط الجهاز السابق: سجّل الخروج ثم ادخل من جديد واضغط «نقل الحساب إلى هذا الجهاز».
+            إذا مضى يوم على ربط الجهاز السابق: سجّل الخروج ثم ادخل من جديد واضغط «نقل الحساب إلى هذا الجهاز».
             قبل ذلك يتم النقل عبر بوت تيليغرام أو الدعم الفني.
           </div>
 

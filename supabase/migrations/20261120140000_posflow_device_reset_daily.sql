@@ -1,0 +1,1 @@
+-- تصفير الجهاز الذاتي: مهلة يوم واحد بدل 5 أيام (طُبّقت عبر apply_migration على request_device_reset_secure(p_user_id uuid))

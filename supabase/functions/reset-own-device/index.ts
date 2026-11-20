@@ -43,7 +43,7 @@ serve(async (req) => {
 
     const userId = signInData.user.id;
 
-    // 2. استدعاء دالة الـ SQL الآمنة الخاضعة لقيد الـ 5 أيام
+    // 2. استدعاء دالة الـ SQL الآمنة الخاضعة لقيد اليوم الواحد
     const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc('request_device_reset_secure', {
       p_user_id: userId
     });
@@ -59,12 +59,12 @@ serve(async (req) => {
       );
     }
 
-    // إذا أعادت الدالة خطأ عدم انقضاء مهلة الـ 5 أيام
+    // إذا أعادت الدالة خطأ عدم انقضاء مهلة اليوم الواحد
     if (!rpcRes.success) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: rpcRes.error || 'لا يمكن تصفير الجهاز قبل مرور 5 أيام على التصفير السابق' 
+          error: rpcRes.error || 'لا يمكن تصفير الجهاز أكثر من مرة في اليوم' 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

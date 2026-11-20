@@ -947,7 +947,7 @@ export default function Login() {
 
             {/* الأزرار والإجراءات */}
             <div className="space-y-2.5 pt-1">
-              {/* زر التصفير المباشر (خاضع لمهلة الـ 5 أيام) */}
+              {/* زر التصفير المباشر (خاضع لمهلة اليوم الواحد) */}
               <Button 
                 type="button"
                 onClick={handleResetDevice} 
@@ -996,7 +996,7 @@ export default function Login() {
             </div>
 
             <p className="text-[11px] text-center text-muted-foreground leading-normal">
-              🔒 يمكنك نقل الحساب بنفسك إذا مضت 5 أيام على ربط الجهاز السابق. قبل ذلك يتم النقل عبر بوت تيليغرام.
+              🔒 يمكنك نقل الحساب بنفسك إذا مضى يوم على ربط الجهاز السابق. قبل ذلك يتم النقل عبر بوت تيليغرام.
             </p>
           </div>
         </div>

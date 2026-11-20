@@ -1,14 +1,24 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
+
 import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
-
-const ActivityArchiveSection = lazy(() => import('@/components/settings/ActivityArchiveSection').then(m => ({ default: m.ActivityArchiveSection })));
-const SystemDiagnostics = lazy(() => import('@/components/settings/SystemDiagnostics').then(m => ({ default: m.SystemDiagnostics })));
-const LocalBackupSection = lazy(() => import('@/components/settings/LocalBackupSection').then(m => ({ default: m.LocalBackupSection })));
-const Partners = lazy(() => import('@/pages/Partners'));
-const LicenseManagement = lazy(() => import('@/components/settings/LicenseManagement').then(m => ({ default: m.LicenseManagement })));
-const DataResetSection = lazy(() => import('@/components/settings/DataResetSection'));
-const ContactLinksSection = lazy(() => import('@/components/settings/ContactLinksSection').then(m => ({ default: m.ContactLinksSection })));
-const ProductFieldsSection = lazy(() => import('@/components/settings/ProductFieldsSection').then(m => ({ default: m.ProductFieldsSection })));
+
+
+const ActivityArchiveSection = lazy(() => import('@/components/settings/ActivityArchiveSection').then(m => ({ default: m.ActivityArchiveSection })));
+
+const SystemDiagnostics = lazy(() => import('@/components/settings/SystemDiagnostics').then(m => ({ default: m.SystemDiagnostics })));
+
+const LocalBackupSection = lazy(() => import('@/components/settings/LocalBackupSection').then(m => ({ default: m.LocalBackupSection })));
+
+const Partners = lazy(() => import('@/pages/Partners'));
+
+const LicenseManagement = lazy(() => import('@/components/settings/LicenseManagement').then(m => ({ default: m.LicenseManagement })));
+
+const DataResetSection = lazy(() => import('@/components/settings/DataResetSection'));
+
+const ContactLinksSection = lazy(() => import('@/components/settings/ContactLinksSection').then(m => ({ default: m.ContactLinksSection })));
+
+const ProductFieldsSection = lazy(() => import('@/components/settings/ProductFieldsSection').then(m => ({ default: m.ProductFieldsSection })));
+
 const UsersTab = lazy(() => import('@/components/settings/UsersTab'));
 const StoreInfoSection = lazy(() => import('@/components/settings/StoreInfoSection'));
 const FinanceSettingsSection = lazy(() => import('@/components/settings/FinanceSettingsSection'));
@@ -111,6 +121,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVerificationDialog';
+import { RestoreWarningDialog } from '@/components/settings/RestoreWarningDialog';
 import { TelegramLinkCard } from '@/components/auth/TelegramLinkCard';
 import { showToast } from '@/lib/toast-config';
 import { useToast } from '@/hooks/use-toast';
@@ -785,6 +796,8 @@ export default function Settings() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [pendingRestore, setPendingRestore] = useState<{ backup: import('@/lib/full-backup').FullBackup; fileName: string; summary: string } | null>(null);
   const [lastBackupResult, setLastBackupResult] = useState<DownloadResult | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -1092,13 +1105,20 @@ export default function Settings() {
       keywords: ['مستخدمين', 'كاشير', 'صلاحيات', 'وصول', 'users', 'roles', 'cashier'],
     },
     {
-      id: 'activity',
-      label: isRTL ? 'سجل النشاط والأرشيف' : 'Activity log & archive',
-      description: isRTL ? 'تدقيق الحركات، الأرشيف واسترجاع المحذوفات' : 'Audit trail, archive & restore deleted items',
-      icon: Activity,
-      category: 'operations',
-      color: 'emerald',
-      badge: isRTL ? 'تدقيق آمن' : 'Audit',
+      id: 'activity',
+
+      label: isRTL ? 'سجل النشاط والأرشيف' : 'Activity log & archive',
+
+      description: isRTL ? 'تدقيق الحركات، الأرشيف واسترجاع المحذوفات' : 'Audit trail, archive & restore deleted items',
+
+      icon: Activity,
+
+      category: 'operations',
+
+      color: 'emerald',
+
+      badge: isRTL ? 'تدقيق آمن' : 'Audit',
+
       keywords: ['نشاط', 'سجل', 'تدقيق', 'عمليات', 'حركات', 'أرشيف', 'محذوفات', 'استرجاع', 'فواتير', 'activity', 'log', 'audit', 'archive', 'deleted'],
     },
     {
@@ -1522,21 +1542,17 @@ export default function Settings() {
   const handleBackupNow = async () => {
     setIsBackingUp(true);
     try {
-      const { generateBackupData } = await import('@/lib/auto-backup');
-      const backupData = await generateBackupData();
-
-      const storeName = storeSettings.name.replace(/[^a-zA-Z0-9أ-ي\s_-]/g, '').trim() || 'posflow';
-      const dateStr = new Date().toISOString().split('T')[0];
-      const filename = `backup_${storeName}_${dateStr}.json`;
-
-      // Use cross-platform download utility
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await downloadJSON(filename, backupData as any);
+      const { buildFullBackup, backupFileName } = await import('@/lib/full-backup');
+      const { downloadFile } = await import('@/lib/file-download');
+      const backup = await buildFullBackup();
+      const content = JSON.stringify(backup);
+      const filename = backupFileName();
+      const result = await downloadFile({ filename, content, mimeType: 'application/json' });
 
       const newBackup: BackupData = {
         id: Date.now().toString(),
         date: formatDateTime(new Date().toISOString()),
-        size: (JSON.stringify(backupData).length / 1024 / 1024).toFixed(2) + ' MB',
+        size: (content.length / 1024 / 1024).toFixed(2) + ' MB',
         type: 'manual',
       };
       setBackups([newBackup, ...backups]);
@@ -1550,153 +1566,73 @@ export default function Settings() {
             : t('settings.backupDownloaded'),
         });
       } else {
-        toast({
-          title: t('common.error'),
-          description: t('settings.backupFailed'),
-          variant: 'destructive',
-        });
+        toast({ title: t('common.error'), description: t('settings.backupFailed'), variant: 'destructive' });
       }
     } catch (error) {
       console.error('Backup error:', error);
-      toast({
-        title: t('common.error'),
-        description: t('settings.backupFailed'),
-        variant: 'destructive',
-      });
+      toast({ title: t('common.error'), description: t('settings.backupFailed'), variant: 'destructive' });
     } finally {
       setIsBackingUp(false);
     }
   };
 
-  // Import backup file (JSON format)
-  const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // اختيار ملف الاستعادة: نقرؤه ونتحقق منه ثم نعرض تحذير الـ 10 ثوانٍ
+  const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     setIsImporting(true);
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      try {
-        const fileContent = e.target?.result as string;
-
-        // Parse JSON backup
-        type BackupPayload = {
-          version?: string;
-          exportedAt?: string;
-          localStorageData?: Record<string, unknown>;
-          settings?: {
-            storeSettings?: typeof storeSettings;
-            exchangeRates?: typeof exchangeRates;
-            syncSettings?: typeof syncSettings;
-            notificationSettings?: typeof notificationSettings;
-            printSettings?: typeof printSettings;
-            backupSettings?: typeof backupSettings;
-          };
-          backups?: BackupData[];
-        };
-        let data: BackupPayload;
-        try {
-          data = JSON.parse(fileContent) as BackupPayload;
-        } catch {
-          toast({
-            title: t('common.error'),
-            description: t('settings.invalidBackupFile'),
-            variant: 'destructive',
-          });
-          setIsImporting(false);
-          return;
-        }
-
-        // Validate backup structure
-        if (!data.version || !data.exportedAt) {
-          toast({
-            title: t('common.error'),
-            description: t('settings.invalidBackupFormat'),
-            variant: 'destructive',
-          });
-          setIsImporting(false);
-          return;
-        }
-
-        // Restore ALL localStorage data if available
-        if (data.localStorageData && typeof data.localStorageData === 'object') {
-          Object.entries(data.localStorageData).forEach(([key, value]) => {
-            try {
-              if (typeof value === 'string') {
-                localStorage.setItem(key, value);
-              } else {
-                localStorage.setItem(key, JSON.stringify(value));
-              }
-            } catch {
-              // skip problematic keys
-            }
-          });
-        }
-
-        if (data.settings) {
-          if (data.settings.storeSettings) setStoreSettings(data.settings.storeSettings);
-          if (data.settings.exchangeRates) setExchangeRates(data.settings.exchangeRates);
-          if (data.settings.syncSettings) setSyncSettings(data.settings.syncSettings);
-          if (data.settings.notificationSettings) setNotificationSettings(data.settings.notificationSettings);
-          if (data.settings.printSettings) setPrintSettings(data.settings.printSettings);
-          if (data.settings.backupSettings) setBackupSettings(data.settings.backupSettings);
-        }
-
-        if (data.backups) setBackups(data.backups);
-
-        // Save to local storage
-        savePersistedSettings({
-          storeSettings: data.settings?.storeSettings || storeSettings,
-          exchangeRates: data.settings?.exchangeRates || exchangeRates,
-          syncSettings: data.settings?.syncSettings || syncSettings,
-          notificationSettings: data.settings?.notificationSettings || notificationSettings,
-          printSettings: data.settings?.printSettings || printSettings,
-          backupSettings: data.settings?.backupSettings || backupSettings,
-        });
-
-        // Apply settings directly to runtime
-        const updatedUnified = loadUnifiedStoreSettings();
-        applySettingsToRuntime(updatedUnified);
-
-        // Dispatch standardized events to update all components
-        emitEvent(EVENTS.CUSTOMERS_UPDATED);
-        emitEvent(EVENTS.DEBTS_UPDATED);
-        emitEvent(EVENTS.INVOICES_UPDATED);
-        emitEvent(EVENTS.PRODUCTS_UPDATED);
-        emitEvent(EVENTS.PARTNERS_UPDATED);
-        emitEvent(EVENTS.EXPENSES_UPDATED);
-
-        toast({
-          title: t('settings.restoreComplete'),
-          description: t('localBackup.restoreSuccess') || t('settings.restoreComplete'),
-        });
-      } catch (error) {
-        console.error('Import error:', error);
-        toast({
-          title: t('common.error'),
-          description: t('settings.importFailed'),
-          variant: 'destructive',
-        });
-      }
-
-      setIsImporting(false);
-      // Reset the input
-      if (importInputRef.current) {
-        importInputRef.current.value = '';
-      }
-    };
-
-    reader.onerror = () => {
+    try {
+      const { decodeBackupFile, parseBackup } = await import('@/lib/full-backup');
+      const parsed = await parseBackup(await decodeBackupFile(file));
+      const c = parsed.counts || {};
+      const summary = `منتجات: ${c.products ?? 0} • فواتير: ${c.invoices ?? 0} • مصاريف: ${c.expenses ?? 0} • عملاء: ${c.customers ?? 0} • صور: ${Object.keys(parsed.images || {}).length}`;
+      setPendingRestore({ backup: parsed, fileName: file.name, summary });
+    } catch (error) {
+      console.error('Import error:', error);
       toast({
         title: t('common.error'),
-        description: t('settings.fileReadError'),
+        description: error instanceof Error ? error.message : t('settings.invalidBackupFile'),
         variant: 'destructive',
       });
+    } finally {
       setIsImporting(false);
-    };
+      if (importInputRef.current) importInputRef.current.value = '';
+    }
+  };
 
-    reader.readAsText(file);
+  const confirmRestore = async () => {
+    if (!pendingRestore) return;
+    setIsRestoring(true);
+    try {
+      const { restoreFullBackup } = await import('@/lib/full-backup');
+      const report = await restoreFullBackup(pendingRestore.backup);
+      // المزامنة إلى السحابة: النسخة المستعادة تحل محل كل النسخ السحابية السابقة
+      try {
+        const { replaceCloudBackupWithCurrent } = await import('@/lib/cloud-backup');
+        await replaceCloudBackupWithCurrent();
+      } catch (e) {
+        console.warn('Cloud backup sync after restore failed:', e);
+      }
+      const total = Object.values(report.restored).reduce((a, b) => a + b, 0);
+      toast({
+        title: t('settings.restoreComplete'),
+        description: report.failed.length
+          ? `تمت استعادة ${total} سجل. تعذّر جزء: ${report.failed.map((f) => `${f.table} (${f.message})`).join(' | ')}`
+          : `تمت استعادة ${total} سجل و${report.imagesRestored} صورة بنجاح`,
+        variant: report.failed.length ? 'destructive' : undefined,
+      });
+      setPendingRestore(null);
+      setTimeout(() => window.location.reload(), report.failed.length ? 6000 : 1500);
+    } catch (error) {
+      console.error('Restore error:', error);
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.importFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   const handleRestoreBackup = (backup: BackupData) => {
@@ -1712,41 +1648,6 @@ export default function Settings() {
       title: t('common.deleted'),
       description: t('settings.backupDeleted'),
     });
-  };
-
-  const handleExportData = async () => {
-    try {
-      const { generateBackupData } = await import('@/lib/auto-backup');
-      const backupData = await generateBackupData();
-
-      const filename = `posflow_export_${new Date().toISOString().split('T')[0]}.json`;
-
-      // Use cross-platform download utility
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await downloadJSON(filename, backupData as any);
-
-      if (result.success) {
-        toast({
-          title: t('settings.exportComplete'),
-          description: isNativePlatform()
-            ? t('settings.dataSavedDevice')
-            : t('settings.dataDownloaded'),
-        });
-      } else {
-        toast({
-          title: t('common.error'),
-          description: t('settings.exportFailed'),
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({
-        title: t('common.error'),
-        description: t('settings.exportFailed'),
-        variant: 'destructive',
-      });
-    }
   };
 
   const handleImportData = () => {
@@ -1958,8 +1859,10 @@ export default function Settings() {
             </Suspense>
           </div>
         );
-      case 'activity':
-      case 'archive':
+      case 'activity':
+
+      case 'archive':
+
         return <ActivityArchiveSection initialView={activeTab === 'archive' ? 'archive' : undefined} />;
       case 'store':
         return (
@@ -2265,7 +2168,6 @@ export default function Settings() {
               isBackingUp={isBackingUp}
               handleImportBackup={handleImportBackup}
               isImporting={isImporting}
-              handleExportData={handleExportData}
               lastBackupResult={lastBackupResult}
               backupSettings={backupSettings}
               setBackupSettings={setBackupSettings}
@@ -3024,6 +2926,14 @@ export default function Settings() {
       </AlertDialog>
 
       {/* نافذة التحقق من ملكية رقم هاتف المتجر ونقله */}
+      <RestoreWarningDialog
+        open={!!pendingRestore}
+        fileName={pendingRestore?.fileName || ''}
+        summary={pendingRestore?.summary || ''}
+        busy={isRestoring}
+        onConfirm={confirmRestore}
+        onCancel={() => setPendingRestore(null)}
+      />
       <StorePhoneVerificationDialog
         open={phoneVerificationOpen}
         onOpenChange={setPhoneVerificationOpen}

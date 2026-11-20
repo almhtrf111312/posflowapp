@@ -98,95 +98,10 @@ const getStoreSettings = (): Record<string, unknown> => {
   return {};
 };
 
-// Generate comprehensive backup data with all system data
+// نسخة كاملة (كل الجداول والأعمدة والصور) — راجع full-backup.ts
 export const generateBackupData = async (): Promise<object> => {
-  const storeSettings = getStoreSettings();
-
-  // Load all data from Cloud Stores (Source of Truth)
-  // These functions should ideally have local fallback/caching
-  let invoices: unknown[] = [];
-  let products: unknown[] = [];
-  let partners: unknown[] = [];
-  // dynamically import to avoid circular deps if any
-  const { loadInvoicesCloud } = await import('./cloud/invoices-cloud');
-  const { loadProductsCloud } = await import('./cloud/products-cloud');
-  const { loadPartnersCloud } = await import('./cloud/partners-cloud');
-  const { loadExpensesCloud } = await import('./cloud/expenses-cloud');
-  const { loadWarehousesCloud, fetchAllWarehouseStocksCloud, loadStockTransfersCloud } = await import('./cloud/warehouses-cloud');
-
-  // Try fetching main data
-  try { invoices = await loadInvoicesCloud(); } catch (e) { console.error('Backup invoice error', e); }
-  try { products = await loadProductsCloud(); } catch (e) { console.error('Backup product error', e); }
-  try { partners = await loadPartnersCloud(); } catch (e) { console.error('Backup partner error', e); }
-
-  let expenses: unknown[] = [];
-  try { expenses = await loadExpensesCloud(); } catch (e) { console.error('Backup expense error', e); }
-
-  let warehouses: unknown[] = [];
-  let warehouseStock: unknown[] = [];
-  let stockTransfers: unknown[] = [];
-  try { warehouses = await loadWarehousesCloud(); } catch (e) { console.error('Backup warehouse error', e); }
-  try { warehouseStock = await fetchAllWarehouseStocksCloud(); } catch (e) { console.error('Backup stock error', e); }
-  try { stockTransfers = await loadStockTransfersCloud(); } catch (e) { console.error('Backup transfer error', e); }
-
-  // Other local-only or less critical data from localStorage
-  // Customers, Debts might be in Invoice Cloud or separate. 
-  // Assuming Customers are separate? Let's check localStorage fallback for them.
-  const customers = tryParse('posflow_customers_v1') || [];
-  const debts = tryParse('posflow_debts_v1') || []; // If debts are cloud, should use loader. Assuming local fallback for now.
-
-  const backupData: Record<string, unknown> = {
-    version: '2.1', // Bump version/
-    timestamp: new Date().toISOString(),
-    localTimestamp: formatDateTime(new Date().toISOString()),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    appName: 'FlowBOS Pro',
-    source: 'posflow_backup_cloud',
-    storeInfo: storeSettings,
-    data: {
-      // Cloud Data
-      'posflow_invoices_v1': invoices,
-      'posflow_products_v1': products,
-      'posflow_partners_v1': partners,
-      'posflow_expenses_v1': expenses,
-
-      // Warehouse Data (New)
-      'posflow_warehouses_v1': warehouses,
-      'posflow_warehouse_stock_v1': warehouseStock,
-      'posflow_stock_transfers_v1': stockTransfers,
-
-      // Local/Legacy Data
-      'posflow_customers_v1': customers,
-      'posflow_debts_v1': debts,
-      'posflow_recurring_expenses_v1': tryParse('posflow_recurring_expenses_v1'),
-      'posflow_categories_v1': tryParse('posflow_categories_v1'),
-      'posflow_maintenance_v1': tryParse('posflow_maintenance_v1'),
-
-      // Internal State
-      'posflow_cashbox_v1': tryParse('posflow_cashbox_v1'),
-      'posflow_shifts_v1': tryParse('posflow_shifts_v1'),
-      'posflow_capital_v1': tryParse('posflow_capital_v1'),
-
-      // Configs
-      'posflow_settings': tryParse('posflow_settings'),
-      'posflow_settings_v1': tryParse('posflow_settings_v1'),
-      'posflow_exchange_rates_v1': tryParse('posflow_exchange_rates_v1'),
-      'posflow_custom_fields_config': tryParse('posflow_custom_fields_config'),
-      'posflow_product_fields_config': tryParse('posflow_product_fields_config'),
-      'posflow_backup_config_v1': tryParse('posflow_backup_config_v1'),
-      'posflow_activity_log': tryParse('posflow_activity_log'),
-    },
-    summary: {
-      invoicesCount: invoices.length,
-      productsCount: products.length,
-      customersCount: customers.length,
-      expensesCount: expenses.length,
-      partnersCount: partners.length,
-      warehousesCount: warehouses.length,
-    }
-  };
-
-  return backupData;
+  const { buildFullBackup } = await import('./full-backup');
+  return buildFullBackup();
 };
 
 const tryParse = (key: string) => {
@@ -200,7 +115,7 @@ const tryParse = (key: string) => {
 export const saveBackupLocally = async (): Promise<boolean> => {
   try {
     const backupData = await generateBackupData();
-    const fileName = `FlowBOS Pro - Backup - ${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const fileName = `PosFlow - Backup - ${new Date().toISOString().replace(/[:.]/g, '-')}.posflowbak`;
 
     // Check if running on native platform
     const isNative = typeof window !== 'undefined' &&
@@ -208,25 +123,14 @@ export const saveBackupLocally = async (): Promise<boolean> => {
 
     if (isNative) {
       await Filesystem.writeFile({
-        path: `FlowBOS Pro/backups/${fileName}`,
+        path: `PosFlow/backups/${fileName}`,
         data: JSON.stringify(backupData, null, 2),
         directory: Directory.Documents,
         encoding: Encoding.UTF8,
         recursive: true,
       });
     } else {
-      // For web, save to localStorage as fallback
-      const backups = loadLocalBackups();
-      backups.unshift({
-        fileName,
-        data: backupData,
-        createdAt: new Date().toISOString(),
-      });
-      // Keep only last 10 backups
-      if (backups.length > 10) {
-        backups.pop();
-      }
-      localStorage.setItem('posflow_local_backups', JSON.stringify(backups));
+      // على الويب لا نخزن نسخة كاملة (بالصور) في localStorage؛ النسخة السحابية والتنزيل اليدوي كافيان
     }
 
     return true;
@@ -324,7 +228,7 @@ export const stopAutoBackup = (): void => {
 // Generate downloadable JSON backup for manual export
 export const generateDownloadableBackup = async (): Promise<{ data: string; fileName: string }> => {
   const backupData = await generateBackupData();
-  const fileName = `FlowBOS Pro - Full Backup - ${new Date().toISOString().split('T')[0]}.json`;
+  const fileName = `PosFlow - Backup - ${new Date().toISOString().split('T')[0]}.posflowbak`;
 
   return {
     data: JSON.stringify(backupData, null, 2),

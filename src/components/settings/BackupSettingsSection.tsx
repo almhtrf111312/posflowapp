@@ -19,7 +19,6 @@ export interface BackupSettingsSectionProps {
   isBackingUp: boolean;
   handleImportBackup: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isImporting: boolean;
-  handleExportData: () => void;
   lastBackupResult: any;
   backupSettings: any;
   setBackupSettings: React.Dispatch<React.SetStateAction<any>>;
@@ -37,7 +36,6 @@ export function BackupSettingsSection({
   isBackingUp,
   handleImportBackup,
   isImporting,
-  handleExportData,
   lastBackupResult,
   backupSettings,
   setBackupSettings,
@@ -64,7 +62,7 @@ export function BackupSettingsSection({
                 <span className="text-xs">{t('settings.downloadBackup')}</span>
               </Button>
               <div className="w-full">
-                <input type="file" accept=".json,application/json,text/plain" onChange={handleImportBackup} className="hidden" id="import-backup" ref={importInputRef} />
+                <input type="file" accept=".posflowbak,.json,application/json,text/plain" onChange={handleImportBackup} className="hidden" id="import-backup" ref={importInputRef} />
                 <label htmlFor="import-backup" className="w-full block">
                   <Button variant="outline" size="sm" className="w-full h-9" asChild disabled={isImporting}>
                     <span className="cursor-pointer">
@@ -75,11 +73,6 @@ export function BackupSettingsSection({
                 </label>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleExportData} className="w-full h-9">
-              <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="text-xs">تصدير بيانات JSON</span>
-            </Button>
-
             {/* Last backup result */}
             {lastBackupResult?.success && (
               <div className="p-2 bg-muted/50 rounded-lg border border-border text-xs flex items-center gap-2">

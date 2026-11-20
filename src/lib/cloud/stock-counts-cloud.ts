@@ -122,19 +122,16 @@ export async function saveStockCount(params: {
 
       if (it.variance < 0) {
         const lostQty = Math.abs(it.variance);
-        await sb.from('stock_damages').insert({
-          user_id: owner,
-          product_id: it.product_id,
-          product_name: it.product_name || null,
-          warehouse_id: params.warehouse_id || null,
-          quantity: lostQty,
-          unit_cost: it.unit_cost,
-          cost_value: lostQty * it.unit_cost,
-          reason: 'نقص جرد',
-          source: 'stock_count',
-          source_ref: countId,
-          recorded_by: user?.id || null,
-          recorded_by_name: user?.email || null,
+        await sb.rpc('record_stock_damage_atomic', {
+          _product_id: it.product_id,
+          _warehouse_id: params.warehouse_id || null,
+          _quantity: lostQty,
+          _unit_cost: it.unit_cost,
+          _reason: 'نقص جرد',
+          _notes: null,
+          _apply_to_stock: false,
+          _source: 'stock_count',
+          _source_ref: String(countId),
         });
       }
     }

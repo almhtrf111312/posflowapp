@@ -46,34 +46,22 @@ export async function recordDamage(params: {
 }): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
-  const { data: roleRow } = await sb
-    .from('user_roles').select('owner_id').eq('user_id', user.id).maybeSingle();
-  const owner = roleRow?.owner_id || user.id;
 
   const cost_value = params.quantity * params.unit_cost;
 
-  const { error } = await sb.from('stock_damages').insert({
-    user_id: owner,
-    product_id: params.product_id,
-    product_name: params.product_name || null,
-    warehouse_id: params.warehouse_id || null,
-    quantity: params.quantity,
-    unit_cost: params.unit_cost,
-    cost_value,
-    reason: params.reason || null,
-    notes: params.notes || null,
-    recorded_by: user.id,
-    recorded_by_name: user.email || null,
-    source: 'manual',
+  // تسجيل التالف وخصم المخزون في معاملة ذرية واحدة (حركة مخزون من نوع damage)
+  const { error } = await sb.rpc('record_stock_damage_atomic', {
+    _product_id: params.product_id,
+    _warehouse_id: params.warehouse_id || null,
+    _quantity: params.quantity,
+    _unit_cost: params.unit_cost,
+    _reason: params.reason || null,
+    _notes: params.notes || null,
+    _apply_to_stock: !!params.applyToStock,
+    _source: 'manual',
+    _source_ref: null,
   });
   if (error) { console.error(error); return false; }
-
-  if (params.applyToStock) {
-    await sb.rpc('deduct_product_quantity', {
-      _product_id: params.product_id,
-      _amount: params.quantity,
-    });
-  }
 
   logActivity('product_updated' as never, `إتلاف ${params.quantity} من ${params.product_name || ''}`, {
     entityType: 'stock_damage', entityId: params.product_id, quantity: params.quantity, cost_value

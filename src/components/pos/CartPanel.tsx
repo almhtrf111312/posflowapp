@@ -2,7 +2,6 @@ import { isAppOffline } from '@/hooks/use-network-status';
 import { isLocalOnlyMode } from '@/lib/subscription-lock';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
-import { addExpenseCloud } from '@/lib/cloud/expenses-cloud';
 import {
   Wrench,
   AlertCircle,
@@ -569,7 +568,8 @@ export function CartPanel({
     }
 
     // 💰 الزيادة في المقبوض تُعتمد دائماً كربح إضافي (لا يوجد باقٍ للزبون)
-    if (receivedUSD > total + 0.001) {
+    // قابل للتعطيل من الإعدادات (posflow_surplus_as_profit = 'false' ⇒ الزيادة لا تُضاف للربح)
+    if (receivedUSD > total + 0.001 && localStorage.getItem('posflow_surplus_as_profit') !== 'false') {
       if (!onUpdateItemPrice) return;
       handleApplySurplusAsProfit();
     }
@@ -615,7 +615,6 @@ export function CartPanel({
   };
 
   // 🧾 نقص المقبوض يُسجَّل كمصروف «فرق سعر» عند اختيار الكاشير ذلك
-  const shortageAsExpenseRef = useRef(false);
 
   const confirmCashSale = async () => {
     // 🛡️ تفعيل القفل فوراً وبشكل متزامن قبل أي استدعاء غير متزامن (await)
@@ -653,9 +652,7 @@ export function CartPanel({
     const cartSnapshot = [...cart];
     // 🛡️ لا يُحوَّل نقص المقبوض إلى خصم صامت بعد اليوم.
     // البيع النقدي يُسجَّل بقيمته الكاملة؛ النقص يُعالج كخصم صريح أو كبيع مركب مع عميل.
-    const shortageExpenseUSD = shortageAsExpenseRef.current ? round8(total - receivedUSD) : 0;
-    shortageAsExpenseRef.current = false;
-    if (receivedUSD > 0 && receivedUSD < total - 0.001 && shortageExpenseUSD <= 0) {
+    if (receivedUSD > 0 && receivedUSD < total - 0.001) {
       if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
@@ -971,17 +968,6 @@ export function CartPanel({
         debtRemaining: 0,
         invoiceNumber,
       };
-
-      if (shortageExpenseUSD > 0.001) {
-        const itemNames = cartSnapshot.map(i => `${i.name} ×${i.quantity}`).join('، ');
-        addExpenseCloud({
-          type: 'other',
-          customType: 'فرق سعر بيع',
-          amount: shortageExpenseUSD,
-          notes: `فرق سعر على الفاتورة ${invoiceNumber} - العميل: ${customerNameSnapshot || 'عميل نقدي'} - البنود: ${itemNames} - الإجمالي ${formatNumber(totalSnapshot)}$ والمقبوض ${formatNumber(receivedUSD)}$`,
-          date: new Date().toISOString().split('T')[0],
-        }).catch(err => console.error('[POS] shortage expense failed', err));
-      }
 
       showToast.success('فاتورة مكتملة', {
         operation: 'فاتورة مكتملة',
@@ -2524,12 +2510,11 @@ export function CartPanel({
                 type="button"
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                 onClick={() => {
-                  shortageAsExpenseRef.current = true;
                   setShowDeficitDialog(false);
-                  confirmCashSale();
+                  handleApplyDeficitAsDiscount();
                 }}
               >
-                تسجيل الفرق كمصروف (فرق سعر)
+                اعتماد الفرق كخصم على الفاتورة
               </Button>
 
               {isRealCustomerSelected(customerName) ? (

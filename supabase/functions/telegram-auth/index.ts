@@ -247,16 +247,16 @@ serve(async (req) => {
       // أمر حالة الحساب: هل هذه المحادثة مربوطة بحساب؟
       // -------------------------------------------------------------
       if (typeof message.text === "string" && (message.text.trim().startsWith("/status") || message.text.includes("حالة حسابي"))) {
-        const { data: linked } = await serviceClient
+        const { data: linkedRows } = await serviceClient
           .from("profiles")
           .select("full_name")
-          .eq("telegram_chat_id", chatId.toString())
-          .maybeSingle();
+          .eq("telegram_chat_id", chatId.toString());
+        const names = (linkedRows || []).map((r: any) => escapeMd(r.full_name || "المستخدم"));
         await sendTelegramMessage(
           botToken,
           chatId,
-          linked
-            ? `✅ *حسابك مربوط*\n\nالحساب: *${escapeMd(linked.full_name || "المستخدم")}*\n\n` +
+          names.length
+            ? `✅ *حسابك مربوط*\n\n${names.length > 1 ? "الحسابات المربوطة بهذه المحادثة:\n" : "الحساب: "}*${names.join("* ، *")}*\n\n` +
                 "ستصلك رموز الاستعادة والتنبيهات الأمنية في هذه المحادثة."
             : "⚠️ *حسابك غير مربوط بعد*\n\nاضغط «مشاركة رقم الهاتف للتحقق» لربط حسابك.",
           MAIN_KEYBOARD,
@@ -277,11 +277,22 @@ serve(async (req) => {
         console.log(`[TelegramAuth] Reset device requested from chat ${chatId}`);
 
         // 1. البحث عن الحساب المرتبط بهذا الـ Chat ID
-        const { data: profile } = await serviceClient
+        const { data: profileRows } = await serviceClient
           .from("profiles")
           .select("user_id, full_name, phone")
-          .eq("telegram_chat_id", chatId.toString())
-          .maybeSingle();
+          .eq("telegram_chat_id", chatId.toString());
+        const chosenId = (String(message.text).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i) || [])[0];
+        if ((profileRows || []).length > 1 && !chosenId) {
+          await sendTelegramMessage(botToken, chatId, "🔄 *اختر الحساب المراد نقله لجهاز جديد:*", {
+            inline_keyboard: (profileRows || []).map((r: any) => [
+              { text: String(r.full_name || "المستخدم"), callback_data: `/reset_device ${r.user_id}` },
+            ]),
+          });
+          return new Response("OK", { status: 200 });
+        }
+        const profile = chosenId
+          ? (profileRows || []).find((r: any) => r.user_id === chosenId)
+          : (profileRows || [])[0];
 
         if (!profile) {
           await sendTelegramMessage(

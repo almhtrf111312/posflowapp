@@ -133,7 +133,9 @@ function loadLicenseCacheFallback(): (Omit<LicenseState, 'isLoading' | 'error'>)
 }
 
 export function LicenseProvider({ children }: { children: ReactNode }) {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
+  // التجريبي الذي سجّل رقم هاتف يُسمح له بالمزامنة (السيرفر هو الحَكَم عبر has_paid_write_access)
+  const hasPhone = !!profile?.phone && profile.phone.trim().length > 0;
   const initialCache = loadLicenseCache();
   const fallbackCache = initialCache ? null : loadLicenseCacheFallback();
   const effectiveCache = initialCache || fallbackCache;
@@ -454,16 +456,17 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
   // وضع التجربة المحلي: التجربة (غير المشتركة) لا ترفع بياناتها إلى السحابة
   useEffect(() => {
     if (state.isLoading) return;
-    setLocalOnlyMode(!!state.isTrial && !!state.hasLicense && state.role !== 'boss');
-  }, [state.isLoading, state.isTrial, state.hasLicense, state.role]);
+    const trialCanSync = hasPhone && state.isValid && (!state.expiresAt || new Date(state.expiresAt).getTime() > Date.now());
+    setLocalOnlyMode(!!state.isTrial && !!state.hasLicense && state.role !== 'boss' && !trialCanSync);
+  }, [state.isLoading, state.isTrial, state.hasLicense, state.role, state.isValid, state.expiresAt, hasPhone]);
 
   // حاجز الكتابة السحابية: مسموح فقط لمالك/كاشير برخصة مدفوعة فعّالة، أو للـ Boss
   useEffect(() => {
     if (state.isLoading) return;
     const notExpired = !state.expiresAt || new Date(state.expiresAt).getTime() > Date.now();
-    const paidActive = state.role === 'boss' || (state.hasLicense && !state.isTrial && state.isValid && notExpired);
+    const paidActive = state.role === 'boss' || (state.hasLicense && (!state.isTrial || hasPhone) && state.isValid && notExpired);
     setCloudWriteBlocked(!paidActive);
-  }, [state.isLoading, state.hasLicense, state.isTrial, state.isValid, state.expiresAt, state.role]);
+  }, [state.isLoading, state.hasLicense, state.isTrial, state.isValid, state.expiresAt, state.role, hasPhone]);
 
   return (
     <LicenseContext.Provider value={{ ...state, checkLicense, activateCode, startTrial }}>

@@ -211,37 +211,48 @@ Deno.serve(async (req) => {
       const subUserIds = (subRoles || []).map((r: any) => r.user_id).filter(Boolean);
       console.log('Owner sub accounts:', subUserIds.length);
 
-      // 2) Delete sub-accounts fully (including auth)
+      // 2) Delete the owner's business data FIRST (atomic; runs as boss JWT so auth.uid() checks pass).
+      //    If this fails we must NOT delete the auth accounts, otherwise the data is orphaned on Supabase.
+      if (!supabaseAnonKey) {
+        console.error('Missing SUPABASE_ANON_KEY / SUPABASE_PUBLISHABLE_KEY in env');
+        return new Response(
+          JSON.stringify({ success: false, error: 'Server configuration error (anon key missing)' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const authedClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      const { data: cascadeOk, error: cascadeErr } = await authedClient.rpc('delete_owner_cascade', {
+        _owner_id: userId,
+      });
+
+      if (cascadeErr || cascadeOk !== true) {
+        console.error('delete_owner_cascade failed:', cascadeErr, cascadeOk);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'تعذر حذف بيانات الحساب، لم يُحذف أي شيء',
+            details: cascadeErr?.message ?? 'cascade returned false',
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log('delete_owner_cascade result:', cascadeOk);
+
+      // 3) Delete the sub-accounts' auth users (their data is already gone)
       for (const subId of subUserIds) {
         try {
           await deleteUserCompletely(adminClient, subId);
         } catch (e) {
           console.error('Failed deleting sub account:', subId, e);
-        }
-      }
-
-      // 3) Delete owner data from business tables (must run as boss JWT for auth.uid() checks)
-      if (!supabaseAnonKey) {
-        console.error('Missing SUPABASE_ANON_KEY / SUPABASE_PUBLISHABLE_KEY in env');
-      } else {
-        const authedClient = createClient(supabaseUrl, supabaseAnonKey, {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-          auth: { autoRefreshToken: false, persistSession: false },
-        });
-
-        const { data: cascadeOk, error: cascadeErr } = await authedClient.rpc('delete_owner_cascade', {
-          _owner_id: userId,
-        });
-
-        if (cascadeErr) {
-          console.error('delete_owner_cascade failed:', cascadeErr);
-          // We still proceed with auth delete, but return a warning to caller
-        } else {
-          console.log('delete_owner_cascade result:', cascadeOk);
         }
       }
 

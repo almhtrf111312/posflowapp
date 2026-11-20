@@ -11,6 +11,7 @@ import {
 } from '@/lib/cashbox-store';
 import { EVENTS } from '@/lib/events';
 import { loadQueue } from '@/lib/sync-queue';
+import { ShiftFxDialog } from '@/components/cashbox/ShiftFxDialog';
 import { loadShiftSupplierMoney, ShiftSupplierMoney } from '@/lib/cloud/suppliers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
@@ -62,6 +63,7 @@ export default function CashShifts() {
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [openShift, setOpenShift] = useState<Shift | null>(null);
+  const [showFx, setShowFx] = useState(false);
   const [supplierMoney, setSupplierMoney] = useState<ShiftSupplierMoney | null>(null);
   useEffect(() => {
     if (!openShift) { setSupplierMoney(null); return; }
@@ -415,9 +417,13 @@ export default function CashShifts() {
                   {t('cashShifts.startedAt')} {formatDateTime(openShift.openedAt)} • {openShift.userName}
                 </CardDescription>
               </div>
-              <Badge variant="default" className="bg-green-500">
-                {t('cashShifts.active')}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowFx(true)}>تحويل عملة</Button>
+                <Badge variant="default" className="bg-green-500">
+                  {t('cashShifts.active')}
+                </Badge>
+              </div>
+              <ShiftFxDialog open={showFx} onOpenChange={setShowFx} shiftId={openShift.id} onDone={loadData} />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">

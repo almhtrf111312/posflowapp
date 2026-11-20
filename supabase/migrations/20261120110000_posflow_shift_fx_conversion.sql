@@ -1,0 +1,3 @@
+-- record_shift_fx_atomic: records an in-shift currency conversion as paired fx_out/fx_in shift transactions (idempotent per operation id).
+-- (Applied to bwlqfxfvchjvehnbvwaz via MCP as posflow_shift_fx_conversion.) Close function already counts fx_in/fx_out per currency.
+-- Also applied: posflow_purchase_return_serials (purchase_return_atomic requires/marks serials for tracked products).

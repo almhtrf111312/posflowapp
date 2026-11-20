@@ -56,7 +56,6 @@ import {
   VolumeX,
   FileText,
   Clock,
-  Shield,
   AlertCircle,
   CheckCircle2,
   Cloud,
@@ -69,7 +68,6 @@ import {
   Banknote,
   Package,
   AlertTriangle,
-  ExternalLink,
   Wrench,
   Archive,
   Percent,
@@ -318,34 +316,6 @@ export default function Settings() {
   const [isSavingUser, setIsSavingUser] = useState(false);
   const navigate = useNavigate();
   const { isBoss, isAdmin: isOwnerAdmin } = useUserRole();
-
-  // Boss panel password verification
-  const [bossPassword, setBossPassword] = useState('');
-  const [showBossPassword, setShowBossPassword] = useState(false);
-  const [bossPasswordError, setBossPasswordError] = useState('');
-  const [isVerifyingBossPassword, setIsVerifyingBossPassword] = useState(false);
-
-  const handleOpenBossPanel = async () => {
-    if (!bossPassword || !currentUser?.email) return;
-    setIsVerifyingBossPassword(true);
-    setBossPasswordError('');
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: currentUser.email,
-        password: bossPassword,
-      });
-      if (error) {
-        setBossPasswordError(t('auth.invalidCredentials') || 'كلمة المرور غير صحيحة');
-      } else {
-        setBossPassword('');
-        navigate('/boss');
-      }
-    } catch {
-      setBossPasswordError('حدث خطأ أثناء التحقق');
-    } finally {
-      setIsVerifyingBossPassword(false);
-    }
-  };
 
   const persisted = loadPersistedSettings();
   const initialUnified = loadUnifiedStoreSettings();
@@ -1132,18 +1102,6 @@ export default function Settings() {
       keywords: ['ترخيص', 'تفعيل', 'كود', 'رخصة', 'license', 'activation', 'key'],
     },
     {
-      id: 'licenses',
-      label: t('settings.licenseManagement') || 'إدارة التراخيص',
-      description: isRTL ? 'توليد الأكواد وإدارة الأجهزة' : 'Generate keys & manage devices',
-      icon: Shield,
-      bossOnly: true,
-      danger: true,
-      category: 'operations',
-      color: 'rose',
-      badge: 'Super Admin',
-      keywords: ['تراخيص', 'توليد', 'أجهزة', 'أكواد', 'licenses', 'management'],
-    },
-    {
       id: 'partners',
       label: t('nav.partners') || 'الشركاء ورأس المال',
       description: isRTL ? 'حصص الأرباح والمسحوبات' : 'Partners & profit sharing',
@@ -1189,7 +1147,7 @@ export default function Settings() {
   ], [t, isRTL, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationPerm, printSettings?.paperSize]);
 
   // Independent tabs that have no saveable settings form state
-  const INDEPENDENT_TABS = ['licenses', 'activity', 'archive', 'license', 'contact', 'reset', 'about', 'users', 'partners', 'profile'];
+  const INDEPENDENT_TABS = ['activity', 'archive', 'license', 'contact', 'reset', 'about', 'users', 'partners', 'profile'];
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = (() => {
@@ -2246,51 +2204,6 @@ export default function Settings() {
           </div>
         );
 
-      case 'licenses':
-        return (
-          <div className="space-y-6">
-            <div className="bg-card rounded-2xl border border-border p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4">
-              <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
-                <Shield className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground mb-1">{t('settings.bossPanel')}</h3>
-                <p className="text-sm text-muted-foreground">{t('settings.goToBossPanel')}</p>
-              </div>
-              {bossPasswordError && (
-                <p className="text-sm text-destructive">{bossPasswordError}</p>
-              )}
-              <div className="w-full max-w-xs space-y-3">
-                <div className="relative">
-                  <Input
-                    type={showBossPassword ? 'text' : 'password'}
-                    value={bossPassword}
-                    onChange={(e) => { setBossPassword(e.target.value); setBossPasswordError(''); }}
-                    placeholder={t('auth.password')}
-                    className="pe-10"
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleOpenBossPanel(); }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowBossPassword(!showBossPassword)}
-                    className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground"
-                  >
-                    {showBossPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <Button
-                  onClick={handleOpenBossPanel}
-                  disabled={isVerifyingBossPassword || !bossPassword}
-                  className="w-full gap-2"
-                >
-                  {isVerifyingBossPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
-                  {t('common.open')}
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-
       case 'contact':
         return (
           <div className="space-y-4">
@@ -2493,7 +2406,7 @@ export default function Settings() {
           {(() => {
             const visibleTabs = settingsTabs.filter(tab => {
               if (isGuestDemoMode()) {
-                if (tab.id === 'licenses' || tab.id === 'license') {
+                if (tab.id === 'license') {
                   return false;
                 }
               }

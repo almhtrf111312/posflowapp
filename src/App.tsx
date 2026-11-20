@@ -59,7 +59,6 @@ const Expenses = lazy(() => import("./pages/Expenses"));
 const CashShifts = lazy(() => import("./pages/CashShifts"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Reports = lazy(() => import("./pages/Reports"));
-const BossPanel = lazy(() => import("./pages/BossPanel"));
 const Purchases = lazy(() => import("./pages/Purchases"));
 const Appearance = lazy(() => import("./pages/Appearance"));
 const LibraryMembers = lazy(() => import("./pages/LibraryMembers"));
@@ -479,7 +478,6 @@ const PageFallback = () => {
         <Route path="/" element={<ProtectedRoute><FeatureErrorBoundary featureName="نقطة البيع"><IndexRoute /></FeatureErrorBoundary></ProtectedRoute>} />
         <Route path="/pos" element={<ProtectedRoute><FeatureErrorBoundary featureName="نقطة البيع"><POS /></FeatureErrorBoundary></ProtectedRoute>} />
         <Route path="/help" element={<ProtectedRoute><FeatureErrorBoundary featureName="المساعدة والدعم"><Help /></FeatureErrorBoundary></ProtectedRoute>} />
-        <Route path="/boss" element={<ProtectedRoute><RoleGuard allowedRoles={['boss']}><FeatureErrorBoundary featureName="لوحة الإدارة"><BossPanel /></FeatureErrorBoundary></RoleGuard></ProtectedRoute>} />
 
         {/* Protected routes wrapped by a single persistent MainLayout with NativeTabHost Keep-Alive and user-scoped key */}
         <Route element={<ProtectedRoute><MainLayoutWithKeepAlive /></ProtectedRoute>}>

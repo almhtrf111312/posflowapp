@@ -279,10 +279,6 @@ export function LicenseManagement() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/boss')}>
-            <ExternalLink className="w-4 h-4" />
-            <span className="ms-2">{t('licenseManagement.bossPanel')}</span>
-          </Button>
           <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
             <Plus className="w-4 h-4" />
             <span className="ms-2">{t('licenseManagement.createCode')}</span>

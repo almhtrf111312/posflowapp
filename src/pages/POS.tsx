@@ -1,4 +1,4 @@
-import { findSerialLocal, getSelectedSerials, setSelectedSerials } from '@/lib/serials-store';
+import { findSerialLocal, getSelectedSerials, setSelectedSerials, clearSelectedSerials } from '@/lib/serials-store';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
@@ -1929,36 +1929,56 @@ export default function POS() {
 
 
 
-    setCart(prev => prev.map(item => {
-
-      // Match by id and unit (if provided)
-
-      if (item.id === id && (unit === undefined || item.unit === unit)) {
-
-        const newQty = Math.max(1, item.quantity + change);
-
-        return { ...item, quantity: newQty };
-
+    setCart(prev => {
+      const next = prev.map(item => {
+        // Match by id and unit (if provided)
+        if (item.id === id && (unit === undefined || item.unit === unit)) {
+          const newQty = Math.max(1, item.quantity + change);
+          return { ...item, quantity: newQty };
+        }
+        return item;
+      });
+      // تقليص الأرقام التسلسلية المختارة تلقائياً إذا انخفضت الكمية
+      if (change < 0) {
+        const selected = getSelectedSerials(id);
+        if (selected && selected.length > 0) {
+          const maxPieces = next
+            .filter(i => i.id === id)
+            .reduce((s, i) => s + (i.unit === 'bulk' && i.conversionFactor ? i.quantity * i.conversionFactor : i.quantity), 0);
+          if (selected.length > maxPieces) {
+            setSelectedSerials(id, selected.slice(0, maxPieces));
+          }
+        }
       }
-
-      return item;
-
-    }));
+      return next;
+    });
 
   };
 
 
 
   const removeItem = (id: string, unit?: 'piece' | 'bulk') => {
-
-    setCart(prev => prev.filter(item => !(item.id === id && (unit === undefined || item.unit === unit))));
-
+    setCart(prev => {
+      const next = prev.filter(item => !(item.id === id && (unit === undefined || item.unit === unit)));
+      const remainingPieces = next
+        .filter(i => i.id === id)
+        .reduce((s, i) => s + (i.unit === 'bulk' && i.conversionFactor ? i.quantity * i.conversionFactor : i.quantity), 0);
+      if (remainingPieces <= 0) {
+        clearSelectedSerials([id]);
+      } else {
+        const selected = getSelectedSerials(id);
+        if (selected && selected.length > remainingPieces) {
+          setSelectedSerials(id, selected.slice(0, remainingPieces));
+        }
+      }
+      return next;
+    });
   };
 
 
 
   const clearCart = () => {
-
+    clearSelectedSerials(cart.map(i => i.id));
     setCart([]);
 
     setDiscount(0);

@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   FileText,
   User,
@@ -134,6 +135,7 @@ export function PurchaseInvoiceViewDialog({
         quantity: i.quantity,
         cost_price: i.cost_price,
         sale_price: i.sale_price,
+        ...(Array.isArray(i.serials) && i.serials.length > 0 ? { serials: i.serials } : {}),
       }))
     );
     setEditReason('تصحيح كميات وأسعار فاتورة الشراء');
@@ -148,6 +150,17 @@ export function PurchaseInvoiceViewDialog({
     setEditLines((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], quantity: Math.max(0, val) };
+      return next;
+    });
+  };
+
+  const handleLineSerialsChange = (index: number, text: string) => {
+    setEditLines((prev) => {
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        serials: text.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean),
+      };
       return next;
     });
   };
@@ -559,6 +572,29 @@ export function PurchaseInvoiceViewDialog({
                   </div>
                 </div>
               </div>
+
+              {/* Serial numbers editing (only lines that track serials) */}
+              {isEditing && editLines.some((l) => Array.isArray(l.serials)) && (
+                <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-3">
+                  <div className="text-xs font-bold">الأرقام التسلسلية (رقم في كل سطر)</div>
+                  {editLines.map((l, idx) =>
+                    Array.isArray(l.serials) ? (
+                      <div key={idx}>
+                        <label className="text-[11px] text-muted-foreground block mb-1">
+                          {l.product_name} — {l.serials.length} / {l.quantity}
+                        </label>
+                        <Textarea
+                          dir="ltr"
+                          rows={Math.min(6, Math.max(2, l.serials.length))}
+                          defaultValue={l.serials.join('\n')}
+                          onChange={(e) => handleLineSerialsChange(idx, e.target.value)}
+                          className="text-xs font-mono"
+                        />
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              )}
 
               {/* Invoice Image Thumbnail if present */}
               {invoice.image_url && !isEditing && (

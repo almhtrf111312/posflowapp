@@ -544,6 +544,7 @@ export interface EditPurchaseInvoiceLine {
   cost_price: number;
   cost_price_before?: number;
   sale_price?: number;
+  serials?: string[];
 }
 
 /**

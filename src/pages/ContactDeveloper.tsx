@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MessageCircle, Phone, Globe, User, Headphones, AlertCircle, ArrowLeft, ArrowRight, Shield, CheckCheck } from 'lucide-react';
+import { MessageCircle, Phone, Globe, User, Headphones, AlertCircle, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/hooks/use-language';
-import { useUserRole } from '@/hooks/use-user-role';
 import { useLicense } from '@/hooks/use-license';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 import { Button } from '@/components/ui/button';
@@ -21,20 +20,13 @@ export default function ContactDeveloper() {
   const navigate = useNavigate();
   const supportReason = (location.state as any)?.supportReason as string | undefined;
   const userEmail = (location.state as any)?.email as string | undefined;
-  const { isBoss } = useUserRole();
   const license = useLicense();
   const licenseState = (license as any)?.licenseState || license;
   const [info, setInfo] = useState<DevInfo>({});
   const isDirectChatOpen = Boolean((location.state as any)?.openChat);
-  const [chatOpen, setChatOpen] = useState(isDirectChatOpen || isBoss || ['revoked','inactive','owner_inactive'].includes(supportReason || ''));
+  const [chatOpen, setChatOpen] = useState(isDirectChatOpen || ['revoked','inactive','owner_inactive'].includes(supportReason || ''));
   const [rel, setRel] = useState<ReleaseConfig>(getCachedReleaseConfig());
   useEffect(() => { fetchReleaseConfig().then(setRel).catch(() => {}); }, []);
-
-  useEffect(() => {
-    if (isBoss) {
-      setChatOpen(true);
-    }
-  }, [isBoss]);
 
   useEffect(() => {
     if ((location.state as any)?.openChat) {
@@ -108,40 +100,7 @@ export default function ContactDeveloper() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-5 pt-12 md:pt-4" dir={direction}>
-      {/* للمدير العام (Boss): بطاقة صندوق استفسارات العملاء وتصفير الشارات */}
-      {isBoss ? (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-primary/10 border border-primary/20 rounded-2xl p-4 shadow-xs">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
-              <Headphones className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-foreground">صندوق استفسارات ومحادثات العملاء</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                يمكنك الرد على العملاء مباشرة أو تصفير شارات التنبيهات الحمراء المعلقة
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-2 bg-background hover:bg-muted text-xs font-semibold shrink-0"
-            onClick={async () => {
-              try {
-                const { data, error } = await supabase.rpc('mark_all_support_messages_read');
-                if (error) throw error;
-                toast.success('تم تحديد كافة رسائل الدعم كمقروءة وتصفير الشارات');
-                window.dispatchEvent(new CustomEvent('posflow:support-read'));
-              } catch (err: any) {
-                toast.error('فشل في تحديث حالة الرسائل: ' + err.message);
-              }
-            }}
-          >
-            <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            تحديد الكل كمقروء وتصفير الشارة
-          </Button>
-        </div>
-      ) : (supportReason === 'revoked' || supportReason === 'inactive' || supportReason === 'owner_inactive') ? null : (
+      {(supportReason === 'revoked' || supportReason === 'inactive' || supportReason === 'owner_inactive') ? null : (
         /* للعملاء العاديين: بطاقة تجديد وترقية الاشتراك (لا تُعرض للحساب الملغى/المحظور) */
         <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -285,7 +244,7 @@ export default function ContactDeveloper() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <h2 className="text-sm font-bold text-foreground">
-              {isBoss ? 'محادثات العملاء' : 'الدعم الفني المباشر'}
+              الدعم الفني المباشر
             </h2>
             <Badge className="text-[9px] px-1.5 py-0 h-4 bg-green-500/20 text-green-600 border-green-500/30">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse me-1 inline-block" />
@@ -293,9 +252,7 @@ export default function ContactDeveloper() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            {isBoss
-              ? 'اعرض وتفاعل مع محادثات العملاء مباشرة'
-              : 'تواصل مع المطور مباشرة — سنرد عليك في أقرب وقت ممكن'}
+            تواصل مع المطور مباشرة — سنرد عليك في أقرب وقت ممكن
           </p>
         </div>
         <Button
@@ -304,7 +261,7 @@ export default function ContactDeveloper() {
           className="shrink-0 gap-1.5"
         >
           <MessageCircle className="w-3.5 h-3.5" />
-          {isBoss ? 'عرض المحادثات' : 'ابدأ المحادثة'}
+          ابدأ المحادثة
         </Button>
       </div>
 

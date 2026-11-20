@@ -1,32 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Headphones, Users, ArrowRight, X } from 'lucide-react';
+import { Headphones, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  SupportConversation,
-  BossConversationList,
-  ChatMessages,
-  InputBar
-} from './SupportChat';
+import { ChatMessages, InputBar } from './SupportChat';
 
 export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
-  const { isBoss } = useUserRole();
-
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [selectedConv, setSelectedConv] = useState<SupportConversation | null>(null);
-  const [bossView, setBossView] = useState<'list' | 'chat'>('list');
-
-  const activeChatConvId = isBoss
-    ? selectedConv?.id ?? null
-    : conversationId;
 
   // Load existing user conversation
   useEffect(() => {
-    if (!user || isBoss) return;
+    if (!user) return;
     supabase
       .from('support_conversations')
       .select('id')
@@ -37,11 +23,11 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
       .then(({ data }) => {
         if (data?.id) setConversationId(data.id);
       });
-  }, [user, isBoss]);
+  }, [user]);
 
   // Mark as read when opened inline
   useEffect(() => {
-    if (conversationId && user && !isBoss) {
+    if (conversationId && user) {
       supabase
         .from('support_messages')
         .update({ is_read: true })
@@ -51,28 +37,9 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
           window.dispatchEvent(new CustomEvent('posflow:support-read'));
         });
     }
-  }, [conversationId, user, isBoss]);
-
-  // Mark as read when Boss opens a conversation
-  useEffect(() => {
-    if (activeChatConvId && user && isBoss) {
-      supabase
-        .from('support_messages')
-        .update({ is_read: true })
-        .eq('conversation_id', activeChatConvId)
-        .neq('sender_id', user.id)
-        .then(() => {
-          window.dispatchEvent(new CustomEvent('posflow:support-read'));
-        });
-    }
-  }, [activeChatConvId, user, isBoss]);
+  }, [conversationId, user]);
 
   if (!user) return null;
-
-  const handleBossSelectConv = (conv: SupportConversation) => {
-    setSelectedConv(conv);
-    setBossView('chat');
-  };
 
   return (
     <div
@@ -87,44 +54,14 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
       <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <div className="size-8 rounded-xl bg-primary/20 flex items-center justify-center">
-            {isBoss ? (
-              <Users className="w-4 h-4 text-primary" />
-            ) : (
-              <Headphones className="w-4 h-4 text-primary" />
-            )}
+            <Headphones className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-bold text-foreground leading-none">
-              {isBoss
-                ? bossView === 'list'
-                  ? 'محادثات العملاء'
-                  : selectedConv?.user_name || 'محادثة'
-                : 'الدعم الفني'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {isBoss
-                ? bossView === 'chat'
-                  ? [selectedConv?.user_email, selectedConv?.store_name].filter(Boolean).join(' · ')
-                  : 'اختر محادثة للرد'
-                : 'سنرد عليك في أقرب وقت'}
-            </p>
+            <p className="text-sm font-bold text-foreground leading-none">الدعم الفني</p>
+            <p className="text-xs text-muted-foreground mt-0.5">سنرد عليك في أقرب وقت</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {isBoss && bossView === 'chat' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 rounded-lg"
-              onClick={() => {
-                setBossView('list');
-                setSelectedConv(null);
-              }}
-              title="العودة للقائمة"
-            >
-              <ArrowRight className="h-4 w-4 rotate-180" />
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="sm"
@@ -138,21 +75,10 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Body */}
-      {isBoss && bossView === 'list' ? (
-        <BossConversationList onSelect={handleBossSelectConv} />
-      ) : activeChatConvId || !isBoss ? (
+      {conversationId ? (
         <>
-          <ChatMessages
-            conversationId={activeChatConvId || ''}
-            currentUserId={user.id}
-          />
-          <InputBar
-            conversationId={activeChatConvId}
-            onConversationCreated={(id) => {
-              if (!isBoss) setConversationId(id);
-              else if (selectedConv) setSelectedConv({ ...selectedConv, id });
-            }}
-          />
+          <ChatMessages conversationId={conversationId} currentUserId={user.id} />
+          <InputBar conversationId={conversationId} onConversationCreated={setConversationId} />
         </>
       ) : (
         <>
@@ -161,10 +87,7 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
             <p className="font-bold text-foreground text-base">مرحباً بك في الدعم الفني</p>
             <p className="opacity-70 max-w-sm">أرسل رسالتك الأولى وسيرد عليك المطور في أقرب وقت ممكن</p>
           </div>
-          <InputBar
-            conversationId={null}
-            onConversationCreated={setConversationId}
-          />
+          <InputBar conversationId={null} onConversationCreated={setConversationId} />
         </>
       )}
     </div>

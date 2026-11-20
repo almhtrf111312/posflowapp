@@ -5,7 +5,6 @@ import { App as CapApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
 import {
   sendLocalNotification,
   checkNotificationPermissionNative,
@@ -14,7 +13,6 @@ import {
 
 export function useNativeChatAlerts() {
   const { user } = useAuth();
-  const { isBoss } = useUserRole();
   const navigate = useNavigate();
 
   // 1. لا يُطلب إذن الإشعارات تلقائياً عند الإقلاع:
@@ -26,72 +24,44 @@ export function useNativeChatAlerts() {
     try {
       // لا ننبّه إلا عن الرسائل الحديثة: الرسائل الأقدم من 24 ساعة تبقى في المحادثة والشارة فقط
       const recentCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      if (isBoss) {
-        // المدير العام: فحص رسائل العملاء التي لم يتم إطلاق إشعار نظام لها بعد
-        const { data: unnotifiedMsgs, error } = await supabase
+      // العميل العادي: جلب محادثاته ثم فحص الردود غير المشعرة
+      const { data: convData } = await supabase
+        .from('support_conversations')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (convData && convData.length > 0) {
+        const convIds = convData.map((c) => c.id);
+        const { data: unnotifiedReplies, error } = await supabase
           .from('support_messages')
           .select('id, conversation_id, sender_id, sender_role, message, created_at')
-          .eq('sender_role', 'user')
+          .in('conversation_id', convIds)
+          .in('sender_role', ['boss', 'admin'])
           .eq('notified_native', false)
           .gte('created_at', recentCutoff)
           .order('created_at', { ascending: false })
           .limit(5);
 
-        if (!error && unnotifiedMsgs && unnotifiedMsgs.length > 0) {
-          for (const msg of unnotifiedMsgs) {
+        if (!error && unnotifiedReplies && unnotifiedReplies.length > 0) {
+          for (const msg of unnotifiedReplies) {
             await sendLocalNotification(
-              '📥 استفسار جديد من عميل PosFlow',
-              msg.message ? msg.message.substring(0, 120) : 'أرسل العميل مرفقاً جديداً',
+              '💬 رد من الدعم الفني (PosFlow)',
+              msg.message ? msg.message.substring(0, 120) : 'تم إرسال إشعار تفعيل أو تحديث لحسابك',
               'critical',
               { action: 'open_support_chat', conversationId: msg.conversation_id }
             );
           }
-          const ids = unnotifiedMsgs.map((m) => m.id);
+          const ids = unnotifiedReplies.map((m) => m.id);
           await supabase
             .from('support_messages')
             .update({ notified_native: true })
             .in('id', ids);
         }
-      } else {
-        // العميل العادي: جلب محادثاته ثم فحص الردود غير المشعرة
-        const { data: convData } = await supabase
-          .from('support_conversations')
-          .select('id')
-          .eq('user_id', user.id);
-
-        if (convData && convData.length > 0) {
-          const convIds = convData.map((c) => c.id);
-          const { data: unnotifiedReplies, error } = await supabase
-            .from('support_messages')
-            .select('id, conversation_id, sender_id, sender_role, message, created_at')
-            .in('conversation_id', convIds)
-            .in('sender_role', ['boss', 'admin'])
-            .eq('notified_native', false)
-            .gte('created_at', recentCutoff)
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          if (!error && unnotifiedReplies && unnotifiedReplies.length > 0) {
-            for (const msg of unnotifiedReplies) {
-              await sendLocalNotification(
-                '💬 رد من الدعم الفني (PosFlow)',
-                msg.message ? msg.message.substring(0, 120) : 'تم إرسال إشعار تفعيل أو تحديث لحسابك',
-                'critical',
-                { action: 'open_support_chat', conversationId: msg.conversation_id }
-              );
-            }
-            const ids = unnotifiedReplies.map((m) => m.id);
-            await supabase
-              .from('support_messages')
-              .update({ notified_native: true })
-              .in('id', ids);
-          }
-        }
       }
     } catch (err) {
       console.debug('[ChatAlerts] Doze check skipped:', err);
     }
-  }, [user?.id, isBoss]);
+  }, [user?.id]);
 
   // 3. الاستماع لدورة حياة التطبيق (Capacitor App State + Window Focus)
   useEffect(() => {
@@ -163,24 +133,8 @@ export function useNativeChatAlerts() {
           // تجاهل الرسائل التي أرسلتها أنا بنفسي
           if (newMsg.sender_id === user.id) return;
 
-          // أ) إذا كان المستخدم الحالي هو المدير والرسالة من عميل
-          if (isBoss && newMsg.sender_role === 'user') {
-            await sendLocalNotification(
-              '📥 استفسار جديد من عميل PosFlow',
-              newMsg.message ? newMsg.message.substring(0, 120) : 'أرسل العميل مرفقاً جديداً',
-              'critical',
-              { action: 'open_support_chat', conversationId: newMsg.conversation_id }
-            );
-            // تمييز الرسالة كمشعرة
-            supabase
-              .from('support_messages')
-              .update({ notified_native: true })
-              .eq('id', newMsg.id)
-              .then(() => {});
-          }
-
-          // ب) إذا كان المستخدم الحالي عميلاً عادياً والرسالة من المدير/الدعم
-          if (!isBoss && (newMsg.sender_role === 'boss' || newMsg.sender_role === 'admin')) {
+          // الرسالة من الدعم الفني
+          if (newMsg.sender_role === 'boss' || newMsg.sender_role === 'admin') {
             await sendLocalNotification(
               '💬 رد من الدعم الفني (PosFlow)',
               newMsg.message ? newMsg.message.substring(0, 120) : 'تم إرسال إشعار تفعيل أو تحديث لحسابك',
@@ -201,5 +155,5 @@ export function useNativeChatAlerts() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, isBoss]);
+  }, [user?.id]);
 }

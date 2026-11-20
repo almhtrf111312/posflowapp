@@ -1,0 +1,203 @@
+--- a/src/lib/cloud/invoices-cloud.ts
++++ b/src/lib/cloud/invoices-cloud.ts
+@@ -212,12 +212,22 @@
+ // Save invoices to localStorage for offline access
+ const saveInvoicesToLocalCache = (invoices: Invoice[]) => {
+   try {
+-    // حد 5MB في localStorage: نحتفظ بأحدث 3000 فاتورة فقط في الكاش المحلي
+-    const capped = invoices.length > 3000 ? [...invoices].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).slice(0, 3000) : invoices;
+-    localStorage.setItem(LOCAL_INVOICES_CACHE_KEY, JSON.stringify({
+-      invoices: capped,
+-      timestamp: Date.now()
+-    }));
++    // حماية حد 5MB في localStorage بتدرّج آمن يمنع فشل الحفظ الصامت مع الفواتير الضخمة
++    const sorted = invoices.length > 1000
++      ? [...invoices].sort((a, b) => String(b.createdAt ?? b.date ?? '').localeCompare(String(a.createdAt ?? a.date ?? '')))
++      : invoices;
++    for (const limit of [1500, 750, 300]) {
++      try {
++        const capped = sorted.length > limit ? sorted.slice(0, limit) : sorted;
++        localStorage.setItem(LOCAL_INVOICES_CACHE_KEY, JSON.stringify({
++          invoices: capped,
++          timestamp: Date.now()
++        }));
++        break;
++      } catch (quotaErr) {
++        if (limit === 300) throw quotaErr;
++      }
++    }
+   } catch (e) {
+     console.warn('[InvoicesCloud] localStorage save failed:', e);
+   }
+@@ -468,14 +478,21 @@
+   return days > 0 ? new Date(Date.now() - days * 86400000).toISOString() : '1970-01-01T00:00:00Z';
+ };
+ 
+-// مخزن الجلسة للمزامنة التزايدية: بعد أول جلب كامل نجلب فقط الفواتير المعدّلة منذ آخر مزامنة (updated_at)
++// مخزن الجلسة للمزامنة التزايدية مع عزل صارم لكل مستخدم/متجر لمنع تسرب الفواتير عند تبديل الحساب
+ const invoiceStore = new Map<string, Invoice>();
++let invoiceStoreUserId: string | null = null;
+ let lastFullSyncAt = 0;
+ let lastDeltaSyncAt = 0;
+ const FULL_RESYNC_MS = 6 * 3600 * 1000;
+ 
+ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
+   try {
++    if (invoiceStoreUserId !== userId) {
++      invoiceStore.clear();
++      lastFullSyncAt = 0;
++      lastDeltaSyncAt = 0;
++      invoiceStoreUserId = userId;
++    }
+     const delta = invoiceStore.size > 0 && Date.now() - lastFullSyncAt < FULL_RESYNC_MS;
+     const syncStartedAt = Date.now();
+     // Check if user is cashier
+@@ -593,6 +610,10 @@
+ export const invalidateInvoicesCache = () => {
+   invoicesCache = null;
+   cacheTimestamp = 0;
++  invoiceStore.clear();
++  invoiceStoreUserId = null;
++  lastFullSyncAt = 0;
++  lastDeltaSyncAt = 0;
+ };
+ 
+ // Add invoice
+
+--- a/src/components/pos/CartPanel.tsx
++++ b/src/components/pos/CartPanel.tsx
+@@ -1270,6 +1270,7 @@
+         stockItems: stockItemsLocal,
+         warehouseId: stockWarehouseId,
+         downPayment: downPaymentSnapshot,
++        paymentMethod: payMethod,
+         taxMode: (taxMode === 'gross' ? 'inclusive' : 'exclusive') as 'inclusive' | 'exclusive',
+       };
+ 
+@@ -1366,19 +1367,32 @@
+         });
+       }
+ 
+-      // ✅ تسجيل الدفعة النقدية المقبوضة في الصندوق والوردية النشطة فوراً
++      // ✅ تسجيل الدفعة الأولى المقبوضة في الوردية النشطة (نقدي في الدرج أو رقمي خارج الدرج)
+       if (downPaymentSnapshot > 0) {
+         const cashRatio = totalSnapshot > 0 ? downPaymentSnapshot / totalSnapshot : 1;
+         const downPaymentProfit = round8(discountedProfit * cashRatio);
+         const downPaymentCOGS = round8(totalCOGS * cashRatio);
+-        addSalesToShift(
+-          downPaymentSnapshot,
+-          downPaymentProfit,
+-          downPaymentCOGS,
+-          (receivedCurrencyCode as any) || 'USD',
+-          downPaymentSnapshot * (activeReceivedCurrency.rate || 1),
+-          operationId
+-        );
++        const downPaymentInCurr = downPaymentSnapshot * (activeReceivedCurrency.rate || 1);
++        if (payMethod === 'digital') {
++          addDigitalSaleToShift(
++            downPaymentSnapshot,
++            downPaymentProfit,
++            downPaymentCOGS,
++            (receivedCurrencyCode as any) || 'USD',
++            downPaymentInCurr,
++            operationId
++          );
++          setPayMethod('cash');
++        } else {
++          addSalesToShift(
++            downPaymentSnapshot,
++            downPaymentProfit,
++            downPaymentCOGS,
++            (receivedCurrencyCode as any) || 'USD',
++            downPaymentInCurr,
++            operationId
++          );
++        }
+       }
+ 
+       // ✅ تسجيل الربح محلياً فوراً برقم الفاتورة ومعرف العملية (يمنع المضاعفة عند المزامنة)
+
+--- a/src/pages/POS.tsx
++++ b/src/pages/POS.tsx
+@@ -1,4 +1,4 @@
+-import { findSerialLocal, getSelectedSerials, setSelectedSerials } from '@/lib/serials-store';
++import { findSerialLocal, getSelectedSerials, setSelectedSerials, clearSelectedSerials } from '@/lib/serials-store';
+ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+ 
+ import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
+@@ -1929,36 +1929,56 @@
+ 
+ 
+ 
+-    setCart(prev => prev.map(item => {
+-
+-      // Match by id and unit (if provided)
+-
+-      if (item.id === id && (unit === undefined || item.unit === unit)) {
+-
+-        const newQty = Math.max(1, item.quantity + change);
+-
+-        return { ...item, quantity: newQty };
+-
+-      }
+-
+-      return item;
+-
+-    }));
++    setCart(prev => {
++      const next = prev.map(item => {
++        // Match by id and unit (if provided)
++        if (item.id === id && (unit === undefined || item.unit === unit)) {
++          const newQty = Math.max(1, item.quantity + change);
++          return { ...item, quantity: newQty };
++        }
++        return item;
++      });
++      // تقليص الأرقام التسلسلية المختارة تلقائياً إذا انخفضت الكمية
++      if (change < 0) {
++        const selected = getSelectedSerials(id);
++        if (selected && selected.length > 0) {
++          const maxPieces = next
++            .filter(i => i.id === id)
++            .reduce((s, i) => s + (i.unit === 'bulk' && i.conversionFactor ? i.quantity * i.conversionFactor : i.quantity), 0);
++          if (selected.length > maxPieces) {
++            setSelectedSerials(id, selected.slice(0, maxPieces));
++          }
++        }
++      }
++      return next;
++    });
+ 
+   };
+ 
+ 
+ 
+   const removeItem = (id: string, unit?: 'piece' | 'bulk') => {
+-
+-    setCart(prev => prev.filter(item => !(item.id === id && (unit === undefined || item.unit === unit))));
+-
++    setCart(prev => {
++      const next = prev.filter(item => !(item.id === id && (unit === undefined || item.unit === unit)));
++      const remainingPieces = next
++        .filter(i => i.id === id)
++        .reduce((s, i) => s + (i.unit === 'bulk' && i.conversionFactor ? i.quantity * i.conversionFactor : i.quantity), 0);
++      if (remainingPieces <= 0) {
++        clearSelectedSerials([id]);
++      } else {
++        const selected = getSelectedSerials(id);
++        if (selected && selected.length > remainingPieces) {
++          setSelectedSerials(id, selected.slice(0, remainingPieces));
++        }
++      }
++      return next;
++    });
+   };
+ 
+ 
+ 
+   const clearCart = () => {
+-
++    clearSelectedSerials(cart.map(i => i.id));
+     setCart([]);
+ 
+     setDiscount(0);

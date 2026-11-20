@@ -55,6 +55,8 @@ export const openShiftCloud = async (params: {
   cashierId?: string | null;
   cashierName?: string | null;
   openingBalance: number;
+  /** مبالغ الافتتاح بكل عملة (بعملتها) — يعتمد عليها الخادم لحساب المتوقع لكل عملة */
+  openingByCurrency?: Record<string, number>;
 }): Promise<string | null> => {
   const userId = await ensureUserId();
   if (!userId) return null;
@@ -75,6 +77,9 @@ export const openShiftCloud = async (params: {
     expected_balance: openingBalance,
     reconciliation_status: 'open' as const,
   };
+  if (params.openingByCurrency && Object.keys(params.openingByCurrency).length > 0) {
+    payload.opening_by_currency = params.openingByCurrency;
+  }
 
   try {
     const { data, error } = await sb
@@ -96,6 +101,10 @@ export const closeShiftCloud = async (params: {
   expectedBalance: number;
   actualBalance: number;
   varianceReason?: string;
+  /** المعدود لكل عملة (بعملتها) مع سعر الصرف (وحدات العملة لكل 1$) */
+  counts?: { code: string; counted: number; rate: number }[];
+  /** عند تجاوز حد السماح: accept = يُسجَّل فائضاً/عجزاً ، defer = يؤجَّل لقرار المالك */
+  decision?: 'accept' | 'defer';
 }): Promise<boolean> => {
   const userId = await ensureUserId();
   if (!userId) return false;
@@ -110,6 +119,8 @@ export const closeShiftCloud = async (params: {
       _shift_id: params.shiftId,
       _actual_balance: actualBalance,
       _variance_reason: varianceReason,
+      _decision: params.decision || 'accept',
+      _counts: params.counts && params.counts.length > 0 ? params.counts : null,
     });
     if (error) throw error;
     if ((data as { success?: boolean } | null)?.success) return true;
@@ -117,7 +128,7 @@ export const closeShiftCloud = async (params: {
   } catch (e) {
     console.warn('[cashbox-cloud] atomic shift close failed, queued for retry:', e);
     try {
-      addToQueue('shift_close', { shiftId: params.shiftId, actualBalance, varianceReason }, 10);
+      addToQueue('shift_close', { shiftId: params.shiftId, actualBalance, varianceReason, decision: params.decision || 'accept', counts: params.counts || null }, 10);
     } catch { /* noop */ }
     return false;
   }
@@ -231,4 +242,50 @@ export const loadCloudShifts = async (limit = 50): Promise<CloudShift[]> => {
   } catch {
     return [];
   }
+};
+
+
+/** حد سماح فروقات الصندوق بالدولار (من إعدادات المتجر) */
+export const loadShiftVarianceTolerance = async (): Promise<number> => {
+  try {
+    const { data } = await sb.from('store_settings').select('shift_variance_tolerance_usd').limit(1).maybeSingle();
+    const v = Number((data as { shift_variance_tolerance_usd?: number } | null)?.shift_variance_tolerance_usd);
+    return Number.isFinite(v) && v >= 0 ? v : 1;
+  } catch {
+    return 1;
+  }
+};
+
+export const saveShiftVarianceTolerance = async (valueUsd: number): Promise<boolean> => {
+  const userId = await ensureUserId();
+  if (!userId) return false;
+  const ownerId = (await getOwnerIdForInsert()) || userId;
+  const v = Math.max(0, roundCurrency(valueUsd));
+  const { error } = await sb.from('store_settings').update({ shift_variance_tolerance_usd: v }).eq('user_id', ownerId);
+  return !error;
+};
+
+export interface DeferredShiftVariance {
+  id: string;
+  closed_at: string | null;
+  cashier_name: string | null;
+  variance: number | null;
+  currency_counts: { code: string; expected: number; counted: number; variance: number; variance_usd: number }[] | null;
+}
+
+export const loadDeferredShiftVariances = async (): Promise<DeferredShiftVariance[]> => {
+  try {
+    const { data, error } = await sb.from('cash_shifts')
+      .select('id, closed_at, cashier_name, variance, currency_counts')
+      .eq('variance_decision', 'deferred').order('closed_at', { ascending: false }).limit(50);
+    if (error) throw error;
+    return (data || []) as DeferredShiftVariance[];
+  } catch {
+    return [];
+  }
+};
+
+export const resolveShiftVarianceCloud = async (shiftId: string, decision: 'accept' | 'dismiss', note?: string): Promise<{ ok: boolean; error?: string }> => {
+  const { error } = await sb.rpc('resolve_shift_variance_atomic', { _shift_id: shiftId, _decision: decision, _note: note || null });
+  return error ? { ok: false, error: error.message } : { ok: true };
 };

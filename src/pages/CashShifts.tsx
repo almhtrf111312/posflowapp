@@ -7,7 +7,6 @@ import {
   openShift as openShiftFn,
   closeShift as closeShiftFn,
   calculateShiftStatus,
-  addShiftAdjustment,
   Shift
 } from '@/lib/cashbox-store';
 import { EVENTS } from '@/lib/events';
@@ -16,14 +15,14 @@ import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
 import { getEnabledCurrencies, toUsd, fromUsd, round8, roundForCurrency } from '@/lib/money-engine';
-import { openShiftCloud, closeShiftCloud, loadCloudShifts } from '@/lib/cloud/cashbox-cloud';
+import { openShiftCloud, closeShiftCloud, loadCloudShifts, loadShiftVarianceTolerance, loadDeferredShiftVariances, resolveShiftVarianceCloud, DeferredShiftVariance } from '@/lib/cloud/cashbox-cloud';
+import { useUserRole } from '@/hooks/use-user-role';
 import { addActivityLog } from '@/lib/activity-log';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -50,8 +49,6 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  ArrowDownRight,
-  ArrowUpRight,
   Loader2,
   Banknote
 } from 'lucide-react';
@@ -72,7 +69,12 @@ export default function CashShifts() {
   const [activeShiftCurrency, setActiveShiftCurrency] = useState<string>('USD');
   const [openings, setOpenings] = useState<Record<string, string>>({});
   const [closings, setClosings] = useState<Record<string, string>>({});
-  const [createAdjustment, setCreateAdjustment] = useState(true);
+  const [dismissTarget, setDismissTarget] = useState<string | null>(null);
+  const [dismissNote, setDismissNote] = useState('');
+  const [varianceDecision, setVarianceDecision] = useState<'accept' | 'defer'>('accept');
+  const [toleranceUsd, setToleranceUsd] = useState(1);
+  const [deferred, setDeferred] = useState<DeferredShiftVariance[]>([]);
+  const { isOwner } = useUserRole();
   const closeShiftGuard = useActionGuard();
 
   const enabledCurrencies = useMemo(() => getEnabledCurrencies(), []);
@@ -108,6 +110,16 @@ export default function CashShifts() {
     });
     return result;
   }, [openShift, enabledCurrencies]);
+
+  const loadDeferred = () => {
+    if (!isOwner) return;
+    void loadDeferredShiftVariances().then(setDeferred);
+  };
+  useEffect(() => {
+    void loadShiftVarianceTolerance().then(setToleranceUsd);
+    loadDeferred();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner]);
 
   // Load data
   const loadData = () => {
@@ -231,6 +243,7 @@ export default function CashShifts() {
         cashierId: userId,
         cashierName: userName,
         openingBalance: totalOpeningUSD,
+        openingByCurrency: currencyOpeningsRecord,
       });
     }
 
@@ -260,6 +273,19 @@ export default function CashShifts() {
     if (!hasAnyClosingInput) return 0;
     return round8(totalClosingUSD - shiftStatus.expectedCash);
   }, [hasAnyClosingInput, totalClosingUSD, shiftStatus.expectedCash]);
+
+  // فروقات الإقفال لكل عملة + الحكم على حد السماح
+  const closingRows = useMemo(() => enabledCurrencies.map(c => {
+    const expected = openShiftCurrencies?.[c.code]?.expected ?? (c.code === 'USD' ? shiftStatus.expectedCash : 0);
+    const counted = parseFloat(closings[c.code] || '') || 0;
+    const variance = roundForCurrency(counted - expected, c.code);
+    const varianceUsd = variance === 0 ? 0 : toUsd(variance, c.code, c.rate);
+    return { code: c.code, rate: c.rate, expected, counted, variance, varianceUsd };
+  }), [enabledCurrencies, openShiftCurrencies, closings, shiftStatus.expectedCash]);
+  const netVarianceUsd = useMemo(() => round8(closingRows.reduce((a, r) => a + r.varianceUsd, 0)), [closingRows]);
+  const beyondTolerance = hasAnyClosingInput && (
+    closingRows.some(r => Math.abs(r.varianceUsd) > toleranceUsd) || Math.abs(netVarianceUsd) > toleranceUsd
+  );
 
   // Handle close shift
   const handleCloseShift = () => closeShiftGuard.run(async () => {
@@ -291,12 +317,14 @@ export default function CashShifts() {
       }
     }
 
-    const adjustmentNote = createAdjustment ? t('cashShifts.createAdjustment') : undefined;
+    const adjustmentNote = beyondTolerance && varianceDecision === 'accept' ? t('cashShifts.createAdjustment') : undefined;
+    const closeCounts = closingRows.map(r => ({ code: r.code, counted: r.counted, rate: r.rate }));
+    const closeDecision = varianceDecision;
 
     // Close dialog immediately for responsive UX
     setShowCloseDialog(false);
     setClosings({});
-    setCreateAdjustment(true);
+    setVarianceDecision('accept');
 
     try {
       const activeDef = enabledCurrencies.find(c => c.code === activeShiftCurrency) || enabledCurrencies[0];
@@ -321,7 +349,9 @@ export default function CashShifts() {
             expectedBalance: shiftStatus.expectedCash,
             actualBalance: totalClosingUSD,
             varianceReason: adjustmentNote || (discrepancy !== 0 ? discrepancyText : undefined),
-          });
+            counts: closeCounts,
+            decision: closeDecision,
+          }).then(() => loadDeferred());
         }
       }
     } catch (err) {
@@ -482,6 +512,40 @@ export default function CashShifts() {
         </Card>
       )}
 
+      {isOwner && deferred.length > 0 && (
+        <Card className="border-amber-400">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><AlertTriangle className="w-4 h-4 text-amber-600" /> فروقات بانتظار القرار ({deferred.length})</CardTitle>
+            <CardDescription>ورديات أُقفلت بفرق أكبر من حد السماح وأُجّل قرارها.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {deferred.map(d => (
+              <div key={d.id} className="rounded-lg border p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{d.cashier_name || 'كاشير'} — {d.closed_at ? formatDateTime(d.closed_at) : ''}</span>
+                  <span className={cn('font-mono font-bold', (d.variance || 0) < 0 ? 'text-red-600' : 'text-blue-600')}>{(d.variance || 0) > 0 ? '+' : ''}{formatUsd(d.variance || 0)}</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground font-mono space-y-0.5">
+                  {(d.currency_counts || []).filter(c => c.variance !== 0).map(c => (
+                    <div key={c.code}>{c.code}: متوقع {c.expected} / معدود {c.counted} / فرق {c.variance > 0 ? '+' : ''}{c.variance}</div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={async () => {
+                    const r = await resolveShiftVarianceCloud(d.id, 'accept', 'اعتماد من المالك');
+                    if (r.ok) { toast.success('سُجّل الفرق في الصندوق'); loadDeferred(); } else toast.error(r.error || 'تعذر التنفيذ');
+                  }}>اعتماد وتسجيل الفرق</Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setDismissNote('');
+                    setDismissTarget(d.id);
+                  }}>إغلاق دون تسجيل</Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Shifts */}
       <Card>
         <CardHeader>
@@ -608,6 +672,16 @@ export default function CashShifts() {
                       placeholder={`0 ${getCurrencyDisplayLabel(curr.code, curr.symbol, curr.name)}`}
                       className="font-mono text-base bg-background"
                     />
+                    {val !== '' && (() => {
+                      const row = closingRows.find(r => r.code === curr.code);
+                      if (!row || row.variance === 0) return null;
+                      return (
+                        <div className={cn('text-[11px] font-mono font-bold', Math.abs(row.varianceUsd) > toleranceUsd ? 'text-red-600' : 'text-amber-600')}>
+                          {row.variance > 0 ? 'زيادة' : 'نقص'} {formatCurrency(Math.abs(row.variance), curr.symbol, curr.decimals, curr.code, curr.name)}
+                          {curr.code !== 'USD' && <> (≈ ${formatNumber(Math.abs(row.varianceUsd), 2)})</>}
+                        </div>
+                      );
+                    })()}
                     {numVal > 0 && curr.code !== 'USD' && (
                       <div className="text-[10.5px] text-muted-foreground font-mono">
                         يعادل ${formatNumber(usdEq, 2)}
@@ -837,61 +911,25 @@ export default function CashShifts() {
               </div>
             )}
 
-            {/* Adjustment buttons */}
-            {hasAnyClosingInput && previewDiscrepancy !== 0 && openShift && (
-              <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-3">
-                {previewDiscrepancy < 0 ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full text-red-600 border-red-300 hover:bg-red-50"
-                    onClick={() => {
-                      const diff = Math.abs(previewDiscrepancy);
-                      const success = addShiftAdjustment('expense_added', diff, 'عجز في الصندوق');
-                      if (success) {
-                        toast.success(`تم تسجيل ${formatUsd(diff)} كمصروف`);
-                        loadData();
-                      }
-                    }}
-                  >
-                    <ArrowDownRight className="w-4 h-4" />
-                    تسجيل {formatUsd(Math.abs(previewDiscrepancy))} كمصروف
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full text-green-600 border-green-300 hover:bg-green-50"
-                    onClick={() => {
-                      const diff = previewDiscrepancy;
-                      const success = addShiftAdjustment('income_added', diff, 'فائض في الصندوق');
-                      if (success) {
-                        toast.success(`تم تسجيل ${formatUsd(diff)} كإيراد إضافي`);
-                        loadData();
-                      }
-                    }}
-                  >
-                    <ArrowUpRight className="w-4 h-4" />
-                    تسجيل {formatUsd(previewDiscrepancy)} كإيراد
-                  </Button>
-                )}
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                  سيتم تعديل المجاميع لمطابقة الرصيد الفعلي
-                </p>
+            {/* قرار الفرق: ضمن حد السماح أو أكبر منه */}
+            {hasAnyClosingInput && !beyondTolerance && closingRows.some(r => r.variance !== 0) && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300">
+                الفرق ضمن حد السماح (حتى {formatUsd(toleranceUsd)}) — يُعتمد كفرق تقريب دون إجراء إضافي.
               </div>
             )}
-
-            {/* Adjustment option */}
-            {hasAnyClosingInput && previewDiscrepancy !== 0 && (
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                <Checkbox
-                  id="createAdjustment"
-                  checked={createAdjustment}
-                  onCheckedChange={(checked) => setCreateAdjustment(checked as boolean)}
-                />
-                <Label htmlFor="createAdjustment" className="cursor-pointer text-sm">
-                  {t('cashShifts.createAdjustment')}
-                </Label>
+            {beyondTolerance && (
+              <div className="rounded-lg border-2 border-red-300 p-3 space-y-2">
+                <div className="text-xs font-semibold text-red-700 dark:text-red-400">
+                  الفرق أكبر من حد السماح ({formatUsd(toleranceUsd)}). صافي الفرق: {netVarianceUsd > 0 ? '+' : ''}{formatUsd(netVarianceUsd)}
+                </div>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input type="radio" name="varianceDecision" checked={varianceDecision === 'accept'} onChange={() => setVarianceDecision('accept')} className="mt-1" />
+                  <span>تسجيل الفرق الآن كفائض أو عجز في الصندوق</span>
+                </label>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <input type="radio" name="varianceDecision" checked={varianceDecision === 'defer'} onChange={() => setVarianceDecision('defer')} className="mt-1" />
+                  <span>تأجيل القرار للمالك (لا يُسجَّل شيء الآن ويظهر في «فروقات بانتظار القرار»)</span>
+                </label>
               </div>
             )}
           </div>
@@ -904,6 +942,24 @@ export default function CashShifts() {
               {closeShiftGuard.isRunning && <Loader2 className="h-4 w-4 animate-spin" />}
               {t('cashShifts.closeShift')}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!dismissTarget} onOpenChange={(o) => { if (!o) setDismissTarget(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>إغلاق الفرق دون تسجيل</DialogTitle>
+            <DialogDescription>لن يُسجَّل أي فائض أو عجز. اكتب سبباً واضحاً للتوثيق.</DialogDescription>
+          </DialogHeader>
+          <Input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} placeholder="السبب (إلزامي)" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDismissTarget(null)}>إلغاء</Button>
+            <Button disabled={!dismissNote.trim()} onClick={async () => {
+              if (!dismissTarget) return;
+              const r = await resolveShiftVarianceCloud(dismissTarget, 'dismiss', dismissNote.trim());
+              if (r.ok) { toast.success('أُغلق الفرق'); setDismissTarget(null); loadDeferred(); } else toast.error(r.error || 'تعذر التنفيذ');
+            }}>تأكيد</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

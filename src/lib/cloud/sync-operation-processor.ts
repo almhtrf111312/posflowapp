@@ -63,6 +63,8 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         _shift_id: shiftId,
         _actual_balance: Number.isFinite(actualBalance) ? actualBalance : 0,
         _variance_reason: rawReason ? String(rawReason) : null,
+        _decision: data.decision === 'defer' ? 'defer' : 'accept',
+        _counts: Array.isArray(data.counts) && data.counts.length > 0 ? data.counts : null,
       });
       if (closeError) throw new Error(closeError.message);
       if (!(closeResult as { success?: boolean } | null)?.success) {

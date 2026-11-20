@@ -232,7 +232,7 @@ const clearAllUserSessionCaches = async () => {
           key !== 'posflow_language' &&
           key !== 'posflow_theme' &&
           key !== 'posflow_stay_logged_in' &&
-          key !== 'posflow_setup_complete' &&
+          !key.startsWith('posflow_setup_complete_') && // علم الإعداد لكل مستخدم يبقى؛ المفتاح العام القديم يُمسح
           key !== 'posflow_privacy_accepted' &&
           key !== 'posflow_privacy_version' &&
           key !== 'posflow_device_id' &&       // 👈 حماية بصمة الجهاز من المسح عند الخروج

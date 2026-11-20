@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from '@/lib/sonner-bridge';
+import { markSetupComplete } from '@/lib/setup-flag';
 import { applyTheme } from '@/hooks/use-theme';
 import { Loader2, Store, Eye, EyeOff, Smartphone, RefreshCw, AlertTriangle, Mail, Sparkles, Send, KeyRound, ShieldCheck, ShieldAlert, CheckCircle2, ArrowRight, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -428,9 +429,8 @@ export default function Login() {
     })();
 
     if (!isNewSignup) {
-      try {
-        localStorage.setItem('posflow_setup_complete', 'true');
-      } catch {}
+      // العلم لهذا المستخدم فقط (لا يُفرض على حسابات أخرى على نفس الجهاز)
+      markSetupComplete(loggedUser?.id);
     }
 
     setIsLoading(false);

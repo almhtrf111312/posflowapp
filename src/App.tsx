@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, useSearchParams, useNavigate, useLocation, Outlet, Navigate } from "react-router-dom";
 import { Capacitor } from '@capacitor/core';
+import { isSetupCompleteFor, markSetupComplete, setupFlagKey } from '@/lib/setup-flag';
 import { App as CapApp } from '@capacitor/app';
 import { MainLayout } from "./components/layout/MainLayout";
 import { NativeTabHost } from "./components/layout/NativeTabKeepAlive";
@@ -192,15 +193,18 @@ const AppContent = () => {
   // 🔔 فحص المصاريف المستحقة والدفع التلقائي عند بدء تشغيل التطبيق
   useDueExpensesChecker();
 
-  const [setupComplete, setSetupComplete] = useState<boolean>(() => {
+  // علم الإعداد مرتبط بمعرّف المستخدم؛ إعدادات المتجر لا تُعتبر دليلاً إلا إذا حملت اسماً حقيقياً
+  const readSetupComplete = (uid?: string | null): boolean => {
     try {
       // Prioritize new signup flag over existing device settings
       if (sessionStorage.getItem('posflow_just_signed_up') === 'true') {
-        return localStorage.getItem('posflow_setup_complete') === 'true';
+        return uid ? localStorage.getItem(setupFlagKey(uid)) === 'true' : false;
       }
-      return localStorage.getItem('posflow_setup_complete') === 'true' || !!localStorage.getItem('posflow_settings_v1');
-    } catch { return true; }
-  });
+      return isSetupCompleteFor(uid);
+    } catch { return false; }
+  };
+
+  const [setupComplete, setSetupComplete] = useState<boolean>(() => readSetupComplete(user?.id));
 
   // Re-read flag whenever the user changes (after login/logout) or settings are updated
   useEffect(() => {
@@ -209,9 +213,10 @@ const AppContent = () => {
         const isNew = sessionStorage.getItem('posflow_just_signed_up') === 'true';
         if (isNew) {
           // إذا كان المستخدم في جلسة إنشاء حساب جديد، لا تقم بضبط setupComplete إلى true من خلال أحداث المزامنة
+          setSetupComplete(readSetupComplete(user?.id));
           return;
         } else {
-          setSetupComplete(localStorage.getItem('posflow_setup_complete') === 'true' || !!localStorage.getItem('posflow_settings_v1'));
+          setSetupComplete(readSetupComplete(user?.id));
         }
       } catch {}
     };
@@ -424,7 +429,7 @@ const AppContent = () => {
       if (effectiveRole === 'cashier') {
         try {
           sessionStorage.removeItem('posflow_just_signed_up');
-          localStorage.setItem('posflow_setup_complete', 'true');
+          markSetupComplete(user?.id);
         } catch {}
       } else if (!setupComplete) {
         // 2c. Store owners (boss/admin) or offline fallback -> display SetupWizard
@@ -432,7 +437,7 @@ const AppContent = () => {
           <SetupWizard onComplete={() => {
             try {
               sessionStorage.removeItem('posflow_just_signed_up');
-              localStorage.setItem('posflow_setup_complete', 'true');
+              markSetupComplete(user?.id);
             } catch {}
             setSetupComplete(true);
             setManualShowSetup(false);

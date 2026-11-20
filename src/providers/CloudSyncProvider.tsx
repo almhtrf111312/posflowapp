@@ -1,6 +1,7 @@
 // Cloud Sync Provider - Wraps the app and ensures cloud sync is properly initialized
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { hasRealConfiguredStore, markSetupComplete } from '@/lib/setup-flag';
 import { useAuth } from '@/hooks/use-auth';
 import { setCurrentUserId, fetchStoreSettings, saveStoreSettings, saveStoreSettingsDirect } from '@/lib/supabase-store';
 import { refundInvoiceCloud, refundInvoicePartialCloud, loadCachedInvoicesSync } from '@/lib/cloud/invoices-cloud';
@@ -292,7 +293,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           key !== 'posflow_stay_logged_in' &&
           key !== 'posflow_session_cache' &&
           key !== 'posflow_theme' &&
-          key !== 'posflow_setup_complete' &&
+          !key.startsWith('posflow_setup_complete_') &&
           key !== 'posflow_privacy_accepted' &&
           key !== 'posflow_privacy_version' &&
           key !== 'posflow_recurring_expenses_v1' &&
@@ -326,8 +327,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       await pullStoreSettingsWithGuard();
 
       const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('posflow_just_signed_up') === 'true';
-      if (!isJustSignedUp) {
-        localStorage.setItem('posflow_setup_complete', 'true');
+      // لا نعلّم الإعداد مكتملاً إلا إذا سُحب اسم متجر حقيقي من السحابة (متجر جديد فارغ يبقى بحاجة للمعالج)
+      if (!isJustSignedUp && hasRealConfiguredStore()) {
+        markSetupComplete(user?.id);
       }
 
       setLastSyncTime(new Date().toISOString());
@@ -500,8 +502,9 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       // ✅ استخدام pullStoreSettingsWithGuard لمنع الكتابة العكسية للإعدادات السحابية القديمة فوق التعديلات المحلية الأحدث
       await pullStoreSettingsWithGuard();
       const isJustSignedUp = typeof window !== 'undefined' && sessionStorage.getItem('posflow_just_signed_up') === 'true';
-      if (!isJustSignedUp) {
-        localStorage.setItem('posflow_setup_complete', 'true');
+      // لا نعلّم الإعداد مكتملاً إلا إذا سُحب اسم متجر حقيقي من السحابة (متجر جديد فارغ يبقى بحاجة للمعالج)
+      if (!isJustSignedUp && hasRealConfiguredStore()) {
+        markSetupComplete(user?.id);
       }
 
       emitEvent(EVENTS.PRODUCTS_UPDATED);

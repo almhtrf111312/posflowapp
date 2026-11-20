@@ -27,6 +27,8 @@ export interface AtomicSaleBundle {
 
   customerName: string;
 
+  paymentMethod?: 'cash' | 'digital';
+
   customerPhone?: string;
 
   taxMode?: 'inclusive' | 'exclusive';
@@ -338,6 +340,9 @@ export async function processPosSaleAtomic(
 
     if (paymentType === 'debt') emitEvent(EVENTS.DEBTS_UPDATED, null);
     markSaleAsSyncedInNativeSQLite(row.invoice_id, row.invoice_number).catch(() => {});
+    if ((bundle as any).paymentMethod === 'digital') {
+      try { await sb.rpc('mark_invoice_digital', { _invoice_number: row.invoice_number }); } catch { /* غير حرج: يُعاد وسمها عند أي مزامنة لاحقة */ }
+    }
 
 
 

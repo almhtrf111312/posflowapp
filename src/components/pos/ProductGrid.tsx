@@ -1,3 +1,4 @@
+import { findSerialLocal } from '@/lib/serials-store';
 import { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { Search, Barcode, Package, LayoutGrid, Grid3x3, List, AlignJustify } from 'lucide-react';
 import { ProductImage } from '@/components/products/ProductImage';
@@ -138,11 +139,13 @@ export const ProductGrid = memo(function ProductGrid({
 
   const filteredProducts = useMemo(() => {
     const query = searchQuery.toLowerCase();
+    const serialHitId = findSerialLocal(searchQuery);
     return products.filter(product => {
       if (product.archived) return false;
       if (!noInventory && product.quantity <= 0) return false;
       const matchesSearch = product.name.toLowerCase().includes(query) ||
-        (product.barcode && product.barcode.includes(searchQuery));
+        (product.barcode && product.barcode.includes(searchQuery)) ||
+        (serialHitId !== undefined && product.id === serialHitId);
       const matchesCategory = selectedCategory === t('common.all') || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });

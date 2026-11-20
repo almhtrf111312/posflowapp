@@ -56,7 +56,7 @@ import { isNativeAndroid } from '@/lib/printer/posflow-printer';
 import { getStoredPrinterConfig } from '@/lib/printer/printer-config';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { playSaleComplete, playDebtRecorded } from '@/lib/sound-utils';
-import { addSalesToShift, getActiveShift } from '@/lib/cashbox-store';
+import { addSalesToShift, addDigitalSaleToShift, getActiveShift } from '@/lib/cashbox-store';
 import { recordActivity } from '@/lib/auto-backup';
 import { useLanguage } from '@/hooks/use-language';
 import { getLocalizedUnit } from '@/lib/product-units';
@@ -246,6 +246,7 @@ export function CartPanel({
   const { syncState, syncMessage, startSync, completeSync, failSync } = useSyncState();
   const { isOnline, syncImmediately } = useCloudSyncContext();
   const [showCashDialog, setShowCashDialog] = useState(false);
+  const [payMethod, setPayMethod] = useState<'cash' | 'digital'>('cash');
   const [serialPick, setSerialPick] = useState<{ items: SerialPickItem[]; resume: 'cash' | 'debt' } | null>(null);
   useEffect(() => { warmSerialCache(); const t = setInterval(() => warmSerialCache(), 10 * 60 * 1000); const on = () => warmSerialCache(true); window.addEventListener('online', on); return () => { clearInterval(t); window.removeEventListener('online', on); }; }, []);
   const [showDeficitDialog, setShowDeficitDialog] = useState(false);
@@ -907,6 +908,7 @@ export function CartPanel({
           invoiceNumber,
           customerId: resolvedCustomerId,
           customerName: customerNameSnapshot || 'عميل نقدي',
+          paymentMethod: payMethod,
           items: localItems.map(i => ({ ...i, profit: round8(i.profit - i.total * discountRatio) })),
           subtotal,
           discount: effectiveDiscountAmount,
@@ -956,14 +958,20 @@ export function CartPanel({
         ? Math.max(0, receivedAmount - (changeInReceivedCurrency || 0))
         : totalSnapshot * (activeReceivedCurrency.rate || 1);
 
-      addSalesToShift(
-        totalSnapshot,
-        discountedProfit,
-        totalCOGS,
-        (receivedCurrencyCode as any) || 'USD',
-        netCashReceivedInCurrency,
-        operationId
-      );
+      if (payMethod === 'digital') {
+        // دفع رقمي: لا يدخل درج النقد، يُسجَّل كدفع رقمي في الوردية
+        addDigitalSaleToShift(totalSnapshot, discountedProfit, totalCOGS, (receivedCurrencyCode as any) || 'USD', netCashReceivedInCurrency, operationId);
+        setPayMethod('cash');
+      } else {
+        addSalesToShift(
+          totalSnapshot,
+          discountedProfit,
+          totalCOGS,
+          (receivedCurrencyCode as any) || 'USD',
+          netCashReceivedInCurrency,
+          operationId
+        );
+      }
       recordActivity();
 
       playSaleComplete();
@@ -2379,6 +2387,19 @@ export function CartPanel({
               </div>
             </div>
           )}
+
+          <div className="flex items-center gap-1.5 text-xs">
+            {(['cash', 'digital'] as const).map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setPayMethod(m)}
+                className={`flex-1 h-8 rounded-lg border font-semibold transition-colors ${payMethod === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground'}`}
+              >
+                {m === 'cash' ? 'نقدي' : 'دفع رقمي'}
+              </button>
+            ))}
+          </div>
 
           {/* Row 5: Pay Buttons + Action Icons */}
           <div className="flex items-center gap-1.5">

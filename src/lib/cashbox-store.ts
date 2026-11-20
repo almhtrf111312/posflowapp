@@ -467,6 +467,40 @@ export const addSalesToShift = (
 };
 
 /**
+ * 💳 دفع رقمي (محفظة): لا يدخل رصيد الدرج النقدي ولا المتوقع عند الإقفال،
+ * يُسجَّل في الوردية كإجمالي دفع رقمي ويُحتسب في المبيعات والأرباح.
+ */
+export const addDigitalSaleToShift = (
+  amount: number,
+  grossProfit: number = 0,
+  cogs: number = 0,
+  currency: ShiftCurrency = 'USD',
+  currencyAmount?: number,
+  referenceId?: string
+): void => {
+  const roundedAmount = roundCurrency(amount);
+  const roundedCurrAmount = currencyAmount !== undefined ? roundCurrency(currencyAmount) : roundedAmount;
+  const shifts = loadShifts();
+  const idx = shifts.findIndex(s => s.status === 'open');
+  if (idx === -1) return;
+  const shift = shifts[idx] as any;
+  shift.digitalTotal = addUsd(shift.digitalTotal || 0, roundedAmount);
+  shift.grossProfitTotal = addUsd(shift.grossProfitTotal || 0, roundCurrency(grossProfit));
+  shift.cogsTotal = addUsd(shift.cogsTotal || 0, roundCurrency(cogs));
+  saveShifts(shifts);
+  emitEvent(EVENTS.CASH_SHIFTS_UPDATED, shifts);
+  if (roundedAmount > 0 && shift.id) {
+    const shiftId = shift.id;
+    import('./cloud/cashbox-cloud').then(({ addShiftTransactionCloud }) => {
+      addShiftTransactionCloud({
+        shiftId, type: 'digital_sale', amount: roundedAmount, currency,
+        currencyAmount: roundedCurrAmount, referenceId, notes: 'دفع رقمي',
+      }).catch(() => {});
+    }).catch(() => {});
+  }
+};
+
+/**
  * ✅ تسجيل مرتجع نقدي وخصمه من الوردية النشطة ورصيد الصندوق
  * يمنع العجز الوهمي في درج الكاشير عند تسليم أموال المرتجع للعميل
  */

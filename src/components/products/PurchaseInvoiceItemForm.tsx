@@ -84,6 +84,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
   const [expiryDate, setExpiryDate] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [serialsText, setSerialsText] = useState('');
+  const [serialScanIdx, setSerialScanIdx] = useState<number | null>(null);
   const [batchNumber, setBatchNumber] = useState('');
   const [warranty, setWarranty] = useState('');
   const [size, setSize] = useState('');
@@ -101,6 +102,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
   const [bulkUnit, setBulkUnit] = useState('كرتونة');
   const [smallUnit, setSmallUnit] = useState('قطعة');
   const [conversionFactor, setConversionFactor] = useState('1');
+  const serialCount = Math.min(500, Math.max(1, (Number.parseInt(quantity) || 1) * ((trackByUnit === 'bulk' && (Number.parseInt(conversionFactor) || 1) > 1) ? (Number.parseInt(conversionFactor) || 1) : 1)));
   const [bulkCostPrice, setBulkCostPrice] = useState('');
   const [bulkSalePrice, setBulkSalePrice] = useState('');
 
@@ -567,16 +569,42 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
       )}
 
       <div className="space-y-1.5">
-        <Label className="text-sm">أرقام تسلسلية / IMEI (اختياري — رقم في كل سطر، بعدد الكمية)</Label>
-        <textarea
-          value={serialsText}
-          onChange={(e) => setSerialsText(e.target.value)}
-          rows={3}
-          dir="ltr"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-          placeholder="356938035643809&#10;356938035643810"
-        />
+        <Label className="text-sm">أرقام تسلسلية / IMEI (اختياري — خانة لكل قطعة)</Label>
+        {(() => {
+          const n = serialCount;
+          const rows = serialsText.split('\n');
+          while (rows.length < n) rows.push('');
+          const setRow = (idx: number, v: string) => {
+            const next = rows.slice(0, n); next[idx] = v.replace(/[\n,;]+/g, '').trim();
+            setSerialsText(next.join('\n'));
+          };
+          return (
+            <div className="space-y-1.5">
+              {Array.from({ length: n }, (_, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="w-12 shrink-0 text-xs text-muted-foreground">جهاز {idx + 1}</span>
+                  <Input dir="ltr" className="font-mono" value={rows[idx] || ''} onChange={(e) => setRow(idx, e.target.value)} placeholder="IMEI / Serial" />
+                  <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={() => setSerialScanIdx(idx)}>
+                    <ScanLine className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
+      <BarcodeScanner
+        isOpen={serialScanIdx !== null}
+        onClose={() => setSerialScanIdx(null)}
+        onScan={(code) => {
+          const idx = serialScanIdx; setSerialScanIdx(null);
+          if (idx === null) return;
+          const n = serialCount;
+          const rows = serialsText.split('\n'); while (rows.length < n) rows.push('');
+          rows[idx] = String(code).trim();
+          setSerialsText(rows.slice(0, n).join('\n'));
+        }}
+      />
 
       {fieldsConfig.serialNumber && (
         <div className="space-y-1.5">

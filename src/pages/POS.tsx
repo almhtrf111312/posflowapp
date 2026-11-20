@@ -1,3 +1,4 @@
+import { findSerialLocal, getSelectedSerials, setSelectedSerials } from '@/lib/serials-store';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
@@ -1611,6 +1612,22 @@ export default function POS() {
       p.barcode === barcode || p.barcode2 === barcode || p.barcode3 === barcode
 
     );
+
+
+    // 🔎 لا يوجد باركود مطابق: جرّب الرقم التسلسلي / IMEI من الكاش المحلي (يعمل أوفلاين)
+    if (matches.length === 0) {
+      const serialProductId = findSerialLocal(barcode);
+      const serialProduct = serialProductId ? products.find(p => p.id === serialProductId) : undefined;
+      if (serialProduct) {
+        const cur = getSelectedSerials(serialProduct.id) || [];
+        if (!cur.includes(barcode.trim())) {
+          const real = barcode.trim();
+          setSelectedSerials(serialProduct.id, [...cur, real]);
+          addToCart(serialProduct, 'piece');
+        }
+        return;
+      }
+    }
 
 
 

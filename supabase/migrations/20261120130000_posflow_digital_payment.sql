@@ -1,0 +1,2 @@
+-- دفع رقمي: نوع حركة وردية digital_sale (لا يدخل المتوقع النقدي)، invoices.payment_method، mark_invoice_digital().
+-- طُبّقت عبر apply_migration (راجع جسمها في سجل الهجرات).

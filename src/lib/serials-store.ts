@@ -35,6 +35,17 @@ export const confirmSerialsSynced = (serials: string[]) => {
   const p = pendingSold(); serials.forEach(x => p.delete(x)); writeJson(PENDING_KEY, [...p]);
 };
 
+/** بحث محلي عن رقم تسلسلي/IMEI متوفر -> معرّف المنتج (يعمل بدون اتصال) */
+export const findSerialLocal = (code: string): string | undefined => {
+  const q = (code || '').trim().toLowerCase();
+  if (q.length < 5) return undefined;
+  const c = readCache(); const p = pendingSold();
+  for (const [pid, list] of Object.entries(c.inStock)) {
+    if (list.some(x => x.toLowerCase() === q && !p.has(x))) return pid;
+  }
+  return undefined;
+};
+
 /** تسخين الكاش أثناء الاتصال: المنتجات المتتبَّعة + أرقامها المتوفرة */
 let lastWarm = 0;
 export async function warmSerialCache(force = false): Promise<void> {

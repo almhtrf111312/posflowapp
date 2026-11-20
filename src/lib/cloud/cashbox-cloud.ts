@@ -15,6 +15,7 @@ import { roundCurrency } from '../utils';
 
 export type ShiftTxType =
   | 'sale'
+  | 'digital_sale'
   | 'deposit_capital'
   | 'deposit_revenue'
   | 'deposit_purchase_cover'

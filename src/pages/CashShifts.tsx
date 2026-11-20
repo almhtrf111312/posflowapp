@@ -102,7 +102,8 @@ export default function CashShifts() {
     const result: Record<string, { opening: number; sales: number; expenses: number; deposits: number; withdrawals: number; expected: number }> = {};
     const allCodes = new Set([
       ...enabledCurrencies.map(c => c.code),
-      'USD',
+      // USD لا يُضاف قسراً: فقط إذا كان مفعلاً أو له حركة في الوردية (أو وردية قديمة بلا تفصيل عملات)
+      ...(Object.keys(curr).length === 0 ? ['USD'] : []),
       ...Object.keys(curr)
     ]);
     allCodes.forEach(code => {
@@ -920,6 +921,12 @@ export default function CashShifts() {
                     ) : null;
                   })()}
                 </div>
+              </div>
+            )}
+
+            {Number((openShift as any)?.digitalTotal || 0) > 0 && (
+              <div className="rounded-lg border p-3 text-xs">
+                مبيعات دفع رقمي (لا تدخل درج النقد): <b>{formatUsd(Number((openShift as any).digitalTotal))}</b>
               </div>
             )}
 

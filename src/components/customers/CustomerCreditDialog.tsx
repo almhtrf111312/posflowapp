@@ -6,7 +6,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { getActiveShift, addWithdrawalFromShift } from '@/lib/cashbox-store';
 import { extractErrorMessage } from '@/lib/sync-queue';
 import { formatMoney } from '@/lib/utils';
-import { getEnabledCurrencies, fromUsd, round8 } from '@/lib/money-engine';
+import { getEnabledCurrencies, toUsd, round8 } from '@/lib/money-engine';
 import {
   loadCreditSummary, loadCreditLedger, loadOpenDebts, setCreditLimit, issueStoreCredit, applyCreditToDebt, payoutStoreCredit,
   CreditSummary, CreditLedgerRow, OpenDebt,
@@ -24,8 +24,8 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [payCcy, setPayCcy] = useState('USD');
   const payCurrencies = getEnabledCurrencies();
+  const [payCcy, setPayCcy] = useState(() => payCurrencies[0]?.code || 'USD');
 
   const refresh = useCallback(async () => {
     if (!customer) return;
@@ -34,7 +34,13 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
     setLimitText(s.creditLimit == null ? '' : String(s.creditLimit));
   }, [customer]);
 
-  useEffect(() => { setAmount(''); setReason(''); void refresh(); }, [refresh]);
+  useEffect(() => {
+    setAmount('');
+    setReason('');
+    setPayCcy(payCurrencies[0]?.code || 'USD');
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh]);
 
   const run = async (fn: () => Promise<void>, ok: string) => {
     setBusy(true);
@@ -42,8 +48,11 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
     catch (e) { toast.error(extractErrorMessage(e) || 'حدث خطأ'); }
     finally { setBusy(false); }
   };
+
+  // توحيد سلوك الإدخال مع نافذة الموردين: المبلغ المُدخل بعملة الاختيار ويُحوَّل إلى USD للتسجيل المحاسبي
   const val = Number(amount);
-  const valid = val > 0;
+  const valid = Number.isFinite(val) && val > 0;
+  const usdVal = valid ? (payCcy === 'USD' ? round8(val) : round8(toUsd(val, payCcy))) : 0;
 
   return (
     <Dialog open={!!customer} onOpenChange={onOpenChange}>
@@ -58,7 +67,7 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
 
             {isOwner && (
               <div className="rounded-xl border p-3 space-y-2">
-                <div className="text-xs font-semibold">حد الائتمان (اتركه فارغاً = بلا حد)</div>
+                <div className="text-xs font-semibold">حد الائتمان بالدولار (اتركه فارغاً = بلا حد)</div>
                 <div className="flex gap-2">
                   <Input type="number" inputMode="decimal" value={limitText} onChange={e => setLimitText(e.target.value)} />
                   <Button disabled={busy} onClick={() => run(() => setCreditLimit(customer.id, limitText.trim() === '' ? null : Number(limitText)), 'تم حفظ حد الائتمان')}>حفظ</Button>
@@ -67,17 +76,23 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
             )}
 
             <div className="rounded-xl border p-3 space-y-2">
-              <Input type="number" inputMode="decimal" placeholder="المبلغ" value={amount} onChange={e => setAmount(e.target.value)} />
-              <Input placeholder="السبب / رقم الفاتورة (للإصدار)" value={reason} onChange={e => setReason(e.target.value)} />
+              <Input type="number" inputMode="decimal" placeholder={`المبلغ (${payCcy})`} value={amount} onChange={e => setAmount(e.target.value)} />
               {payCurrencies.length > 1 && (
-                <select className="w-full h-9 rounded-md border bg-background px-2 text-sm" value={payCcy} onChange={e => setPayCcy(e.target.value)} title="عملة الصرف النقدي">
-                  {payCurrencies.map(c => <option key={c.code} value={c.code}>صرف بعملة {c.code}</option>)}
+                <select className="w-full h-9 rounded-md border bg-background px-2 text-sm" value={payCcy} onChange={e => setPayCcy(e.target.value)} title="العملة">
+                  {payCurrencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
                 </select>
               )}
+              {valid && payCcy !== 'USD' && (
+                <div className="text-[11px] text-muted-foreground font-mono">المعادل المحاسبي: {formatMoney(usdVal)}</div>
+              )}
+              <Input placeholder="السبب / رقم الفاتورة (للإصدار)" value={reason} onChange={e => setReason(e.target.value)} />
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" disabled={busy || !valid} onClick={() => run(() => issueStoreCredit(customer.id, val, reason), 'تم إصدار الرصيد')}>إصدار رصيد</Button>
+                <Button size="sm" disabled={busy || !valid} onClick={() => run(() => issueStoreCredit(customer.id, usdVal, reason), 'تم إصدار الرصيد')}>إصدار رصيد</Button>
                 <Button size="sm" variant="outline" disabled={busy || !valid || sum.storeCredit <= 0 || !getActiveShift()}
-                  onClick={() => run(async () => { await payoutStoreCredit(customer.id, val, getActiveShift()!.id, payCcy, payCcy === 'USD' ? val : round8(fromUsd(val, payCcy))); addWithdrawalFromShift(val, payCcy, payCcy === 'USD' ? val : round8(fromUsd(val, payCcy))); }, 'تم صرف الرصيد نقداً')}>
+                  onClick={() => run(async () => {
+                    await payoutStoreCredit(customer.id, usdVal, getActiveShift()!.id, payCcy, val);
+                    addWithdrawalFromShift(usdVal, payCcy, val);
+                  }, 'تم صرف الرصيد نقداً')}>
                   صرف نقدي من الصندوق
                 </Button>
               </div>
@@ -86,7 +101,7 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
                   <div className="text-xs text-muted-foreground">تسديد دين من الرصيد:</div>
                   {debts.map(d => (
                     <Button key={d.id} size="sm" variant="secondary" className="w-full justify-between" disabled={busy || !valid}
-                      onClick={() => run(() => applyCreditToDebt(d.id, Math.min(val, d.remaining_debt)), 'تم تسديد الدين من الرصيد')}>
+                      onClick={() => run(() => applyCreditToDebt(d.id, Math.min(usdVal, d.remaining_debt)), 'تم تسديد الدين من الرصيد')}>
                       <span>دين {d.invoice_id || ''}</span><span className="font-mono">{formatMoney(d.remaining_debt)}</span>
                     </Button>
                   ))}

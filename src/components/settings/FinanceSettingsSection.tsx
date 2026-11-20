@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Coins, DollarSign, Percent, Check, Wallet } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
 import { ShiftToleranceField } from './ShiftToleranceField';
+import { SurplusProfitField } from './SurplusProfitField';
 import { useLanguage } from '@/hooks/use-language';
 import { PREDEFINED_CURRENCIES, CURRENCY_CATEGORIES } from '@/lib/currencies';
 import type { CurrencyDisplayMode } from '@/lib/store-settings-sync';
@@ -547,6 +548,7 @@ export function FinanceSettingsSection({
                 </div>
 
                 <ShiftToleranceField />
+                <SurplusProfitField />
 
                 {/* نص توضيحي للعملات والضرائب */}
                 <div className="pt-3 border-t border-border">

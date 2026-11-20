@@ -8,3 +8,4 @@ DROP FUNCTION IF EXISTS public._register_serials(uuid,uuid,text[],numeric,uuid,n
 -- Tables hold history; drop only if never used:
 -- DROP TABLE public.product_serial_events; DROP TABLE public.product_serials;
 -- ALTER TABLE public.purchase_invoice_items DROP COLUMN serials; ALTER TABLE public.products DROP COLUMN track_serials;
+-- purchase_return_atomic: re-apply the body from 20261120060000_posflow_phase6_suppliers_returns.sql to drop the serials block (migration posflow_purchase_return_serials).

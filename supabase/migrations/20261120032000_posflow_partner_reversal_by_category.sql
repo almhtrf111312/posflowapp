@@ -1,0 +1,3 @@
+-- عكس أرباح الشركاء موزعاً على تصنيفات الربح الأصلية (بدل سطر واحد "مرتجع فاتورة")
+-- (مطبّقة على القاعدة الحية بنفس المحتوى: دالة _split_reversal_by_category + ربطها في revert_invoice_partner_profits_atomic)
+-- يُعاد تطبيقها عبر الترقيع: استبدال '|| _revert_record,' بـ '|| public._split_reversal_by_category(_revert_record, profit_history, _inv.invoice_number),'

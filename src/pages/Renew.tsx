@@ -286,15 +286,23 @@ export default function RenewPage() {
       if (insertError) throw insertError;
 
       // إرسال صورة إثبات التحويل إلى محادثة الدعم
+      // الاستدعاء يرجع {error} ولا يرمي استثناء، لذلك نفحصه صراحةً ونُعلم العميل إذا فشل الإرسال
+      let proofSent = false;
       try {
-        await supabase.rpc('send_support_message', {
+        const { error: proofError } = await supabase.rpc('send_support_message', {
           _message: `[IMAGE]${proofImage}[/IMAGE]\nإشعار تحويل - مرجع ${refCode} - ${selectedPlan.name} - ${selectedMethod.name}`,
           _conversation_id: null,
         } as any);
+        if (proofError) throw proofError;
+        proofSent = true;
       } catch (e) {
         console.warn('proof send failed', e);
       }
-      setProofImage(null);
+      if (proofSent) {
+        setProofImage(null);
+      } else {
+        showToast.error('تم تسجيل الطلب لكن تعذر إرسال صورة الإيصال، أرسلها من محادثة الدعم الفني');
+      }
 
       // إرسال إشعار تليجرام فوري للمدير العام كإشعار احتياطي
       sendBossTelegramChatAlert(

@@ -23,7 +23,6 @@ export default function ContactDeveloper() {
   const license = useLicense();
   const licenseState = (license as any)?.licenseState || license;
   const [info, setInfo] = useState<DevInfo>({});
-  const isDirectChatOpen = Boolean((location.state as any)?.openChat);
   const [chatOpen, setChatOpen] = useState(true);
   const [rel, setRel] = useState<ReleaseConfig>(getCachedReleaseConfig());
   useEffect(() => { fetchReleaseConfig().then(setRel).catch(() => {}); }, []);

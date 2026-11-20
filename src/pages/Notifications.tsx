@@ -229,11 +229,12 @@ export default function Notifications() {
   };
 
   // فتح الصفحة = اعتبار الإشعارات مقروءة (يختفي الرقم من القائمة الجانبية)
+  // يعتمد على عدد الإعلانات المحمّلة حتى لا يستعمل نسخة قديمة (فارغة) من markAllRead قبل وصول البيانات
   useEffect(() => {
     const t = setTimeout(() => markAllRead(true), 1500);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [rawItems.length]);
 
   // أرشفة أو حذف الإشعار
   const handleDeleteOrArchive = (item: UnifiedItem) => {

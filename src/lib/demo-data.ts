@@ -1,6 +1,6 @@
 /**
  * Demo Data - Synchronized sample data for products, customers, invoices, and debts
- * Flow POS Pro - Guest Demo Mode
+ * POS Flow App - Guest Demo Mode
  */
 
 import { Product } from './products-store';

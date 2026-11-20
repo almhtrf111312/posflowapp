@@ -1,7 +1,7 @@
 # 🧠 FlowPOS Pro — Persistent Project Memory (Project State & Ledger)
 
-**Last Updated:** 2026-11-08
-**Current Version:** `v1.5.74 (Build 462)`
+**Last Updated:** 2026-11-20
+**Current Version:** `v1.5.228 (Build 616)` and later (see git log / version.json)
 **Repository Branch:** `main`
 **Base Accounting Currency:** `USD`  
 **Primary Language / Direction:** Arabic (`ar`) RTL (with EN/TR support)
@@ -66,6 +66,15 @@
 ---
 
 ## 🕒 Recent Implementations & Changelog Log
+* **2026-11-20:** Releases v1.5.223 → v1.5.229 — Boss app split, FCM push, support/renewal flow, role & setup-flag fixes:
+  * Boss panel moved out of the customer app into the separate `posflow-boss` APK; customer-chat inbox and orphaned `LicenseManagement` removed from the customer app.
+  * Firebase push (FCM v1): `send-boss-push` edge function + pg_net triggers, tables `boss_push_tokens` / `user_push_tokens` (RLS on, no direct policies — access only via SECURITY DEFINER RPCs such as `register_push_token`); support tables added to `supabase_realtime`. Client side: `src/hooks/use-push-registration.ts`, `PosFlowPushPlugin`, tap opens the chat. Supabase-side changes were applied directly (migrations `boss_fcm_push`, `support_chat_realtime`, `customer_fcm_push`), not via repo commits.
+  * Customer app: floating Google phone popup removed (phone asked once in setup step 1); Contact page opens the support chat directly; Notifications tabs (all/unread/read) with fixed 3-column layout, auto-read after 1.5s (re-armed when broadcasts load), raw `[IMAGE]` text hidden; trial badge kept bottom-left on purpose (owner request — do NOT move it back to the top).
+  * `Renew.tsx`: hard-coded payment methods removed; only `payment_methods` rows added by the Boss are shown (table currently empty until the Boss adds Sham Cash); transfer proof (image compressed, or PDF <= 512KB) is mandatory and sent to support via `send_support_message` as `[IMAGE]data:...[/IMAGE]`; a failed proof send is now reported to the customer.
+  * Boss app: receipt preview (image / PDF first page) + on-device OCR with Google ML Kit (transaction no., amount, currency, date), shown to the Boss only.
+  * Fix `use-user-role.tsx`: role query timeout 2.5s -> 8s, `.maybeSingle()`, retry at 2/5/10s, re-fetch on `online`/focus, cache only trusted for the same user (cause of owner menus disappearing and cashier menus showing).
+  * Fix setup wizard flag: new `src/lib/setup-flag.ts`; flag is per user (`posflow_setup_complete_<uid>`), default store settings no longer count as configured, CloudSync marks complete only after a real store name is pulled, logout keeps per-user flags and drops the shared legacy key.
+  * RLS audit (2026-11-20, read-only): `app_settings`, `client_versions`, `app_broadcasts`, `payment_methods`, push-token and support tables all have RLS on with sensible policies (`client_versions` insert/update check `user_id = auth.uid()`); no change needed. A proposed role-trigger migration was reviewed and not applied (trigger and own-role SELECT policy already exist).
 * **2026-11-08:** Release v1.5.69 (Build 457) — POS Mobile 3-Column Grid Fix & Comprehensive Reports Audit (EGM Implementation):
   * EGM Design Specification & Review Swarm (`docs/designs/pos-grid-and-reports-audit.md`, `docs/designs/consolidated_review_report.md`): Formulated comprehensive specification and conducted 7-persona Goldfish review swarm (`design`, `codebase-details`, `implementation-readiness`, `inventive-catalyst`, `zoom-out`, `structural`, `comprehension`) resolving layout real estate math and calendar date boundaries.
   * POS Mobile 3-Column Grid Optimization (`src/components/pos/ProductGrid.tsx`): Dropped `xs: 380px` constraint, enabling 3 items side-by-side (`grid-cols-3 sm:grid-cols-4...`) directly on all mobile devices (320px–375px); applied TRIZ extraction pattern by floating the quantity badge (`absolute top-1 end-1 z-10`) over the 4:3 product image, freeing 100% of the card base exclusively for full price rendering (`text-[11px] sm:text-xs font-black`) without truncation, and providing 2 lines for titles (`line-clamp-2 min-h-[1.75rem]`).

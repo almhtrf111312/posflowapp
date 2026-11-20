@@ -47,6 +47,7 @@ import { isGuestDemoMode } from '@/lib/demo-data';
    quantity: number;
    cost_price: number;
    sale_price?: number;
+   serials?: string[] | null;
    total_cost: number;
    created_at: string;
  }
@@ -76,6 +77,7 @@ import { isGuestDemoMode } from '@/lib/demo-data';
    quantity: number;
    cost_price: number;
    sale_price?: number;
+   serials?: string[];
  }
  
 // Local storage cache helpers

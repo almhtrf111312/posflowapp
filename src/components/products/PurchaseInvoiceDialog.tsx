@@ -204,6 +204,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
     cost_price: number;
     sale_price?: number;
     product_id?: string;
+    serials?: string[];
     // Extended fields
     wholesale_price?: number;
     expiry_date?: string;
@@ -308,6 +309,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         total_cost: item.quantity * item.cost_price,
         created_at: new Date().toISOString(),
         product_id: resolvedProductId,
+        serials: item.serials,
       };
       setInvoiceItems(prev => [...prev, localItem]);
       // Update local invoice totals
@@ -335,6 +337,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
       cost_price: item.cost_price,
       sale_price: item.sale_price,
       product_id: resolvedProductId,
+      serials: item.serials,
     });
     setLoading(false);
 
@@ -455,6 +458,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
           cost_price: item.cost_price,
           sale_price: item.sale_price,
           product_id: item.product_id,
+          serials: item.serials || undefined,
         })),
         existingInvoiceId: isOfflineInvoice ? undefined : currentInvoice.id,
       });
@@ -538,6 +542,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
           cost_price: item.cost_price,
           sale_price: item.sale_price,
           product_id: item.product_id,
+          serials: item.serials || undefined,
         })),
         existingInvoiceId: currentInvoice.id,
       });

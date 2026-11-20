@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { emitEvent, EVENTS } from '@/lib/events';
+import { getSelectedSerials, clearSelectedSerials } from '@/lib/serials-store';
 
 import { invalidateInvoicesCache } from './invoices-cloud';
 import { invalidatePartnersCache } from './partners-cloud';
@@ -192,6 +193,7 @@ function buildRpcItems(bundle: AtomicSaleBundle) {
       unit: item.unit || 'piece',
 
       conversion_factor: item.conversionFactor || 1,
+      ...(getSelectedSerials(item.id)?.length ? { serials: getSelectedSerials(item.id) } : {}),
 
     };
 
@@ -327,6 +329,7 @@ export async function processPosSaleAtomic(
 
 
 
+    clearSelectedSerials(bundle.items.map(i => i.id));
     invalidateInvoicesCache();
     invalidatePartnersCache();
 

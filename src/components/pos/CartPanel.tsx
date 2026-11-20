@@ -1,6 +1,8 @@
 import { isAppOffline } from '@/hooks/use-network-status';
 import { isLocalOnlyMode } from '@/lib/subscription-lock';
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { SerialPickerDialog, SerialPickItem } from '@/components/pos/SerialPickerDialog';
+import { loadTrackedProducts, getSelectedSerials } from '@/lib/serials-store';
 import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
 import {
   Wrench,
@@ -244,6 +246,7 @@ export function CartPanel({
   const { syncState, syncMessage, startSync, completeSync, failSync } = useSyncState();
   const { isOnline, syncImmediately } = useCloudSyncContext();
   const [showCashDialog, setShowCashDialog] = useState(false);
+  const [serialPick, setSerialPick] = useState<{ items: SerialPickItem[]; resume: 'cash' | 'debt' } | null>(null);
   const [showDeficitDialog, setShowDeficitDialog] = useState(false);
   const [showDebtDialog, setShowDebtDialog] = useState(false);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -552,8 +555,24 @@ export function CartPanel({
     }
   };
 
+  // المنتجات المُتتبَّعة بالرقم التسلسلي تتطلب اختيار رقم لكل وحدة قبل إتمام البيع
+  const ensureSerials = async (resume: 'cash' | 'debt'): Promise<boolean> => {
+    const ids = cart.map(c => c.id).filter(id => /^[0-9a-f-]{36}$/i.test(id));
+    const tracked = await loadTrackedProducts(ids);
+    const need = cart.filter(c => tracked[c.id]).map(c => ({
+      id: c.id,
+      name: c.name,
+      quantity: c.unit === 'bulk' && c.conversionFactor ? c.quantity * c.conversionFactor : c.quantity,
+    }));
+    if (need.length === 0) return true;
+    if (need.every(n => (getSelectedSerials(n.id) || []).length === n.quantity)) return true;
+    setSerialPick({ items: need, resume });
+    return false;
+  };
+
   const handleCashSale = async () => {
     if (cart.length === 0) return;
+    if (!(await ensureSerials('cash'))) return;
 
     const validation = await validateCartProducts(cart);
     if (!validation.isValid) {
@@ -579,6 +598,7 @@ export function CartPanel({
 
   const handleDebtSale = async () => {
     if (cart.length === 0) return;
+    if (!(await ensureSerials('debt'))) return;
 
     // 🛡️ فحص استباقي: التحقق من أن كل صنف في السلة معتمد وموجود في الكتالوج السحابي
     const validation = await validateCartProducts(cart);
@@ -2381,6 +2401,16 @@ export function CartPanel({
       </div>
 
       {/* Cash Sale Dialog */}
+      <SerialPickerDialog
+        open={!!serialPick}
+        items={serialPick?.items || []}
+        onCancel={() => setSerialPick(null)}
+        onConfirm={() => {
+          const resume = serialPick?.resume;
+          setSerialPick(null);
+          if (resume === 'cash') void handleCashSale(); else if (resume === 'debt') void handleDebtSale();
+        }}
+      />
       <Dialog open={showCashDialog} onOpenChange={setShowCashDialog}>
         <DialogContent className="w-[94vw] max-w-md p-4 sm:p-6 rounded-2xl">
           <DialogHeader>

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useLanguage } from '@/hooks/use-language';
 import { Plus, Camera, ScanLine, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/lib/sonner-bridge';
 import { getEffectiveFieldsConfig } from '@/lib/product-fields-config';
 import { getCategoryNamesCloud, getCategoryNamesLocalFirst } from '@/lib/cloud/categories-cloud';
 import { EVENTS } from '@/lib/events';
@@ -24,6 +25,7 @@ interface PurchaseInvoiceItemFormProps {
     cost_price: number;
     sale_price?: number;
     product_id?: string;
+    serials?: string[];
     // Extended fields
     wholesale_price?: number;
     expiry_date?: string;
@@ -81,6 +83,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
   const [wholesalePrice, setWholesalePrice] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
+  const [serialsText, setSerialsText] = useState('');
   const [batchNumber, setBatchNumber] = useState('');
   const [warranty, setWarranty] = useState('');
   const [size, setSize] = useState('');
@@ -215,7 +218,14 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
     const baseCostPriceUSD = isBulk && bulkCostPriceUSD ? bulkCostPriceUSD / factor : costPriceUSD;
     const baseSalePriceUSD = isBulk && bulkSalePriceUSD && !salePriceUSD ? bulkSalePriceUSD / factor : salePriceUSD;
 
+    const serialsList = serialsText.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+    if (serialsList.length > 0) {
+      if (new Set(serialsList.map(x => x.toLowerCase())).size !== serialsList.length) { toast.error('توجد أرقام تسلسلية مكررة'); return; }
+      if (serialsList.length !== baseQuantity) { toast.error(`عدد الأرقام التسلسلية (${serialsList.length}) يجب أن يساوي الكمية (${baseQuantity})`); return; }
+    }
+
     onAdd({
+      serials: serialsList.length ? serialsList : undefined,
       product_name: productName,
       barcode: barcode || undefined,
       category: category || undefined,
@@ -256,6 +266,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
     setWholesalePrice('');
     setExpiryDate('');
     setSerialNumber('');
+    setSerialsText('');
     setBatchNumber('');
     setWarranty('');
     setSize('');
@@ -554,6 +565,18 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
           />
         </div>
       )}
+
+      <div className="space-y-1.5">
+        <Label className="text-sm">أرقام تسلسلية / IMEI (اختياري — رقم في كل سطر، بعدد الكمية)</Label>
+        <textarea
+          value={serialsText}
+          onChange={(e) => setSerialsText(e.target.value)}
+          rows={3}
+          dir="ltr"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
+          placeholder="356938035643809&#10;356938035643810"
+        />
+      </div>
 
       {fieldsConfig.serialNumber && (
         <div className="space-y-1.5">

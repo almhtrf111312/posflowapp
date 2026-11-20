@@ -378,7 +378,7 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'image_url', 'custom_fields', 'purchase_history', 'is_taxable', 'tax_rate', 'track_stock',
     'is_active', 'archived', 'labor_cost', 'bulk_unit', 'small_unit', 'conversion_factor',
     'bulk_cost_price', 'bulk_sale_price', 'track_by_unit',
-    'unit', 'supplier', 'location', 'notes', 'description', 'warranty_months',
+    'unit', 'supplier', 'location', 'notes', 'description', 'warranty_months', 'track_serials',
     'serial_number', 'batch_number', 'weight', 'size', 'color', 'fabric_type',
     'author', 'publisher', 'table_number', 'order_notes',
     'created_at', 'updated_at'
@@ -401,11 +401,11 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'id', 'user_id', 'invoice_number', 'supplier_name', 'supplier_company', 'invoice_date',
     'expected_items_count', 'expected_total_quantity', 'expected_grand_total',
     'actual_items_count', 'actual_total_quantity', 'actual_grand_total',
-    'status', 'notes', 'image_url', 'created_at', 'updated_at'
+    'status', 'notes', 'image_url', 'supplier_id', 'amount_paid', 'paid_from', 'paid_shift_id', 'payment_method', 'created_at', 'updated_at'
   ],
   purchase_invoice_items: [
     'id', 'invoice_id', 'product_id', 'product_name', 'barcode', 'category',
-    'quantity', 'cost_price', 'cost_price_before', 'sale_price', 'total_cost', 'created_at'
+    'quantity', 'cost_price', 'cost_price_before', 'sale_price', 'total_cost', 'serials', 'created_at'
   ],
   customers: [
     'id', 'user_id', 'cashier_id', 'name', 'phone', 'email', 'address',

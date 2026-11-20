@@ -48,6 +48,7 @@ interface PurchaseInvoiceData {
     cost_price: number;
     sale_price?: number;
     product_id?: string;
+    serials?: string[];
   }>;
   /** The invoice already exists in the cloud (created online as a draft): finalize it instead of creating a new one. */
   existingInvoiceId?: string;
@@ -171,6 +172,7 @@ export async function processPurchaseInvoiceFromQueue(data: PurchaseInvoiceData,
     sale_price: item.sale_price || 0,
     total_cost: item.quantity * item.cost_price,
     product_id: item.product_id || null,
+    serials: item.serials && item.serials.length ? item.serials : null,
   }));
 
   if (itemRows.length === 0) {

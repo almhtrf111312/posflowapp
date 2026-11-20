@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { SerialsDialog } from '@/components/products/SerialsDialog';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useProductLimits } from '@/hooks/use-product-limits';
@@ -213,6 +214,7 @@ export default function Products() {
 
   // Unified View & Form state (Full-Screen View)
   const [activeView, setActiveView] = useState<'list' | 'add' | 'edit'>('list');
+  const [serialsProduct, setSerialsProduct] = useState<{ id: string; name: string } | null>(null);
   const showAddDialog = activeView === 'add';
   const showEditDialog = activeView === 'edit';
   const setShowAddDialog = useCallback((open: boolean) => {
@@ -2191,6 +2193,7 @@ export default function Products() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background relative selection:bg-primary/20">
+      <SerialsDialog product={serialsProduct} onOpenChange={(o) => { if (!o) setSerialsProduct(null); }} />
 
       {/* الشريط العلوي المباشر: النشطة (يمين) - التصنيفات (وسط) - الأرشيف (يسار) */}
       <div className={cn(
@@ -2568,6 +2571,14 @@ export default function Products() {
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       {t('common.edit') || 'تعديل'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs px-2.5 font-medium"
+                      onClick={() => setSerialsProduct({ id: product.id, name: product.name })}
+                    >
+                      IMEI
                     </Button>
                     {product.archived ? (
                       <Button

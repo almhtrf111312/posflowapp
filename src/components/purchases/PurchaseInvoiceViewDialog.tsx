@@ -39,6 +39,7 @@ import { formatNumber, formatCurrency } from '@/lib/utils';
 import { useMoney } from '@/hooks/use-money';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { toast } from '@/lib/sonner-bridge';
+import { PurchaseReturnDialog } from '@/components/purchases/PurchaseReturnDialog';
 import { emitEvent, EVENTS } from '@/lib/events';
 
 interface PurchaseInvoiceViewDialogProps {
@@ -68,6 +69,7 @@ export function PurchaseInvoiceViewDialog({
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
+  const [showReturn, setShowReturn] = useState(false);
   const [editLines, setEditLines] = useState<EditPurchaseInvoiceLine[]>([]);
   const m = useMoney();
 
@@ -325,6 +327,11 @@ export function PurchaseInvoiceViewDialog({
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">تعديل</span>
+                  </Button>
+                )}
+                {canEdit && invoice.status === 'finalized' && (
+                  <Button variant="outline" size="sm" className="gap-1 h-8 px-2.5 text-xs" onClick={() => setShowReturn(true)} disabled={loading}>
+                    <span>مرتجع</span>
                   </Button>
                 )}
                 <Button
@@ -653,6 +660,15 @@ export function PurchaseInvoiceViewDialog({
           </Dialog>
         )}
       </DialogContent>
+      {invoice && (
+        <PurchaseReturnDialog
+          open={showReturn}
+          onOpenChange={setShowReturn}
+          invoiceId={invoice.id}
+          items={items}
+          onDone={() => fetchInvoice(invoice.id)}
+        />
+      )}
     </Dialog>
   );
 }

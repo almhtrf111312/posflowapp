@@ -1,6 +1,6 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
- * Flow POS Pro - Error Radar Service
+ * POS Flow App - Error Radar Service
  * رادار الأخطاء المركزي - خدمة تسجيل وتشخيص أخطاء التطبيق مع دعم التخزين والإرسال دون اتصال
  * 
  * المبادئ الأساسية:

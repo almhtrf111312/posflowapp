@@ -201,7 +201,10 @@ export function ChatMessages({
                     فريق الدعم الفني
                   </p>
                 )}
-                {imageUrl && (
+                {imageUrl && imageUrl.startsWith('data:application/pdf') && (
+                  <div className="mb-1.5 rounded-xl bg-black/10 px-3 py-2 text-xs font-bold">📄 ملف PDF مرفق</div>
+                )}
+                {imageUrl && !imageUrl.startsWith('data:application/pdf') && (
                   <div className="mb-1.5 overflow-hidden rounded-xl cursor-pointer group">
                     <img
                       src={imageUrl}

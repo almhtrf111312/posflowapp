@@ -89,12 +89,17 @@ export default function RenewPage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+    if (isPdf && file.size > 512 * 1024) {
+      showToast.error('ملف PDF أكبر من 512 كيلوبايت، اختر ملفاً أصغر أو أرسل صورة');
+      return;
+    }
     setProofLoading(true);
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
         const raw = ev.target?.result as string;
-        setProofImage(await compressImage(raw, 120, 1200, 1200));
+        setProofImage(isPdf ? raw.replace(/^data:[^;]*;/, 'data:application/pdf;') : await compressImage(raw, 120, 1200, 1200));
       } catch {
         showToast.error('تعذر قراءة الصورة، اختر صورة أخرى');
       } finally {
@@ -604,10 +609,11 @@ export default function RenewPage() {
                       </div>
 
                       <div className="sm:col-span-3 space-y-2">
-                        <Label className="text-xs font-bold">صورة إشعار التحويل (إلزامي)</Label>
-                        <Input type="file" accept="image/*" onChange={handleProofPick} className="h-11 pt-2" />
+                        <Label className="text-xs font-bold">صورة أو PDF لإشعار التحويل (إلزامي)</Label>
+                        <Input type="file" accept="image/*,application/pdf" onChange={handleProofPick} className="h-11 pt-2" />
                         {proofLoading && <p className="text-[11px] text-muted-foreground">جاري تجهيز الصورة...</p>}
-                        {proofImage && <img src={proofImage} alt="إشعار التحويل" className="max-h-40 rounded-lg border" />}
+                        {proofImage && proofImage.startsWith('data:application/pdf') && <p className="text-xs font-bold">📄 ملف PDF جاهز للإرسال</p>}
+                        {proofImage && !proofImage.startsWith('data:application/pdf') && <img src={proofImage} alt="إشعار التحويل" className="max-h-40 rounded-lg border" />}
                       </div>
 
                       <Button

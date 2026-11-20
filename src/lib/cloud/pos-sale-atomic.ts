@@ -341,7 +341,31 @@ export async function processPosSaleAtomic(
     if (paymentType === 'debt') emitEvent(EVENTS.DEBTS_UPDATED, null);
     markSaleAsSyncedInNativeSQLite(row.invoice_id, row.invoice_number).catch(() => {});
     if ((bundle as any).paymentMethod === 'digital') {
-      try { await sb.rpc('mark_invoice_digital', { _invoice_number: row.invoice_number }); } catch { /* غير حرج: يُعاد وسمها عند أي مزامنة لاحقة */ }
+      try {
+        const { error: dErr } = await sb.rpc('mark_invoice_digital', { _invoice_number: row.invoice_number });
+        if (dErr) throw dErr;
+      } catch {
+        try {
+          const k = 'posflow_pending_digital_marks';
+          const q: string[] = JSON.parse(localStorage.getItem(k) || '[]');
+          if (!q.includes(row.invoice_number)) q.push(row.invoice_number);
+          localStorage.setItem(k, JSON.stringify(q));
+        } catch { /* ignore */ }
+      }
+    }
+    // إعادة محاولة وسم الفواتير الرقمية التي فشل وسمها سابقاً
+    try {
+      const k = 'posflow_pending_digital_marks';
+      const q: string[] = JSON.parse(localStorage.getItem(k) || '[]');
+      if (q.length > 0) {
+        const left: string[] = [];
+        for (const n of q) {
+          const { error: e2 } = await sb.rpc('mark_invoice_digital', { _invoice_number: n });
+          if (e2) left.push(n);
+        }
+        localStorage.setItem(k, JSON.stringify(left));
+      }
+    } catch { /* ignore */
     }
 
 

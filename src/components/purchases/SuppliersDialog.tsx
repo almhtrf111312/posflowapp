@@ -9,6 +9,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { getActiveShift, addWithdrawalFromShift, addDepositToShift } from '@/lib/cashbox-store';
 import { extractErrorMessage } from '@/lib/sync-queue';
 import { formatMoney } from '@/lib/utils';
+import { getEnabledCurrencies, toUsd, round8 } from '@/lib/money-engine';
 import {
   loadSuppliersCloud, loadSupplierLedgerCloud, paySupplierCloud, refundFromSupplierCloud,
   SupplierBalance, SupplierLedgerRow, SupplierMoneySource,
@@ -28,6 +29,8 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const [note, setNote] = useState('');
   const [source, setSource] = useState<SupplierMoneySource>('external');
   const [busy, setBusy] = useState(false);
+  const [ccy, setCcy] = useState('USD');
+  const currencies = getEnabledCurrencies();
 
   const refresh = useCallback(async (keepId?: string) => {
     setLoading(true);
@@ -59,9 +62,10 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
     if (source === 'drawer' && !shift) { toast.error('لا توجد وردية مفتوحة'); return; }
     setBusy(true);
     try {
-      const args = { supplierId: selected.id, amount: val, note, source, shiftId: shift?.id };
+      const usd = ccy === 'USD' ? val : round8(toUsd(val, ccy));
+      const args = { supplierId: selected.id, amount: usd, note, source, shiftId: shift?.id, currency: ccy, currencyAmount: val, rate: usd > 0 ? round8(val / usd) : undefined };
       if (mode === 'pay') await paySupplierCloud(args); else await refundFromSupplierCloud(args);
-      if (source === 'drawer') { if (mode === 'pay') addWithdrawalFromShift(val, 'USD'); else addDepositToShift(val, 'USD'); }
+      if (source === 'drawer') { if (mode === 'pay') addWithdrawalFromShift(usd, ccy, val); else addDepositToShift(usd, ccy, val); }
       toast.success(mode === 'pay' ? 'تم تسجيل الدفعة' : 'تم تسجيل الاسترداد');
       setMode(null);
       await refresh(selected.id);
@@ -118,6 +122,11 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
               <div className="rounded-xl border p-3 space-y-3">
                 <Label>{mode === 'pay' ? 'مبلغ الدفعة' : 'المبلغ المسترد'}</Label>
                 <Input type="number" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} />
+                {currencies.length > 1 && (
+                  <select className="w-full h-10 rounded-md border bg-background px-2 text-sm" value={ccy} onChange={e => setCcy(e.target.value)}>
+                    {currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                  </select>
+                )}
                 <Input placeholder="ملاحظة (اختياري)" value={note} onChange={e => setNote(e.target.value)} />
                 <RadioGroup value={source} onValueChange={v => setSource(v as SupplierMoneySource)} className="space-y-2">
                   <div className="flex items-center gap-2">

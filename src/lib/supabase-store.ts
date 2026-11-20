@@ -261,7 +261,7 @@ export async function fetchFromSupabase<T = unknown>(
   tableName: string,
   orderBy?: { column: string; ascending?: boolean },
   timeoutMs: number = 3800,
-  options?: { strict?: boolean }
+  options?: { strict?: boolean; gte?: { column: string; value: string } }
 ): Promise<T[]> {
   const strict = options?.strict === true;
   const userId = getCurrentUserId();
@@ -278,6 +278,7 @@ export async function fetchFromSupabase<T = unknown>(
   try {
     // ✅ جلب الدفعة الأولى بطلب ذرّي بنطاق 0 إلى 999
     let query = sb.from(tableName).select('*').range(0, SUPABASE_PAGE_SIZE - 1);
+    if (options?.gte) query = query.gte(options.gte.column, options.gte.value);
 
     if (orderBy) {
       query = query.order(orderBy.column, { ascending: orderBy.ascending ?? false });
@@ -316,6 +317,7 @@ export async function fetchFromSupabase<T = unknown>(
 
     while (allData.length < MAX_PAGINATION_ROWS) {
       let pageQuery = sb.from(tableName).select('*').range(offset, offset + SUPABASE_PAGE_SIZE - 1);
+      if (options?.gte) pageQuery = pageQuery.gte(options.gte.column, options.gte.value);
       if (orderBy) {
         pageQuery = pageQuery.order(orderBy.column, { ascending: orderBy.ascending ?? false });
       }

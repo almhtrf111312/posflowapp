@@ -1,8 +1,50 @@
 {
-  "versionCode": 596,
-  "versionName": "1.5.208",
-  "lastUpdated": "2026-11-20T02:54:16.736Z",
+  "versionCode": 603,
+  "versionName": "1.5.215",
+  "lastUpdated": "2026-11-20T03:41:07.938Z",
   "buildHistory": [
+    {
+      "versionCode": 603,
+      "versionName": "1.5.215",
+      "date": "2026-11-20",
+      "description": "Auto-bump on push (6cc790c)"
+    },
+    {
+      "versionCode": 602,
+      "versionName": "1.5.214",
+      "date": "2026-11-20",
+      "description": "Auto-bump on push (11b876d)"
+    },
+    {
+      "versionCode": 601,
+      "versionName": "1.5.213",
+      "date": "2026-11-20",
+      "description": "Auto-bump on push (20a02de)"
+    },
+    {
+      "versionCode": 600,
+      "versionName": "1.5.212",
+      "date": "2026-11-20",
+      "description": "Auto-bump on push (80abac3)"
+    },
+    {
+      "versionCode": 599,
+      "versionName": "1.5.211",
+      "date": "2026-11-20",
+      "description": "Auto-bump on push (51f287f)"
+    },
+    {
+      "versionCode": 598,
+      "versionName": "1.5.210",
+      "date": "2026-11-20",
+      "description": "Auto-bump on push (e6afe69)"
+    },
+    {
+      "versionCode": 597,
+      "versionName": "1.5.209",
+      "date": "2026-11-20",
+      "description": "Auto-bump on push (1b9c1ca)"
+    },
     {
       "versionCode": 596,
       "versionName": "1.5.208",
@@ -80,48 +122,6 @@
       "versionName": "1.5.196",
       "date": "2026-11-17",
       "description": "Auto-bump on push (e207f43)"
-    },
-    {
-      "versionCode": 583,
-      "versionName": "1.5.195",
-      "date": "2026-11-16",
-      "description": "Auto-bump on push (47b8727)"
-    },
-    {
-      "versionCode": 582,
-      "versionName": "1.5.194",
-      "date": "2026-11-16",
-      "description": "Auto-bump on push (fabc4c1)"
-    },
-    {
-      "versionCode": 581,
-      "versionName": "1.5.193",
-      "date": "2026-11-16",
-      "description": "Auto-bump on push (d004ec8)"
-    },
-    {
-      "versionCode": 580,
-      "versionName": "1.5.192",
-      "date": "2026-11-16",
-      "description": "Auto-bump on push (2ccac52)"
-    },
-    {
-      "versionCode": 579,
-      "versionName": "1.5.191",
-      "date": "2026-11-14",
-      "description": "Auto-bump on push (05760ea)"
-    },
-    {
-      "versionCode": 578,
-      "versionName": "1.5.190",
-      "date": "2026-11-14",
-      "description": "Auto-bump on push (173df8a)"
-    },
-    {
-      "versionCode": 577,
-      "versionName": "1.5.189",
-      "date": "2026-11-14",
-      "description": "Auto-bump on push (e5a0153)"
     }
   ]
 }

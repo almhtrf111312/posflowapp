@@ -40,8 +40,8 @@ export const uploadCloudBackup = async (data?: object): Promise<boolean> => {
     // The secret is the random per-account key stored server-side (owner-only RLS), not the public user id.
     const keyMaterial = await getAccountKeyMaterial(userId);
     if (!keyMaterial) return false;
-    const encrypted = await encryptBackupV2({ ...backupData, appName: 'FlowBOS Pro' }, keyMaterial);
-    const fileName = `FlowBOS Pro - Backup - ${new Date().toISOString().replace(/[:.]/g, '-')}.hpbk`;
+    const encrypted = await encryptBackupV2({ ...backupData, appName: 'PosFlow' }, keyMaterial);
+    const fileName = `PosFlow - Backup - ${new Date().toISOString().replace(/[:.]/g, '-')}.hpbk`;
     const filePath = `${userId}/${fileName}`;
 
     const { error } = await supabase.storage
@@ -175,3 +175,17 @@ export const formatBackupSize = (bytes: number): string => {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 };
 
+
+/**
+ * بعد الاستعادة: ترفع النسخة الكاملة الحالية وتحذف كل النسخ السحابية السابقة،
+ * فتصبح النسخة المستعادة هي الوحيدة على السحابة.
+ */
+export const replaceCloudBackupWithCurrent = async (): Promise<boolean> => {
+  const userId = await getUserId();
+  if (!userId) return false;
+  const old = await listCloudBackups();
+  const ok = await uploadCloudBackup();
+  if (!ok) return false;
+  if (old.length) await supabase.storage.from(BUCKET_NAME).remove(old.map((f) => f.path));
+  return true;
+};

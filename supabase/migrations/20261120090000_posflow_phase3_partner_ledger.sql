@@ -1,0 +1,6 @@
+-- PosFlow phase 3: immutable partner ledger fed by a trigger on partners (captures every balance change from any code path).
+-- (Applied to bwlqfxfvchjvehnbvwaz via MCP as posflow_phase3_partner_ledger.)
+-- Objects: table partner_ledger_entries (select-only for store owner, update/delete blocked by trigger _partner_ledger_immutable),
+-- trigger trg_partner_ledger_capture on partners (INSERT => 'opening'; UPDATE => deltas typed withdrawal/capital/pending_profit/profit/reversal/adjustment),
+-- opening backfill for existing partners, view partner_ledger_reconciliation (ledger sums vs partners columns),
+-- and partner functions now set app.partner_source so each entry records its originating function.

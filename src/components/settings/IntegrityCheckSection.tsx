@@ -21,6 +21,7 @@ export function IntegrityCheckSection() {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [partnerMismatch, setPartnerMismatch] = useState<string[] | null>(null);
 
   const run = async () => {
     setLoading(true);
@@ -28,6 +29,8 @@ export function IntegrityCheckSection() {
     const { data, error } = await (supabase as any).rpc('posflow_integrity_check');
     if (error) setError(error.message || 'تعذّر تنفيذ الفحص');
     else setReport(data as Report);
+    const pm = await (supabase as any).from('partner_ledger_reconciliation').select('name').eq('mismatch', true);
+    setPartnerMismatch(pm.error ? null : (pm.data || []).map((r: { name: string }) => r.name));
     setLoading(false);
   };
 
@@ -61,6 +64,18 @@ export function IntegrityCheckSection() {
               <span className="font-bold tabular-nums">{c.count}</span>
             </div>
           ))}
+          {partnerMismatch && (
+            <div className="flex items-start justify-between rounded-lg border p-3 text-sm">
+              <div className="flex items-center gap-1.5">
+                {partnerMismatch.length > 0 && <AlertTriangle className="w-4 h-4 text-destructive" />}
+                <div>
+                  <div>مطابقة سجل الشركاء مع أرصدتهم</div>
+                  {partnerMismatch.length > 0 && <div className="text-[11px] text-muted-foreground mt-1">{partnerMismatch.join('، ')}</div>}
+                </div>
+              </div>
+              <span className="font-bold tabular-nums">{partnerMismatch.length}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

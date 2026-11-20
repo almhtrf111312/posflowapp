@@ -569,10 +569,6 @@ export function CartPanel({
       quantity: c.unit === 'bulk' && c.conversionFactor ? c.quantity * c.conversionFactor : c.quantity,
     }));
     if (need.length === 0) return true;
-    if (cart.some(c => tracked[c.id] && c.unit === 'bulk')) {
-      showToast.error('المنتجات ذات الرقم التسلسلي (IMEI) تُباع بالقطعة فقط، غيّر الوحدة إلى قطعة');
-      return false;
-    }
     if (need.every(n => (getSelectedSerials(n.id) || []).length === n.quantity)) return true;
     setSerialPick({ items: need, resume });
     return false;

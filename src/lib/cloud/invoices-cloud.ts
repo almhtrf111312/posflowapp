@@ -461,6 +461,13 @@ export const loadInvoicesCloud = async (): Promise<Invoice[]> => {
   }
 };
 
+/** نافذة الفواتير المحمّلة (افتراضي 18 شهراً) — قابلة للتغيير عبر posflow_invoice_window_days؛ 0 = بلا حد */
+const invoiceWindowStart = (): string => {
+  let days = 548;
+  try { const v = Number(localStorage.getItem('posflow_invoice_window_days')); if (Number.isFinite(v) && localStorage.getItem('posflow_invoice_window_days') !== null) days = v; } catch { /* ignore */ }
+  return days > 0 ? new Date(Date.now() - days * 86400000).toISOString() : '1970-01-01T00:00:00Z';
+};
+
 const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
   try {
     // Check if user is cashier
@@ -469,7 +476,7 @@ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
     let cloudInvoices = await fetchFromSupabase<CloudInvoice>('invoices', {
       column: 'created_at',
       ascending: false,
-    }, 3800, { strict: true });
+    }, 3800, { strict: true, gte: { column: 'created_at', value: invoiceWindowStart() } });
 
     // If cloud returned empty, check local cache
     if (cloudInvoices.length === 0) {

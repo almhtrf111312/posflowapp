@@ -11,7 +11,7 @@ export interface ToastOptions {
 }
 
 /**
- * Standardized Flow POS Pro useToast hook
+ * Standardized POS Flow App useToast hook
  * Routes legacy and component useToast calls to the in-app unified SmartToastCard.
  */
 export function toast(options: ToastOptions | string, extra?: any) {

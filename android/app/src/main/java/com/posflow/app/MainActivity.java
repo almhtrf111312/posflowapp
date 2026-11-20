@@ -51,7 +51,7 @@ public class MainActivity extends BridgeActivity {
                             try {
                                 PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
                                 if (printManager != null) {
-                                    PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter("FlowPOS_PrintJob");
+                                    PrintDocumentAdapter printAdapter = webView.createPrintDocumentAdapter("POSFlowApp_PrintJob");
                                     printManager.print("PosFlow Print", printAdapter, new PrintAttributes.Builder().build());
                                 }
                             } catch (Exception e) {

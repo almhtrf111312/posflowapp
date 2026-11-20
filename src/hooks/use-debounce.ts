@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 /**
  * Custom hook to debounce any fast-changing value.
- * Standardized for Flow POS Pro search and filter inputs.
+ * Standardized for POS Flow App search and filter inputs.
  *
  * @param value The value to debounce
  * @param delay The delay in milliseconds (default: 300ms)

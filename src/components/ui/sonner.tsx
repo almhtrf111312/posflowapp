@@ -11,7 +11,7 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 export { getSavedToastDuration };
 
 /**
- * Standardized Flow POS Pro Toast Component
+ * Standardized POS Flow App Toast Component
  * Backward-compatible host for Sonner while all visual notifications
  * are rendered in-app via the unified SmartToastCard with swipe-to-dismiss.
  */
@@ -82,7 +82,7 @@ function formatSonnerDesc(data?: any): string | undefined {
 }
 
 /**
- * Standardized Flow POS Pro Toast Wrapper
+ * Standardized POS Flow App Toast Wrapper
  * Bridges all Sonner calls to the unified in-app SmartToastCard.
  */
 export const toast = Object.assign(

@@ -1,7 +1,7 @@
 import { showSmartToast, hideSmartToast, hideSmartToastById } from '@/hooks/use-smart-toast';
 
 /**
- * Unified toast notification utility linked to Flow POS Pro notifications system
+ * Unified toast notification utility linked to POS Flow App notifications system
  * 
  * ✅ Standardized in-app toast implementation across the app (0ms delay)
  * ✅ Unifies all notifications into the large SmartToastCard with swipe-to-dismiss

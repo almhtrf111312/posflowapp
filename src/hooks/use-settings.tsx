@@ -1,6 +1,6 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
- * Flow POS Pro - Fast Stale-While-Revalidate Settings Hook
+ * POS Flow App - Fast Stale-While-Revalidate Settings Hook
  * ========================================================
  * Cache-First hook with 0ms synchronous local retrieval from localStorage.
  * Performs background non-blocking revalidation against Supabase cloud storage.

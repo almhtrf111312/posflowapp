@@ -2,7 +2,7 @@ import { isAppOffline } from '@/hooks/use-network-status';
 import { isLocalOnlyMode } from '@/lib/subscription-lock';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { SerialPickerDialog, SerialPickItem } from '@/components/pos/SerialPickerDialog';
-import { loadTrackedProducts, getSelectedSerials } from '@/lib/serials-store';
+import { loadTrackedProducts, getSelectedSerials, clearSelectedSerials, markSerialsSoldLocally, warmSerialCache } from '@/lib/serials-store';
 import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
 import {
   Wrench,
@@ -247,6 +247,7 @@ export function CartPanel({
   const { isOnline, syncImmediately } = useCloudSyncContext();
   const [showCashDialog, setShowCashDialog] = useState(false);
   const [serialPick, setSerialPick] = useState<{ items: SerialPickItem[]; resume: 'cash' | 'debt' } | null>(null);
+  useEffect(() => { warmSerialCache(); const t = setInterval(() => warmSerialCache(), 10 * 60 * 1000); const on = () => warmSerialCache(true); window.addEventListener('online', on); return () => { clearInterval(t); window.removeEventListener('online', on); }; }, []);
   const [showDeficitDialog, setShowDeficitDialog] = useState(false);
   const [showDebtDialog, setShowDebtDialog] = useState(false);
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -776,8 +777,12 @@ export function CartPanel({
           category: cat,
           unit: item.unit || 'piece',
           conversionFactor: item.conversionFactor || 1,
+          ...((getSelectedSerials(item.id)?.length) ? { serials: [...(getSelectedSerials(item.id) as string[])] } : {}),
         };
       });
+      // الأرقام التسلسلية أصبحت ضمن عناصر البيع (تُحفظ في الطابور) — نفرّغ الاختيار ونخفي المباعة محلياً
+      markSerialsSoldLocally(localItems.flatMap((i: any) => i.serials || []));
+      clearSelectedSerials(localItems.map((i: any) => i.id));
 
       const discountRatio = subtotal > 0 ? Math.min(1, effectiveDiscountAmount / subtotal) : 0;
       // الربح = المجموع − الخصم − التكلفة بدقة 8 منازل
@@ -1207,8 +1212,11 @@ export function CartPanel({
           category: cat,
           total: round8(linePrice * item.quantity),
           profit: round8(itemProfit - (linePrice * item.quantity) * (subtotal > 0 ? discountAmount / subtotal : 0) * (taxMode === 'gross' && effectiveTaxRate > 0 ? 1 / (1 + effectiveTaxRate / 100) : 1)),
+          ...((getSelectedSerials(item.id)?.length) ? { serials: [...(getSelectedSerials(item.id) as string[])] } : {}),
         };
       });
+      markSerialsSoldLocally(localItems.flatMap((i: any) => i.serials || []));
+      clearSelectedSerials(localItems.map((i: any) => i.id));
 
       const discountRatio = subtotal > 0 ? discountAmount / subtotal : 0;
       const discountedProfit = round8(totalProfit - discountAmount * (taxMode === 'gross' && effectiveTaxRate > 0 ? 1 / (1 + effectiveTaxRate / 100) : 1));

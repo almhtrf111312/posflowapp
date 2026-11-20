@@ -1,0 +1,3 @@
+-- إغلاق الوردية يعتمد على آخر سعر صرف محفوظ في store_settings.exchange_rates (Supabase)
+-- طُبّقت عبر apply_migration بتعديل جسم close_cash_shift_atomic: يُقرأ السعر المحفوظ أولاً،
+-- ثم سعر العميل، ثم آخر سعر في حركات الوردية.

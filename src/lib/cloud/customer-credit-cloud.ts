@@ -39,8 +39,8 @@ export async function applyCreditToDebt(debtId: string, amount: number) {
   if (error) throw error;
   done();
 }
-export async function payoutStoreCredit(customerId: string, amount: number, shiftId: string) {
-  const { error } = await db.rpc('payout_store_credit_atomic', { _customer_id: customerId, _amount: amount, _shift_id: shiftId, _operation_id: crypto.randomUUID() });
+export async function payoutStoreCredit(customerId: string, amount: number, shiftId: string, currency = 'USD', currencyAmount?: number) {
+  const { error } = await db.rpc('payout_store_credit_atomic', { _customer_id: customerId, _amount: amount, _shift_id: shiftId, _operation_id: crypto.randomUUID(), _currency: currency, _currency_amount: currencyAmount ?? amount, _rate: currencyAmount && amount > 0 ? currencyAmount / amount : null });
   if (error) throw error;
   done();
 }

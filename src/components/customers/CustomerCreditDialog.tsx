@@ -6,6 +6,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { getActiveShift, addWithdrawalFromShift } from '@/lib/cashbox-store';
 import { extractErrorMessage } from '@/lib/sync-queue';
 import { formatMoney } from '@/lib/utils';
+import { getEnabledCurrencies, fromUsd, round8 } from '@/lib/money-engine';
 import {
   loadCreditSummary, loadCreditLedger, loadOpenDebts, setCreditLimit, issueStoreCredit, applyCreditToDebt, payoutStoreCredit,
   CreditSummary, CreditLedgerRow, OpenDebt,
@@ -23,6 +24,8 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [payCcy, setPayCcy] = useState('USD');
+  const payCurrencies = getEnabledCurrencies();
 
   const refresh = useCallback(async () => {
     if (!customer) return;
@@ -66,10 +69,15 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
             <div className="rounded-xl border p-3 space-y-2">
               <Input type="number" inputMode="decimal" placeholder="المبلغ" value={amount} onChange={e => setAmount(e.target.value)} />
               <Input placeholder="السبب / رقم الفاتورة (للإصدار)" value={reason} onChange={e => setReason(e.target.value)} />
+              {payCurrencies.length > 1 && (
+                <select className="w-full h-9 rounded-md border bg-background px-2 text-sm" value={payCcy} onChange={e => setPayCcy(e.target.value)} title="عملة الصرف النقدي">
+                  {payCurrencies.map(c => <option key={c.code} value={c.code}>صرف بعملة {c.code}</option>)}
+                </select>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" disabled={busy || !valid} onClick={() => run(() => issueStoreCredit(customer.id, val, reason), 'تم إصدار الرصيد')}>إصدار رصيد</Button>
                 <Button size="sm" variant="outline" disabled={busy || !valid || sum.storeCredit <= 0 || !getActiveShift()}
-                  onClick={() => run(async () => { await payoutStoreCredit(customer.id, val, getActiveShift()!.id); addWithdrawalFromShift(val, 'USD'); }, 'تم صرف الرصيد نقداً')}>
+                  onClick={() => run(async () => { await payoutStoreCredit(customer.id, val, getActiveShift()!.id, payCcy, payCcy === 'USD' ? val : round8(fromUsd(val, payCcy))); addWithdrawalFromShift(val, payCcy, payCcy === 'USD' ? val : round8(fromUsd(val, payCcy))); }, 'تم صرف الرصيد نقداً')}>
                   صرف نقدي من الصندوق
                 </Button>
               </div>

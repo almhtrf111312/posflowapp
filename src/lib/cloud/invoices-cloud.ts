@@ -468,18 +468,28 @@ const invoiceWindowStart = (): string => {
   return days > 0 ? new Date(Date.now() - days * 86400000).toISOString() : '1970-01-01T00:00:00Z';
 };
 
+// مخزن الجلسة للمزامنة التزايدية: بعد أول جلب كامل نجلب فقط الفواتير المعدّلة منذ آخر مزامنة (updated_at)
+const invoiceStore = new Map<string, Invoice>();
+let lastFullSyncAt = 0;
+let lastDeltaSyncAt = 0;
+const FULL_RESYNC_MS = 6 * 3600 * 1000;
+
 const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
   try {
+    const delta = invoiceStore.size > 0 && Date.now() - lastFullSyncAt < FULL_RESYNC_MS;
+    const syncStartedAt = Date.now();
     // Check if user is cashier
     const isCashier = await isCashierUser();
 
     let cloudInvoices = await fetchFromSupabase<CloudInvoice>('invoices', {
       column: 'created_at',
       ascending: false,
-    }, 3800, { strict: true, gte: { column: 'created_at', value: invoiceWindowStart() } });
+    }, 3800, { strict: true, gte: delta
+      ? { column: 'updated_at', value: new Date(lastDeltaSyncAt - 5 * 60000).toISOString() }
+      : { column: 'created_at', value: invoiceWindowStart() } });
 
     // If cloud returned empty, check local cache
-    if (cloudInvoices.length === 0) {
+    if (cloudInvoices.length === 0 && !delta) {
       const localInvoices = loadInvoicesFromLocalCache();
       if (localInvoices && localInvoices.length > 0) {
         console.log('[InvoicesCloud] ⚠️ Cloud returned empty, using local cache');
@@ -554,8 +564,15 @@ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
       })
     );
 
+    if (!delta) { invoiceStore.clear(); lastFullSyncAt = syncStartedAt; }
+    for (const inv of invoicesWithItems) invoiceStore.set(inv.id, inv);
+    lastDeltaSyncAt = syncStartedAt;
+    const allInvoices = delta
+      ? [...invoiceStore.values()].sort((a, b) => String(b.createdAt ?? b.date ?? '').localeCompare(String(a.createdAt ?? a.date ?? '')))
+      : invoicesWithItems;
+
     // دمج العمليات المعلقة في طابور المزامنة لمنع اختفاء الفواتير غير المرفوعة
-    const mergedWithQueue = mergeSyncQueueInvoices(invoicesWithItems);
+    const mergedWithQueue = mergeSyncQueueInvoices(allInvoices);
     invoicesCache = mergedWithQueue;
     cacheTimestamp = Date.now();
 

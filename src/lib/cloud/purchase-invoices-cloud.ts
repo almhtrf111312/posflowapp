@@ -25,6 +25,10 @@ import { isGuestDemoMode } from '@/lib/demo-data';
    status: 'draft' | 'reconciled' | 'finalized' | 'superseded' | 'cancelled';
   payment_status?: string;
   payment_method?: string;
+  supplier_id?: string | null;
+  amount_paid?: number;
+  paid_from?: 'drawer' | 'external' | null;
+  paid_shift_id?: string | null;
   replaced_by?: string;
   operation_id?: string;
   edit_reason?: string;
@@ -57,6 +61,10 @@ import { isGuestDemoMode } from '@/lib/demo-data';
    expected_grand_total: number;
    notes?: string;
   payment_method?: string;
+  supplier_id?: string;
+  amount_paid?: number;
+  paid_from?: 'drawer' | 'external' | null;
+  paid_shift_id?: string | null;
  }
  
  export interface CreatePurchaseInvoiceItemInput {

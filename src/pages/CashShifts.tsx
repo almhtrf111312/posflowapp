@@ -11,6 +11,7 @@ import {
 } from '@/lib/cashbox-store';
 import { EVENTS } from '@/lib/events';
 import { loadQueue } from '@/lib/sync-queue';
+import { loadShiftSupplierMoney, ShiftSupplierMoney } from '@/lib/cloud/suppliers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
@@ -61,6 +62,11 @@ export default function CashShifts() {
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [openShift, setOpenShift] = useState<Shift | null>(null);
+  const [supplierMoney, setSupplierMoney] = useState<ShiftSupplierMoney | null>(null);
+  useEffect(() => {
+    if (!openShift) { setSupplierMoney(null); return; }
+    loadShiftSupplierMoney(openShift.id, openShift.openedAt).then(setSupplierMoney).catch(() => setSupplierMoney(null));
+  }, [openShift]);
   const [shiftStatus, setShiftStatus] = useState({ cashSales: 0, cashExpenses: 0, expectedCash: 0 });
 
   // Dialog states
@@ -908,6 +914,16 @@ export default function CashShifts() {
                     ) : null;
                   })()}
                 </div>
+              </div>
+            )}
+
+            {supplierMoney && (supplierMoney.drawerPaid + supplierMoney.drawerRefunded + supplierMoney.externalPaid + supplierMoney.externalRefunded) > 0 && (
+              <div className="rounded-lg border p-3 text-xs space-y-1">
+                <div className="font-semibold">دفعات الموردين خلال هذه الوردية</div>
+                {supplierMoney.drawerPaid > 0 && <div>مدفوع من الصندوق (الغلة): <b>{formatUsd(supplierMoney.drawerPaid)}</b> — محسوب ضمن المتوقع في الصندوق</div>}
+                {supplierMoney.drawerRefunded > 0 && <div>مسترد من موردين إلى الصندوق: <b>{formatUsd(supplierMoney.drawerRefunded)}</b></div>}
+                {supplierMoney.externalPaid > 0 && <div className="text-muted-foreground">مدفوع من مصدر خارجي: {formatUsd(supplierMoney.externalPaid)} — لا يؤثر على الصندوق</div>}
+                {supplierMoney.externalRefunded > 0 && <div className="text-muted-foreground">مسترد خارج الصندوق: {formatUsd(supplierMoney.externalRefunded)}</div>}
               </div>
             )}
 

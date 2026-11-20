@@ -9,6 +9,7 @@ import { formatNumber } from '@/lib/utils';
 import { loadPurchaseInvoicesCloud, PurchaseInvoice } from '@/lib/cloud/purchase-invoices-cloud';
 import { PurchaseInvoiceDialog } from '@/components/products/PurchaseInvoiceDialog';
 import { QuickPurchaseDialog } from '@/components/products/QuickPurchaseDialog';
+import { SuppliersDialog } from '@/components/purchases/SuppliersDialog';
 import { PurchaseInvoiceViewDialog } from '@/components/purchases/PurchaseInvoiceViewDialog';
 import { EVENTS } from '@/lib/events';
 import { format } from 'date-fns';
@@ -23,6 +24,7 @@ export default function Purchases() {
   const [isLoading, setIsLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [showQuickDialog, setShowQuickDialog] = useState(false);
+  const [showSuppliers, setShowSuppliers] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
 
@@ -74,6 +76,14 @@ export default function Purchases() {
           >
             <ShoppingBag className="w-4 h-4 shrink-0 text-primary" />
             <span>{t('purchases.quickAdd')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSuppliers(true)}
+            className={cn(capsuleItem, capsuleIdle)}
+          >
+            <Truck className="w-4 h-4 shrink-0 text-primary" />
+            <span>الموردون</span>
           </button>
         </div></div>
       </div>
@@ -171,6 +181,7 @@ export default function Purchases() {
         onOpenChange={setShowDialog}
         onSuccess={loadData}
       />
+      <SuppliersDialog open={showSuppliers} onOpenChange={setShowSuppliers} />
       <QuickPurchaseDialog
         open={showQuickDialog}
         onOpenChange={setShowQuickDialog}

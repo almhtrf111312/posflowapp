@@ -26,7 +26,8 @@ import {
   Loader2,
   Wallet
 } from 'lucide-react';
-import { addWithdrawalFromShift } from '@/lib/cashbox-store';
+import { addWithdrawalFromShift, getActiveShift } from '@/lib/cashbox-store';
+import { loadSuppliersCloud, createSupplierCloud, SupplierBalance } from '@/lib/cloud/suppliers-cloud';
 import { addActivityLog } from '@/lib/activity-log';
 import { formatMoney } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -71,6 +72,11 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [supplierCompany, setSupplierCompany] = useState('');
+  const [suppliers, setSuppliers] = useState<SupplierBalance[]>([]);
+  const [supplierId, setSupplierId] = useState('');
+  const [newSupplier, setNewSupplier] = useState(false);
+  const [paidFrom, setPaidFrom] = useState<'drawer' | 'external'>('drawer');
+  const activeShift = getActiveShift();
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
@@ -85,7 +91,16 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
 
   // Reset form when dialog closes
   useEffect(() => {
+    if (open) {
+      loadSuppliersCloud().then(setSuppliers).catch(() => {});
+      setPaidFrom(getActiveShift() ? 'drawer' : 'external');
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!open) {
+      setSupplierId('');
+      setNewSupplier(false);
       setStep('header');
       setInvoiceNumber('');
       setSupplierName('');
@@ -101,20 +116,40 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
   }, [open, clearInvoiceImage]);
 
   const handleCreateInvoice = async () => {
-    if (!invoiceNumber || !supplierName) {
+    if (!invoiceNumber || (!supplierId && !(newSupplier && supplierName.trim()))) {
       toast.error(t('products.fillRequired'));
       return;
     }
 
     // فحص الاتصال الفعلي بالإنترنت (وليس فقط الشبكة)
     const hasInternet = await checkRealInternetAccess(2500);
+    let resolvedSupplierId = supplierId;
+    let resolvedSupplierName = supplierName;
+    if (supplierId) {
+      const sp = suppliers.find(x => x.id === supplierId);
+      resolvedSupplierName = sp?.name || supplierName;
+    } else if (hasInternet) {
+      try {
+        resolvedSupplierId = await createSupplierCloud({ name: supplierName, company: supplierCompany });
+        setSupplierId(resolvedSupplierId);
+        setSuppliers(await loadSuppliersCloud());
+        setNewSupplier(false);
+      } catch (e) {
+        toast.error(extractErrorMessage(e) || t('common.error'));
+        return;
+      }
+    } else {
+      toast.error('إنشاء مورد جديد يتطلب اتصالاً بالإنترنت؛ اختر مورداً موجوداً أو اتصل بالشبكة');
+      return;
+    }
     if (!hasInternet) {
       const localInvoice: PurchaseInvoice = {
         id: `local_${Date.now()}`,
         user_id: 'offline',
         invoice_number: invoiceNumber,
-        supplier_name: supplierName,
+        supplier_name: resolvedSupplierName,
         supplier_company: supplierCompany,
+        supplier_id: resolvedSupplierId,
         invoice_date: invoiceDate,
         expected_items_count: 0,
         expected_total_quantity: 0,
@@ -137,8 +172,9 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
     setLoading(true);
     const invoice = await addPurchaseInvoiceCloud({
       invoice_number: invoiceNumber,
-      supplier_name: supplierName,
+      supplier_name: resolvedSupplierName,
       supplier_company: supplierCompany,
+      supplier_id: resolvedSupplierId,
       invoice_date: invoiceDate,
       expected_items_count: 0,
       expected_total_quantity: 0,
@@ -380,7 +416,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
 
     // تسجيل سحب مصروفات نقدية من الوردية النشطة إذا كان السداد نقداً لمنع عجز الصندوق
     const recordShiftCashWithdrawal = async () => {
-      if (paymentMethod === 'cash' && totalCost > 0) {
+      if (paymentMethod === 'cash' && paidFrom === 'drawer' && totalCost > 0) {
         addWithdrawalFromShift(totalCost, 'USD');
         try {
           const { data: { user } } = await supabase.auth.getUser();
@@ -404,6 +440,10 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         invoiceNumber: currentInvoice.invoice_number,
         supplierName: currentInvoice.supplier_name,
         supplierCompany: currentInvoice.supplier_company || undefined,
+        supplierId: currentInvoice.supplier_id || undefined,
+        amountPaid: paymentMethod === 'cash' ? totalCost : 0,
+        paidFrom: paymentMethod === 'cash' ? paidFrom : undefined,
+        paidShiftId: paymentMethod === 'cash' && paidFrom === 'drawer' ? getActiveShift()?.id : undefined,
         invoiceDate: currentInvoice.invoice_date,
         notes: currentInvoice.notes || undefined,
         imageUrl: invoiceImageUrl || undefined,
@@ -430,6 +470,24 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
     }
 
     try {
+      // سجّل بيانات السداد على الفاتورة قبل الاعتماد (يُنشئ الخادم قيد المورد وحركة الصندوق ذرّياً)
+      const payingCash = paymentMethod === 'cash' && totalCost > 0;
+      if (payingCash && paidFrom === 'drawer' && !getActiveShift()) {
+        setLoading(false);
+        toast.error('لا توجد وردية مفتوحة للدفع من الصندوق، اختر «مصدر خارجي» أو افتح وردية');
+        return;
+      }
+      const { error: payErr } = await supabase
+        .from('purchase_invoices')
+        .update({
+          amount_paid: payingCash ? totalCost : 0,
+          paid_from: payingCash ? paidFrom : null,
+          paid_shift_id: payingCash && paidFrom === 'drawer' ? getActiveShift()?.id : null,
+          payment_method: paymentMethod,
+        } as never)
+        .eq('id', currentInvoice.id);
+      if (payErr) throw payErr;
+
       // Save image URL if present
       if (invoiceImageUrl) {
         await supabase
@@ -465,6 +523,10 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         invoiceNumber: currentInvoice.invoice_number,
         supplierName: currentInvoice.supplier_name,
         supplierCompany: currentInvoice.supplier_company || undefined,
+        supplierId: currentInvoice.supplier_id || undefined,
+        amountPaid: paymentMethod === 'cash' ? totalCost : 0,
+        paidFrom: paymentMethod === 'cash' ? paidFrom : undefined,
+        paidShiftId: paymentMethod === 'cash' && paidFrom === 'drawer' ? getActiveShift()?.id : undefined,
         invoiceDate: currentInvoice.invoice_date,
         notes: currentInvoice.notes || undefined,
         imageUrl: invoiceImageUrl || undefined,
@@ -594,27 +656,53 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     <User className="w-4 h-4 text-primary" />
                     {t('purchaseInvoice.supplierName')} *
                   </Label>
-                  <Input
+                  <select
                     data-testid="pi-supplier"
-                    value={supplierName}
-                    onChange={(e) => setSupplierName(e.target.value)}
-                    placeholder={t('purchaseInvoice.supplierNamePlaceholder')}
-                    className="h-11 rounded-xl"
-                  />
+                    value={newSupplier ? '__new__' : supplierId}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') { setNewSupplier(true); setSupplierId(''); }
+                      else { setNewSupplier(false); setSupplierId(e.target.value); }
+                    }}
+                    className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">— اختر المورد —</option>
+                    {suppliers.map(sp => (
+                      <option key={sp.id} value={sp.id}>
+                        {sp.name}{sp.company ? ` (${sp.company})` : ''}
+                      </option>
+                    ))}
+                    <option value="__new__">+ مورد جديد</option>
+                  </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="flex items-center gap-1 text-sm font-medium">
-                    <Building className="w-4 h-4 text-primary" />
-                    {t('purchaseInvoice.supplierCompany')}
-                  </Label>
-                  <Input
-                    value={supplierCompany}
-                    onChange={(e) => setSupplierCompany(e.target.value)}
-                    placeholder={t('purchaseInvoice.supplierCompanyPlaceholder')}
-                    className="h-11 rounded-xl"
-                  />
-                </div>
+                {newSupplier && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1 text-sm font-medium">
+                        <User className="w-4 h-4 text-primary" />
+                        اسم المورد الجديد *
+                      </Label>
+                      <Input
+                        value={supplierName}
+                        onChange={(e) => setSupplierName(e.target.value)}
+                        placeholder={t('purchaseInvoice.supplierNamePlaceholder')}
+                        className="h-11 rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-1 text-sm font-medium">
+                        <Building className="w-4 h-4 text-primary" />
+                        {t('purchaseInvoice.supplierCompany')}
+                      </Label>
+                      <Input
+                        value={supplierCompany}
+                        onChange={(e) => setSupplierCompany(e.target.value)}
+                        placeholder={t('purchaseInvoice.supplierCompanyPlaceholder')}
+                        className="h-11 rounded-xl"
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div className="space-y-1.5">
                   <Label className="flex items-center gap-1 text-sm font-medium">
@@ -653,16 +741,36 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
                       <RadioGroupItem value="cash" id="invoice-pay-cash" />
                       <Label htmlFor="invoice-pay-cash" className="cursor-pointer text-xs sm:text-sm font-medium">
-                        نقداً من الصندوق (سحب من الوردية النشطة)
+                        نقداً (مدفوع كاملاً الآن)
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
                       <RadioGroupItem value="credit" id="invoice-pay-credit" />
                       <Label htmlFor="invoice-pay-credit" className="cursor-pointer text-xs sm:text-sm font-medium text-muted-foreground">
-                        آجل (ذمم موردين - بدون سحب نقدي)
+                        آجل (يُسجَّل ديناً للمورد)
                       </Label>
                     </div>
                   </RadioGroup>
+                  {paymentMethod === 'cash' && (
+                    <RadioGroup
+                      value={paidFrom}
+                      onValueChange={(v) => setPaidFrom(v as 'drawer' | 'external')}
+                      className="flex flex-wrap gap-4 pt-2 border-t border-border/40"
+                    >
+                      <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                        <RadioGroupItem value="drawer" id="invoice-src-drawer" disabled={!activeShift} />
+                        <Label htmlFor="invoice-src-drawer" className="cursor-pointer text-xs sm:text-sm">
+                          من الصندوق (الغلة){!activeShift ? ' — لا توجد وردية مفتوحة' : ''}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                        <RadioGroupItem value="external" id="invoice-src-external" />
+                        <Label htmlFor="invoice-src-external" className="cursor-pointer text-xs sm:text-sm">
+                          من مصدر خارجي (لا يمسّ الصندوق)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  )}
                 </div>
               </div>
             )}
@@ -761,7 +869,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     <div className="p-2.5 rounded-xl bg-muted/40">
                       <span className="text-muted-foreground block text-[11px]">طريقة السداد</span>
                       <span className="font-bold text-foreground">
-                        {paymentMethod === 'cash' ? 'نقداً من الصندوق (سحب وردية)' : 'آجل (ذمم موردين)'}
+                        {paymentMethod === 'cash' ? (paidFrom === 'drawer' ? 'نقداً من الصندوق (سحب وردية)' : 'نقداً من مصدر خارجي') : 'آجل (ذمم موردين)'}
                       </span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">

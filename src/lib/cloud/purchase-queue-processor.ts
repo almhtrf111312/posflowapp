@@ -33,6 +33,10 @@ interface PurchaseInvoiceData {
   invoiceNumber: string;
   supplierName: string;
   supplierCompany?: string;
+  supplierId?: string;
+  amountPaid?: number;
+  paidFrom?: 'drawer' | 'external';
+  paidShiftId?: string;
   invoiceDate: string;
   notes?: string;
   imageUrl?: string;
@@ -128,6 +132,11 @@ export async function processPurchaseInvoiceFromQueue(data: PurchaseInvoiceData,
       invoice_number: data.invoiceNumber,
       supplier_name: data.supplierName,
       supplier_company: data.supplierCompany || null,
+      supplier_id: data.supplierId || null,
+      amount_paid: data.amountPaid || 0,
+      paid_from: data.amountPaid ? data.paidFrom || 'external' : null,
+      paid_shift_id: data.paidFrom === 'drawer' ? data.paidShiftId || null : null,
+      payment_method: data.amountPaid ? 'cash' : 'credit',
       invoice_date: data.invoiceDate,
       expected_items_count: 0,
       expected_total_quantity: 0,

@@ -369,10 +369,25 @@ export function getEnabledCurrencies(): CurrencyDefinition[] {
   return Object.values(state.currencies).filter((c) => c.enabled === true);
 }
 
+/**
+ * Decimal-safe rounding (exponent shift) — avoids binary float errors such as
+ * 2.135 -> 2.13. Falls back to plain scaling for exponent-notation inputs.
+ */
+function roundDecimal(num: number, decimals: number): number {
+  const str = String(num);
+  if (str.includes('e') || str.includes('E')) {
+    const factor = Math.pow(10, decimals);
+    return Math.round(num * factor) / factor;
+  }
+  const shifted = Math.round(Number(`${str}e${decimals}`));
+  const back = Number(`${shifted}e-${decimals}`);
+  return Number.isFinite(back) ? back : Math.round(num * Math.pow(10, decimals)) / Math.pow(10, decimals);
+}
+
 export function round8(usd: number): number {
   const num = Number(usd);
   if (!Number.isFinite(num)) return 0;
-  return Math.round((num + Number.EPSILON) * 1e8) / 1e8;
+  return roundDecimal(num, 8);
 }
 
 export function preciseAdd(...amounts: number[]): number {
@@ -402,8 +417,7 @@ export function roundForCurrency(amount: number, code?: string | null, decimalsO
   if (decimals <= 0) {
     return Math.round(num);
   }
-  const factor = Math.pow(10, decimals);
-  return Math.round((num + Number.EPSILON) * factor) / factor;
+  return roundDecimal(num, decimals);
 }
 
 export function toUsd(amount: number, code?: string | null, rateOverride?: number): number {

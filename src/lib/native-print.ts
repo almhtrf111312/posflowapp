@@ -1,381 +1,294 @@
+import { sanitizePrintHtml, escapeHtml, safeImageSrc } from './print-sanitize';
 /**
- * Native Print Utility for Capacitor/Android & Web & Thermal Bluetooth/USB
- * =========================================================================
- * يوفر طباعة حقيقية تعمل على:
- * 1. طابعات حرارية مقترنة (Bluetooth ESC/POS على Android أو Web Serial/USB على الكمبيوتر)
- * 2. الأندرويد/Capacitor عبر Android PrintManager أو WebView Print
- * 3. المتصفح عبر window.print() أو نافذة طباعة نظيفة
- * 4. fallback لمشاركة الفاتورة في حالة عدم توفر طابعة
+ * Native Print Utility for Capacitor/Android
+ * ============================================
+ * حل مشكلة الطباعة في WebView الأندرويد
+ * يستخدم تحويل HTML إلى صورة/PDF ثم المشاركة
  */
 
 import { Capacitor } from '@capacitor/core';
-import { formatCurrency, formatNumber } from './utils';
-import { resolveInvoiceCurrencySymbol } from './currencies';
-import { getDefaultPrinter, ThermalPrinterDevice } from './thermal-printer';
-import { buildReceiptESCPOS, printToThermalPrinter, ReceiptPrintData } from './escpos-builder';
-import { showToast } from './toast-config';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { formatNumber, formatCurrency } from './utils';
+import { resolveInvoiceCurrencySymbol, getActiveCurrencyCode } from './currencies';
+import { getEnabledCurrencies, formatAmount, fromUsd, toUsd } from './money-engine';
 import { isGuestDemoMode } from './demo-data';
+import { toast } from '@/lib/sonner-bridge';
+import { isNativeAndroid } from './printer/posflow-printer';
+import {
+  PRINTER_CONFIG_KEY,
+  getStoredPrinterConfig,
+  saveStoredPrinterConfig,
+  type PrinterConfig,
+} from './printer/printer-config';
+import {
+  buildReceiptParts,
+  type PaperWidth,
+  type ReceiptLine,
+} from './printer/receipt-escpos';
+import {
+  printParts,
+  printTestPage,
+  describePrinterError,
+} from './printer/bluetooth-printer';
+import { PosFlowPrinter } from './printer/posflow-printer';
 
-export interface PrintReceiptData {
-  invoiceNumber: string;
-  date: string;
-  time: string;
-  storeName: string;
-  storePhone?: string;
-  storeAddress?: string;
-  storeEmail?: string;
-  storeLogo?: string;
-  customerName?: string;
-  customerPhone?: string;
-  items: Array<{
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    total: number;
-    unit?: string;
-    expiryDate?: string;
-    batchNumber?: string;
-  }>;
-  subtotal: number;
-  discount?: number;
-  taxAmount?: number;
-  taxRate?: number;
-  total: number;
-  currencySymbol: string;
-  currencyCode?: string;
-  currencyName?: string;
-  paymentType: 'cash' | 'debt' | 'split' | string;
-  downPayment?: number;
-  debtRemaining?: number;
-  cashierName?: string;
-  notes?: string;
-  footer?: string;
-  welcomeMessage?: string;
-  paperSize?: '58mm' | '80mm' | 'A4';
+const SETTINGS_KEY = 'posflow_settings_v1';
+
+export interface StoreSettings {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  logo: string;
+}
+
+export interface PrintSettings {
+  autoPrint?: boolean;
   showStoreName?: boolean;
-  showLogo?: boolean;
-  showAddress?: boolean;
-  showPhone?: boolean;
+  showLogo: boolean;
+  showAddress: boolean;
+  showPhone: boolean;
   showEmail?: boolean;
   showInvoiceNumber?: boolean;
   showDateTime?: boolean;
   showCashierName?: boolean;
-  showCustomerInfo?: boolean;
+  welcomeMessage?: string;
+  footer: string;
   showAlternativeCurrencies?: boolean;
-  alternativeTotals?: Array<{ symbol: string; amount: number; code?: string }>;
-  copies?: number;
-  /** عند تمريرها يتم توجيه الطباعة لطابعة حرارية محددة */
-  printerDevice?: ThermalPrinterDevice | null;
-  /** عند true نتجاوز الطابعة الحرارية ونستخدم طباعة النظام العادية */
-  forceSystemPrint?: boolean;
+  paperSize?: string;
+  copies?: string | number;
 }
 
 /**
- * قراءة إعدادات الطباعة المحفوظة
+ * Get store settings from localStorage
  */
-export function getSavedPrintSettings() {
+export function getStoreSettings(): StoreSettings {
   try {
-    const raw = localStorage.getItem('posflow_settings_v1');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed?.printSettings) {
-        return parsed.printSettings;
-      }
-    }
+    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    return {
+      name: settings.storeSettings?.name || 'PosFlow Store',
+      phone: settings.storeSettings?.phone || '',
+      email: settings.storeSettings?.email || '',
+      address: settings.storeSettings?.address || '',
+      logo: settings.storeSettings?.logo || '',
+    };
   } catch {
-    // ignore
+    return { name: 'PosFlow Store', phone: '', email: '', address: '', logo: '' };
   }
-  return {
-    autoPrint: false,
-    showStoreName: true,
-    showLogo: true,
-    showAddress: true,
-    showPhone: true,
-    showEmail: false,
-    showInvoiceNumber: true,
-    showDateTime: true,
-    showCashierName: true,
-    showAlternativeCurrencies: true,
-    paperSize: '80mm',
-    copies: '1',
-    welcomeMessage: '',
-    footer: 'شكراً لزيارتكم!',
-  };
 }
 
 /**
- * التحقق مما إذا كان هناك طابعة حرارية افتراضية مهيّأة
+ * Get print settings from localStorage
  */
-export function hasDefaultThermalPrinter(): boolean {
-  const printer = getDefaultPrinter();
-  return !!(printer && (printer.type === 'bluetooth' || printer.type === 'usb' || printer.type === 'network'));
-}
-
-/**
- * التحقق من دعم الطباعة في البيئة الحالية
- */
-export function isPrintSupported(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (hasDefaultThermalPrinter()) return true;
-  if (Capacitor.isNativePlatform()) {
-    return typeof (window as any).AndroidPrinter?.print === 'function' || typeof window.print === 'function';
-  }
-  return typeof window.print === 'function';
-}
-
-/**
- * تحويل بيانات الإيصال إلى صيغة ESC/POS وإرسالها للطابعة الحرارية المقترنة
- */
-export async function printReceiptThermal(
-  data: PrintReceiptData,
-  device?: ThermalPrinterDevice
-): Promise<{ success: boolean; error?: string }> {
-  const targetPrinter = device || data.printerDevice || getDefaultPrinter();
-  if (!targetPrinter) {
-    return { success: false, error: 'لا توجد طابعة حرارية افتراضية مقترنة' };
-  }
-
-  const saved = getSavedPrintSettings();
-  const paperWidth = (data.paperSize === '58mm' || targetPrinter.paperWidth === '58mm') ? '58mm' : '80mm';
-  const currencySymbol = resolveInvoiceCurrencySymbol(data.currencyCode, data.currencySymbol);
-  const copies = Math.max(1, Number(data.copies || saved.copies || 1));
-
-  const escData: ReceiptPrintData = {
-    storeName: (data.showStoreName ?? saved.showStoreName ?? true) ? data.storeName : '',
-    storeAddress: (data.showAddress ?? saved.showAddress ?? true) ? data.storeAddress : undefined,
-    storePhone: (data.showPhone ?? saved.showPhone ?? true) ? data.storePhone : undefined,
-    welcomeMessage: data.welcomeMessage ?? saved.welcomeMessage,
-    invoiceNumber: data.invoiceNumber,
-    date: data.date,
-    time: data.time,
-    cashierName: (data.showCashierName ?? saved.showCashierName ?? true) ? data.cashierName : undefined,
-    customerName: data.customerName,
-    customerPhone: data.customerPhone,
-    paymentType: data.paymentType,
-    items: data.items.map(it => ({
-      name: it.name,
-      quantity: it.quantity,
-      unitPrice: it.unitPrice,
-      total: it.total,
-      unit: it.unit,
-    })),
-    subtotal: data.subtotal,
-    discount: data.discount,
-    taxAmount: data.taxAmount,
-    taxRate: data.taxRate,
-    total: data.total,
-    currencySymbol,
-    currencyCode: data.currencyCode,
-    currencyName: data.currencyName,
-    downPayment: data.downPayment,
-    debtRemaining: data.debtRemaining,
-    alternativeTotals: (data.showAlternativeCurrencies ?? saved.showAlternativeCurrencies ?? true)
-      ? data.alternativeTotals
-      : undefined,
-    notes: data.notes,
-    footer: data.footer ?? saved.footer ?? 'شكراً لزيارتكم!',
-    paperWidth,
-  };
-
+export function getPrintSettings(): PrintSettings {
   try {
-    const bytes = buildReceiptESCPOS(escData);
-    for (let copy = 0; copy < copies; copy++) {
-      const res = await printToThermalPrinter(targetPrinter, bytes);
-      if (!res.success) {
-        return res;
-      }
-      if (copy < copies - 1) {
-        await new Promise(r => setTimeout(r, 400));
-      }
-    }
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'فشل الطباعة الحرارية' };
+    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const ps = settings.printSettings || {};
+    return {
+      autoPrint: ps.autoPrint ?? true,
+      showStoreName: ps.showStoreName ?? true,
+      showLogo: ps.showLogo ?? true,
+      showAddress: ps.showAddress ?? true,
+      showPhone: ps.showPhone ?? true,
+      showEmail: ps.showEmail ?? true,
+      showInvoiceNumber: ps.showInvoiceNumber ?? true,
+      showDateTime: ps.showDateTime ?? true,
+      showCashierName: ps.showCashierName ?? true,
+      welcomeMessage: ps.welcomeMessage || '',
+      footer: ps.footer || 'شكراً لتسوقكم معنا!',
+      showAlternativeCurrencies: ps.showAlternativeCurrencies ?? false,
+      paperSize: ps.paperSize || '80mm',
+      copies: ps.copies || '1',
+    };
+  } catch {
+    return {
+      autoPrint: true,
+      showStoreName: true,
+      showLogo: true,
+      showAddress: true,
+      showPhone: true,
+      showEmail: true,
+      showInvoiceNumber: true,
+      showDateTime: true,
+      showCashierName: true,
+      welcomeMessage: '',
+      footer: 'شكراً لتسوقكم معنا!',
+      showAlternativeCurrencies: false,
+      paperSize: '80mm',
+      copies: '1',
+    };
   }
 }
 
 /**
- * توليد HTML نظيف واحترافي للفاتورة جاهز للطباعة على ورق حراري (58mm / 80mm) أو A4
+ * إنشاء محتوى HTML للفاتورة
  */
-export function generateReceiptHTML(data: PrintReceiptData): string {
-  const saved = getSavedPrintSettings();
-  const paperSize = data.paperSize || saved.paperSize || '80mm';
-  const is58 = paperSize === '58mm';
-  const isA4 = paperSize === 'A4';
-  const widthCss = isA4 ? '210mm' : is58 ? '54mm' : '74mm';
-  const fontSize = is58 ? '11px' : isA4 ? '14px' : '12.5px';
-  const currencySymbol = resolveInvoiceCurrencySymbol(data.currencyCode, data.currencySymbol);
-  const fmt = (val: number) => formatCurrency(val, currencySymbol, undefined, data.currencyCode, data.currencyName);
+export interface PrintableInvoice {
+  id: string;
+  invoiceNumber?: string;
+  date: string;
+  time?: string;
+  customerName: string;
+  customerPhone?: string;
+  cashierName?: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    total: number;
+  }>;
+  subtotal: number;
+  discount?: number;
+  discountAmount?: number;
+  tax?: number;
+  total: number;
+  currencySymbol: string;
+  currencyName?: string;
+  currency?: string;
+  currency_code?: string;
+  currency_symbol?: string;
+  exchangeRate?: number;
+  exchange_rate?: number;
+  totalUSD?: number;
+  paymentType: 'cash' | 'debt' | 'split';
+  notes?: string;
+}
 
-  const showStoreName = data.showStoreName ?? saved.showStoreName ?? true;
-  const showLogo = data.showLogo ?? saved.showLogo ?? true;
-  const showAddress = data.showAddress ?? saved.showAddress ?? true;
-  const showPhone = data.showPhone ?? saved.showPhone ?? true;
-  const showEmail = data.showEmail ?? saved.showEmail ?? false;
-  const showInvoiceNumber = data.showInvoiceNumber ?? saved.showInvoiceNumber ?? true;
-  const showDateTime = data.showDateTime ?? saved.showDateTime ?? true;
-  const showCashierName = data.showCashierName ?? saved.showCashierName ?? true;
-  const showAlt = data.showAlternativeCurrencies ?? saved.showAlternativeCurrencies ?? true;
-  const welcomeMessage = data.welcomeMessage ?? saved.welcomeMessage ?? '';
-  const footerText = data.footer ?? saved.footer ?? 'شكراً لزيارتكم!';
+export function generateReceiptHTML(invoice: PrintableInvoice): string {
+  const store = getStoreSettings();
+  const printSettings = getPrintSettings();
 
-  const paymentLabel = data.paymentType === 'cash'
-    ? 'نقدي'
-    : (data.paymentType === 'split' || (data.downPayment && data.downPayment > 0))
-      ? 'بيع مركب (نقدي + آجل)'
-      : 'آجل (دين)';
+  const rawSymbol = (invoice.currencySymbol || '').trim();
+  const rawCurrency = (invoice.currency_code || invoice.currency || '').toUpperCase();
+  const effectiveSymbol = resolveInvoiceCurrencySymbol(rawCurrency, rawSymbol);
 
-  const itemsRows = data.items.map((item, idx) => `
+  const itemsHTML = invoice.items.map(item => `
     <tr>
-      <td style="text-align: right; padding: 5px 2px; border-bottom: 1px dashed #ccc; word-break: break-word;">
-        <div style="font-weight: 600;">${idx + 1}. ${escapeHtml(item.name)}</div>
-        ${item.unit ? `<div style="font-size: 0.82em; color: #666;">${escapeHtml(item.unit)}</div>` : ''}
-        ${item.expiryDate || item.batchNumber ? `<div style="font-size: 0.78em; color: #666;">${item.batchNumber ? `دفعة: ${escapeHtml(item.batchNumber)} ` : ''}${item.expiryDate ? `صلاحية: ${escapeHtml(item.expiryDate)}` : ''}</div>` : ''}
-      </td>
-      <td style="text-align: center; padding: 5px 2px; border-bottom: 1px dashed #ccc; white-space: nowrap;">
-        ${formatNumber(item.quantity)}
-      </td>
-      <td style="text-align: center; padding: 5px 2px; border-bottom: 1px dashed #ccc; white-space: nowrap;">
-        ${fmt(item.unitPrice)}
-      </td>
-      <td style="text-align: left; padding: 5px 2px; border-bottom: 1px dashed #ccc; font-weight: 700; white-space: nowrap;">
-        ${fmt(item.total)}
-      </td>
+      <td style="text-align: right; padding: 4px 0; font-size: 12px;">${escapeHtml(item.name)}</td>
+      <td style="text-align: center; padding: 4px 0; font-size: 12px;">${item.quantity}</td>
+      <td style="text-align: left; padding: 4px 0; font-size: 12px;">${formatCurrency(item.total, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}</td>
     </tr>
   `).join('');
 
-  return `<!DOCTYPE html>
+  const logoHTML = printSettings.showLogo !== false && store.logo
+    ? `<img src="${safeImageSrc(store.logo)}" alt="Logo" style="max-width: 80px; max-height: 80px; margin-bottom: 8px;" />`
+    : '';
+
+  const storeNameHTML = printSettings.showStoreName !== false && store.name
+    ? `<div class="store-name">${escapeHtml(store.name)}</div>`
+    : '';
+
+  const addressHTML = printSettings.showAddress !== false && store.address
+    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">${escapeHtml(store.address)}</p>`
+    : '';
+
+  const phoneHTML = printSettings.showPhone !== false && store.phone
+    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">📞 ${escapeHtml(store.phone)}</p>`
+    : '';
+
+  const emailHTML = printSettings.showEmail !== false && store.email
+    ? `<p style="margin: 2px 0; font-size: 11px; color: #666;">✉️ ${escapeHtml(store.email)}</p>`
+    : '';
+
+  const welcomeHTML = printSettings.welcomeMessage
+    ? `<p style="margin: 6px 0 2px; font-size: 12px; color: #334155; font-weight: 500;">${escapeHtml(printSettings.welcomeMessage)}</p>`
+    : '';
+
+  return `
+<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>فاتورة #${escapeHtml(data.invoiceNumber)}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=80mm, initial-scale=1.0">
   <style>
-    @page {
-      size: ${isA4 ? 'A4' : `${paperSize} auto`};
-      margin: ${isA4 ? '12mm' : '2mm'};
-    }
     * {
-      box-sizing: border-box;
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
     }
     body {
-      font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
-      direction: rtl;
-      background: #ffffff;
-      color: #000000;
-      font-size: ${fontSize};
-      line-height: 1.45;
-      width: ${widthCss};
-      margin: 0 auto;
-      padding: ${isA4 ? '10px' : '4px'};
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+      width: 80mm;
+      padding: 8px;
+      background: white;
+      color: #000;
+    }
+    .receipt {
+      width: 100%;
     }
     .header {
       text-align: center;
+      border-bottom: 1px dashed #000;
       padding-bottom: 8px;
-      border-bottom: 2px solid #000;
       margin-bottom: 8px;
-    }
-    .logo {
-      max-height: ${is58 ? '40px' : '56px'};
-      max-width: 120px;
-      object-fit: contain;
-      margin-bottom: 4px;
     }
     .store-name {
-      font-size: ${is58 ? '15px' : isA4 ? '22px' : '17px'};
-      font-weight: 800;
-      margin-bottom: 2px;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 4px;
     }
-    .store-meta {
-      font-size: 0.85em;
-      color: #333;
-    }
-    .welcome {
-      margin-top: 4px;
-      font-size: 0.85em;
-      font-style: italic;
-      color: #444;
-    }
-    .meta-grid {
-      margin-bottom: 8px;
-      padding-bottom: 6px;
-      border-bottom: 1px dashed #666;
-      font-size: 0.9em;
-    }
-    .meta-row {
+    .invoice-info {
       display: flex;
       justify-content: space-between;
-      gap: 6px;
-      margin-bottom: 2px;
+      font-size: 11px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #000;
     }
-    .meta-label {
-      color: #444;
+    .customer-info {
+      font-size: 12px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #000;
     }
-    .meta-val {
-      font-weight: 700;
-    }
-    table {
+    .items-table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 8px;
     }
-    thead th {
-      background: #f0f0f0;
-      border-top: 1px solid #000;
+    .items-table th {
+      font-size: 11px;
+      font-weight: bold;
+      padding: 4px 0;
       border-bottom: 1px solid #000;
-      padding: 5px 2px;
-      font-size: 0.85em;
-      font-weight: 700;
     }
     .totals {
-      border-top: 2px solid #000;
-      padding-top: 6px;
-      margin-top: 4px;
+      border-top: 1px dashed #000;
+      padding-top: 8px;
+      margin-top: 8px;
     }
     .total-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 3px;
-      font-size: 0.95em;
+      font-size: 12px;
+      margin: 4px 0;
     }
     .grand-total {
-      display: flex;
-      justify-content: space-between;
-      font-size: ${is58 ? '14px' : isA4 ? '18px' : '15.5px'};
-      font-weight: 800;
-      border-top: 1px solid #000;
-      border-bottom: 2px double #000;
-      padding: 6px 0;
-      margin: 5px 0;
-    }
-    .alt-currencies {
-      background: #f7f7f7;
-      padding: 4px 6px;
-      border-radius: 4px;
-      margin-top: 4px;
-      font-size: 0.85em;
-    }
-    .notes-box {
-      margin-top: 6px;
-      padding: 5px;
-      border: 1px dashed #666;
-      font-size: 0.85em;
+      font-size: 16px;
+      font-weight: bold;
+      border-top: 2px solid #000;
+      padding-top: 8px;
+      margin-top: 8px;
     }
     .footer {
       text-align: center;
-      margin-top: 10px;
+      margin-top: 16px;
       padding-top: 8px;
       border-top: 1px dashed #000;
-      font-size: 0.88em;
+      font-size: 11px;
+      color: #666;
     }
-    @media print {
-      body { width: 100%; }
-      .no-print { display: none !important; }
+    .payment-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-top: 4px;
     }
+    .cash { background: #d4edda; color: #155724; }
+    .debt { background: #fff3cd; color: #856404; }
     ${isGuestDemoMode() ? `
       .receipt { position: relative; overflow: hidden; }
       .receipt::before {
@@ -383,12 +296,12 @@ export function generateReceiptHTML(data: PrintReceiptData): string {
         position: absolute;
         top: 35%;
         left: -10%;
-        width: 120%;
-        text-align: center;
-        font-size: ${is58 ? '18px' : '26px'};
+        right: -10%;
+        transform: rotate(-25deg);
+        font-size: 24px;
         font-weight: 900;
-        color: rgba(225, 29, 72, 0.14);
-        transform: rotate(-30deg);
+        color: rgba(225, 29, 72, 0.12);
+        text-align: center;
         pointer-events: none;
         z-index: 999;
         white-space: nowrap;
@@ -399,108 +312,120 @@ export function generateReceiptHTML(data: PrintReceiptData): string {
 <body>
   <div class="receipt">
     <div class="header">
-      ${showLogo && data.storeLogo ? `<img src="${escapeHtml(data.storeLogo)}" class="logo" alt="logo" />` : ''}
-      ${showStoreName ? `<div class="store-name">${escapeHtml(data.storeName)}</div>` : ''}
-      ${showAddress && data.storeAddress ? `<div class="store-meta">${escapeHtml(data.storeAddress)}</div>` : ''}
-      ${showPhone && data.storePhone ? `<div class="store-meta" dir="ltr">${escapeHtml(data.storePhone)}</div>` : ''}
-      ${showEmail && data.storeEmail ? `<div class="store-meta" dir="ltr">${escapeHtml(data.storeEmail)}</div>` : ''}
-      ${welcomeMessage ? `<div class="welcome">${escapeHtml(welcomeMessage)}</div>` : ''}
+      ${logoHTML}
+      ${storeNameHTML}
+      ${addressHTML}
+      ${phoneHTML}
+      ${emailHTML}
+      ${welcomeHTML}
     </div>
 
-    <div class="meta-grid">
-      ${showInvoiceNumber ? `
-      <div class="meta-row">
-        <span class="meta-label">رقم الفاتورة:</span>
-        <span class="meta-val" dir="ltr">#${escapeHtml(data.invoiceNumber)}</span>
-      </div>` : ''}
-      ${showDateTime ? `
-      <div class="meta-row">
-        <span class="meta-label">التاريخ والوقت:</span>
-        <span class="meta-val" dir="ltr">${escapeHtml(data.date)} ${escapeHtml(data.time)}</span>
-      </div>` : ''}
-      ${data.customerName ? `
-      <div class="meta-row">
-        <span class="meta-label">العميل:</span>
-        <span class="meta-val">${escapeHtml(data.customerName)}</span>
-      </div>` : ''}
-      ${data.customerPhone ? `
-      <div class="meta-row">
-        <span class="meta-label">هاتف العميل:</span>
-        <span class="meta-val" dir="ltr">${escapeHtml(data.customerPhone)}</span>
-      </div>` : ''}
-      ${showCashierName && data.cashierName ? `
-      <div class="meta-row">
-        <span class="meta-label">الكاشير:</span>
-        <span class="meta-val">${escapeHtml(data.cashierName)}</span>
-      </div>` : ''}
-      <div class="meta-row">
-        <span class="meta-label">طريقة الدفع:</span>
-        <span class="meta-val">${paymentLabel}</span>
+    ${(printSettings.showInvoiceNumber !== false || printSettings.showDateTime !== false) ? `
+      <div class="invoice-info">
+        ${printSettings.showInvoiceNumber !== false ? `<span>فاتورة: ${escapeHtml(invoice.id)}</span>` : '<span></span>'}
+        ${printSettings.showDateTime !== false ? `<span>${escapeHtml(invoice.date)}${invoice.time ? ' ' + escapeHtml(invoice.time) : ''}</span>` : '<span></span>'}
       </div>
+    ` : ''}
+
+    <div class="customer-info">
+      <strong>العميل:</strong> ${escapeHtml(invoice.customerName || 'عميل نقدي')}
+      ${invoice.customerPhone ? `<br/>الهاتف: ${escapeHtml(invoice.customerPhone)}` : ''}
+      ${(printSettings.showCashierName !== false && invoice.cashierName) ? `<br/><span>الكاشير: ${escapeHtml(invoice.cashierName)}</span>` : ''}
     </div>
 
-    <table>
+    <table class="items-table">
       <thead>
         <tr>
           <th style="text-align: right;">الصنف</th>
           <th style="text-align: center;">الكمية</th>
-          <th style="text-align: center;">السعر</th>
-          <th style="text-align: left;">الإجمالي</th>
+          <th style="text-align: left;">المبلغ</th>
         </tr>
       </thead>
       <tbody>
-        ${itemsRows}
+        ${itemsHTML}
       </tbody>
     </table>
 
     <div class="totals">
-      <div class="total-row">
-        <span>المجموع الفرعي:</span>
-        <span>${fmt(data.subtotal)}</span>
-      </div>
-      ${data.discount && data.discount > 0 ? `
-      <div class="total-row">
-        <span>الخصم:</span>
-        <span>-${fmt(data.discount)}</span>
-      </div>` : ''}
-      ${data.taxAmount && data.taxAmount > 0 ? `
-      <div class="total-row">
-        <span>الضريبة${data.taxRate ? ` (${data.taxRate}%)` : ''}:</span>
-        <span>${fmt(data.taxAmount)}</span>
-      </div>` : ''}
-
-      <div class="grand-total">
-        <span>الإجمالي النهائي:</span>
-        <span>${fmt(data.total)}</span>
-      </div>
-
-      ${(data.paymentType === 'split' || data.paymentType === 'debt' || (data.downPayment && data.downPayment > 0)) ? `
-        ${data.downPayment && data.downPayment > 0 ? `
+      ${invoice.items.length > 1 ? `
         <div class="total-row">
-          <span>المدفوع نقداً:</span>
-          <span>${fmt(data.downPayment)}</span>
-        </div>` : ''}
-        <div class="total-row" style="font-weight: 700;">
-          <span>المتبقي كدين:</span>
-          <span>${fmt(data.debtRemaining !== undefined ? data.debtRemaining : (data.total - (data.downPayment || 0)))}</span>
+          <span>المجموع الفرعي:</span>
+          <span>${formatCurrency(invoice.subtotal, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}</span>
+        </div>
+      ` : ''}
+      
+      ${invoice.discountAmount && invoice.discountAmount > 0 ? `
+        <div class="total-row">
+          <span>الخصم${invoice.discount ? ` (${invoice.discount}%)` : ''}:</span>
+          <span>-${formatCurrency(invoice.discountAmount!, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}</span>
         </div>
       ` : ''}
 
-      ${showAlt && data.alternativeTotals && data.alternativeTotals.length > 0 ? `
-      <div class="alt-currencies">
-        ${data.alternativeTotals.map(alt => `
-          <div class="total-row" style="margin-bottom: 1px;">
-            <span>المعادل (${escapeHtml(alt.code || alt.symbol)}):</span>
-            <span>${formatCurrency(alt.amount, resolveInvoiceCurrencySymbol(alt.code, alt.symbol), undefined, alt.code)}</span>
-          </div>
-        `).join('')}
-      </div>` : ''}
+      ${invoice.tax && invoice.tax > 0 ? `
+        <div class="total-row">
+          <span>الضريبة:</span>
+          <span>${formatCurrency(invoice.tax!, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}</span>
+        </div>
+      ` : ''}
+
+      <div class="total-row grand-total">
+        <span>الإجمالي:</span>
+        <span>${formatCurrency(invoice.total, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}</span>
+      </div>
+
+      ${(() => {
+        if (!printSettings.showAlternativeCurrencies) return '';
+        try {
+          const enabledList = getEnabledCurrencies();
+          const rawCode = invoice.currency_code || invoice.currency;
+          const invCode = (rawCode || (effectiveSymbol === '$' ? 'USD' : getActiveCurrencyCode())).toUpperCase();
+          const invRate = Number(invoice.exchange_rate || invoice.exchangeRate) || 1;
+
+          let baseUSD = invoice.totalUSD;
+          if (baseUSD === undefined || baseUSD === null || isNaN(baseUSD) || baseUSD <= 0) {
+            if (invRate > 0 && invCode !== 'USD') {
+              baseUSD = invoice.total / invRate;
+            } else {
+              baseUSD = toUsd(invoice.total, invCode);
+            }
+          }
+
+          const parts: string[] = [];
+          if (invCode !== 'USD') {
+            const usdDef = enabledList.find(c => c.code === 'USD');
+            if (usdDef && usdDef.enabled) {
+              parts.push(`المعادل بالدولار: ${usdDef.symbol}${formatNumber(baseUSD, 2)}`);
+            }
+          }
+
+          for (const curr of enabledList) {
+            if (curr.code === invCode || !curr.enabled || curr.code === 'USD') continue;
+            const altAmount = fromUsd(baseUSD, curr.code);
+            parts.push(`${escapeHtml(curr.name)}: ${formatAmount(altAmount, curr.code)} ${escapeHtml(curr.symbol)}`);
+          }
+
+          if (parts.length === 0) return '';
+          return `
+            <div style="margin-top: 6px; padding: 6px; background: #f8fafc; border-radius: 6px; font-size: 11px; text-align: center; border: 1px dashed #cbd5e1; color: #334155;">
+              <div style="font-weight: bold; margin-bottom: 2px;">المعادل بالعملات البديلة:</div>
+              <div>${parts.join(' | ')}</div>
+            </div>
+          `;
+        } catch {
+          return '';
+        }
+      })()}
+
+      <div style="text-align: center; margin-top: 8px;">
+        <span class="payment-badge ${invoice.paymentType === 'cash' ? 'cash' : 'debt'}">
+          ${invoice.paymentType === 'cash' ? '💵 نقدي' : '📋 آجل'}
+        </span>
+      </div>
     </div>
 
-    ${data.notes ? `<div class="notes-box"><strong>ملاحظات:</strong> ${escapeHtml(data.notes)}</div>` : ''}
-
     <div class="footer">
-      <div>${escapeHtml(footerText)}</div>
+      ${escapeHtml(printSettings.footer)}
+      <br/>
       <small style="color: #999;">PosFlow</small>
       ${isGuestDemoMode() ? `
         <div style="margin-top: 10px; padding: 6px; border: 2px dashed #e11d48; color: #e11d48; font-weight: bold; font-size: 13px; text-align: center; border-radius: 4px; background: #fff1f2;">
@@ -511,331 +436,338 @@ export function generateReceiptHTML(data: PrintReceiptData): string {
     </div>
   </div>
 </body>
-</html>`;
-}
-
-function escapeHtml(str: string): string {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+</html>
+  `.trim();
 }
 
 /**
- * طباعة HTML مباشر عبر iframe مخفي أو Android PrintManager
+ * طباعة محتوى HTML
+ * على الأندرويد: يحفظ كـ HTML ويشاركه للطباعة
+ * على المتصفح: يستخدم iframe + window.print()
  */
-export async function printHtmlDocument(html: string, jobName: string = 'PosFlow_Receipt'): Promise<boolean> {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return false;
 
-  // 1. على أندرويد (Capacitor): إذا توفّر AndroidPrinter.printHtml أو AndroidPrinter.print
-  if (Capacitor.isNativePlatform()) {
-    const androidPrinter = (window as any).AndroidPrinter;
-    if (androidPrinter && typeof androidPrinter.printHtml === 'function') {
-      try {
-        androidPrinter.printHtml(html, jobName);
-        return true;
-      } catch (err) {
-        console.warn('[NativePrint] AndroidPrinter.printHtml failed:', err);
-      }
+export {
+  PRINTER_CONFIG_KEY,
+  getStoredPrinterConfig,
+  saveStoredPrinterConfig,
+  type PrinterConfig,
+};
+
+export interface BluetoothDevice {
+  name: string;
+  address: string;
+}
+
+/**
+ * Check if Bluetooth hardware or platform bridge is actually supported in current runtime
+ */
+export function isBluetoothSupported(): boolean {
+  if (isNativeAndroid()) return true;
+  if (typeof navigator !== 'undefined' && Boolean((navigator as any).bluetooth)) return true;
+  return false;
+}
+
+/**
+ * Search paired / available Bluetooth printers
+ */
+export async function searchBluetoothPrinters(): Promise<BluetoothDevice[]> {
+  if (isNativeAndroid()) {
+    try {
+      const paired = await PosFlowPrinter.listPaired();
+      return (paired?.devices || []).map(d => ({ name: d.name, address: d.address }));
+    } catch (e) {
+      console.warn('[NativePrint] listPaired error:', e);
+      return [];
     }
-
-    // استخدام iframe ثم AndroidPrinter.print() أو window.print()
-    return await printViaHiddenIframe(html, () => {
-      if (androidPrinter && typeof androidPrinter.print === 'function') {
-        androidPrinter.print();
-      } else {
-        window.print();
-      }
-    });
   }
 
-  // 2. على المتصفح / Electron: طباعة عبر iframe معزول (بدون popups محجوبة)
-  return await printViaHiddenIframe(html);
+  // Web Bluetooth API fallback
+  if (typeof navigator !== 'undefined' && (navigator as any).bluetooth?.getDevices) {
+    try {
+      const webDevices = await (navigator as any).bluetooth.getDevices();
+      if (webDevices && Array.isArray(webDevices)) {
+        return webDevices.map((d: any) => ({ name: d.name || 'Bluetooth Printer', address: d.id || '' }));
+      }
+    } catch (e) {
+      console.warn('[Printer] Web Bluetooth getDevices:', e);
+    }
+  }
+
+  return [];
 }
 
 /**
- * طباعة معزولة عبر iframe مخفي (لا يفتح نافذة منبثقة ولا يعيد تحميل التطبيق)
+ * Connect to thermal printer & verify connection / save as default.
  */
-function printViaHiddenIframe(html: string, customPrintTrigger?: (win: Window) => void): Promise<boolean> {
-  return new Promise((resolve) => {
+export async function connectAndTestBluetoothPrinter(
+  address: string,
+  name?: string
+): Promise<{ success: boolean; message: string }> {
+  if (!address) {
+    return {
+      success: false,
+      message: 'عنوان الطابعة غير محدد أو غير صالح',
+    };
+  }
+
+  if (isNativeAndroid()) {
     try {
-      const existing = document.getElementById('posflow-print-iframe');
-      if (existing) existing.remove();
+      const config = getStoredPrinterConfig();
+      const paper = (config.paperWidth === '58mm' ? '58mm' : '80mm') as PaperWidth;
+      await printTestPage(address, paper);
+      config.connectionType = 'bluetooth';
+      config.deviceAddress = address;
+      if (name) config.deviceName = name;
+      saveStoredPrinterConfig(config);
 
-      const iframe = document.createElement('iframe');
-      iframe.id = 'posflow-print-iframe';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.style.opacity = '0';
-      iframe.style.pointerEvents = 'none';
+      return {
+        success: true,
+        message: `تم الاتصال بنجاح بالطابعة ${name || address} وطباعة صفحة الاختبار`,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: describePrinterError(err),
+      };
+    }
+  }
 
-      document.body.appendChild(iframe);
+  return {
+    success: false,
+    message: 'طباعة البلوتوث المباشرة تعمل على نظام أندرويد عبر البلوتوث الكلاسيكي (SPP)',
+  };
+}
 
-      const frameWin = iframe.contentWindow;
-      const frameDoc = iframe.contentDocument || frameWin?.document;
+/**
+ * Compatibility helper for existing callers
+ */
+export async function htmlToEscPosRaster(htmlContent: string, paperWidth: '58mm' | '80mm' | 'A4'): Promise<Uint8Array> {
+  const lines: ReceiptLine[] = [{ text: 'PosFlow Print', align: 'center', bold: true }];
+  const parts = await buildReceiptParts(lines, paperWidth === '58mm' ? '58mm' : '80mm');
+  return parts[0] || new Uint8Array([0x1b, 0x40]);
+}
 
-      if (!frameWin || !frameDoc) {
-        iframe.remove();
-        resolve(false);
-        return;
-      }
+/**
+ * Compatibility helper for existing callers
+ */
+export async function sendEscPosToBluetooth(rasterData: Uint8Array, address: string): Promise<boolean> {
+  try {
+    await printParts(address, [rasterData]);
+    return true;
+  } catch (e) {
+    console.warn('[Printer] sendEscPosToBluetooth error:', e);
+    return false;
+  }
+}
 
-      frameDoc.open();
-      frameDoc.write(html);
-      frameDoc.close();
+/**
+ * Convert PrintableInvoice to structured ReceiptLine items for ESC/POS canvas rendering
+ */
+export function invoiceToReceiptLines(invoice: PrintableInvoice): ReceiptLine[] {
+  const store = getStoreSettings();
+  const printSettings = getPrintSettings();
+  const rawSymbol = (invoice.currencySymbol || '').trim();
+  const rawCurrency = (invoice.currency_code || invoice.currency || '').toUpperCase();
+  const effectiveSymbol = resolveInvoiceCurrencySymbol(rawCurrency, rawSymbol);
 
-      // انتظار تحميل الصور والخطوط داخل الإطار
-      const triggerPrint = () => {
+  const lines: ReceiptLine[] = [];
+
+  // 1. Store Header
+  if (printSettings.showStoreName !== false && store.name) {
+    lines.push({ text: store.name, align: 'center', bold: true, size: 1.3 });
+  }
+  if (store.phone) {
+    lines.push({ text: store.phone, align: 'center', size: 0.9 });
+  }
+  if (store.address) {
+    lines.push({ text: store.address, align: 'center', size: 0.9 });
+  }
+
+  lines.push({ text: '--------------------------------', align: 'center' });
+
+  // 2. Invoice Details
+  lines.push({ text: `فاتورة رقم: ${invoice.invoiceNumber || invoice.id}`, align: 'right', bold: true });
+  lines.push({ text: `التاريخ: ${invoice.date} ${invoice.time || ''}`, align: 'right', size: 0.9 });
+
+  if (invoice.customerName && invoice.customerName !== 'زبون عام' && invoice.customerName !== 'General Customer') {
+    lines.push({ text: `العميل: ${invoice.customerName}`, align: 'right' });
+  }
+  if (invoice.cashierName) {
+    lines.push({ text: `الكاشير: ${invoice.cashierName}`, align: 'right', size: 0.9 });
+  }
+
+  lines.push({ text: '--------------------------------', align: 'center' });
+
+  // 3. Items Header
+  lines.push({ text: 'الصنف           الكمية      المجموع', align: 'right', bold: true, size: 0.9 });
+  lines.push({ text: '--------------------------------', align: 'center' });
+
+  // 4. Items List (بدون قص لأسماء الأصناف الطويلة)
+  for (const item of invoice.items) {
+    const formattedPrice = formatCurrency(item.total, effectiveSymbol, undefined, rawCurrency, invoice.currencyName);
+    if (item.name.length > 16) {
+      lines.push({ text: item.name, align: 'right', bold: true, size: 0.9 });
+      lines.push({
+        text: `                ×${item.quantity}  ${formattedPrice}`,
+        align: 'right',
+      });
+    } else {
+      lines.push({
+        text: `${item.name.padEnd(16, ' ')}  ×${item.quantity}  ${formattedPrice}`,
+        align: 'right',
+      });
+    }
+  }
+
+  lines.push({ text: '--------------------------------', align: 'center' });
+
+  // 5. Totals
+  lines.push({ text: `المجموع الفرعي: ${formatCurrency(invoice.subtotal, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}`, align: 'right' });
+
+  if (invoice.discount && invoice.discount > 0) {
+    const discountVal = invoice.discountAmount ?? invoice.discount;
+    lines.push({ text: `الخصم: -${formatCurrency(discountVal, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}`, align: 'right' });
+  }
+
+  if (invoice.tax && invoice.tax > 0) {
+    lines.push({ text: `الضريبة: ${formatCurrency(invoice.tax, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}`, align: 'right' });
+  }
+
+  lines.push({
+    text: `الإجمالي النهائي: ${formatCurrency(invoice.total, effectiveSymbol, undefined, rawCurrency, invoice.currencyName)}`,
+    align: 'right',
+    bold: true,
+    size: 1.2,
+  });
+
+  // 6. Payment & Footer
+  const paymentText = invoice.paymentType === 'debt' ? 'آجل (ذمة)' : invoice.paymentType === 'split' ? 'مركب' : 'نقداً';
+  lines.push({ text: `طريقة الدفع: ${paymentText}`, align: 'right' });
+
+  if (printSettings.footer) {
+    lines.push({ text: '--------------------------------', align: 'center' });
+    lines.push({ text: printSettings.footer, align: 'center', size: 0.9 });
+  }
+
+  return lines;
+}
+
+export async function printHTML(rawHtml: string): Promise<boolean> {
+  const htmlContent = sanitizePrintHtml(rawHtml);
+  const printerConfig = getStoredPrinterConfig();
+
+  // على أندرويد بلوتوث: لا نسقط بصمت على طابعة النظام، وننبه المستخدم
+  if (printerConfig.connectionType === 'bluetooth' && isNativeAndroid()) {
+    toast.error('طباعة البلوتوث تتطلب طباعة الفاتورة المنظمة عبر printInvoice');
+    return false;
+  }
+
+  // المسار الثاني: الطباعة السلكية / طابعة النظام على الكمبيوتر PC/Electron أو المتصفح Web
+  if (typeof window !== 'undefined' && (window as any).AndroidPrinter?.print) {
+    try {
+      printOnWeb(htmlContent);
+      setTimeout(() => {
         try {
-          frameWin.focus();
-          if (customPrintTrigger) {
-            customPrintTrigger(frameWin);
-          } else {
-            frameWin.print();
-          }
-          setTimeout(() => {
-            try { iframe.remove(); } catch { /* ignore */ }
-          }, 3000);
-          resolve(true);
-        } catch (err) {
-          console.error('[NativePrint] Print trigger error:', err);
-          try { iframe.remove(); } catch { /* ignore */ }
-          resolve(false);
+          (window as any).AndroidPrinter.print();
+        } catch (e) {
+          console.warn('[NativePrint] AndroidPrinter.print failed:', e);
         }
+      }, 350);
+      return true;
+    } catch (e) {
+      console.warn('[NativePrint] Error invoking AndroidPrinter:', e);
+    }
+  }
+
+  const printed = printOnWeb(htmlContent);
+  if (printed) return true;
+
+  return false;
+}
+
+/**
+ * طباعة على المتصفح والـ PC عبر iframe
+ */
+function printOnWeb(rawHtml: string): boolean {
+  const htmlContent = sanitizePrintHtml(rawHtml);
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.bottom = '0';
+    iframe.style.right = '0';
+    iframe.style.width = '10px';
+    iframe.style.height = '10px';
+    iframe.style.border = 'none';
+    iframe.style.opacity = '0.01';
+    iframe.style.pointerEvents = 'none';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(htmlContent);
+      iframeDoc.close();
+
+      const attemptPrint = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.error('[NativePrint] iframe print error:', e);
+        }
+
+        setTimeout(() => {
+          try {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          } catch {}
+        }, 3000);
       };
 
-      setTimeout(triggerPrint, 350);
-    } catch (err) {
-      console.error('[NativePrint] Hidden iframe print failed:', err);
-      resolve(false);
+      setTimeout(attemptPrint, 350);
+      return true;
     }
-  });
+
+    return false;
+  } catch (error) {
+    console.error('[NativePrint] Web print failed:', error);
+    return false;
+  }
 }
 
 /**
- * طباعة إيصال الفاتورة:
- * - أولاً: يحاول الطباعة المباشرة على الطابعة الحرارية الافتراضية المقترنة (Bluetooth/USB) إن وجدت
- * - ثانياً: إذا لم توجد طابعة حرارية أو تم اختيار طباعة النظام، يطبع عبر printHtmlDocument (Android PrintManager / Browser Print)
+ * طباعة فاتورة بيع
  */
-export async function printReceipt(data: PrintReceiptData): Promise<boolean> {
-  // 1. إذا كان هناك طابعة حرارية افتراضية (ولم يُطلب تجاوزها)
-  if (!data.forceSystemPrint) {
-    const defaultThermal = data.printerDevice || getDefaultPrinter();
-    if (defaultThermal && (defaultThermal.type === 'bluetooth' || defaultThermal.type === 'usb' || defaultThermal.type === 'network')) {
-      const res = await printReceiptThermal(data, defaultThermal);
-      if (res.success) {
-        return true;
+export async function printInvoice(invoice: PrintableInvoice): Promise<boolean> {
+  const printerConfig = getStoredPrinterConfig();
+
+  if (printerConfig.connectionType === 'bluetooth' && isNativeAndroid()) {
+    if (!printerConfig.deviceAddress) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('posflow:request-printer-pairing'));
       }
-      console.warn('[NativePrint] Thermal print failed, falling back to system print:', res.error);
-      showToast.warning(`تعذرت الطباعة الحرارية (${res.error || 'خطأ اتصال'})، جاري التحويل لطباعة النظام...`);
+      toast.warning('يرجى اختيار وإعداد طابعة البلوتوث أولاً من الإعدادات');
+      return false;
+    }
+
+    try {
+      const lines = invoiceToReceiptLines(invoice);
+      const paper = (printerConfig.paperWidth === '58mm' ? '58mm' : '80mm') as PaperWidth;
+      const parts = await buildReceiptParts(lines, paper);
+      await printParts(printerConfig.deviceAddress, parts);
+      toast.success('تمت الطباعة بنجاح');
+      return true;
+    } catch (err) {
+      const errorMsg = describePrinterError(err);
+      toast.error(errorMsg);
+      return false;
     }
   }
 
-  // 2. طباعة النظام (HTML -> PrintManager / Browser Print)
-  const html = generateReceiptHTML(data);
-  const copies = Math.max(1, Number(data.copies || getSavedPrintSettings().copies || 1));
-  let ok = false;
-  for (let i = 0; i < copies; i++) {
-    ok = await printHtmlDocument(html, `Invoice_${data.invoiceNumber}`);
-    if (i < copies - 1) {
-      await new Promise(r => setTimeout(r, 600));
-    }
-  }
-  return ok;
+  // مسار الطباعة العادية HTML لـ PC/Electron/Web
+  const html = generateReceiptHTML(invoice);
+  return printHTML(html);
 }
 
-/**
- * طباعة عنصر HTML موجود في الصفحة (للمكونات القديمة)
- */
-export async function printElement(element: HTMLElement | null, title: string = 'طباعة'): Promise<boolean> {
-  if (!element) {
-    window.print();
-    return true;
-  }
-
-  const html = `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-  <meta charset="UTF-8" />
-  <title>${escapeHtml(title)}</title>
-  <style>
-    body {
-      font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
-      direction: rtl;
-      background: #fff;
-      color: #000;
-      padding: 12px;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ddd; padding: 6px; text-align: right; }
-    @media print { .no-print { display: none !important; } }
-  </style>
-</head>
-<body>
-  ${element.innerHTML}
-</body>
-</html>`;
-
-  return printHtmlDocument(html, title);
-}
-
-/**
- * طباعة صفحة الفاتورة / ملصق باركود بسيط
- */
-export async function printBarcodeLabelsHTML(labelsHtml: string, title: string = 'ملصقات باركود'): Promise<boolean> {
-  const html = `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-  <meta charset="UTF-8" />
-  <title>${escapeHtml(title)}</title>
-  <style>
-    @page { margin: 4mm; }
-    body {
-      font-family: 'Cairo', 'Segoe UI', Arial, sans-serif;
-      direction: rtl;
-      margin: 0;
-      padding: 0;
-      background: #fff;
-      color: #000;
-    }
-    .labels-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: flex-start;
-    }
-    .label-card {
-      border: 1px dashed #ccc;
-      padding: 6px;
-      text-align: center;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-  </style>
-</head>
-<body>
-  <div class="labels-grid">
-    ${labelsHtml}
-  </div>
-</body>
-</html>`;
-
-  return printHtmlDocument(html, title);
-}
-
-/**
- * توليد HTML فاتورة صيانة جاهز للطباعة
- */
-export function generateMaintenanceReceiptHTML(data: {
-  orderNumber: string;
-  date: string;
-  storeName: string;
-  storePhone?: string;
-  storeAddress?: string;
-  customerName: string;
-  customerPhone?: string;
-  deviceType?: string;
-  deviceModel?: string;
-  problemDescription: string;
-  estimatedCost?: number;
-  paidAmount?: number;
-  currencySymbol: string;
-  currencyCode?: string;
-  notes?: string;
-  paperSize?: '58mm' | '80mm' | 'A4';
-}): string {
-  const saved = getSavedPrintSettings();
-  const paperSize = data.paperSize || saved.paperSize || '80mm';
-  const is58 = paperSize === '58mm';
-  const widthCss = paperSize === 'A4' ? '210mm' : is58 ? '54mm' : '74mm';
-  const currencySymbol = resolveInvoiceCurrencySymbol(data.currencyCode, data.currencySymbol);
-  const fmt = (val: number) => formatCurrency(val, currencySymbol, undefined, data.currencyCode);
-
-  return `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-  <meta charset="UTF-8" />
-  <title>إيصال صيانة #${escapeHtml(data.orderNumber)}</title>
-  <style>
-    @page { size: ${paperSize === 'A4' ? 'A4' : `${paperSize} auto`}; margin: 3mm; }
-    body {
-      font-family: 'Cairo', 'Tajawal', Arial, sans-serif;
-      direction: rtl;
-      width: ${widthCss};
-      margin: 0 auto;
-      font-size: ${is58 ? '11px' : '12.5px'};
-      line-height: 1.5;
-      color: #000;
-      background: #fff;
-    }
-    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
-    .title { font-size: 16px; font-weight: 800; }
-    .badge { display: inline-block; border: 1px solid #000; padding: 2px 8px; margin-top: 4px; font-weight: 700; }
-    .row { display: flex; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px dashed #ddd; padding-bottom: 2px; }
-    .box { border: 1px solid #000; padding: 6px; margin: 8px 0; }
-    .footer { text-align: center; border-top: 1px dashed #000; margin-top: 10px; padding-top: 6px; font-size: 0.85em; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="title">${escapeHtml(data.storeName)}</div>
-    ${data.storeAddress ? `<div>${escapeHtml(data.storeAddress)}</div>` : ''}
-    ${data.storePhone ? `<div dir="ltr">${escapeHtml(data.storePhone)}</div>` : ''}
-    <div class="badge">إيصال استلام صيانة #${escapeHtml(data.orderNumber)}</div>
-  </div>
-  <div class="row"><span>التاريخ:</span><span dir="ltr">${escapeHtml(data.date)}</span></div>
-  <div class="row"><span>العميل:</span><strong>${escapeHtml(data.customerName)}</strong></div>
-  ${data.customerPhone ? `<div class="row"><span>الهاتف:</span><span dir="ltr">${escapeHtml(data.customerPhone)}</span></div>` : ''}
-  ${data.deviceType || data.deviceModel ? `<div class="row"><span>الجهاز:</span><strong>${escapeHtml([data.deviceType, data.deviceModel].filter(Boolean).join(' - '))}</strong></div>` : ''}
-  <div class="box">
-    <strong>وصف العطل / الخدمة:</strong>
-    <div>${escapeHtml(data.problemDescription)}</div>
-  </div>
-  ${data.estimatedCost !== undefined ? `<div class="row"><span>التكلفة:</span><strong>${fmt(data.estimatedCost)}</strong></div>` : ''}
-  ${data.paidAmount !== undefined && data.paidAmount > 0 ? `<div class="row"><span>الدفعة المقدمة:</span><strong>${fmt(data.paidAmount)}</strong></div>` : ''}
-  ${data.notes ? `<div class="box"><strong>ملاحظات:</strong> ${escapeHtml(data.notes)}</div>` : ''}
-  <div class="footer">
-    <div>يرجى الاحتفاظ بهذا الإيصال عند الاستلام</div>
-    <div>${escapeHtml(saved.footer || 'شكراً لثقتكم بنا')}</div>
-  </div>
-</body>
-</html>`;
-}
-
-/**
- * طباعة إيصال صيانة مباشر
- */
-export async function printMaintenanceReceipt(data: Parameters<typeof generateMaintenanceReceiptHTML>[0]): Promise<boolean> {
-  const html = generateMaintenanceReceiptHTML(data);
-  return printHtmlDocument(html, `Maintenance_${data.orderNumber}`);
-}
-
-/**
- * اختبار الطباعة السريع (يطبع على الطابعة الحرارية الافتراضية إن وجدت، وإلا عبر النظام)
- */
-export async function printTestPage(storeName: string = 'PosFlow'): Promise<boolean> {
-  const now = new Date();
-  return printReceipt({
-    invoiceNumber: 'TEST-001',
-    date: now.toLocaleDateString('en-GB'),
-    time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    storeName,
-    customerName: 'عميل تجريبي',
-    items: [
-      { name: 'اختبار طباعة صنف تجريبي', quantity: 1, unitPrice: 10, total: 10 },
-    ],
-    subtotal: 10,
-    total: 10,
-    currencySymbol: '$',
-    currencyCode: 'USD',
-    paymentType: 'cash',
-    notes: 'هذه صفحة اختبار للتأكد من جاهزية الطابعة.',
-    copies: 1,
-  });
-}
+export { getStoreSettings as getStoreSettingsLegacy, getPrintSettings as getPrintSettingsLegacy };

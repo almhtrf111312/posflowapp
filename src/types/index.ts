@@ -97,6 +97,7 @@ export interface Invoice {
   exchange_rate?: number;
   total_in_currency?: number;
   paymentType: PaymentType;
+  paymentMethod?: string;
   status: InvoiceStatus;
   notes?: string;
   createdAt: string;

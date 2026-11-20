@@ -3,6 +3,7 @@ import { isLocalOnlyMode } from '@/lib/subscription-lock';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { SerialPickerDialog, SerialPickItem } from '@/components/pos/SerialPickerDialog';
 import { loadTrackedProducts, getSelectedSerials, clearSelectedSerials, markSerialsSoldLocally, warmSerialCache } from '@/lib/serials-store';
+import { syncSurplusSetting } from '@/components/settings/SurplusProfitField';
 import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
 import {
   Wrench,
@@ -248,6 +249,7 @@ export function CartPanel({
   const [showCashDialog, setShowCashDialog] = useState(false);
   const [payMethod, setPayMethod] = useState<'cash' | 'digital'>('cash');
   const [serialPick, setSerialPick] = useState<{ items: SerialPickItem[]; resume: 'cash' | 'debt' } | null>(null);
+  useEffect(() => { syncSurplusSetting(); }, []);
   useEffect(() => { warmSerialCache(); const t = setInterval(() => warmSerialCache(), 10 * 60 * 1000); const on = () => warmSerialCache(true); window.addEventListener('online', on); return () => { clearInterval(t); window.removeEventListener('online', on); }; }, []);
   const [showDeficitDialog, setShowDeficitDialog] = useState(false);
   const [showDebtDialog, setShowDebtDialog] = useState(false);
@@ -567,6 +569,10 @@ export function CartPanel({
       quantity: c.unit === 'bulk' && c.conversionFactor ? c.quantity * c.conversionFactor : c.quantity,
     }));
     if (need.length === 0) return true;
+    if (cart.some(c => tracked[c.id] && c.unit === 'bulk')) {
+      showToast.error('المنتجات ذات الرقم التسلسلي (IMEI) تُباع بالقطعة فقط، غيّر الوحدة إلى قطعة');
+      return false;
+    }
     if (need.every(n => (getSelectedSerials(n.id) || []).length === n.quantity)) return true;
     setSerialPick({ items: need, resume });
     return false;

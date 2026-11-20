@@ -179,7 +179,11 @@ const LOCAL_CACHE_KEY = 'posflow_partners_cache';
 
 const savePartnersLocally = (partners: Partner[]) => {
   try {
-    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(partners));
+    // الكاش المحلي فقط يحتفظ بآخر 90 يوماً من السجلات (السجل الكامل في partner_ledger_entries)
+    const cutoff = Date.now() - 90 * 86400000;
+    const recent = (arr: unknown) => Array.isArray(arr) ? arr.filter((x) => { const t = Date.parse(String((x as { createdAt?: string; date?: string })?.createdAt ?? (x as { date?: string })?.date ?? '')); return Number.isNaN(t) || t >= cutoff; }) : arr;
+    const slim = partners.map((p) => { const q = { ...(p as unknown as Record<string, unknown>) }; for (const k of ['profitHistory', 'expenseHistory', 'withdrawalHistory']) if (k in q) q[k] = recent(q[k]); return q; });
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(slim));
   } catch { /* ignore */ }
 };
 

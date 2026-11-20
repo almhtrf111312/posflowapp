@@ -184,6 +184,7 @@ function toInvoice(cloud: CloudInvoice): Invoice {
     currencyCode: rawCurrency,
     currencySymbol,
     paymentType: (cloud.payment_type as PaymentType) || 'cash',
+    paymentMethod: ((cloud as unknown as { payment_method?: string }).payment_method) || undefined,
     status: (cloud.status as InvoiceStatus) || 'paid',
     profit: Number(cloud.profit) || 0,
     debtPaid: Number(cloud.debt_paid) || 0,
@@ -211,8 +212,10 @@ const LOCAL_INVOICES_CACHE_KEY = 'posflow_invoices_cache';
 // Save invoices to localStorage for offline access
 const saveInvoicesToLocalCache = (invoices: Invoice[]) => {
   try {
+    // حد 5MB في localStorage: نحتفظ بأحدث 3000 فاتورة فقط في الكاش المحلي
+    const capped = invoices.length > 3000 ? [...invoices].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).slice(0, 3000) : invoices;
     localStorage.setItem(LOCAL_INVOICES_CACHE_KEY, JSON.stringify({
-      invoices,
+      invoices: capped,
       timestamp: Date.now()
     }));
   } catch (e) {

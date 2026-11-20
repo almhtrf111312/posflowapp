@@ -53,15 +53,22 @@ export async function warmSerialCache(force = false): Promise<void> {
   if (!force && Date.now() - lastWarm < 10 * 60 * 1000) return;
   lastWarm = Date.now();
   try {
-    const { data: prods, error } = await db.from('products').select('id').eq('track_serials', true).limit(500);
+    const { data: prods, error } = await db.from('products').select('id').eq('track_serials', true).limit(1000);
     if (error) return;
     const c = readCache();
     const p = pendingSold();
-    for (const pr of prods || []) {
-      c.tracked[pr.id] = true;
-      const { data } = await db.from('product_serials').select('serial').eq('product_id', pr.id).eq('status', 'in_stock').order('serial').limit(500);
-      c.inStock[pr.id] = (data || []).map((r: { serial: string }) => r.serial).filter((x: string) => !p.has(x));
+    const grouped: Record<string, string[]> = {};
+    for (const pr of prods || []) { c.tracked[pr.id] = true; grouped[pr.id] = []; }
+    // استعلام مجمّع واحد (صفحات 1000) بدل استعلام لكل منتج
+    for (let from = 0; from < 20000; from += 1000) {
+      const { data, error: e2 } = await db.from('product_serials').select('product_id, serial').eq('status', 'in_stock').order('product_id').range(from, from + 999);
+      if (e2) return;
+      for (const r of (data || []) as { product_id: string; serial: string }[]) {
+        if (grouped[r.product_id] && !p.has(r.serial) && grouped[r.product_id].length < 500) grouped[r.product_id].push(r.serial);
+      }
+      if (!data || data.length < 1000) break;
     }
+    for (const pid of Object.keys(grouped)) c.inStock[pid] = grouped[pid].sort();
     c.at = Date.now();
     writeJson(CACHE_KEY, c);
   } catch { /* ignore */ }

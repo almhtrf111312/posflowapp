@@ -1,6 +1,6 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 /**
- * Flow POS Pro - Unified Store Settings & Cross-Device Sync Module
+ * POS Flow App - Unified Store Settings & Cross-Device Sync Module
  * ==============================================================
  * العقد الموحد لإعدادات المتجر والتزامن الشامل بين الويب والموبايل
  * - Offline-First: الحفظ المحلي فوري وغير قابل للحذف عند غياب بيانات السحابة

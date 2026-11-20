@@ -1270,6 +1270,7 @@ export function CartPanel({
         stockItems: stockItemsLocal,
         warehouseId: stockWarehouseId,
         downPayment: downPaymentSnapshot,
+        paymentMethod: payMethod,
         taxMode: (taxMode === 'gross' ? 'inclusive' : 'exclusive') as 'inclusive' | 'exclusive',
       };
 
@@ -1366,19 +1367,32 @@ export function CartPanel({
         });
       }
 
-      // ✅ تسجيل الدفعة النقدية المقبوضة في الصندوق والوردية النشطة فوراً
+      // ✅ تسجيل الدفعة الأولى المقبوضة في الوردية النشطة (نقدي في الدرج أو رقمي خارج الدرج)
       if (downPaymentSnapshot > 0) {
         const cashRatio = totalSnapshot > 0 ? downPaymentSnapshot / totalSnapshot : 1;
         const downPaymentProfit = round8(discountedProfit * cashRatio);
         const downPaymentCOGS = round8(totalCOGS * cashRatio);
-        addSalesToShift(
-          downPaymentSnapshot,
-          downPaymentProfit,
-          downPaymentCOGS,
-          (receivedCurrencyCode as any) || 'USD',
-          downPaymentSnapshot * (activeReceivedCurrency.rate || 1),
-          operationId
-        );
+        const downPaymentInCurr = downPaymentSnapshot * (activeReceivedCurrency.rate || 1);
+        if (payMethod === 'digital') {
+          addDigitalSaleToShift(
+            downPaymentSnapshot,
+            downPaymentProfit,
+            downPaymentCOGS,
+            (receivedCurrencyCode as any) || 'USD',
+            downPaymentInCurr,
+            operationId
+          );
+          setPayMethod('cash');
+        } else {
+          addSalesToShift(
+            downPaymentSnapshot,
+            downPaymentProfit,
+            downPaymentCOGS,
+            (receivedCurrencyCode as any) || 'USD',
+            downPaymentInCurr,
+            operationId
+          );
+        }
       }
 
       // ✅ تسجيل الربح محلياً فوراً برقم الفاتورة ومعرف العملية (يمنع المضاعفة عند المزامنة)

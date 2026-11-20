@@ -212,12 +212,22 @@ const LOCAL_INVOICES_CACHE_KEY = 'posflow_invoices_cache';
 // Save invoices to localStorage for offline access
 const saveInvoicesToLocalCache = (invoices: Invoice[]) => {
   try {
-    // حد 5MB في localStorage: نحتفظ بأحدث 3000 فاتورة فقط في الكاش المحلي
-    const capped = invoices.length > 3000 ? [...invoices].sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).slice(0, 3000) : invoices;
-    localStorage.setItem(LOCAL_INVOICES_CACHE_KEY, JSON.stringify({
-      invoices: capped,
-      timestamp: Date.now()
-    }));
+    // حماية حد 5MB في localStorage بتدرّج آمن يمنع فشل الحفظ الصامت مع الفواتير الضخمة
+    const sorted = invoices.length > 1000
+      ? [...invoices].sort((a, b) => String(b.createdAt ?? b.date ?? '').localeCompare(String(a.createdAt ?? a.date ?? '')))
+      : invoices;
+    for (const limit of [1500, 750, 300]) {
+      try {
+        const capped = sorted.length > limit ? sorted.slice(0, limit) : sorted;
+        localStorage.setItem(LOCAL_INVOICES_CACHE_KEY, JSON.stringify({
+          invoices: capped,
+          timestamp: Date.now()
+        }));
+        break;
+      } catch (quotaErr) {
+        if (limit === 300) throw quotaErr;
+      }
+    }
   } catch (e) {
     console.warn('[InvoicesCloud] localStorage save failed:', e);
   }
@@ -468,14 +478,21 @@ const invoiceWindowStart = (): string => {
   return days > 0 ? new Date(Date.now() - days * 86400000).toISOString() : '1970-01-01T00:00:00Z';
 };
 
-// مخزن الجلسة للمزامنة التزايدية: بعد أول جلب كامل نجلب فقط الفواتير المعدّلة منذ آخر مزامنة (updated_at)
+// مخزن الجلسة للمزامنة التزايدية مع عزل صارم لكل مستخدم/متجر لمنع تسرب الفواتير عند تبديل الحساب
 const invoiceStore = new Map<string, Invoice>();
+let invoiceStoreUserId: string | null = null;
 let lastFullSyncAt = 0;
 let lastDeltaSyncAt = 0;
 const FULL_RESYNC_MS = 6 * 3600 * 1000;
 
 const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
   try {
+    if (invoiceStoreUserId !== userId) {
+      invoiceStore.clear();
+      lastFullSyncAt = 0;
+      lastDeltaSyncAt = 0;
+      invoiceStoreUserId = userId;
+    }
     const delta = invoiceStore.size > 0 && Date.now() - lastFullSyncAt < FULL_RESYNC_MS;
     const syncStartedAt = Date.now();
     // Check if user is cashier
@@ -593,6 +610,10 @@ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
 export const invalidateInvoicesCache = () => {
   invoicesCache = null;
   cacheTimestamp = 0;
+  invoiceStore.clear();
+  invoiceStoreUserId = null;
+  lastFullSyncAt = 0;
+  lastDeltaSyncAt = 0;
 };
 
 // Add invoice

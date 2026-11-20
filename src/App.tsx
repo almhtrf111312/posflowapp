@@ -11,7 +11,6 @@ import { AuthProvider } from "./hooks/use-auth";
 import { AppLockProvider, useAppLock } from "./hooks/use-app-lock";
 import { AppLockOverlay } from "./components/auth/AppLockOverlay";
 import { MandatoryPinSetupModal } from "./components/auth/MandatoryPinSetupModal";
-import { GooglePhoneGate } from "./components/auth/GooglePhoneGate"; // Google sign-in (removable)
 import { TelegramLinkPrompt } from "./components/auth/TelegramLinkPrompt";
 import { DeviceBanGate } from "./components/auth/DeviceBanGate";
 import { LanguageProvider, useLanguage } from "./hooks/use-language";
@@ -538,7 +537,6 @@ const App = () => (
                         <LicenseWarningBadge />
                         <OfflineProtectionBanner />
                         {/* خارج LicenseGuard عمداً: شاشة الترخيص/التحميل كانت تُلغي تركيب النافذة فتختفي وتظهر عشوائياً */}
-                        <GooglePhoneGate />
                         <TelegramLinkPrompt />
                         <DemoModeBanner />
                         <RemoteUpdatesGate />

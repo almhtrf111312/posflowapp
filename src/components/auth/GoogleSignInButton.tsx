@@ -57,7 +57,7 @@ export function GoogleSignInButton({ disabled, stayLoggedIn = true, onSignedIn, 
     }
     const check = await checkGoogleAccountAllowed(result.data.user.id, result.data.user.identities ?? []);
     if (check.reason === 'new_account') {
-      // الاسم والهاتف تطلبهما GooglePhoneGate على مستوى التطبيق (لا تختفي مع شاشة الدخول)
+      // الهاتف يُطلب مرة واحدة في الخطوة الأولى من معالج الإعداد
       await onNewAccount();
       return;
     }

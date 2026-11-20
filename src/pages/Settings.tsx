@@ -11,7 +11,6 @@ const LocalBackupSection = lazy(() => import('@/components/settings/LocalBackupS
 
 const Partners = lazy(() => import('@/pages/Partners'));
 
-const LicenseManagement = lazy(() => import('@/components/settings/LicenseManagement').then(m => ({ default: m.LicenseManagement })));
 
 const DataResetSection = lazy(() => import('@/components/settings/DataResetSection'));
 

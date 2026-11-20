@@ -195,7 +195,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const uuidOrNew = (v: unknown): string => (typeof v === 'string' && UUID_RE.test(v) ? v : crypto.randomUUID());
 
 /**
- * تحويل ملف النظام القديم (HyperPOS / POS Flow App) إلى صفوف قاعدة بيانات PosFlow.
+ * تحويل ملف النظام القديم (HyperPOS / FlowPOS Pro) إلى صفوف قاعدة بيانات PosFlow.
  * يُستخدم مرة لنقل البيانات القديمة؛ لا يمس أرصدة المخزون ولا يعيد توزيع الأرباح.
  */
 export function convertLegacyExport(src: { data?: Record<string, unknown> }, uid: string): FullBackup {

@@ -24,7 +24,7 @@ export default function ContactDeveloper() {
   const licenseState = (license as any)?.licenseState || license;
   const [info, setInfo] = useState<DevInfo>({});
   const isDirectChatOpen = Boolean((location.state as any)?.openChat);
-  const [chatOpen, setChatOpen] = useState(isDirectChatOpen || ['revoked','inactive','owner_inactive'].includes(supportReason || ''));
+  const [chatOpen, setChatOpen] = useState(true);
   const [rel, setRel] = useState<ReleaseConfig>(getCachedReleaseConfig());
   useEffect(() => { fetchReleaseConfig().then(setRel).catch(() => {}); }, []);
 
@@ -198,9 +198,6 @@ export default function ContactDeveloper() {
               </a>
             ) : null
           )}
-          <button type="button" onClick={() => setChatOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary hover:bg-primary/20">
-            <MessageCircle className="w-4 h-4" /> محادثة المطور داخل التطبيق
-          </button>
           {siteUrl && (
             <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm hover:bg-muted" dir="ltr">
               <Globe className="w-4 h-4 text-primary" /> {site}
@@ -237,7 +234,7 @@ export default function ContactDeveloper() {
       </div>
 
       {/* Live Support Chat CTA */}
-      <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 flex items-center gap-4">
+      {!chatOpen && <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
           <Headphones className="w-6 h-6 text-primary" />
         </div>
@@ -263,7 +260,7 @@ export default function ContactDeveloper() {
           <MessageCircle className="w-3.5 h-3.5" />
           ابدأ المحادثة
         </Button>
-      </div>
+      </div>}
 
       {/* Embedded Inline Chat (opens when button is clicked) */}
       {chatOpen && (

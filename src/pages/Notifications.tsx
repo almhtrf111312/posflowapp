@@ -51,6 +51,9 @@ export interface UnifiedItem {
   rawNotification?: Notification;
 }
 
+const stripImageTags = (t: string) =>
+  t.replace(/\[IMAGE\][\s\S]*?\[\/IMAGE\]/g, '📷 صورة').replace(/\[IMAGE\][A-Za-z0-9+/=:;,._-]{40,}/g, '📷 صورة').trim();
+
 export default function Notifications() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -212,7 +215,7 @@ export default function Notifications() {
   };
 
   // تحديد الكل كمقروء
-  const markAllRead = () => {
+  const markAllRead = (silent?: boolean | unknown) => {
     const allIds = filteredBroadcasts.map((b) => b.id);
     const set = new Set([...seenIds, ...allIds]);
     const next = Array.from(set).slice(-200);
@@ -222,8 +225,15 @@ export default function Notifications() {
     window.dispatchEvent(new Event('hp-broadcasts-updated'));
 
     markAllUserNotificationsAsRead();
-    toast.success('تم تحديد جميع الإشعارات كمقروءة');
+    if (silent !== true) toast.success('تم تحديد جميع الإشعارات كمقروءة');
   };
+
+  // فتح الصفحة = اعتبار الإشعارات مقروءة (يختفي الرقم من القائمة الجانبية)
+  useEffect(() => {
+    const t = setTimeout(() => markAllRead(true), 1500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // أرشفة أو حذف الإشعار
   const handleDeleteOrArchive = (item: UnifiedItem) => {
@@ -280,7 +290,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-4" dir="rtl">
+    <div className="p-4 w-full max-w-2xl mx-auto space-y-4 min-h-[70vh]" dir="rtl">
       {/* الشريط العلوي */}
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -306,11 +316,11 @@ export default function Notifications() {
       </div>
 
       {/* كبسولات التصفية (الكل / غير المقروءة / المقروءة) */}
-      <div className="flex gap-2 border-b border-border/60 pb-2">
+      <div className="grid grid-cols-3 gap-2 border-b border-border/60 pb-2 w-full">
         <Button
           variant={tab === 'all' ? 'default' : 'outline'}
           size="sm"
-          className="rounded-full text-xs h-7"
+          className="rounded-full text-xs h-7 w-full px-1"
           onClick={() => setTab('all')}
         >
           الكل ({allItems.length})
@@ -318,7 +328,7 @@ export default function Notifications() {
         <Button
           variant={tab === 'unread' ? 'default' : 'outline'}
           size="sm"
-          className="rounded-full text-xs h-7"
+          className="rounded-full text-xs h-7 w-full px-1"
           onClick={() => setTab('unread')}
         >
           غير مقروءة ({unreadCount})
@@ -326,7 +336,7 @@ export default function Notifications() {
         <Button
           variant={tab === 'read' ? 'default' : 'outline'}
           size="sm"
-          className="rounded-full text-xs h-7"
+          className="rounded-full text-xs h-7 w-full px-1"
           onClick={() => setTab('read')}
         >
           مقروءة ({readCount})
@@ -348,7 +358,7 @@ export default function Notifications() {
       )}
 
       {/* قائمة الإشعارات الموحدة */}
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 w-full">
         {displayedItems.map((item) => {
           const Icon = getItemIcon(item);
           const isUpdate = item.kind === 'update';
@@ -394,7 +404,7 @@ export default function Notifications() {
 
                 {item.body && (
                   <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap leading-relaxed select-text">
-                    {item.body}
+                    {stripImageTags(item.body)}
                   </p>
                 )}
 

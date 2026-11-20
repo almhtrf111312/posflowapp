@@ -25,6 +25,7 @@ import {
   Download,
 } from 'lucide-react';
 import { showToast } from '@/lib/toast';
+import { compressImage } from '@/lib/image-upload';
 import { sendBossTelegramChatAlert } from '@/lib/telegram-alerts';
 
 const DEFAULT_PLANS = [
@@ -63,38 +64,6 @@ const DEFAULT_PLANS = [
   },
 ];
 
-const DEFAULT_METHODS = [
-  {
-    id: 'method_sham',
-    name: 'شام كاش / محفظة إلكترونية',
-    account_number: 'SHAM-7729104',
-    button_label: 'فتح محفظة شام كاش',
-    link_url: '',
-    qr_image_url: '',
-    badge: 'فوري ⚡',
-    instructions: 'قم بالتحويل إلى رقم المحفظة أو امسح الباركود، ثم اضغط زر إرسال الإشعار للدعم الفني.',
-  },
-  {
-    id: 'method_usdt',
-    name: 'USDT (TRC20)',
-    account_number: 'TXyZ8829KmnPQ11234flowposproTRC20',
-    button_label: 'نسخ عنوان المحفظة',
-    link_url: '',
-    qr_image_url: '',
-    badge: 'دولي 🌐',
-    instructions: 'حول المبلغ بالدولار الرقمي عبر شبكة Tron (TRC20)، ثم اضغط زر إرسال الإشعار للدعم الفني.',
-  },
-  {
-    id: 'method_direct',
-    name: 'حوالة هرم / فؤاد / كاش',
-    account_number: 'اسم المستلم معتمد لدى الإدارة',
-    button_label: 'طلب بيانات الحوالة المباشرة',
-    link_url: '',
-    qr_image_url: '',
-    badge: 'وكيل معتمد',
-    instructions: 'أرسل الحوالة باسم المستلم المعتمد ثم أرسل إشعار التحويل للدعم الفني لتفعيل الترخيص فورياً.',
-  },
-];
 
 interface ContactLinks {
   phone?: string;
@@ -107,12 +76,34 @@ export default function RenewPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>(DEFAULT_PLANS);
-  const [methods, setMethods] = useState<any[]>(DEFAULT_METHODS);
+  const [methods, setMethods] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<any>(DEFAULT_PLANS[1]);
-  const [selectedMethod, setSelectedMethod] = useState<any>(DEFAULT_METHODS[0]);
+  const [selectedMethod, setSelectedMethod] = useState<any>(null);
   const [contactLinks, setContactLinks] = useState<ContactLinks>({});
   const [payerName, setPayerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [proofImage, setProofImage] = useState<string | null>(null);
+  const [proofLoading, setProofLoading] = useState(false);
+
+  const handleProofPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setProofLoading(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const raw = ev.target?.result as string;
+        setProofImage(await compressImage(raw, 120, 1200, 1200));
+      } catch {
+        showToast.error('تعذر قراءة الصورة، اختر صورة أخرى');
+      } finally {
+        setProofLoading(false);
+      }
+    };
+    reader.onerror = () => setProofLoading(false);
+    reader.readAsDataURL(file);
+  };
   const [activeRequest, setActiveRequest] = useState<any>(null);
 
   // حوار تأكيد الإرسال للعميل
@@ -153,9 +144,9 @@ export default function RenewPage() {
         .eq('enabled', true)
         .order('sort_order', { ascending: true });
 
-      if (!methodsErr && methodsData && methodsData.length > 0) {
+      if (!methodsErr && methodsData) {
         setMethods(methodsData);
-        setSelectedMethod(methodsData[0]);
+        setSelectedMethod((prev: any) => methodsData.find((m: any) => m.id === prev?.id) || methodsData[0] || null);
       }
 
       // 3. جلب قنوات التواصل من إعدادات النظام
@@ -254,6 +245,10 @@ export default function RenewPage() {
 
   const handleClaimPayment = async () => {
     if (!selectedPlan || !selectedMethod) return;
+    if (!proofImage) {
+      showToast.error('يرجى إرفاق صورة إشعار التحويل أولاً');
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -284,6 +279,17 @@ export default function RenewPage() {
         .single();
 
       if (insertError) throw insertError;
+
+      // إرسال صورة إثبات التحويل إلى محادثة الدعم
+      try {
+        await supabase.rpc('send_support_message', {
+          _message: `[IMAGE]${proofImage}[/IMAGE]\nإشعار تحويل - مرجع ${refCode} - ${selectedPlan.name} - ${selectedMethod.name}`,
+          _conversation_id: null,
+        } as any);
+      } catch (e) {
+        console.warn('proof send failed', e);
+      }
+      setProofImage(null);
 
       // إرسال إشعار تليجرام فوري للمدير العام كإشعار احتياطي
       sendBossTelegramChatAlert(
@@ -437,6 +443,11 @@ export default function RenewPage() {
         <div className="space-y-6">
           <h2 className="text-lg font-semibold">2. اختر طريقة التحويل</h2>
 
+          {methods.length === 0 && (
+            <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+              لا توجد طرق دفع متاحة حالياً، يرجى التواصل مع الدعم الفني.
+            </div>
+          )}
           {/* أزرار طرق الدفع */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {methods.map((m) => {
@@ -592,9 +603,16 @@ export default function RenewPage() {
                         </p>
                       </div>
 
+                      <div className="sm:col-span-3 space-y-2">
+                        <Label className="text-xs font-bold">صورة إشعار التحويل (إلزامي)</Label>
+                        <Input type="file" accept="image/*" onChange={handleProofPick} className="h-11 pt-2" />
+                        {proofLoading && <p className="text-[11px] text-muted-foreground">جاري تجهيز الصورة...</p>}
+                        {proofImage && <img src={proofImage} alt="إشعار التحويل" className="max-h-40 rounded-lg border" />}
+                      </div>
+
                       <Button
                         onClick={handleClaimPayment}
-                        disabled={submitting}
+                        disabled={submitting || proofLoading || !proofImage}
                         className="gap-2 h-11 w-full bg-primary font-bold text-sm shadow-md"
                       >
                         <Send className="w-4 h-4" />

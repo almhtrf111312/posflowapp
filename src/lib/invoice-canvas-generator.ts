@@ -742,7 +742,7 @@ export async function generateInvoiceCanvas(data: InvoiceCanvasData): Promise<HT
     ctx.fillStyle = 'rgba(225, 29, 72, 0.12)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('نسخة تجريبية - Flow POS Pro', 0, 0);
+    ctx.fillText('نسخة تجريبية - POS Flow App', 0, 0);
     ctx.restore();
 
     drawRoundedRect(ctx, 30, bottomBarY + 30, LOGICAL_WIDTH - 60, 26, 6, '#fff1f2', '#e11d48', 1.5);

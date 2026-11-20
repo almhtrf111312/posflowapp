@@ -54,10 +54,10 @@ function ArabicTerms() {
   return (
     <>
       <p className="text-muted-foreground">تاريخ آخر تحديث: 15 فبراير 2026</p>
-      <p>يرجى قراءة شروط الاستخدام وإخلاء المسؤولية هذه بعناية قبل استخدام برنامج Flow POS Pro (المشار إليه فيما بعد بـ "البرنامج"). يشكل استخدامك للبرنامج موافقة منك على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على هذه الشروط، فلا يحق لك استخدام البرنامج.</p>
+      <p>يرجى قراءة شروط الاستخدام وإخلاء المسؤولية هذه بعناية قبل استخدام برنامج POS Flow App (المشار إليه فيما بعد بـ "البرنامج"). يشكل استخدامك للبرنامج موافقة منك على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على هذه الشروط، فلا يحق لك استخدام البرنامج.</p>
 
       <h3>1. قبول الشروط</h3>
-      <p>باستخدامك لبرنامج Flow POS Pro، فإنك تقر وتوافق على أنك قد قرأت وفهمت ووافقت على الالتزام بجميع الشروط والأحكام الواردة في هذه الاتفاقية. إذا كنت تستخدم البرنامج نيابةً عن كيان أو شركة، فإنك تقر وتضمن أنك ممثل مفوض لذلك الكيان وتمتلك السلطة لإلزام الكيان بهذه الاتفاقية.</p>
+      <p>باستخدامك لبرنامج POS Flow App، فإنك تقر وتوافق على أنك قد قرأت وفهمت ووافقت على الالتزام بجميع الشروط والأحكام الواردة في هذه الاتفاقية. إذا كنت تستخدم البرنامج نيابةً عن كيان أو شركة، فإنك تقر وتضمن أنك ممثل مفوض لذلك الكيان وتمتلك السلطة لإلزام الكيان بهذه الاتفاقية.</p>
 
       <h3>2. ترخيص الاستخدام</h3>
       <p>يمنحك المطور ترخيصًا شخصيًا، محدودًا، غير حصري، وغير قابل للتحويل لاستخدام البرنامج لأغراضك المحاسبية والبيعية الداخلية فقط. لا يجوز لك إعادة ترخيص، بيع، تأجير، تعديل، توزيع، أو إنشاء أعمال مشتقة من البرنامج.</p>
@@ -100,10 +100,10 @@ function EnglishTerms() {
   return (
     <>
       <p className="text-muted-foreground">Last updated: February 15, 2026</p>
-      <p>Please read these Terms of Use and Disclaimer carefully before using Flow POS Pro (hereinafter referred to as "the Software"). Your use of the Software constitutes your agreement to be bound by these terms and conditions. If you do not agree to these terms, you are not authorized to use the Software.</p>
+      <p>Please read these Terms of Use and Disclaimer carefully before using POS Flow App (hereinafter referred to as "the Software"). Your use of the Software constitutes your agreement to be bound by these terms and conditions. If you do not agree to these terms, you are not authorized to use the Software.</p>
 
       <h3>1. Acceptance of Terms</h3>
-      <p>By using Flow POS Pro, you acknowledge and agree that you have read, understood, and agreed to be bound by all terms and conditions set forth in this agreement. If you are using the Software on behalf of an entity or company, you represent and warrant that you are an authorized representative of that entity and have the authority to bind the entity to this agreement.</p>
+      <p>By using POS Flow App, you acknowledge and agree that you have read, understood, and agreed to be bound by all terms and conditions set forth in this agreement. If you are using the Software on behalf of an entity or company, you represent and warrant that you are an authorized representative of that entity and have the authority to bind the entity to this agreement.</p>
 
       <h3>2. License of Use</h3>
       <p>The developer grants you a personal, limited, non-exclusive, and non-transferable license to use the Software for your internal accounting and retail sales operations only. You may not sublicense, sell, lease, modify, distribute, or create derivative works from the Software.</p>
@@ -146,10 +146,10 @@ function TurkishTerms() {
   return (
     <>
       <p className="text-muted-foreground">Son güncelleme tarihi: 15 Şubat 2026</p>
-      <p>Flow POS Pro (bundan böyle "Yazılım" olarak anılacaktır) uygulamasını kullanmadan önce lütfen bu Kullanım Şartları ve Sorumluluk Reddini dikkatlice okuyunuz. Yazılımı kullanmanız, bu şart ve koşullarla bağlı olmayı kabul ettiğiniz anlamına gelir. Bu şartları kabul etmiyorsanız, Yazılımı kullanma yetkiniz yoktur.</p>
+      <p>POS Flow App (bundan böyle "Yazılım" olarak anılacaktır) uygulamasını kullanmadan önce lütfen bu Kullanım Şartları ve Sorumluluk Reddini dikkatlice okuyunuz. Yazılımı kullanmanız, bu şart ve koşullarla bağlı olmayı kabul ettiğiniz anlamına gelir. Bu şartları kabul etmiyorsanız, Yazılımı kullanma yetkiniz yoktur.</p>
 
       <h3>1. Şartların Kabulü</h3>
-      <p>Flow POS Pro uygulamasını kullanarak, bu sözleşmede belirtilen tüm şart ve koşulları okuduğunuzu, anladığınızı ve bunlara uymayı kabul ettiğinizi beyan edersiniz. Yazılımı bir tüzel kişilik veya şirket adına kullanıyorsanız, o tüzel kişiliği bu sözleşmeyle bağlama yetkisine sahip yetkili bir temsilci olduğunuzu beyan ve taahhüt edersiniz.</p>
+      <p>POS Flow App uygulamasını kullanarak, bu sözleşmede belirtilen tüm şart ve koşulları okuduğunuzu, anladığınızı ve bunlara uymayı kabul ettiğinizi beyan edersiniz. Yazılımı bir tüzel kişilik veya şirket adına kullanıyorsanız, o tüzel kişiliği bu sözleşmeyle bağlama yetkisine sahip yetkili bir temsilci olduğunuzu beyan ve taahhüt edersiniz.</p>
 
       <h3>2. Kullanım Lisansı</h3>
       <p>Geliştirici, Yazılımı yalnızca dahili muhasebe ve satış işlemleriniz için kullanmanız üzere size kişisel, sınırlı, münhasır olmayan ve devredilemez bir lisans vermektedir. Yazılımı alt lisanslayamaz, satamaz, kiralayamaz, değiştiremez, dağıtamaz veya türev çalışmalarını oluşturamazsınız.</p>
@@ -192,10 +192,10 @@ function PersianTerms() {
   return (
     <>
       <p className="text-muted-foreground">تاریخ آخرین به‌روزرسانی: ۱۵ فوریه ۲۰۲۶</p>
-      <p>لطفاً پیش از استفاده از نرم‌افزار Flow POS Pro (که از این پس «نرم‌افزار» نامیده می‌شود)، این شرایط استفاده و سلب مسئولیت را با دقت مطالعه فرمایید. استفاده شما از نرم‌افزار به منزله پذیرش و تعهد کامل به رعایت کلیه مفاد و قوانین مندرج در این موافقت‌نامه است. در صورت عدم موافقت با این شرایط، مجاز به استفاده از نرم‌افزار نمی‌باشید.</p>
+      <p>لطفاً پیش از استفاده از نرم‌افزار POS Flow App (که از این پس «نرم‌افزار» نامیده می‌شود)، این شرایط استفاده و سلب مسئولیت را با دقت مطالعه فرمایید. استفاده شما از نرم‌افزار به منزله پذیرش و تعهد کامل به رعایت کلیه مفاد و قوانین مندرج در این موافقت‌نامه است. در صورت عدم موافقت با این شرایط، مجاز به استفاده از نرم‌افزار نمی‌باشید.</p>
 
       <h3>۱. پذیرش شرایط</h3>
-      <p>با استفاده از نرم‌افزار Flow POS Pro، شما تأیید و اقرار می‌نمایید که کلیه شرایط و ضوابط این موافقت‌نامه را مطالعه کرده، فهمیده و با آن موافقت نموده‌اید. چنانچه به نمایندگی از یک شرکت، فروشگاه یا شخصیت حقوقی از نرم‌افزار استفاده می‌کنید، تضمین می‌نمایید که نماینده قانونی دارای اختیار لازم جهت متعهد ساختن آن مجموعه به این شروط هستید.</p>
+      <p>با استفاده از نرم‌افزار POS Flow App، شما تأیید و اقرار می‌نمایید که کلیه شرایط و ضوابط این موافقت‌نامه را مطالعه کرده، فهمیده و با آن موافقت نموده‌اید. چنانچه به نمایندگی از یک شرکت، فروشگاه یا شخصیت حقوقی از نرم‌افزار استفاده می‌کنید، تضمین می‌نمایید که نماینده قانونی دارای اختیار لازم جهت متعهد ساختن آن مجموعه به این شروط هستید.</p>
 
       <h3>۲. مجوز استفاده</h3>
       <p>توسعه‌دهنده به شما مجوزی شخصی، محدود، غیرانحصاری و غیرقابل انتقال جهت استفاده از نرم‌افزار صرفاً برای مقاصد حسابداری و مدیریت فروش داخلی اعطا می‌نماید. شما حق واگذاری مجوز، فروش، اجاره، مهندسی معکوس، تغییر، توزیع یا ایجاد نسخه‌های اشتقاقی از نرم‌افزار را نخواهید داشت.</p>
@@ -238,10 +238,10 @@ function KurdishTerms() {
   return (
     <>
       <p className="text-muted-foreground">ڕێکەوتی دوایین نوێکردنەوە: ١٥ی شوباتی ٢٠٢٦</p>
-      <p>تکایە پێش بەکارهێنانی بەرنامەی Flow POS Pro (لەمەودوا پێی دەوترێت "بەرنامەکە")، ئەم مەرجانەی بەکارهێنان و ڕەتکردنەوەی بەرپرسیارێتییە بە وردی بخوێنەرەوە. بەکارهێنانی بەرنامەکە لەلایەن تۆوە بە واتای ڕەزامەندی تەواوە لەسەر پابەندبوون بەم مەرج و ڕێسایانە. ئەگەر بەم مەرجانە ڕازی نیت، مافی بەکارهێنانی بەرنامەکەت نییە.</p>
+      <p>تکایە پێش بەکارهێنانی بەرنامەی POS Flow App (لەمەودوا پێی دەوترێت "بەرنامەکە")، ئەم مەرجانەی بەکارهێنان و ڕەتکردنەوەی بەرپرسیارێتییە بە وردی بخوێنەرەوە. بەکارهێنانی بەرنامەکە لەلایەن تۆوە بە واتای ڕەزامەندی تەواوە لەسەر پابەندبوون بەم مەرج و ڕێسایانە. ئەگەر بەم مەرجانە ڕازی نیت، مافی بەکارهێنانی بەرنامەکەت نییە.</p>
 
       <h3>١. قبوڵکردنی مەرجەکان</h3>
-      <p>بە بەکارهێنانی Flow POS Pro، تۆ دان بەوەدا دەنێیت کە هەموو مەرج و ڕێساکانی ناو ئەم ڕێککەوتننامەیەت خوێندووەتەوە، تێگەیشتوویت و ڕازیت پێیان. ئەگەر بە ناوی کۆمپانیا یان لایەنێکەوە بەکاری دەهێنیت، دەبێت نوێنەری یاسایی و خاوەن دەسەڵاتی ئەو لایەنە بیت.</p>
+      <p>بە بەکارهێنانی POS Flow App، تۆ دان بەوەدا دەنێیت کە هەموو مەرج و ڕێساکانی ناو ئەم ڕێککەوتننامەیەت خوێندووەتەوە، تێگەیشتوویت و ڕازیت پێیان. ئەگەر بە ناوی کۆمپانیا یان لایەنێکەوە بەکاری دەهێنیت، دەبێت نوێنەری یاسایی و خاوەن دەسەڵاتی ئەو لایەنە بیت.</p>
 
       <h3>٢. مۆڵەتی بەکارهێنان</h3>
       <p>گەشەپێدەر مۆڵەتێکی کەسی، سنووردار، ناتایبەت و نەگوێزراوەت پێدەدات بۆ بەکارهێنانی بەرنامەکە تەنها بۆ مەبەستەکانی ژمێریاری و فرۆشتنی ناوخۆیی خۆت. بۆت نییە مۆڵەتەکە بفرۆشیتەوە، بەکرێی بدەیت، دەستکاری بکەیت، یان دابەشی بکەیت.</p>

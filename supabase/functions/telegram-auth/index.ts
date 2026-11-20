@@ -162,8 +162,51 @@ serve(async (req) => {
         return new Response("Unauthorized", { status: 401 });
       }
 
-      const message = body.message;
+      let message = body.message;
+      // أزرار القائمة المضمّنة: نحوّل ضغطة الزر إلى أمر نصي عادي
+      if (!message && body.callback_query) {
+        const cq = body.callback_query;
+        fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ callback_query_id: cq.id }),
+        }).catch(() => {});
+        message = { chat: cq.message?.chat, from: cq.from, text: String(cq.data || "") };
+      }
       if (!message) {
+        return new Response("OK", { status: 200 });
+      }
+
+      // قائمة رئيسية بأزرار مضمّنة + خيارات ظريفة
+      if (typeof message.text === "string" && (message.text.trim().startsWith("/menu") || message.text.trim() === "القائمة")) {
+        await sendTelegramMessage(botToken, message.chat?.id, "🎛️ *القائمة الرئيسية*\nاختر ما تريد:", {
+          inline_keyboard: [
+            [{ text: "ℹ️ حالة حسابي", callback_data: "/status" }, { text: "🔄 نقل حسابي لجهاز جديد", callback_data: "/reset_device" }],
+            [{ text: "❓ مساعدة", callback_data: "/help" }, { text: "💡 نصيحة اليوم", callback_data: "/tip" }],
+            [{ text: "🎲 معلومة ظريفة", callback_data: "/fun" }],
+          ],
+        });
+        return new Response("OK", { status: 200 });
+      }
+      if (typeof message.text === "string" && message.text.trim().startsWith("/tip")) {
+        const tips = [
+          "💡 اعمل جرد دوري للمخزون أسبوعياً لتكتشف الفروقات مبكراً.",
+          "💡 أغلق الوردية يومياً وراجع الفرق بين المتوقع والفعلي.",
+          "💡 فعّل النسخ الاحتياطي ولا تنتظر حتى تحتاجه.",
+          "💡 سجّل رقم IMEI لكل جهاز تبيعه، يحميك عند أي مرتجع.",
+          "💡 لا تشارك رمز التحقق مع أي أحد مهما كان.",
+        ];
+        await sendTelegramMessage(botToken, message.chat?.id, tips[Math.floor(Math.random() * tips.length)]);
+        return new Response("OK", { status: 200 });
+      }
+      if (typeof message.text === "string" && message.text.trim().startsWith("/fun")) {
+        const facts = [
+          "🎲 أول باركود في التاريخ مُسح على علبة علكة عام 1974.",
+          "🎲 الكاشير الأسرع يعالج أكثر من 40 منتجاً في الدقيقة!",
+          "🎲 البائع الناجح يتذكر زبائنه بأسمائهم، والنظام يتذكر ديونهم 😄",
+          "🎲 كلمة «حاسوب» أصلها من الحساب، وأنت تحسب كل يوم 🧮",
+        ];
+        await sendTelegramMessage(botToken, message.chat?.id, facts[Math.floor(Math.random() * facts.length)]);
         return new Response("OK", { status: 200 });
       }
 
@@ -391,6 +434,40 @@ serve(async (req) => {
     // 2. CLIENT API ENDPOINTS
     // =========================================================================
     const action = body.action;
+
+    // --- Action: setup_webhook (يسجّل رابط البوت تلقائياً دون كشف التوكن) ---
+    if (action === "setup_webhook") {
+      if (!botToken) {
+        return new Response(JSON.stringify({ error: "no bot token" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const secret = await sha256b64url(`telegram-webhook:${botToken}`);
+      const base = Deno.env.get("SUPABASE_URL")!;
+      const r = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: `${base}/functions/v1/telegram-auth`,
+          secret_token: secret,
+          allowed_updates: ["message", "callback_query"],
+        }),
+      });
+      await fetch(`https://api.telegram.org/bot${botToken}/setMyCommands`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commands: [
+            { command: "menu", description: "القائمة الرئيسية" },
+            { command: "status", description: "حالة حسابي" },
+            { command: "reset_device", description: "نقل الحساب لجهاز جديد" },
+            { command: "tip", description: "نصيحة اليوم" },
+            { command: "fun", description: "معلومة ظريفة" },
+            { command: "help", description: "مساعدة" },
+          ],
+        }),
+      }).catch(() => {});
+      const j = await r.json().catch(() => ({}));
+      return new Response(JSON.stringify({ ok: j.ok === true, description: j.description }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // --- Action: get_bot_info ---
     if (action === "get_bot_info") {

@@ -1,0 +1,1 @@
+-- التراجع: أعد تعريف close_cash_shift_atomic من 20261120110000_posflow_shift_fx_conversion.sql

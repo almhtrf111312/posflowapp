@@ -131,6 +131,9 @@ Deno.serve(async (req) => {
     }
 
     // Log the action for audit purposes
+    // تسجيل خروج الكاشير من كل أجهزته بعد تغيير كلمته
+    await serviceClient.rpc('revoke_user_sessions', { p_user_id: targetUserId }).then(() => {}, (e: unknown) => console.warn('revoke_user_sessions failed', e))
+
     console.log(`Admin ${adminUserId} changed password for user ${targetUserId} at ${new Date().toISOString()}`)
 
     return new Response(

@@ -346,7 +346,7 @@ serve(async (req) => {
           chatId,
           `✅ *تم فك ارتباط الجهاز بنجاح!*\n\n` +
             `الحساب: *${escapeMd(profile.full_name || "المستخدم")}*\n\n` +
-            `تم إلغاء ربط الجهاز السابق لهذا الحساب. يمكنك الآن فتح التطبيق ` +
+            `تم إلغاء ربط الجهاز السابق لهذا الحساب وتسجيل خروج الحساب من كل الأجهزة. يمكنك الآن فتح التطبيق ` +
             `وتسجيل الدخول من هاتفك الجديد، وسيُربط الترخيص بهذا الجهاز عند أول دخول ناجح.`,
         );
 
@@ -764,6 +764,13 @@ serve(async (req) => {
       }
 
       // Send security alert on Telegram
+      // تسجيل الخروج من كل الأجهزة بعد تغيير كلمة المرور
+      try {
+        await serviceClient.rpc("revoke_user_sessions", { p_user_id: targetUserId });
+      } catch (revErr) {
+        console.warn("[TelegramAuth] revoke_user_sessions failed:", revErr);
+      }
+
       if (botToken && telegramChatId) {
         const securityAlert = `🛡️ *تنبيه أمني - Flow POS Pro*\n\nتم تغيير كلمة المرور لحسابك بنجاح الآن (${new Date().toLocaleTimeString("ar-SA")}).\n\nإذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل فوراً مع إدارة النظام لتأمين حسابك.`;
         await sendTelegramMessage(botToken, telegramChatId, securityAlert);

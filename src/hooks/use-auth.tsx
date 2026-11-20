@@ -772,6 +772,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  // مراقبة الجلسة: إذا ألغى المالك الجلسة من الخادم (إلغاء ربط الجهاز / تغيير كلمة المرور)
+  // يبقى رمز الدخول صالحاً محلياً حتى ينتهي، لذلك نسأل الخادم دورياً ونسجّل الخروج فوراً عند رفضه.
+  useEffect(() => {
+    if (!user || isGuestDemoMode()) return;
+    let cancelled = false;
+    let running = false;
+    const check = async () => {
+      if (running || cancelled || (typeof navigator !== 'undefined' && navigator.onLine === false)) return;
+      running = true;
+      try {
+        const { error } = await supabase.auth.getUser();
+        if (cancelled || !error) return;
+        const e = error as { status?: number; code?: string; message?: string };
+        const revoked =
+          e.status === 401 || e.status === 403 ||
+          /session_not_found|refresh_token_not_found|user_not_found|session.*(missing|not exist)/i.test(`${e.code || ''} ${e.message || ''}`);
+        if (revoked) {
+          toast.error('تم تسجيل خروجك لأن المالك غيّر بيانات حسابك أو ألغى ربط الجهاز، سجّل الدخول من جديد');
+          await signOut();
+          window.location.reload();
+        }
+      } catch {
+        // أخطاء الشبكة: لا نسجّل الخروج
+      } finally {
+        running = false;
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') void check(); };
+    const id = window.setInterval(check, 30000);
+    window.addEventListener('focus', check);
+    window.addEventListener('online', check);
+    document.addEventListener('visibilitychange', onVisible);
+    void check();
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      window.removeEventListener('focus', check);
+      window.removeEventListener('online', check);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   return (
     <AuthContext.Provider value={{
       user,

@@ -16,6 +16,7 @@ import com.getcapacitor.BridgeActivity;
 import com.posflow.app.printer.PosFlowPrinterPlugin;
 import com.posflow.app.auth.PosFlowGoogleAuthPlugin;
 import com.posflow.app.security.PosFlowKeystorePlugin;
+import com.posflow.app.push.PosFlowPushPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -34,6 +35,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PosFlowKeystorePlugin.class); // Keystore-wrapped local storage key
         registerPlugin(PosFlowPrinterPlugin.class);
         registerPlugin(PosFlowGoogleAuthPlugin.class); // Google sign-in (removable)
+        registerPlugin(PosFlowPushPlugin.class); // FCM push token + tap routing
         super.onCreate(savedInstanceState);
 
         try {

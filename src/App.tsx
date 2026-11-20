@@ -78,6 +78,7 @@ import { WarehouseProvider } from "./hooks/use-warehouse";
 import { useLicenseReminder } from "./hooks/use-license-reminder";
 import { useDueExpensesChecker } from "./hooks/use-due-expenses-checker";
 import { useNativeChatAlerts } from "./hooks/use-native-chat-alerts";
+import { usePushRegistration } from "./hooks/use-push-registration";
 import { SmartToast } from '@/components/ui/SmartToast';
 
 const queryClient = new QueryClient({
@@ -152,6 +153,7 @@ const AppContent = () => {
 
   // Android heads-up system tray and native chat notifications
   useNativeChatAlerts();
+  usePushRegistration();
 
   // Only warm the most likely next screens, one at a time, during actual idle time.
   useEffect(() => {

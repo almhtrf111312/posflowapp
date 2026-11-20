@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "674260000977",
+    "project_id": "posflow-boss",
+    "storage_bucket": "posflow-boss.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:674260000977:android:19116974c5d9bcebe825f0",
+        "android_client_info": {
+          "package_name": "com.posflow.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9MVv8Rmv7Kn6L7frL0-291oA0_4cgNEE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

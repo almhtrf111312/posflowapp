@@ -1,5 +1,5 @@
 #!/bin/sh
-# FlowPOS Pro - Auto Version Bump Pre-Commit Hook
+# POS Flow App - Auto Version Bump Pre-Commit Hook
 # Automatically increments versionCode when source code is committed
 
 if git diff --cached --name-only | grep -qE '^src/'; then

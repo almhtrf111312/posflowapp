@@ -1,5 +1,5 @@
 /**
- * Flow POS Pro - Fast Local Settings Storage Engine
+ * POS Flow App - Fast Local Settings Storage Engine
  * ==================================================
  * Provides synchronous (0ms) read/write operations for store settings.
  * Adheres to Offline-First architecture and emits update events on write.

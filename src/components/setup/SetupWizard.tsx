@@ -588,7 +588,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     emitEvent(EVENTS.SETTINGS_UPDATED, newSettings);
     emitEvent(EVENTS.STORE_TYPE_CHANGED, storeType);
 
-    toast.success('تم إعداد المتجر بنجاح! مرحباً بك في Flow POS', {
+    toast.success('تم إعداد المتجر بنجاح! مرحباً بك في POS Flow App', {
       description: 'نظامك جاهز للعمل الآن بأعلى كفاءة',
     });
 

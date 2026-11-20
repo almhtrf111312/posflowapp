@@ -4117,7 +4117,7 @@ export default function BossPanel() {
                 </div>
                 <div className="space-y-2">
                   <Label>اسم المطور / الجهة</Label>
-                  <Input value={contactLinks._developer_name || ''} onChange={(e) => setContactLinks(prev => ({ ...prev, _developer_name: e.target.value }))} placeholder="مثال: فريق Flow POS" />
+                  <Input value={contactLinks._developer_name || ''} onChange={(e) => setContactLinks(prev => ({ ...prev, _developer_name: e.target.value }))} placeholder="مثال: فريق POS Flow App" />
                 </div>
                 <div className="space-y-2">
                   <Label>رقم الهاتف أو رابط (تيليجرام...)</Label>

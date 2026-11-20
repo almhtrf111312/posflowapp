@@ -387,7 +387,7 @@ jobs:
             const sizeTxt = (sizeBytes / 1024 / 1024).toFixed(1) + ' MB';
 
             const head =
-              `🚀 <b>تحديث جديد | Flow POS Pro</b>\n${sep}\n` +
+              `🚀 <b>تحديث جديد | POS Flow App</b>\n${sep}\n` +
               `📌 <b>الإصدار:</b> <code>${esc(ver)}</code>\n\n` +
               `✨ <b>أبرز التحديثات والإصلاحات:</b>\n`;
             const foot = `\n${sep}\n💡 <i>يمكنك تثبيت هذا التحديث مباشرة فوق النسخة الحالية دون حذف بياناتك.</i>`;
@@ -444,7 +444,7 @@ jobs:
             if (!r.ok && /caption is too long/i.test(r.description || '')) {
               warn('الوصف أطول من المسموح — إعادة الإرسال بوصف مختصر.');
               r = await callWithRetry('sendDocument', () =>
-                buildForm(chat.id, `🚀 تحديث جديد | Flow POS Pro — ${msgs.ver}`, false)
+                buildForm(chat.id, `🚀 تحديث جديد | POS Flow App — ${msgs.ver}`, false)
               );
             }
             if (!r.ok) {

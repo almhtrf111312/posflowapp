@@ -1,0 +1,263 @@
+--- a/src/components/PrivacyPolicyScreen.tsx
++++ b/src/components/PrivacyPolicyScreen.tsx
+@@ -54,10 +54,10 @@
+   return (
+     <>
+       <p className="text-muted-foreground">تاريخ آخر تحديث: 15 فبراير 2026</p>
+-      <p>يرجى قراءة شروط الاستخدام وإخلاء المسؤولية هذه بعناية قبل استخدام برنامج Flow POS Pro (المشار إليه فيما بعد بـ "البرنامج"). يشكل استخدامك للبرنامج موافقة منك على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على هذه الشروط، فلا يحق لك استخدام البرنامج.</p>
++      <p>يرجى قراءة شروط الاستخدام وإخلاء المسؤولية هذه بعناية قبل استخدام برنامج POS Flow App (المشار إليه فيما بعد بـ "البرنامج"). يشكل استخدامك للبرنامج موافقة منك على الالتزام بهذه الشروط والأحكام. إذا كنت لا توافق على هذه الشروط، فلا يحق لك استخدام البرنامج.</p>
+ 
+       <h3>1. قبول الشروط</h3>
+-      <p>باستخدامك لبرنامج Flow POS Pro، فإنك تقر وتوافق على أنك قد قرأت وفهمت ووافقت على الالتزام بجميع الشروط والأحكام الواردة في هذه الاتفاقية. إذا كنت تستخدم البرنامج نيابةً عن كيان أو شركة، فإنك تقر وتضمن أنك ممثل مفوض لذلك الكيان وتمتلك السلطة لإلزام الكيان بهذه الاتفاقية.</p>
++      <p>باستخدامك لبرنامج POS Flow App، فإنك تقر وتوافق على أنك قد قرأت وفهمت ووافقت على الالتزام بجميع الشروط والأحكام الواردة في هذه الاتفاقية. إذا كنت تستخدم البرنامج نيابةً عن كيان أو شركة، فإنك تقر وتضمن أنك ممثل مفوض لذلك الكيان وتمتلك السلطة لإلزام الكيان بهذه الاتفاقية.</p>
+ 
+       <h3>2. ترخيص الاستخدام</h3>
+       <p>يمنحك المطور ترخيصًا شخصيًا، محدودًا، غير حصري، وغير قابل للتحويل لاستخدام البرنامج لأغراضك المحاسبية والبيعية الداخلية فقط. لا يجوز لك إعادة ترخيص، بيع، تأجير، تعديل، توزيع، أو إنشاء أعمال مشتقة من البرنامج.</p>
+@@ -100,10 +100,10 @@
+   return (
+     <>
+       <p className="text-muted-foreground">Last updated: February 15, 2026</p>
+-      <p>Please read these Terms of Use and Disclaimer carefully before using Flow POS Pro (hereinafter referred to as "the Software"). Your use of the Software constitutes your agreement to be bound by these terms and conditions. If you do not agree to these terms, you are not authorized to use the Software.</p>
++      <p>Please read these Terms of Use and Disclaimer carefully before using POS Flow App (hereinafter referred to as "the Software"). Your use of the Software constitutes your agreement to be bound by these terms and conditions. If you do not agree to these terms, you are not authorized to use the Software.</p>
+ 
+       <h3>1. Acceptance of Terms</h3>
+-      <p>By using Flow POS Pro, you acknowledge and agree that you have read, understood, and agreed to be bound by all terms and conditions set forth in this agreement. If you are using the Software on behalf of an entity or company, you represent and warrant that you are an authorized representative of that entity and have the authority to bind the entity to this agreement.</p>
++      <p>By using POS Flow App, you acknowledge and agree that you have read, understood, and agreed to be bound by all terms and conditions set forth in this agreement. If you are using the Software on behalf of an entity or company, you represent and warrant that you are an authorized representative of that entity and have the authority to bind the entity to this agreement.</p>
+ 
+       <h3>2. License of Use</h3>
+       <p>The developer grants you a personal, limited, non-exclusive, and non-transferable license to use the Software for your internal accounting and retail sales operations only. You may not sublicense, sell, lease, modify, distribute, or create derivative works from the Software.</p>
+@@ -146,10 +146,10 @@
+   return (
+     <>
+       <p className="text-muted-foreground">Son güncelleme tarihi: 15 Şubat 2026</p>
+-      <p>Flow POS Pro (bundan böyle "Yazılım" olarak anılacaktır) uygulamasını kullanmadan önce lütfen bu Kullanım Şartları ve Sorumluluk Reddini dikkatlice okuyunuz. Yazılımı kullanmanız, bu şart ve koşullarla bağlı olmayı kabul ettiğiniz anlamına gelir. Bu şartları kabul etmiyorsanız, Yazılımı kullanma yetkiniz yoktur.</p>
++      <p>POS Flow App (bundan böyle "Yazılım" olarak anılacaktır) uygulamasını kullanmadan önce lütfen bu Kullanım Şartları ve Sorumluluk Reddini dikkatlice okuyunuz. Yazılımı kullanmanız, bu şart ve koşullarla bağlı olmayı kabul ettiğiniz anlamına gelir. Bu şartları kabul etmiyorsanız, Yazılımı kullanma yetkiniz yoktur.</p>
+ 
+       <h3>1. Şartların Kabulü</h3>
+-      <p>Flow POS Pro uygulamasını kullanarak, bu sözleşmede belirtilen tüm şart ve koşulları okuduğunuzu, anladığınızı ve bunlara uymayı kabul ettiğinizi beyan edersiniz. Yazılımı bir tüzel kişilik veya şirket adına kullanıyorsanız, o tüzel kişiliği bu sözleşmeyle bağlama yetkisine sahip yetkili bir temsilci olduğunuzu beyan ve taahhüt edersiniz.</p>
++      <p>POS Flow App uygulamasını kullanarak, bu sözleşmede belirtilen tüm şart ve koşulları okuduğunuzu, anladığınızı ve bunlara uymayı kabul ettiğinizi beyan edersiniz. Yazılımı bir tüzel kişilik veya şirket adına kullanıyorsanız, o tüzel kişiliği bu sözleşmeyle bağlama yetkisine sahip yetkili bir temsilci olduğunuzu beyan ve taahhüt edersiniz.</p>
+ 
+       <h3>2. Kullanım Lisansı</h3>
+       <p>Geliştirici, Yazılımı yalnızca dahili muhasebe ve satış işlemleriniz için kullanmanız üzere size kişisel, sınırlı, münhasır olmayan ve devredilemez bir lisans vermektedir. Yazılımı alt lisanslayamaz, satamaz, kiralayamaz, değiştiremez, dağıtamaz veya türev çalışmalarını oluşturamazsınız.</p>
+@@ -192,10 +192,10 @@
+   return (
+     <>
+       <p className="text-muted-foreground">تاریخ آخرین به‌روزرسانی: ۱۵ فوریه ۲۰۲۶</p>
+-      <p>لطفاً پیش از استفاده از نرم‌افزار Flow POS Pro (که از این پس «نرم‌افزار» نامیده می‌شود)، این شرایط استفاده و سلب مسئولیت را با دقت مطالعه فرمایید. استفاده شما از نرم‌افزار به منزله پذیرش و تعهد کامل به رعایت کلیه مفاد و قوانین مندرج در این موافقت‌نامه است. در صورت عدم موافقت با این شرایط، مجاز به استفاده از نرم‌افزار نمی‌باشید.</p>
++      <p>لطفاً پیش از استفاده از نرم‌افزار POS Flow App (که از این پس «نرم‌افزار» نامیده می‌شود)، این شرایط استفاده و سلب مسئولیت را با دقت مطالعه فرمایید. استفاده شما از نرم‌افزار به منزله پذیرش و تعهد کامل به رعایت کلیه مفاد و قوانین مندرج در این موافقت‌نامه است. در صورت عدم موافقت با این شرایط، مجاز به استفاده از نرم‌افزار نمی‌باشید.</p>
+ 
+       <h3>۱. پذیرش شرایط</h3>
+-      <p>با استفاده از نرم‌افزار Flow POS Pro، شما تأیید و اقرار می‌نمایید که کلیه شرایط و ضوابط این موافقت‌نامه را مطالعه کرده، فهمیده و با آن موافقت نموده‌اید. چنانچه به نمایندگی از یک شرکت، فروشگاه یا شخصیت حقوقی از نرم‌افزار استفاده می‌کنید، تضمین می‌نمایید که نماینده قانونی دارای اختیار لازم جهت متعهد ساختن آن مجموعه به این شروط هستید.</p>
++      <p>با استفاده از نرم‌افزار POS Flow App، شما تأیید و اقرار می‌نمایید که کلیه شرایط و ضوابط این موافقت‌نامه را مطالعه کرده، فهمیده و با آن موافقت نموده‌اید. چنانچه به نمایندگی از یک شرکت، فروشگاه یا شخصیت حقوقی از نرم‌افزار استفاده می‌کنید، تضمین می‌نمایید که نماینده قانونی دارای اختیار لازم جهت متعهد ساختن آن مجموعه به این شروط هستید.</p>
+ 
+       <h3>۲. مجوز استفاده</h3>
+       <p>توسعه‌دهنده به شما مجوزی شخصی، محدود، غیرانحصاری و غیرقابل انتقال جهت استفاده از نرم‌افزار صرفاً برای مقاصد حسابداری و مدیریت فروش داخلی اعطا می‌نماید. شما حق واگذاری مجوز، فروش، اجاره، مهندسی معکوس، تغییر، توزیع یا ایجاد نسخه‌های اشتقاقی از نرم‌افزار را نخواهید داشت.</p>
+@@ -238,10 +238,10 @@
+   return (
+     <>
+       <p className="text-muted-foreground">ڕێکەوتی دوایین نوێکردنەوە: ١٥ی شوباتی ٢٠٢٦</p>
+-      <p>تکایە پێش بەکارهێنانی بەرنامەی Flow POS Pro (لەمەودوا پێی دەوترێت "بەرنامەکە")، ئەم مەرجانەی بەکارهێنان و ڕەتکردنەوەی بەرپرسیارێتییە بە وردی بخوێنەرەوە. بەکارهێنانی بەرنامەکە لەلایەن تۆوە بە واتای ڕەزامەندی تەواوە لەسەر پابەندبوون بەم مەرج و ڕێسایانە. ئەگەر بەم مەرجانە ڕازی نیت، مافی بەکارهێنانی بەرنامەکەت نییە.</p>
++      <p>تکایە پێش بەکارهێنانی بەرنامەی POS Flow App (لەمەودوا پێی دەوترێت "بەرنامەکە")، ئەم مەرجانەی بەکارهێنان و ڕەتکردنەوەی بەرپرسیارێتییە بە وردی بخوێنەرەوە. بەکارهێنانی بەرنامەکە لەلایەن تۆوە بە واتای ڕەزامەندی تەواوە لەسەر پابەندبوون بەم مەرج و ڕێسایانە. ئەگەر بەم مەرجانە ڕازی نیت، مافی بەکارهێنانی بەرنامەکەت نییە.</p>
+ 
+       <h3>١. قبوڵکردنی مەرجەکان</h3>
+-      <p>بە بەکارهێنانی Flow POS Pro، تۆ دان بەوەدا دەنێیت کە هەموو مەرج و ڕێساکانی ناو ئەم ڕێککەوتننامەیەت خوێندووەتەوە، تێگەیشتوویت و ڕازیت پێیان. ئەگەر بە ناوی کۆمپانیا یان لایەنێکەوە بەکاری دەهێنیت، دەبێت نوێنەری یاسایی و خاوەن دەسەڵاتی ئەو لایەنە بیت.</p>
++      <p>بە بەکارهێنانی POS Flow App، تۆ دان بەوەدا دەنێیت کە هەموو مەرج و ڕێساکانی ناو ئەم ڕێککەوتننامەیەت خوێندووەتەوە، تێگەیشتوویت و ڕازیت پێیان. ئەگەر بە ناوی کۆمپانیا یان لایەنێکەوە بەکاری دەهێنیت، دەبێت نوێنەری یاسایی و خاوەن دەسەڵاتی ئەو لایەنە بیت.</p>
+ 
+       <h3>٢. مۆڵەتی بەکارهێنان</h3>
+       <p>گەشەپێدەر مۆڵەتێکی کەسی، سنووردار، ناتایبەت و نەگوێزراوەت پێدەدات بۆ بەکارهێنانی بەرنامەکە تەنها بۆ مەبەستەکانی ژمێریاری و فرۆشتنی ناوخۆیی خۆت. بۆت نییە مۆڵەتەکە بفرۆشیتەوە، بەکرێی بدەیت، دەستکاری بکەیت، یان دابەشی بکەیت.</p>
+
+--- a/src/components/setup/SetupWizard.tsx
++++ b/src/components/setup/SetupWizard.tsx
+@@ -588,7 +588,7 @@
+     emitEvent(EVENTS.SETTINGS_UPDATED, newSettings);
+     emitEvent(EVENTS.STORE_TYPE_CHANGED, storeType);
+ 
+-    toast.success('تم إعداد المتجر بنجاح! مرحباً بك في Flow POS', {
++    toast.success('تم إعداد المتجر بنجاح! مرحباً بك في POS Flow App', {
+       description: 'نظامك جاهز للعمل الآن بأعلى كفاءة',
+     });
+ 
+
+--- a/src/lib/invoice-canvas-generator.ts
++++ b/src/lib/invoice-canvas-generator.ts
+@@ -742,7 +742,7 @@
+     ctx.fillStyle = 'rgba(225, 29, 72, 0.12)';
+     ctx.textAlign = 'center';
+     ctx.textBaseline = 'middle';
+-    ctx.fillText('نسخة تجريبية - Flow POS Pro', 0, 0);
++    ctx.fillText('نسخة تجريبية - POS Flow App', 0, 0);
+     ctx.restore();
+ 
+     drawRoundedRect(ctx, 30, bottomBarY + 30, LOGICAL_WIDTH - 60, 26, 6, '#fff1f2', '#e11d48', 1.5);
+
+--- a/src/lib/native-print.ts
++++ b/src/lib/native-print.ts
+@@ -292,7 +292,7 @@
+     ${isGuestDemoMode() ? `
+       .receipt { position: relative; overflow: hidden; }
+       .receipt::before {
+-        content: "نسخة تجريبية - Flow POS Pro";
++        content: "نسخة تجريبية - POS Flow App";
+         position: absolute;
+         top: 35%;
+         left: -10%;
+@@ -429,7 +429,7 @@
+       <small style="color: #999;">PosFlow</small>
+       ${isGuestDemoMode() ? `
+         <div style="margin-top: 10px; padding: 6px; border: 2px dashed #e11d48; color: #e11d48; font-weight: bold; font-size: 13px; text-align: center; border-radius: 4px; background: #fff1f2;">
+-          ⚠️ نسخة تجريبية - Flow POS Pro ⚠️
++          ⚠️ نسخة تجريبية - POS Flow App ⚠️
+           <div style="font-size: 10px; font-weight: normal; color: #be123c; margin-top: 2px;">غير معتمدة كفاتورة رسمية أو محاسبية</div>
+         </div>
+       ` : ''}
+
+--- a/src/lib/native-share.ts
++++ b/src/lib/native-share.ts
+@@ -330,7 +330,7 @@
+ ────────────────
+ ${storePhone ? `📞 للتواصل: ${storePhone}` : ''}
+ 
+-شكراً لتعاملكم معنا! 🙏${isGuestDemoMode() ? '\n\n⚠️ نسخة تجريبية - Flow POS Pro (غير معتمدة رسمياً)' : ''}`;
++شكراً لتعاملكم معنا! 🙏${isGuestDemoMode() ? '\n\n⚠️ نسخة تجريبية - POS Flow App (غير معتمدة رسمياً)' : ''}`;
+ }
+ 
+ /**
+
+--- a/src/pages/BossPanel.tsx
++++ b/src/pages/BossPanel.tsx
+@@ -4117,7 +4117,7 @@
+                 </div>
+                 <div className="space-y-2">
+                   <Label>اسم المطور / الجهة</Label>
+-                  <Input value={contactLinks._developer_name || ''} onChange={(e) => setContactLinks(prev => ({ ...prev, _developer_name: e.target.value }))} placeholder="مثال: فريق Flow POS" />
++                  <Input value={contactLinks._developer_name || ''} onChange={(e) => setContactLinks(prev => ({ ...prev, _developer_name: e.target.value }))} placeholder="مثال: فريق POS Flow App" />
+                 </div>
+                 <div className="space-y-2">
+                   <Label>رقم الهاتف أو رابط (تيليجرام...)</Label>
+
+--- a/src/pages/Login.tsx
++++ b/src/pages/Login.tsx
+@@ -972,7 +972,7 @@
+                 type="button"
+                 variant="outline"
+                 onClick={() => {
+-                  const botUser = tgBotLink || 'https://t.me/Flowpos_pro_bot';
++                  const botUser = tgBotLink || 'https://t.me/Posflowappbot';
+                   window.open(botUser, '_blank');
+                 }}
+                 className="w-full h-11 rounded-xl font-bold border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 flex items-center justify-center gap-2 transition-all cursor-pointer"
+
+--- a/src/pages/Renew.tsx
++++ b/src/pages/Renew.tsx
+@@ -77,7 +77,7 @@
+   {
+     id: 'method_usdt',
+     name: 'USDT (TRC20)',
+-    account_number: 'TXyZ8829KmnPQ11234flowposproTRC20',
++    account_number: 'TXyZ8829KmnPQ11234posflowappTRC20',
+     button_label: 'نسخ عنوان المحفظة',
+     link_url: '',
+     qr_image_url: '',
+
+--- a/.github/workflows/telegram-public-release.yml
++++ b/.github/workflows/telegram-public-release.yml
+@@ -387,7 +387,7 @@
+             const sizeTxt = (sizeBytes / 1024 / 1024).toFixed(1) + ' MB';
+ 
+             const head =
+-              `🚀 <b>تحديث جديد | Flow POS Pro</b>\n${sep}\n` +
++              `🚀 <b>تحديث جديد | POS Flow App</b>\n${sep}\n` +
+               `📌 <b>الإصدار:</b> <code>${esc(ver)}</code>\n\n` +
+               `✨ <b>أبرز التحديثات والإصلاحات:</b>\n`;
+             const foot = `\n${sep}\n💡 <i>يمكنك تثبيت هذا التحديث مباشرة فوق النسخة الحالية دون حذف بياناتك.</i>`;
+@@ -444,7 +444,7 @@
+             if (!r.ok && /caption is too long/i.test(r.description || '')) {
+               warn('الوصف أطول من المسموح — إعادة الإرسال بوصف مختصر.');
+               r = await callWithRetry('sendDocument', () =>
+-                buildForm(chat.id, `🚀 تحديث جديد | Flow POS Pro — ${msgs.ver}`, false)
++                buildForm(chat.id, `🚀 تحديث جديد | POS Flow App — ${msgs.ver}`, false)
+               );
+             }
+             if (!r.ok) {
+
+--- a/src/lib/demo-data.ts
++++ b/src/lib/demo-data.ts
+@@ -1,6 +1,6 @@
+ /**
+  * Demo Data - Synchronized sample data for products, customers, invoices, and debts
+- * Flow POS Pro - Guest Demo Mode
++ * POS Flow App - Guest Demo Mode
+  */
+ 
+ import { Product } from './products-store';
+
+--- a/src/lib/error-radar.ts
++++ b/src/lib/error-radar.ts
+@@ -1,6 +1,6 @@
+ import { isLocalDataMode } from '@/hooks/use-network-status';
+ /**
+- * Flow POS Pro - Error Radar Service
++ * POS Flow App - Error Radar Service
+  * رادار الأخطاء المركزي - خدمة تسجيل وتشخيص أخطاء التطبيق مع دعم التخزين والإرسال دون اتصال
+  * 
+  * المبادئ الأساسية:
+
+--- a/src/lib/store-settings-sync.ts
++++ b/src/lib/store-settings-sync.ts
+@@ -1,6 +1,6 @@
+ import { isLocalDataMode } from '@/hooks/use-network-status';
+ /**
+- * Flow POS Pro - Unified Store Settings & Cross-Device Sync Module
++ * POS Flow App - Unified Store Settings & Cross-Device Sync Module
+  * ==============================================================
+  * العقد الموحد لإعدادات المتجر والتزامن الشامل بين الويب والموبايل
+  * - Offline-First: الحفظ المحلي فوري وغير قابل للحذف عند غياب بيانات السحابة
+
+--- a/src/index.css
++++ b/src/index.css
+@@ -91,7 +91,7 @@
+     --pos-cart: 222 47% 8%;
+     --pos-total: 160 84% 39%;
+ 
+-    /* Flow POS Pro Standardized Palette Tokens (Package 6) */
++    /* POS Flow App Standardized Palette Tokens (Package 6) */
+     --app-white: #ffffff;
+     --slate-50: #f8fafc;
+     --slate-200: #e2e8f0;
+
+--- a/src/lib/__tests__/comprehensive-accounting-audit.test.ts
++++ b/src/lib/__tests__/comprehensive-accounting-audit.test.ts
+@@ -1,6 +1,6 @@
+ /**
+  * Comprehensive Accounting Logic Audit Suite for PosFlow
+- * Based on: "خطة اختبار شاملة للمنطق المحاسبي في FlowPOS" (October 2026)
++ * Based on: "خطة اختبار شاملة للمنطق المحاسبي في POS Flow App" (October 2026)
+  *
+  * Covers:
+  * - Preparation & Initial Data (Section 3 & 4)
+@@ -237,7 +237,7 @@
+ 
+   const p1Share = round8(
+     Object.values(categoryProfits).reduce((sum, prof) => {
+-      // In FlowPOS logic, partner 2 gets specialized share first if applicable
++      // In POS Flow App logic, partner 2 gets specialized share first if applicable
+       return sum;
+     }, 0)
+   );
+@@ -304,7 +304,7 @@
+ // ==========================================
+ 
+ console.log('===============================================================');
+-console.log('  FLOWPOS PRO - COMPREHENSIVE MASTER ACCOUNTING AUDIT ENGINE   ');
++console.log('  POS FLOW APP - COMPREHENSIVE MASTER ACCOUNTING AUDIT ENGINE   ');
+ console.log('===============================================================\n');
+ 
+ // -----------------------------------------------------------------------------
+@@ -651,7 +651,7 @@
+     expected: 'الأولى تنجح ويصبح المخزون 0، والثانية تُمنع أو تُسجل سالباً حسب السياسة',
+     actual: `المخزون بعد البيع الأول: ${stockAfterFirst}، السياسة المعتمدة: منع البيع عند نفاد المخزون إلا بإذن المدير`,
+     status: 'PASS',
+-    designNote: 'يتم منع المخزون السالب افتراضياً في FlowPOS إلا إذا فعّل المستخدم خيار "السماح بالبيع بالسالب" في الإعدادات.',
++    designNote: 'يتم منع المخزون السالب افتراضياً في POS Flow App إلا إذا فعّل المستخدم خيار "السماح بالبيع بالسالب" في الإعدادات.',
+   });
+ }

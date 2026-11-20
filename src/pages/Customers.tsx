@@ -80,6 +80,7 @@ import { useMoney } from '@/hooks/use-money';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { EVENTS } from '@/lib/events';
 import Debts from '@/pages/Debts';
+import { CustomerCreditDialog } from '@/components/customers/CustomerCreditDialog';
 import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 
 export default function Customers() {
@@ -104,6 +105,7 @@ export default function Customers() {
 
   // Dialogs
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [creditCustomer, setCreditCustomer] = useState<{ id: string; name: string } | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
@@ -504,6 +506,9 @@ export default function Customers() {
                           <span>مشاركة كشف الحساب</span>
                           <Share2 className="w-4 h-4 text-muted-foreground" />
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setCreditCustomer({ id: customer.id, name: customer.name })} className="justify-between cursor-pointer">
+                          <span>الرصيد وحد الائتمان</span>
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => openDeleteDialog(customer)} className="justify-between text-destructive cursor-pointer">
                           <span>{t('common.delete')}</span>
@@ -601,6 +606,7 @@ export default function Customers() {
       </Tabs>
 
       {/* Add Customer Dialog */}
+      <CustomerCreditDialog customer={creditCustomer} isOwner={isOwner} onOpenChange={(o) => { if (!o) setCreditCustomer(null); }} />
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="w-[95vw] max-w-lg sm:max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl border border-border bg-card shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3.5 border-b border-border bg-card/80 backdrop-blur-md shrink-0">

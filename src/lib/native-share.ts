@@ -330,7 +330,7 @@ ${(paymentType === 'split' || paymentType === 'debt' || (downPayment && downPaym
 ────────────────
 ${storePhone ? `📞 للتواصل: ${storePhone}` : ''}
 
-شكراً لتعاملكم معنا! 🙏${isGuestDemoMode() ? '\n\n⚠️ نسخة تجريبية - Flow POS Pro (غير معتمدة رسمياً)' : ''}`;
+شكراً لتعاملكم معنا! 🙏${isGuestDemoMode() ? '\n\n⚠️ نسخة تجريبية - POS Flow App (غير معتمدة رسمياً)' : ''}`;
 }
 
 /**

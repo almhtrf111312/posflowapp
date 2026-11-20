@@ -292,7 +292,7 @@ export function generateReceiptHTML(invoice: PrintableInvoice): string {
     ${isGuestDemoMode() ? `
       .receipt { position: relative; overflow: hidden; }
       .receipt::before {
-        content: "نسخة تجريبية - Flow POS Pro";
+        content: "نسخة تجريبية - POS Flow App";
         position: absolute;
         top: 35%;
         left: -10%;
@@ -429,7 +429,7 @@ export function generateReceiptHTML(invoice: PrintableInvoice): string {
       <small style="color: #999;">PosFlow</small>
       ${isGuestDemoMode() ? `
         <div style="margin-top: 10px; padding: 6px; border: 2px dashed #e11d48; color: #e11d48; font-weight: bold; font-size: 13px; text-align: center; border-radius: 4px; background: #fff1f2;">
-          ⚠️ نسخة تجريبية - Flow POS Pro ⚠️
+          ⚠️ نسخة تجريبية - POS Flow App ⚠️
           <div style="font-size: 10px; font-weight: normal; color: #be123c; margin-top: 2px;">غير معتمدة كفاتورة رسمية أو محاسبية</div>
         </div>
       ` : ''}

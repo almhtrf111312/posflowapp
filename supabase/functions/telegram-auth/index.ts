@@ -82,7 +82,7 @@ const MAIN_KEYBOARD = {
 };
 
 const HELP_TEXT =
-  "❓ *مساعدة بوت Flow POS Pro*\n" +
+  "❓ *مساعدة بوت POS Flow App*\n" +
   "━━━━━━━━━━━━━━\n" +
   "📱 *ربط الحساب*\n" +
   "اضغط «مشاركة رقم الهاتف للتحقق» لربط حسابك برقمك المسجل في النظام.\n\n" +
@@ -221,7 +221,7 @@ serve(async (req) => {
         await sendTelegramMessage(
           botToken,
           chatId,
-          "👋 *مرحباً بك في Flow POS Pro*\n" +
+          "👋 *مرحباً بك في POS Flow App*\n" +
             "بوت الخدمة الذاتية لحسابك\n" +
             "━━━━━━━━━━━━━━\n" +
             "من هنا يمكنك:\n" +
@@ -416,7 +416,7 @@ serve(async (req) => {
           await sendTelegramMessage(
             botToken,
             chatId,
-            `✅ *تم ربط حسابك بنجاح!*\n\nأهلاً بك يا *${userName}* في نظام *Flow POS Pro*.\n\nتم اعتماد هذا الحساب لاستلام رموز استعادة كلمة المرور والتنبيهات الأمنية لحسابك بنجاح.`,
+            `✅ *تم ربط حسابك بنجاح!*\n\nأهلاً بك يا *${userName}* في نظام *POS Flow App*.\n\nتم اعتماد هذا الحساب لاستلام رموز استعادة كلمة المرور والتنبيهات الأمنية لحسابك بنجاح.`,
             MAIN_KEYBOARD,
           );
         } else {
@@ -424,7 +424,7 @@ serve(async (req) => {
           await sendTelegramMessage(
             botToken,
             chatId,
-            `❌ *لم يتم العثور على حساب مسجل بهذا الرقم* (\`${String(rawPhone).replace(/`/g, "")}\`).\n\nيرجى التأكد من تسجيل رقم هاتفك داخل ملفك الشخصي في نظام Flow POS Pro، أو التواصل مع مدير النظام لتحديث رقم هاتفك.`,
+            `❌ *لم يتم العثور على حساب مسجل بهذا الرقم* (\`${String(rawPhone).replace(/`/g, "")}\`).\n\nيرجى التأكد من تسجيل رقم هاتفك داخل ملفك الشخصي في نظام POS Flow App، أو التواصل مع مدير النظام لتحديث رقم هاتفك.`,
             { remove_keyboard: true },
           );
         }
@@ -606,7 +606,7 @@ serve(async (req) => {
       }
 
       // Send code via Telegram
-      const otpMessage = `🔐 *رمز استعادة كلمة المرور*\n\nالرمز الخاص بحسابك في *Flow POS Pro* هو:\n\n\`${otpCode}\`\n\n⏳ هذا الرمز صالح لمدة *10 دقائق* فقط.\n⚠️ *تحذير أمني*: لا تشارك هذا الرمز مع أي شخص. موظفو Flow POS Pro لن يطلبوا منك هذا الرمز أبداً.`;
+      const otpMessage = `🔐 *رمز استعادة كلمة المرور*\n\nالرمز الخاص بحسابك في *POS Flow App* هو:\n\n\`${otpCode}\`\n\n⏳ هذا الرمز صالح لمدة *10 دقائق* فقط.\n⚠️ *تحذير أمني*: لا تشارك هذا الرمز مع أي شخص. موظفو POS Flow App لن يطلبوا منك هذا الرمز أبداً.`;
 
       const tgResult = await sendTelegramMessage(botToken, telegramChatId, otpMessage);
       console.log(`[TelegramAuth] OTP sent to Telegram chat ${telegramChatId}, result:`, tgResult?.ok);
@@ -772,7 +772,7 @@ serve(async (req) => {
       }
 
       if (botToken && telegramChatId) {
-        const securityAlert = `🛡️ *تنبيه أمني - Flow POS Pro*\n\nتم تغيير كلمة المرور لحسابك بنجاح الآن (${new Date().toLocaleTimeString("ar-SA")}).\n\nإذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل فوراً مع إدارة النظام لتأمين حسابك.`;
+        const securityAlert = `🛡️ *تنبيه أمني - POS Flow App*\n\nتم تغيير كلمة المرور لحسابك بنجاح الآن (${new Date().toLocaleTimeString("ar-SA")}).\n\nإذا لم تكن أنت من قام بهذا التغيير، يرجى التواصل فوراً مع إدارة النظام لتأمين حسابك.`;
         await sendTelegramMessage(botToken, telegramChatId, securityAlert);
       }
 
@@ -904,7 +904,7 @@ serve(async (req) => {
       // إرسال رسالة التنبيه والرمز عبر تيليجرام للمالك الأصلي
       const alertMessage =
         `⚠️ *تنبيه أمني: طلب نقل رقم الهاتف*\n\n` +
-        `تلقينا طلباً لنقل رقم هاتفك (\`${matchedProfile.phone}\`) لربطه بمتجر وحساب آخر على *Flow POS Pro*.\n\n` +
+        `تلقينا طلباً لنقل رقم هاتفك (\`${matchedProfile.phone}\`) لربطه بمتجر وحساب آخر على *POS Flow App*.\n\n` +
         `رمز التأكيد الخاص بك هو:\n` +
         `\`${otpCode}\`\n\n` +
         `⏳ الرمز صالح لمدة *10 دقائق* فقط.\n` +

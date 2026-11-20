@@ -102,6 +102,8 @@ export interface Invoice {
   currency: string;
   currencySymbol: string;
   paymentType: PaymentType;
+  /** cash | digital (payment channel; digital sales are excluded from the cash drawer) */
+  paymentMethod?: string;
   status: InvoiceStatus;
   serviceDescription?: string;
   serviceType?: string;
@@ -214,7 +216,7 @@ const saveInvoicesToLocalCache = (invoices: Invoice[]) => {
   try {
     // حماية حد 5MB في localStorage بتدرّج آمن يمنع فشل الحفظ الصامت مع الفواتير الضخمة
     const sorted = invoices.length > 1000
-      ? [...invoices].sort((a, b) => String(b.createdAt ?? b.date ?? '').localeCompare(String(a.createdAt ?? a.date ?? '')))
+      ? [...invoices].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
       : invoices;
     for (const limit of [1500, 750, 300]) {
       try {
@@ -585,7 +587,7 @@ const fetchInvoicesFromCloud = async (userId: string): Promise<Invoice[]> => {
     for (const inv of invoicesWithItems) invoiceStore.set(inv.id, inv);
     lastDeltaSyncAt = syncStartedAt;
     const allInvoices = delta
-      ? [...invoiceStore.values()].sort((a, b) => String(b.createdAt ?? b.date ?? '').localeCompare(String(a.createdAt ?? a.date ?? '')))
+      ? [...invoiceStore.values()].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
       : invoicesWithItems;
 
     // دمج العمليات المعلقة في طابور المزامنة لمنع اختفاء الفواتير غير المرفوعة

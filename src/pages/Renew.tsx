@@ -258,7 +258,7 @@ export default function RenewPage() {
 
     try {
       // توليد كود مرجعي رسمي سهل القراءة (مثال: FP-9281)
-      const refCode = `FP-${Math.floor(1000 + Math.random() * 9000)}`;
+      let refCode = `FP-${Math.floor(1000 + Math.random() * 9000)}`;
 
       const planUuid = isValidUUID(selectedPlan.id) ? selectedPlan.id : null;
       const methodUuid = isValidUUID(selectedMethod.id) ? selectedMethod.id : null;
@@ -283,7 +283,27 @@ export default function RenewPage() {
         .select('id')
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // يوجد طلب مفتوح للمستخدم مسبقاً (فهرس idx_one_open_sub_request_per_user):
+        // نعيد استخدامه ونرسل الإيصال الجديد بدل إظهار خطأ تقني
+        if ((insertError as any).code === '23505' && user?.id) {
+          const { data: existing } = await supabase
+            .from('subscription_requests' as any)
+            .select('ref_code')
+            .eq('user_id', user.id)
+            .in('status', ['pending', 'paid_claimed'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (existing && (existing as any).ref_code) {
+            refCode = (existing as any).ref_code;
+          } else {
+            throw insertError;
+          }
+        } else {
+          throw insertError;
+        }
+      }
 
       // إرسال صورة إثبات التحويل إلى محادثة الدعم
       // الاستدعاء يرجع {error} ولا يرمي استثناء، لذلك نفحصه صراحةً ونُعلم العميل إذا فشل الإرسال

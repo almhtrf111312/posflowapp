@@ -9,7 +9,6 @@ on:
       - '.github/workflows/build-windows.yml'
       - '.github/workflows/telegram-public-release.yml'
       - '.github/workflows/sync-version-to-cloud.yml'
-      - '.github/workflows/build-apk.yml'
       - '.github/workflows/auto-version-bump.yml'
   workflow_dispatch:
     inputs:
@@ -292,11 +291,23 @@ jobs:
               --data @sync-payload.json || true
           fi
 
+      - name: Package versioned source ZIP
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_ZIP="$RUNNER_TEMP/PosFlow-v${VERSION_NAME}-source.zip"
+          echo "RELEASE_SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          git archive --format=zip --prefix="PosFlow-v${VERSION_NAME}/" --output="$SOURCE_ZIP" HEAD
+          echo "RELEASE_SOURCE_ZIP=$SOURCE_ZIP" >> "$GITHUB_ENV"
+
       - name: Create tagged release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
-          files: ${{ env.FINAL_APK_PATH }}
+          files: |
+            ${{ env.FINAL_APK_PATH }}
+            ${{ env.RELEASE_SOURCE_ZIP }}
           generate_release_notes: true
 
       - name: Publish rolling "latest" release (direct download link)
@@ -306,12 +317,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp "$FINAL_APK_PATH" PosFlow-latest.apk
+          set -euo pipefail
+          test -s "$FINAL_APK_PATH"
+          test -s "$RELEASE_SOURCE_ZIP"
           gh release delete latest --cleanup-tag --yes || true
-          gh release create latest PosFlow-latest.apk \
-            --target "$GITHUB_SHA" \
+          gh release create latest "$FINAL_APK_PATH" "$RELEASE_SOURCE_ZIP" \
+            --target "$RELEASE_SOURCE_SHA" \
             --title "آخر نسخة: v${VERSION_NAME}" \
-            --notes "رابط التحميل المباشر لآخر نسخة (v${VERSION_NAME}). يُحدَّث تلقائياً مع كل بناء." \
+            --notes "ملف APK وأرشيف المصدر ZIP للإصدار v${VERSION_NAME} (Build ${VERSION_CODE})." \
             --latest=false
 
       - name: Publish exact APK to Telegram (If Requested)

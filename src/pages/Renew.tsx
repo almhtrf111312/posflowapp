@@ -249,7 +249,7 @@ export default function RenewPage() {
   };
 
   const handleClaimPayment = async () => {
-    if (!selectedPlan || !selectedMethod) return;
+    if (!selectedPlan || !selectedMethod || !user?.id || submitting || proofLoading) return;
     if (!proofImage) {
       showToast.error('يرجى إرفاق صورة إشعار التحويل أولاً');
       return;
@@ -276,20 +276,20 @@ export default function RenewPage() {
           method_name: selectedMethod.name,
           ref_code: refCode,
           payer_name: payerName.trim() || user?.email || 'عميل المتجر',
-          payer_ref: refCode,
           status: 'pending',
           equivalents_snapshot: selectedPlan.equivalents || [],
         })
         .select('id')
         .single();
 
+      let requestId = insertData?.id;
       if (insertError) {
         // يوجد طلب مفتوح للمستخدم مسبقاً (فهرس idx_one_open_sub_request_per_user):
         // نعيد استخدامه ونرسل الإيصال الجديد بدل إظهار خطأ تقني
         if ((insertError as any).code === '23505' && user?.id) {
           const { data: existing } = await supabase
             .from('subscription_requests' as any)
-            .select('ref_code')
+            .select('id, ref_code')
             .eq('user_id', user.id)
             .in('status', ['pending', 'paid_claimed'])
             .order('created_at', { ascending: false })
@@ -297,6 +297,7 @@ export default function RenewPage() {
             .maybeSingle();
           if (existing && (existing as any).ref_code) {
             refCode = (existing as any).ref_code;
+            requestId = (existing as any).id;
           } else {
             throw insertError;
           }
@@ -305,12 +306,14 @@ export default function RenewPage() {
         }
       }
 
+      if (!requestId) throw new Error('لم يتم العثور على معرّف طلب التجديد');
+
       // إرسال صورة إثبات التحويل إلى محادثة الدعم
       // الاستدعاء يرجع {error} ولا يرمي استثناء، لذلك نفحصه صراحةً ونُعلم العميل إذا فشل الإرسال
       let proofSent = false;
       try {
         const { error: proofError } = await supabase.rpc('send_support_message', {
-          _message: `[IMAGE]${proofImage}[/IMAGE]\nإشعار تحويل - مرجع ${refCode} - ${selectedPlan.name} - ${selectedMethod.name}`,
+          _message: `[IMAGE]${proofImage}[/IMAGE]\nإشعار تحويل - مرجع ${refCode} - طلب ${requestId} - ${selectedPlan.name} - ${selectedMethod.name}`,
           _conversation_id: null,
         } as any);
         if (proofError) throw proofError;
@@ -369,7 +372,7 @@ export default function RenewPage() {
         telegramUrl,
       });
 
-      showToast.success('تم تسجيل طلبك وتجهيز إشعار التحويل للدعم الفني');
+      if (proofSent) showToast.success('تم تسجيل الطلب وإرسال إشعار التحويل للدعم الفني');
       loadData();
     } catch (e: any) {
       showToast.error(e.message || 'فشل إرسال الطلب، يرجى التواصل مع الدعم الفني مباشرة');

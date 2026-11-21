@@ -98,7 +98,7 @@ export default function ContactDeveloper() {
 
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-5 pt-12 md:pt-4" dir={direction}>
+    <div className="w-full min-w-0 max-w-none self-stretch px-4 pb-4 pt-12 space-y-5 md:mx-auto md:max-w-4xl md:p-8 md:pt-4" dir={direction}>
       {(supportReason === 'revoked' || supportReason === 'inactive' || supportReason === 'owner_inactive') ? null : (
         /* للعملاء العاديين: بطاقة تجديد وترقية الاشتراك (لا تُعرض للحساب الملغى/المحظور) */
         <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

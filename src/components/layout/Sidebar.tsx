@@ -532,6 +532,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
 // Mobile menu trigger button - unified across all pages
 export function MobileMenuTrigger({ onClick }: { onClick: () => void }) {
   const { isRTL } = useLanguage();
+  const { pathname } = useLocation();
   const { unreadCount: notifUnread } = useNotifications();
   const supportUnread = useSupportUnread();
   const totalUnread = (notifUnread || 0) + (supportUnread || 0);
@@ -551,7 +552,7 @@ export function MobileMenuTrigger({ onClick }: { onClick: () => void }) {
       )}
     >
       <Menu className="w-5 h-5" />
-      {totalUnread > 0 && (
+      {totalUnread > 0 && pathname !== '/notifications' && (
         <span className="absolute top-1.5 end-1.5 min-w-[0.95rem] h-[0.95rem] px-0.5 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center animate-pulse ring-2 ring-background">
           {totalUnread > 9 ? '9+' : totalUnread}
         </span>

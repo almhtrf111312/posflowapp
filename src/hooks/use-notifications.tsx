@@ -274,7 +274,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    if (id.startsWith('alert_')) saveReadAlertIds([id]);
+    if (id.startsWith('alert_') || id.startsWith('license_')) saveReadAlertIds([id]);
     if (id.startsWith('alert_') || id.startsWith('license_')) return;
     if (user?.id) {
       try {
@@ -285,7 +285,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
   const markAllAsRead = useCallback(async () => {
     setNotifications(prev => {
-      saveReadAlertIds(prev.filter(n => n.id.startsWith('alert_')).map(n => n.id));
+      saveReadAlertIds(prev.filter(n => n.id.startsWith('alert_') || n.id.startsWith('license_')).map(n => n.id));
       return prev.map(n => ({ ...n, read: true }));
     });
     if (user?.id) {
@@ -353,55 +353,35 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const checkLicenseStatus = useCallback((expiresAt: string | null, remainingDays: number | null, isTrial?: boolean) => {
-    if (!expiresAt || remainingDays === null) return;
-    setNotifications(prev => prev.filter(n => n.type !== 'license_status' && n.type !== 'license_expiring'));
-
+    if (!user?.id || !expiresAt || remainingDays === null) return;
     const expiryDate = new Date(expiresAt).toLocaleDateString('ar-SA', {
       year: 'numeric', month: 'long', day: 'numeric',
     });
+    const expiring = remainingDays <= 7;
+    const type = expiring ? 'license_expiring' : 'license_status';
+    const id = `${type}_${user.id}_${expiresAt}`;
     const trialPrefix = isTrial ? '(تجريبي) ' : '';
+    const showRemaining = remainingDays <= 30 || isTrial;
+    const title = expiring ? `⚠️ ${trialPrefix}الترخيص ينتهي قريباً`
+      : showRemaining ? `🔑 ${trialPrefix}حالة الترخيص` : '✅ الترخيص مفعّل';
+    const message = expiring ? `متبقي ${remainingDays} ${remainingDays === 1 ? 'يوم' : 'أيام'} على انتهاء الترخيص`
+      : isTrial ? `متبقي ${remainingDays} يوم من الفترة التجريبية`
+      : showRemaining ? `الترخيص صالح حتى ${expiryDate} (متبقي ${remainingDays} يوم)` : `الترخيص صالح حتى ${expiryDate}`;
+    const wasRead = loadReadAlertIds().has(id);
 
-    if (remainingDays <= 7) {
-      const newNotification: Notification = {
-        id: 'license_expiring_' + Date.now(),
-        type: 'license_expiring',
-        title: `⚠️ ${trialPrefix}الترخيص ينتهي قريباً`,
-        message: `متبقي ${remainingDays} ${remainingDays === 1 ? 'يوم' : 'أيام'} على انتهاء الترخيص`,
-        timestamp: new Date(),
-        read: false,
+    setNotifications(prev => {
+      const current = prev.find(n => n.id === id);
+      if (current?.title === title && current.message === message) return prev;
+      const notification: Notification = {
+        id, type, title, message,
+        timestamp: current?.timestamp ?? new Date(),
+        read: current?.read ?? (wasRead || !showRemaining),
         persistent: true,
         data: { licenseExpiresAt: expiresAt, licenseDaysRemaining: remainingDays },
       };
-      setNotifications(prev => [newNotification, ...prev]);
-      showToast.warning(newNotification.title, { description: newNotification.message });
-    } else if (remainingDays <= 30 || isTrial) {
-      const newNotification: Notification = {
-        id: 'license_status_' + Date.now(),
-        type: 'license_status',
-        title: `🔑 ${trialPrefix}حالة الترخيص`,
-        message: isTrial
-          ? `متبقي ${remainingDays} يوم من الفترة التجريبية`
-          : `الترخيص صالح حتى ${expiryDate} (متبقي ${remainingDays} يوم)`,
-        timestamp: new Date(),
-        read: false,
-        persistent: true,
-        data: { licenseExpiresAt: expiresAt, licenseDaysRemaining: remainingDays },
-      };
-      setNotifications(prev => [newNotification, ...prev]);
-    } else {
-      const newNotification: Notification = {
-        id: 'license_status_' + Date.now(),
-        type: 'license_status',
-        title: `✅ الترخيص مفعّل`,
-        message: `الترخيص صالح حتى ${expiryDate}`,
-        timestamp: new Date(),
-        read: true,
-        persistent: true,
-        data: { licenseExpiresAt: expiresAt, licenseDaysRemaining: remainingDays },
-      };
-      setNotifications(prev => [newNotification, ...prev]);
-    }
-  }, []);
+      return [notification, ...prev.filter(n => !n.id.startsWith('license_'))];
+    });
+  }, [user?.id]);
 
   const checkAlerts = useCallback(async () => {
     try {

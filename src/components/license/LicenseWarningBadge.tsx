@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { useLicense } from '@/hooks/use-license';
 import { useLanguage } from '@/hooks/use-language';
@@ -9,22 +9,45 @@ export function LicenseWarningBadge() {
   const { user } = useAuth();
   const { isTrial, remainingDays, isValid, expiringWarning, isLoading } = useLicense();
   const { t, isRTL } = useLanguage();
-  const [isDismissed, setIsDismissed] = useState(false);
+  const [visibleFor, setVisibleFor] = useState<string | null>(null);
+  const lastShown = useRef<string | null>(null);
+  const accountId = user?.id;
+  const eligible = !isLoading && isValid && remainingDays !== null &&
+    (isTrial || expiringWarning || remainingDays <= 30);
 
-  useEffect(() => { setIsDismissed(false); }, []);
+  useEffect(() => {
+    if (!accountId || !eligible) {
+      setVisibleFor(null);
+      return;
+    }
 
-  if (!user || isLoading) return null;
+    const storageKey = `hp_license_warning_day:${accountId}`;
+    const showForToday = () => {
+      if (document.visibilityState !== 'visible') return;
+      const day = new Date().toDateString();
+      const dailyKey = `${accountId}:${day}`;
+      if (lastShown.current === dailyKey) return;
+      try {
+        if (localStorage.getItem(storageKey) === day) {
+          setVisibleFor(null);
+          return;
+        }
+        localStorage.setItem(storageKey, day);
+      } catch { /* Keep the once-per-day limit in memory if storage is unavailable. */ }
+      lastShown.current = dailyKey;
+      setVisibleFor(accountId);
+    };
 
-  const shouldShow = isValid && !isDismissed && remainingDays !== null && (
-    isTrial || expiringWarning || remainingDays <= 30
-  );
+    showForToday();
+    document.addEventListener('visibilitychange', showForToday);
+    const timer = window.setInterval(showForToday, 30_000);
+    return () => {
+      document.removeEventListener('visibilitychange', showForToday);
+      window.clearInterval(timer);
+    };
+  }, [accountId, eligible]);
 
-  if (!shouldShow) return null;
-
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDismissed(true);
-  };
+  if (!accountId || !eligible || visibleFor !== accountId || remainingDays === null) return null;
 
   const isCritical = remainingDays <= 7;
   const isUrgent = remainingDays <= 14;
@@ -36,12 +59,12 @@ export function LicenseWarningBadge() {
         "fixed z-50 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg cursor-pointer transition-all duration-300 hover:scale-105",
         "left-2 bottom-20 md:bottom-4 opacity-95 scale-90 origin-bottom-left",
         isCritical 
-          ? "bg-destructive text-destructive-foreground animate-pulse" 
+          ? "bg-destructive text-destructive-foreground" 
           : isUrgent 
             ? "bg-orange-500 text-white" 
             : "bg-amber-500 text-white"
       )}
-      onClick={handleDismiss}
+      onClick={() => setVisibleFor(null)}
       dir={isRTL ? 'rtl' : 'ltr'}
       title={t('license.clickToDismiss')}
     >

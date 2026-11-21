@@ -7,10 +7,7 @@ import {
   Wrench,
   AlertTriangle,
   RefreshCw,
-  Eye,
-  EyeOff,
   CheckCheck,
-  Archive,
   Clock,
   ShieldCheck,
   Trash2,
@@ -21,7 +18,6 @@ import { Button } from '@/components/ui/button';
 import { useNotifications, type Notification } from '@/hooks/use-notifications';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from '@/lib/sonner-bridge';
-import { Badge } from '@/components/ui/badge';
 import {
   fetchActiveBroadcasts,
   getCachedReleaseConfig,
@@ -29,7 +25,6 @@ import {
   syncSeenBroadcastsWithCloud,
   markBroadcastSeenCloud,
   openExternal,
-  SEEN_KEY,
   CURRENT_VERSION_CODE,
   type Broadcast,
 } from '@/lib/remote-updates';
@@ -187,54 +182,23 @@ export default function Notifications() {
     return list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [filteredBroadcasts, seenIds, notifications]);
 
-  // تبديل حالة القراءة لإعلان البث
-  const toggleBroadcastRead = (id: string) => {
-    setSeenIds((prev) => {
-      let next: string[];
-      if (prev.includes(id)) {
-        next = prev.filter((x) => x !== id);
-      } else {
-        next = [...prev, id];
-        markBroadcastSeenCloud(id, user?.id);
-      }
-      localStorage.setItem(SEEN_KEY, JSON.stringify(next.slice(-200)));
-      window.dispatchEvent(new Event('hp-broadcasts-updated'));
-      return next;
-    });
-  };
-
-  // تبديل القراءة لعنصر موحد
-  const toggleItemRead = (item: UnifiedItem) => {
+  const markItemRead = (item: UnifiedItem) => {
+    if (item.isRead) return;
     if (item.source === 'broadcast') {
-      toggleBroadcastRead(item.id);
+      markBroadcastSeenCloud(item.id, user?.id);
+      setSeenIds(getSeenBroadcasts());
     } else {
-      if (!item.isRead) {
-        markUserNotificationAsRead(item.id);
-      }
+      void markUserNotificationAsRead(item.id);
     }
   };
 
-  // تحديد الكل كمقروء
-  const markAllRead = (silent?: boolean | unknown) => {
-    const allIds = filteredBroadcasts.map((b) => b.id);
-    const set = new Set([...seenIds, ...allIds]);
-    const next = Array.from(set).slice(-200);
-    setSeenIds(next);
-    localStorage.setItem(SEEN_KEY, JSON.stringify(next));
-    allIds.forEach((id) => markBroadcastSeenCloud(id, user?.id));
-    window.dispatchEvent(new Event('hp-broadcasts-updated'));
-
-    markAllUserNotificationsAsRead();
-    if (silent !== true) toast.success('تم تحديد جميع الإشعارات كمقروءة');
+  const markAllRead = () => {
+    for (const broadcast of filteredBroadcasts) {
+      if (!seenIds.includes(broadcast.id)) markBroadcastSeenCloud(broadcast.id, user?.id);
+    }
+    setSeenIds(getSeenBroadcasts());
+    void markAllUserNotificationsAsRead();
   };
-
-  // فتح الصفحة = اعتبار الإشعارات مقروءة (يختفي الرقم من القائمة الجانبية)
-  // يعتمد على عدد الإعلانات المحمّلة حتى لا يستعمل نسخة قديمة (فارغة) من markAllRead قبل وصول البيانات
-  useEffect(() => {
-    const t = setTimeout(() => markAllRead(true), 1500);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rawItems.length]);
 
   // أرشفة أو حذف الإشعار
   const handleDeleteOrArchive = (item: UnifiedItem) => {
@@ -291,27 +255,19 @@ export default function Notifications() {
   };
 
   return (
-    <div className="p-4 w-full max-w-2xl mx-auto space-y-4 min-h-[70vh]" dir="rtl">
-      {/* الشريط العلوي */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
-          <Bell className="w-5 h-5 text-primary" />
+    <div className="w-full min-w-0 max-w-none self-stretch px-4 pb-4 pt-[calc(var(--app-safe-top,0px)+4.25rem)] space-y-4 min-h-[70vh] md:mx-auto md:max-w-3xl md:pt-4" dir="rtl">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="flex min-w-0 items-center gap-2 text-base font-bold text-foreground sm:text-lg">
+          <Bell className="h-5 w-5 shrink-0 text-primary" />
           الإشعارات والتنبيهات
-          {unreadCount > 0 && (
-            <Badge variant="destructive" className="rounded-full px-2 py-0.5 text-xs">
-              {unreadCount} جديد
-            </Badge>
-          )}
         </h1>
-        <div className="flex items-center gap-1.5">
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllRead} className="text-xs h-8 gap-1">
-              <CheckCheck className="w-3.5 h-3.5 text-primary" />
-              تحديد الكل كمقروء
-            </Button>
-          )}
+        <div className="flex shrink-0 items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={markAllRead} disabled={unreadCount === 0}
+            aria-label="تحديد الكل كمقروء" title="تحديد الكل كمقروء" className="h-8 w-8 p-0">
+            <CheckCheck className="h-4 w-4" />
+          </Button>
           <Button variant="ghost" size="sm" onClick={load} aria-label="تحديث" className="h-8 w-8 p-0">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>
@@ -368,7 +324,7 @@ export default function Notifications() {
           return (
             <div
               key={item.id}
-              className={`rounded-2xl border p-4 flex gap-3.5 transition-all ${
+              className={`rounded-2xl border p-4 transition-colors ${
                 item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')
                   ? 'border-amber-500/40 bg-amber-500/5'
                   : isUpdate
@@ -378,48 +334,56 @@ export default function Notifications() {
                   : 'border-border bg-card shadow-xs'
               }`}
             >
-              <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                  item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')
-                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                    : isUpdate
-                    ? 'bg-primary/15 text-primary'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-              </div>
+              <button type="button" onClick={() => markItemRead(item)}
+                className="flex w-full items-start gap-3 rounded-xl text-start"
+                aria-label={item.isRead ? item.title : `تحديد كمقروء: ${item.title}`}>
+                <span
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                    item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      : isUpdate
+                      ? 'bg-primary/15 text-primary'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                </span>
 
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-bold text-foreground break-words">{item.title}</p>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      {getItemBadge(item)}
-                    </Badge>
-                  </div>
-                  <Badge variant={item.isRead ? 'secondary' : 'default'} className="text-[10px] px-1.5 py-0 shrink-0">
-                    {item.isRead ? 'مقروء' : 'جديد'}
-                  </Badge>
-                </div>
+                <span className="flex-1 min-w-0 space-y-1.5">
+                  <span className="flex items-start justify-between gap-2">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-foreground break-words">{item.title}</span>
+                      <span className="rounded-full border px-1.5 text-[10px]">
+                        {getItemBadge(item)}
+                      </span>
+                    </span>
+                    {!item.isRead && (
+                      <span className="min-w-5 shrink-0 rounded-full bg-destructive px-1.5 text-center text-[10px] text-destructive-foreground" aria-label="غير مقروء">
+                        1
+                      </span>
+                    )}
+                  </span>
 
-                {item.body && (
-                  <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap leading-relaxed select-text">
-                    {stripImageTags(item.body)}
-                  </p>
-                )}
+                  {item.body && (
+                    <span className="block text-xs text-muted-foreground break-words whitespace-pre-wrap leading-relaxed select-text">
+                      {stripImageTags(item.body)}
+                    </span>
+                  )}
 
-                <p className="text-[11px] text-muted-foreground/80 font-mono" dir="ltr">
-                  {new Date(item.created_at).toLocaleString('en-GB')}
-                </p>
+                  <span className="block text-[11px] text-muted-foreground/80 font-mono" dir="ltr">
+                    {new Date(item.created_at).toLocaleString('en-GB')}
+                  </span>
 
-                <div className="flex flex-wrap gap-2 pt-1">
+                </span>
+              </button>
+
+              <div className="flex flex-wrap gap-2 pt-2 ps-12">
                   {link && (
                     <Button
                       size="sm"
                       className="h-8 gap-1.5 text-xs font-bold"
                       onClick={() => {
-                        if (!item.isRead) toggleItemRead(item);
+                        markItemRead(item);
                         openExternal(link);
                       }}
                     >
@@ -433,22 +397,10 @@ export default function Notifications() {
                       size="sm"
                       variant="secondary"
                       className="h-8 gap-1.5 text-xs font-semibold"
-                      onClick={() => navigate(item.actionUrl!)}
+                      onClick={() => { markItemRead(item); navigate(item.actionUrl!); }}
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       عرض التفاصيل
-                    </Button>
-                  )}
-
-                  {!item.isRead && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 gap-1.5 text-xs"
-                      onClick={() => toggleItemRead(item)}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      تحديد كمقروء
                     </Button>
                   )}
 
@@ -462,7 +414,6 @@ export default function Notifications() {
                     <Trash2 className="w-3.5 h-3.5" />
                     حذف
                   </Button>
-                </div>
               </div>
             </div>
           );

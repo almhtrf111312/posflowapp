@@ -44,7 +44,7 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
   return (
     <div
       className={cn(
-        'w-full max-w-2xl mx-auto rounded-2xl shadow-sm border border-border bg-card flex flex-col',
+        'w-full min-w-0 max-w-none rounded-2xl shadow-sm border border-border bg-card flex flex-col',
         'animate-in zoom-in-95 fade-in duration-200',
         'h-[35.7rem] overflow-hidden'
       )}

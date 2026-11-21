@@ -299,6 +299,21 @@ jobs:
           files: ${{ env.FINAL_APK_PATH }}
           generate_release_notes: true
 
+      - name: Publish rolling "latest" release (direct download link)
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp "$FINAL_APK_PATH" PosFlow-latest.apk
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest PosFlow-latest.apk \
+            --target "$GITHUB_SHA" \
+            --title "آخر نسخة: v${VERSION_NAME}" \
+            --notes "رابط التحميل المباشر لآخر نسخة (v${VERSION_NAME}). يُحدَّث تلقائياً مع كل بناء." \
+            --latest=false
+
       - name: Publish exact APK to Telegram (If Requested)
         if: ${{ inputs.publish_telegram == true }}
         continue-on-error: true

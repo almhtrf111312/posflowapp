@@ -6,13 +6,11 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Verify authorization
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
@@ -29,7 +27,6 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // Verify caller using a user-scoped client (works with signing keys)
     const token = authHeader.replace('Bearer ', '').trim()
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -45,9 +42,7 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-    console.log('Authenticated caller:', callerId)
 
-    // Check if caller is admin or boss — retry on transient network errors
     let callerRole: { role: string; owner_id: string | null } | null = null
     let roleError: unknown = null
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -63,7 +58,6 @@ Deno.serve(async (req) => {
 
     if (roleError) {
       console.error('Error fetching caller role (after retries):', roleError)
-      // Degrade gracefully: the UI works without emails
       return new Response(
         JSON.stringify({ emails: {}, warning: 'permissions_check_unavailable' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -80,9 +74,8 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get user_ids from request body
     const { userIds } = await req.json()
-    
+
     if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
       return new Response(
         JSON.stringify({ emails: {} }),
@@ -90,21 +83,16 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Fetching emails for', userIds.length, 'users')
-
-    // For admins, only return emails of users they own or themselves
-    // For boss, return all requested emails
     let allowedUserIds = userIds
 
     if (isAdmin && !isBoss) {
-      // Get all users that belong to this admin (cashiers with owner_id = callerId)
       const { data: ownedUsers } = await adminClient
         .from('user_roles')
         .select('user_id')
         .eq('owner_id', callerId)
 
       const ownedUserIds = new Set((ownedUsers || []).map(u => u.user_id))
-      ownedUserIds.add(callerId) // Include self
+      ownedUserIds.add(callerId)
 
       allowedUserIds = userIds.filter((id: string) => ownedUserIds.has(id))
     }
@@ -136,13 +124,10 @@ Deno.serve(async (req) => {
       if (pageData.users.length < PAGE_SIZE) break
     }
 
-    console.log('Returning', Object.keys(emailMap).length, 'emails')
-
     return new Response(
       JSON.stringify({ emails: emailMap }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(

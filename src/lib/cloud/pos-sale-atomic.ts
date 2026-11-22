@@ -339,7 +339,7 @@ export async function processPosSaleAtomic(
     emitEvent(EVENTS.INVOICES_UPDATED, null);
 
     if (paymentType === 'debt') emitEvent(EVENTS.DEBTS_UPDATED, null);
-    markSaleAsSyncedInNativeSQLite(row.invoice_id, row.invoice_number).catch(() => {});
+    markSaleAsSyncedInNativeSQLite(row.invoice_id, row.invoice_number, operationId).catch(() => {});
     if ((bundle as any).paymentMethod === 'digital') {
       try {
         const { error: dErr } = await sb.rpc('mark_invoice_digital', { _invoice_number: row.invoice_number });

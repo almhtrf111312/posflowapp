@@ -887,6 +887,7 @@ export function CartPanel({
           costPrice: i.costPrice,
           totalPrice: i.total,
           isBox: i.unit === 'bulk',
+          conversionFactor: i.conversionFactor,
         })),
       }).catch(err => console.warn('[CartPanel] Native SQLite sale recording error:', err));
 
@@ -1357,6 +1358,7 @@ export function CartPanel({
           costPrice: i.costPrice,
           totalPrice: i.total,
           isBox: i.unit === 'bulk',
+          conversionFactor: i.conversionFactor,
         })),
       }).catch(err => console.warn('[CartPanel] Native SQLite debt sale recording error:', err));
 

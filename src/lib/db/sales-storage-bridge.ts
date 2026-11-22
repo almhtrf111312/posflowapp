@@ -10,6 +10,15 @@ export interface NativeSaleItem {
   costPrice?: number;
   totalPrice: number;
   isBox?: boolean;
+  /** Pieces per box; stock is kept in pieces, so box sales must deduct quantity × factor */
+  conversionFactor?: number;
+}
+
+/** Stock units (pieces) to deduct for one sale line. */
+export function stockUnitsForSaleItem(item: Pick<NativeSaleItem, 'quantity' | 'isBox' | 'conversionFactor'>): number {
+  const quantity = Number(item.quantity) || 0;
+  const factor = Number(item.conversionFactor) || 1;
+  return item.isBox && factor > 1 ? quantity * factor : quantity;
 }
 
 export interface NativeSaleRecord {
@@ -94,12 +103,13 @@ export async function recordSaleInNativeSQLite(sale: NativeSaleRecord): Promise<
       );
 
       // خصم الكمية المباعة من جدول المنتجات المحلي في SQLite
-      if (item.productId && item.quantity > 0) {
+      const stockUnits = stockUnitsForSaleItem(item);
+      if (item.productId && stockUnits > 0) {
         await db.run(
-          `UPDATE local_products 
-           SET stock = MAX(0, stock - ?) 
+          `UPDATE local_products
+           SET stock = MAX(0, stock - ?)
            WHERE id = ?;`,
-          [Number(item.quantity), item.productId]
+          [stockUnits, item.productId]
         );
       }
     }
@@ -118,7 +128,8 @@ export async function recordSaleInNativeSQLite(sale: NativeSaleRecord): Promise<
  */
 export async function markSaleAsSyncedInNativeSQLite(
   invoiceId: string,
-  invoiceNumber?: string
+  invoiceNumber?: string,
+  operationId?: string
 ): Promise<void> {
   if (!isNativeStorageSupported()) return;
 
@@ -129,8 +140,10 @@ export async function markSaleAsSyncedInNativeSQLite(
     await db.run(
       `UPDATE local_invoices 
        SET sync_status = 'synced' 
-       WHERE id = ? OR invoice_number = ? OR invoice_number = ?;`,
-      [invoiceId, invoiceId, invoiceNumber || invoiceId]
+       WHERE id = ? OR id = ? OR invoice_number = ? OR invoice_number = ?;`,
+      // The local row is saved under the client operationId with the local invoice number,
+      // so the server invoice id/number alone never match it.
+      [invoiceId, operationId || invoiceId, invoiceId, invoiceNumber || invoiceId]
     );
   } catch (error) {
     console.warn('⚠️ [NativeSQLite] تعذر تحديث حالة الفاتورة إلى synced:', error);

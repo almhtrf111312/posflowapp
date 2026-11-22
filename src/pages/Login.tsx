@@ -82,7 +82,8 @@ export default function Login() {
   })();
 
   const { signIn } = useAuth();
-  const { t, direction } = useLanguage();
+  const {t, direction, language } = useLanguage();
+  const isEn = language === 'en';
   const navigate = useNavigate();
 
   const handleStartDemo = async () => {
@@ -93,11 +94,11 @@ export default function Login() {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('guest-demo-started'));
       }
-      toast.success('تم تفعيل وضع التجربة بنجاح (صالح لمدة 24 ساعة)');
+      toast.success(isEn ? 'Demo mode activated (valid for 24 hours)' : 'تم تفعيل وضع التجربة بنجاح (صالح لمدة 24 ساعة)');
       navigate('/');
     } catch (err) {
       console.error('Failed to start demo mode:', err);
-      toast.error('فشل في بدء وضع التجربة');
+      toast.error(isEn ? 'Failed to start demo mode' : 'فشل في بدء وضع التجربة');
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +175,7 @@ export default function Login() {
   const handleRequestTelegramOTP = async () => {
     const trimmed = tgIdentifier.trim();
     if (!trimmed) {
-      toast.error('يرجى إدخال البريد الإلكتروني أو رقم الهاتف المسجل');
+      toast.error(isEn ? 'Please enter your registered email or phone number' : 'يرجى إدخال البريد الإلكتروني أو رقم الهاتف المسجل');
       return;
     }
 
@@ -204,17 +205,17 @@ export default function Login() {
             setTgBotLink(resData.bot_link);
           }
         }
-        toast.error(resData?.error || 'فشل إرسال رمز التحقق إلى تيليغرام');
+        toast.error(resData?.error || (isEn ? 'Failed to send verification code to Telegram' : 'فشل إرسال رمز التحقق إلى تيليغرام'));
         return;
       }
 
       // الرد موحّد (لا يكشف وجود الحساب): نعرض رابط البوت دائماً لمن لم يربط حسابه بعد
       if (resData?.bot_link) setTgBotLink(resData.bot_link);
-      toast.success(resData?.message || 'تم إرسال رمز التحقق إلى تيليغرام بنجاح', { duration: 7000 });
+      toast.success(resData?.message || (isEn ? 'Verification code sent to Telegram' : 'تم إرسال رمز التحقق إلى تيليغرام بنجاح'), { duration: 7000 });
       setTelegramStep(2);
     } catch (err: any) {
       console.error('Request Telegram OTP error:', err);
-      toast.error('تعذر الاتصال بخدمة تيليغرام، يرجى المحاولة لاحقاً');
+      toast.error(isEn ? 'Could not connect to Telegram service, please try again later' : 'تعذر الاتصال بخدمة تيليغرام، يرجى المحاولة لاحقاً');
     } finally {
       setIsTgLoading(false);
     }
@@ -224,17 +225,17 @@ export default function Login() {
   const handleVerifyAndResetPassword = async () => {
     const code = tgCode.trim();
     if (!code || code.length !== 6) {
-      toast.error('يرجى إدخال رمز التحقق المكون من 6 أرقام');
+      toast.error(isEn ? 'Please enter the 6-digit verification code' : 'يرجى إدخال رمز التحقق المكون من 6 أرقام');
       return;
     }
 
     if (!isPasswordValid) {
-      toast.error('يرجى استيفاء جميع معايير كلمة المرور (حرف كبير، حرف صغير، رقم، رمز خاص، و8 خانات)');
+      toast.error(isEn ? 'Please meet all password requirements (uppercase, lowercase, number, symbol, 8+ chars)' : 'يرجى استيفاء جميع معايير كلمة المرور (حرف كبير، حرف صغير، رقم، رمز خاص، و8 خانات)');
       return;
     }
 
     if (tgNewPassword !== tgConfirmPassword) {
-      toast.error('كلمة المرور وتأكيدها غير متطابقين');
+      toast.error(isEn ? 'Password and confirmation do not match' : 'كلمة المرور وتأكيدها غير متطابقين');
       return;
     }
 
@@ -259,11 +260,11 @@ export default function Login() {
       const resData = await response.json();
 
       if (!response.ok || !resData?.success) {
-        toast.error(resData?.error || 'فشل التحقق وتغيير كلمة المرور');
+        toast.error(resData?.error || (isEn ? 'Verification and password reset failed' : 'فشل التحقق وتغيير كلمة المرور'));
         return;
       }
 
-      toast.success(resData?.message || 'تم تغيير كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول.');
+      toast.success(resData?.message || (isEn ? 'Password changed successfully! You can now sign in.' : 'تم تغيير كلمة المرور بنجاح! يمكنك الآن تسجيل الدخول.'));
       setPassword(tgNewPassword);
       if (tgIdentifier.includes('@')) {
         setEmail(tgIdentifier.trim());
@@ -277,7 +278,7 @@ export default function Login() {
       setTgConfirmPassword('');
     } catch (err: any) {
       console.error('Verify and reset password error:', err);
-      toast.error('حدث خطأ أثناء تغيير كلمة المرور');
+      toast.error(isEn ? 'An error occurred while changing the password' : 'حدث خطأ أثناء تغيير كلمة المرور');
     } finally {
       setIsTgLoading(false);
     }
@@ -368,12 +369,12 @@ export default function Login() {
 
     // فحص صحة صيغة الإيميل وقوة كلمة المرور
     if (!isValidEmailFormat(email)) {
-      toast.error('صيغة البريد الإلكتروني غير صحيحة');
+      toast.error(isEn ? 'Invalid email format' : 'صيغة البريد الإلكتروني غير صحيحة');
       return;
     }
 
     if (!password || password.length < 6) {
-      toast.error('كلمة المرور ضعيفة (يجب أن تكون 6 أحرف على الأقل)');
+      toast.error(isEn ? 'Password is too weak (minimum 6 characters)' : 'كلمة المرور ضعيفة (يجب أن تكون 6 أحرف على الأقل)');
       return;
     }
 
@@ -469,7 +470,7 @@ export default function Login() {
   const handleResetDevice = async () => {
     const targetEmail = blockedState?.userEmail || email;
     if (!targetEmail || !password) {
-      toast.error('يرجى كتابة كلمة المرور الخاصة بحسابك لإعادة التعيين والتأكيد');
+      toast.error(isEn ? 'Please enter your account password to confirm device reset' : 'يرجى كتابة كلمة المرور الخاصة بحسابك لإعادة التعيين والتأكيد');
       return;
     }
 
@@ -481,7 +482,7 @@ export default function Login() {
       });
 
       if (error) {
-        let message = 'تعذر الاتصال بخدمة التحقق من الجهاز';
+        let message = isEn ? 'Could not reach device verification service' : 'تعذر الاتصال بخدمة التحقق من الجهاز';
         try {
           const details = error instanceof FunctionsHttpError
             ? await error.context.text()
@@ -498,17 +499,17 @@ export default function Login() {
       }
 
       if (!data) {
-        toast.error('تعذر الاتصال بخدمة التحقق من الجهاز');
+        toast.error(isEn ? 'Could not reach device verification service' : 'تعذر الاتصال بخدمة التحقق من الجهاز');
         return;
       }
 
       if (!data.success) {
         // إظهار رسالة الخطأ القادمة من الـ SQL (مثل: متبقي X يوم أو ساعات)
-        toast.error(data.error || 'فشلت عملية إعادة تعيين الجهاز');
+        toast.error(data.error || (isEn ? 'Device reset failed' : 'فشلت عملية إعادة تعيين الجهاز'));
         return;
       }
 
-      toast.success(data.message || 'تم فك ارتباط الجهاز السابق بنجاح!');
+      toast.success(data.message || (isEn ? 'Previous device unlinked successfully!' : 'تم فك ارتباط الجهاز السابق بنجاح!'));
       
       // مسح حالة الحظر
       sessionStorage.removeItem('posflow_active_device_block');
@@ -536,7 +537,7 @@ export default function Login() {
       navigate('/');
     } catch (err: any) {
       console.error('Reset device error:', err);
-      toast.error('حدث خطأ غير متوقع أثناء تصفير الجهاز');
+      toast.error(isEn ? 'An unexpected error occurred while resetting the device' : 'حدث خطأ غير متوقع أثناء تصفير الجهاز');
     } finally {
       setIsResettingDevice(false);
       setIsLoading(false);
@@ -656,7 +657,7 @@ export default function Login() {
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground font-medium">أو</span>
+              <span className="bg-background px-2 text-muted-foreground font-medium">{isEn ? "or" : "أو"}</span>
             </div>
           </div>
 
@@ -668,20 +669,20 @@ export default function Login() {
             className="w-full h-12 rounded-2xl border-dashed border-primary/50 hover:border-primary hover:bg-primary/5 text-primary font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer text-sm"
           >
             <Sparkles className="w-4 h-4 text-primary" />
-            <span>تجربة التطبيق بدون حساب (Demo Mode)</span>
+            <span>{isEn ? "Try App Without Account (Demo Mode)" : "تجربة التطبيق بدون حساب (Demo Mode)"}</span>
           </Button>
 
           <AlertDialog open={showDemoConfirm} onOpenChange={setShowDemoConfirm}>
-            <AlertDialogContent dir="rtl">
+            <AlertDialogContent dir={direction}>
               <AlertDialogHeader>
-                <AlertDialogTitle>الدخول إلى وضع التجربة</AlertDialogTitle>
+                <AlertDialogTitle>{isEn ? "Enter Demo Mode" : "الدخول إلى وضع التجربة"}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  بيانات وضع التجربة هي بيانات تجريبية فقط، وسيتم الاحتفاظ بها لمدة 24 ساعة ثم تُحذف. هل تريد المتابعة؟
+                  {isEn ? "Demo mode uses sample data only, kept for 24 hours before automatic deletion. Continue?" : "بيانات وضع التجربة هي بيانات تجريبية فقط، وسيتم الاحتفاظ بها لمدة 24 ساعة ثم تُحذف. هل تريد المتابعة؟"}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter className="gap-2 sm:gap-0">
-                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                <AlertDialogAction onClick={() => { setShowDemoConfirm(false); void handleStartDemo(); }}>موافق، ادخل</AlertDialogAction>
+                <AlertDialogCancel>{isEn ? "Cancel" : "إلغاء"}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => { setShowDemoConfirm(false); void handleStartDemo(); }}>{isEn ? "Continue" : "موافق، ادخل"}</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
@@ -720,10 +721,10 @@ export default function Login() {
               <Send className="w-7 h-7" />
             </div>
             <DialogTitle className="text-lg font-bold">
-              استعادة كلمة المرور عبر تيليغرام
+              {isEn ? 'Reset Password via Telegram' : 'استعادة كلمة المرور عبر تيليغرام'}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
-              يتم إرسال رمز الأمان (OTP) مباشرة وبشكل فوري إلى حسابك في بوت تيليغرام
+              {isEn ? "A security code (OTP) is sent instantly to your Telegram bot chat" : "يتم إرسال رمز الأمان (OTP) مباشرة وبشكل فوري إلى حسابك في بوت تيليغرام"}
             </DialogDescription>
           </DialogHeader>
 
@@ -734,13 +735,13 @@ export default function Login() {
               <div className="space-y-3.5">
                 <div className="space-y-1.5">
                   <Label htmlFor="tgIdentifier" className="text-xs font-semibold text-foreground">
-                    البريد الإلكتروني أو رقم الهاتف المسجل
+                    {isEn ? 'Registered Email or Phone Number' : 'البريد الإلكتروني أو رقم الهاتف المسجل'}
                   </Label>
                   <div className="relative">
                     <Input
                       id="tgIdentifier"
                       type="text"
-                      placeholder="name@example.com أو 0770..."
+                      placeholder={isEn ? "name@example.com or phone..." : "name@example.com أو 0770..."}
                       value={tgIdentifier}
                       onChange={(e) => {
                         setTgIdentifier(e.target.value);
@@ -752,7 +753,7 @@ export default function Login() {
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-normal">
-                    أدخل بيانات حسابك لإرسال رمز التحقق فوراً إلى محادثة البوت الخاصة بك.
+                    {isEn ? 'Enter your account details to receive the verification code immediately in your bot chat.' : 'أدخل بيانات حسابك لإرسال رمز التحقق فوراً إلى محادثة البوت الخاصة بك.'}
                   </p>
                 </div>
 
@@ -761,10 +762,10 @@ export default function Login() {
                   <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-2 text-amber-700 dark:text-amber-400">
                     <div className="flex items-center gap-2 font-bold">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      <span>حسابك غير مربوط بالبوت بعد</span>
+                      <span>{isEn ? 'Your account is not linked to the bot yet' : 'حسابك غير مربوط بالبوت بعد'}</span>
                     </div>
                     <p className="text-[11px] leading-relaxed">
-                      لم يتم ربط رقم هاتفك ببوت التحقق حتى الآن. افتح البوت واضغط <strong>/start</strong> ثم <strong>«مشاركة رقم الهاتف للتحقق»</strong>.
+                      {isEn ? (<>Your phone number is not linked to the verification bot yet. Open the bot and tap <strong>/start</strong> then <strong>Share Phone Number</strong>.</>) : (<>لم يتم ربط رقم هاتفك ببوت التحقق حتى الآن. افتح البوت واضغط <strong>/start</strong> ثم <strong>«مشاركة رقم الهاتف للتحقق»</strong>.</>)}
                     </p>
                     {tgBotLink && (
                       <a
@@ -774,7 +775,7 @@ export default function Login() {
                         className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold text-xs transition-colors shadow-sm"
                       >
                         <Send className="w-3.5 h-3.5" />
-                        <span>فتح البوت في تيليغرام الآن</span>
+                        <span>{isEn ? "Open Telegram Bot Now" : "فتح البوت في تيليغرام الآن"}</span>
                       </a>
                     )}
                   </div>
@@ -788,12 +789,12 @@ export default function Login() {
                   {isTgLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>جاري إرسال الرمز...</span>
+                      <span>{isEn ? "Sending code..." : "جاري إرسال الرمز..."}</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4 me-1.5" />
-                      <span>إرسال رمز التحقق إلى تيليغرام</span>
+                      <span>{isEn ? "Send Verification Code to Telegram" : "إرسال رمز التحقق إلى تيليغرام"}</span>
                     </>
                   )}
                 </Button>
@@ -803,29 +804,35 @@ export default function Login() {
               <div className="space-y-3.5">
                 <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-2xl text-xs space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sky-700 dark:text-sky-300">إذا كان الحساب مربوطاً بالبوت فقد أُرسل الرمز</span>
+                    <span className="font-semibold text-sky-700 dark:text-sky-300">{isEn ? "If linked to the bot, the code has been sent" : "إذا كان الحساب مربوطاً بالبوت فقد أُرسل الرمز"}</span>
                     <button
                       type="button"
                       onClick={() => setTelegramStep(1)}
                       className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
                     >
-                      تغيير الحساب
+                      {isEn ? "Change Account" : "تغيير الحساب"}
                     </button>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    راجع محادثة البوت وأدخل الرمز المكون من 6 أرقام هنا.
+                    {isEn ? 'Check your bot chat and enter the 6-digit code below.' : 'راجع محادثة البوت وأدخل الرمز المكون من 6 أرقام هنا.'}
                   </p>
                   {tgBotLink && (
                     <p className="text-[11px] text-muted-foreground">
-                      لم يصلك الرمز؟ افتح{' '}
-                      <a href={tgBotLink} target="_blank" rel="noopener noreferrer" className="text-sky-600 underline">البوت</a>
-                      {' '}واضغط /start ثم «مشاركة رقم الهاتف للتحقق»، وبعدها اطلب الرمز مجدداً.
+                      {isEn ? (
+                        <>Didn't receive the code? Open the{' '}
+                        <a href={tgBotLink} target="_blank" rel="noopener noreferrer" className="text-sky-600 underline">Bot</a>
+                        {' '}and tap /start then Share Phone Number, then request again.</>
+                      ) : (
+                        <>لم يصلك الرمز؟ افتح{' '}
+                        <a href={tgBotLink} target="_blank" rel="noopener noreferrer" className="text-sky-600 underline">البوت</a>
+                        {' '}واضغط /start ثم «مشاركة رقم الهاتف للتحقق»، وبعدها اطلب الرمز مجدداً.</>
+                      )}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="tgCode" className="text-xs font-semibold">رمز التحقق (6 أرقام)</Label>
+                  <Label htmlFor="tgCode" className="text-xs font-semibold">{isEn ? "Verification Code (6 digits)" : "رمز التحقق (6 أرقام)"}</Label>
                   <Input
                     id="tgCode"
                     type="text"
@@ -840,11 +847,11 @@ export default function Login() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="tgNewPassword" className="text-xs font-semibold">كلمة المرور الجديدة</Label>
+                  <Label htmlFor="tgNewPassword" className="text-xs font-semibold">{isEn ? "New Password" : "كلمة المرور الجديدة"}</Label>
                   <Input
                     id="tgNewPassword"
                     type="password"
-                    placeholder="8 خانات على الأقل"
+                    placeholder={isEn ? "At least 8 characters" : "8 خانات على الأقل"}
                     value={tgNewPassword}
                     onChange={(e) => setTgNewPassword(e.target.value)}
                     disabled={isTgLoading}
@@ -854,11 +861,11 @@ export default function Login() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="tgConfirmPassword" className="text-xs font-semibold">تأكيد كلمة المرور</Label>
+                  <Label htmlFor="tgConfirmPassword" className="text-xs font-semibold">{isEn ? "Confirm Password" : "تأكيد كلمة المرور"}</Label>
                   <Input
                     id="tgConfirmPassword"
                     type="password"
-                    placeholder="أعد إدخال كلمة المرور"
+                    placeholder={isEn ? "Re-enter password" : "أعد إدخال كلمة المرور"}
                     value={tgConfirmPassword}
                     onChange={(e) => setTgConfirmPassword(e.target.value)}
                     disabled={isTgLoading}
@@ -875,10 +882,10 @@ export default function Login() {
                   {isTgLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>جاري حفظ كلمة المرور...</span>
+                      <span>{isEn ? "Saving password..." : "جاري حفظ كلمة المرور..."}</span>
                     </>
                   ) : (
-                    <span>حفظ كلمة المرور الجديدة والدخول</span>
+                    <span>{isEn ? "Save New Password & Sign In" : "حفظ كلمة المرور الجديدة والدخول"}</span>
                   )}
                 </Button>
               </div>
@@ -888,15 +895,15 @@ export default function Login() {
             <div className="pt-2 border-t border-border/50">
               <div className="bg-muted/40 rounded-2xl p-3 flex items-center justify-between gap-2 border border-border/40">
                 <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-foreground">تواجه مشكلة بالاسترداد؟</p>
-                  <p className="text-[11px] text-muted-foreground">تواصل مباشرة مع المطور للمساعدة اليدوية</p>
+                  <p className="text-xs font-bold text-foreground">{isEn ? "Having trouble recovering your account?" : "تواجه مشكلة بالاسترداد؟"}</p>
+                  <p className="text-[11px] text-muted-foreground">{isEn ? "Contact the developer directly for manual assistance" : "تواصل مباشرة مع المطور للمساعدة اليدوية"}</p>
                 </div>
                 <Link
                   to="/contact-developer"
                   onClick={() => setShowForgotDialog(false)}
                   className="px-3 py-1.5 bg-background hover:bg-muted text-xs font-bold rounded-xl border border-border text-foreground transition-colors shrink-0"
                 >
-                  التواصل مع المطور
+                  {isEn ? 'Contact Developer' : 'التواصل مع المطور'}
                 </Link>
               </div>
             </div>
@@ -909,7 +916,7 @@ export default function Login() {
               onClick={() => setShowForgotDialog(false)}
               className="w-full h-10 rounded-xl text-xs font-semibold cursor-pointer"
             >
-              إلغاء
+              {isEn ? 'Cancel' : 'إلغاء'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -930,16 +937,16 @@ export default function Login() {
                 <ShieldAlert className="w-9 h-9" />
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
-                الحساب مقترن بجهاز آخر
+                {isEn ? "Account Bound to Another Device" : "الحساب مقترن بجهاز آخر"}
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed px-2">
-                حسابك مسجل ومرتبط بهاتف آخر مسبقاً. حماية للترخيص ولبياناتك لا يمكن فتح الحساب على جهازين بنفس الوقت.
+                {isEn ? "Your account is already bound to another device. To protect your license and data, it cannot be active on two devices simultaneously." : "حسابك مسجل ومرتبط بهاتف آخر مسبقاً. حماية للترخيص ولبياناتك لا يمكن فتح الحساب على جهازين بنفس الوقت."}
               </p>
             </div>
 
             {/* الحساب المستهدف */}
             <div className="p-3 bg-muted/50 rounded-2xl border border-border/50 text-center">
-              <span className="text-xs text-muted-foreground block mb-0.5">البريد الإلكتروني المرتبط:</span>
+              <span className="text-xs text-muted-foreground block mb-0.5">{isEn ? "Linked Email:" : "البريد الإلكتروني المرتبط:"}</span>
               <span className="font-mono font-bold text-xs sm:text-sm text-foreground select-all">
                 {blockedState.userEmail || email}
               </span>
@@ -957,12 +964,12 @@ export default function Login() {
                 {isResettingDevice ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>جاري التحقق وفك الارتباط...</span>
+                    <span>{isEn ? "Verifying & unbinding..." : "جاري التحقق وفك الارتباط..."}</span>
                   </>
                 ) : (
                   <>
                     <RefreshCw className="w-4 h-4" />
-                    <span>نقل الحساب إلى هذا الجهاز</span>
+                    <span>{isEn ? "Transfer Account to This Device" : "نقل الحساب إلى هذا الجهاز"}</span>
                   </>
                 )}
               </Button>
@@ -978,7 +985,7 @@ export default function Login() {
                 className="w-full h-11 rounded-xl font-bold border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <Send className="w-4 h-4" />
-                <span>التصفير عبر بوت تيليغرام (/reset_device)</span>
+                <span>{isEn ? "Reset via Telegram Bot (/reset_device)" : "التصفير عبر بوت تيليغرام (/reset_device)"}</span>
               </Button>
 
               {/* زر إغلاق التنبيه */}
@@ -991,12 +998,12 @@ export default function Login() {
                 }} 
                 className="w-full h-10 rounded-xl text-muted-foreground hover:text-foreground text-xs font-semibold cursor-pointer"
               >
-                إغلاق التنبيه وتجربة حساب آخر
+                {isEn ? "Dismiss & Try Another Account" : "إغلاق التنبيه وتجربة حساب آخر"}
               </Button>
             </div>
 
             <p className="text-[11px] text-center text-muted-foreground leading-normal">
-              🔒 يمكنك نقل الحساب بنفسك إذا مضى يوم على ربط الجهاز السابق. قبل ذلك يتم النقل عبر بوت تيليغرام.
+              {isEn ? '🔒 You can transfer the account yourself 24 hours after linking the previous device. Earlier transfers require the Telegram bot.' : '🔒 يمكنك نقل الحساب بنفسك إذا مضى يوم على ربط الجهاز السابق. قبل ذلك يتم النقل عبر بوت تيليغرام.'}
             </p>
           </div>
         </div>

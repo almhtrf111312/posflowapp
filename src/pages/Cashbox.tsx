@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/sonner-bridge';
 import { useAuth } from '@/hooks/use-auth';
+import { useLanguage } from '@/hooks/use-language';
 import { useMoney } from '@/hooks/use-money';
 import { addActivityLog } from '@/lib/activity-log';
 import { formatNumber, formatCurrency, formatDateTime, formatDate, formatTime } from '@/lib/utils';
@@ -33,6 +34,8 @@ import { openShiftCloud, closeShiftCloud, loadCloudShifts } from '@/lib/cloud/ca
 
 export default function Cashbox() {
   const { user, profile } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const m = useMoney();
   const [cashboxState, setCashboxState] = useState(loadCashboxState());
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -70,7 +73,7 @@ export default function Cashbox() {
               expectedCash: Number(cs.expected_balance) || 0,
               discrepancy: cs.variance !== null && cs.variance !== undefined ? Number(cs.variance) : undefined,
               userId: cs.cashier_id || cs.user_id || '',
-              userName: cs.cashier_name || 'كاشير',
+              userName: cs.cashier_name || (isEn ? 'Cashier' : 'كاشير'),
               status: (cs.closed_at ? 'closed' : 'open') as 'open' | 'closed',
               salesTotal: 0,
               expensesTotal: 0,
@@ -118,11 +121,11 @@ export default function Cashbox() {
   const handleOpenShift = () => {
     const amount = parseFloat(openingAmount);
     if (isNaN(amount) || amount < 0) {
-      toast.error('يرجى إدخال مبلغ صحيح');
+      toast.error(isEn ? 'Please enter a valid amount' : 'يرجى إدخال مبلغ صحيح');
       return;
     }
 
-    const userName = profile?.full_name || user?.email || 'مستخدم';
+    const userName = profile?.full_name || user?.email || (isEn ? 'User' : 'مستخدم');
     const userId = user?.id || '';
 
     const newShift = openShift(amount, userId, userName);
@@ -139,11 +142,11 @@ export default function Cashbox() {
       'shift_opened',
       userId,
       userName,
-      `تم فتح وردية جديدة برصيد افتتاحي ${m.fmt(amount)}`,
+      isEn ? `Opened new shift with opening balance ${m.fmt(amount)}` : `تم فتح وردية جديدة برصيد افتتاحي ${m.fmt(amount)}`,
       { openingCash: amount }
     );
 
-    toast.success('تم فتح الوردية بنجاح');
+    toast.success(isEn ? 'Shift opened successfully' : 'تم فتح الوردية بنجاح');
     setShowOpenDialog(false);
     setOpeningAmount('');
     loadData();
@@ -152,14 +155,14 @@ export default function Cashbox() {
   const handleCloseShift = () => {
     const amount = parseFloat(closingAmount);
     if (isNaN(amount) || amount < 0) {
-      toast.error('يرجى إدخال مبلغ صحيح');
+      toast.error(isEn ? 'Please enter a valid amount' : 'يرجى إدخال مبلغ صحيح');
       return;
     }
 
     const result = closeShift(amount, closingNotes);
 
     if (!result) {
-      toast.error('لا توجد وردية مفتوحة');
+      toast.error(isEn ? 'No open shift' : 'لا توجد وردية مفتوحة');
       return;
     }
 
@@ -172,14 +175,14 @@ export default function Cashbox() {
       });
     }
 
-    const userName = profile?.full_name || user?.email || 'مستخدم';
+    const userName = profile?.full_name || user?.email || (isEn ? 'User' : 'مستخدم');
     const userId = user?.id || '';
 
     addActivityLog(
       'shift_closed',
       userId,
       userName,
-      `تم إغلاق الوردية - الفارق: ${m.fmt(result.discrepancy)}`,
+      isEn ? `Shift closed - Variance: ${m.fmt(result.discrepancy)}` : `تم إغلاق الوردية - الفارق: ${m.fmt(result.discrepancy)}`,
       {
         closingCash: amount,
         expectedCash: result.shift.expectedCash,
@@ -188,10 +191,10 @@ export default function Cashbox() {
     );
 
     if (result.discrepancy !== 0) {
-      const type = result.discrepancy > 0 ? 'فائض' : 'عجز';
-      toast.warning(`تم إغلاق الوردية مع ${type}: ${m.fmt(Math.abs(result.discrepancy))}`);
+      const type = result.discrepancy > 0 ? (isEn ? 'Surplus' : 'فائض') : (isEn ? 'Shortage' : 'عجز');
+      toast.warning(isEn ? `Shift closed with ${type}: ${m.fmt(Math.abs(result.discrepancy))}` : `تم إغلاق الوردية مع ${type}: ${m.fmt(Math.abs(result.discrepancy))}`);
     } else {
-      toast.success('تم إغلاق الوردية بنجاح - الصندوق متطابق');
+      toast.success(isEn ? 'Shift closed successfully - Cashbox balanced' : 'تم إغلاق الوردية بنجاح - الصندوق متطابق');
     }
 
     setShowCloseDialog(false);
@@ -211,7 +214,7 @@ export default function Cashbox() {
               <div className="w-8 h-8 rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
                 <Clock className="w-4 h-4" />
               </div>
-              <span className="text-xs font-bold text-foreground">صندوق الوردية</span>
+              <span className="text-xs font-bold text-foreground">{isEn ? "Shift Cashbox" : "صندوق الوردية"}</span>
             </div>
             <Button
               variant="outline"
@@ -220,14 +223,14 @@ export default function Cashbox() {
               onClick={() => setShowHistoryDialog(true)}
             >
               <History className="w-3.5 h-3.5" />
-              <span>سجل الورديات</span>
+              <span>{isEn ? "Shift History" : "سجل الورديات"}</span>
             </Button>
           </div>
 
           <div className="py-2">
-            <h2 className="text-base sm:text-lg font-bold text-foreground">لا توجد ورديات مفتوحة حالياً</h2>
+            <h2 className="text-base sm:text-lg font-bold text-foreground">{isEn ? "No Open Shifts Right Now" : "لا توجد ورديات مفتوحة حالياً"}</h2>
             <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-              ابدأ وردية جديدة لتسجيل ومتابعة المبيعات، المقبوضات، والمصروفات النقدية للصندوق بدقة
+              {isEn ? "Start a new shift to accurately track cash sales, collections, and drawer expenses" : "ابدأ وردية جديدة لتسجيل ومتابعة المبيعات، المقبوضات، والمصروفات النقدية للصندوق بدقة"}
             </p>
           </div>
           <div className="pt-0.5">
@@ -236,7 +239,7 @@ export default function Cashbox() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 px-6 rounded-2xl shadow-md shadow-primary/25 text-xs sm:text-sm gap-2 transition-all cursor-pointer"
             >
               <Play className="w-4 h-4 fill-current" />
-              <span>فتح وردية جديدة الآن</span>
+              <span>{isEn ? "Open New Shift Now" : "فتح وردية جديدة الآن"}</span>
             </Button>
           </div>
         </div>
@@ -250,9 +253,9 @@ export default function Cashbox() {
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm sm:text-base font-bold text-foreground">الوردية الحالية المفتوحة</CardTitle>
+                  <CardTitle className="text-sm sm:text-base font-bold text-foreground">{isEn ? "Current Open Shift" : "الوردية الحالية المفتوحة"}</CardTitle>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    المسؤول: <span className="font-semibold text-foreground">{activeShift.userName}</span> • بدأت: <span className="font-mono">{formatDateTime(activeShift.openedAt)}</span>
+                    {isEn ? "Cashier:" : "المسؤول:"} <span className="font-semibold text-foreground">{activeShift.userName}</span> • {isEn ? "Started:" : "بدأت:"} <span className="font-mono">{formatDateTime(activeShift.openedAt)}</span>
                   </p>
                 </div>
               </div>
@@ -265,7 +268,7 @@ export default function Cashbox() {
                   onClick={() => setShowHistoryDialog(true)}
                 >
                   <History className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">السجل</span>
+                  <span className="hidden sm:inline">{isEn ? "History" : "السجل"}</span>
                 </Button>
                 <Button
                   variant="destructive"
@@ -274,7 +277,7 @@ export default function Cashbox() {
                   onClick={() => setShowCloseDialog(true)}
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
-                  <span>إغلاق الوردية</span>
+                  <span>{isEn ? "Close Shift" : "إغلاق الوردية"}</span>
                 </Button>
               </div>
             </div>
@@ -282,16 +285,16 @@ export default function Cashbox() {
           <CardContent className="p-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[10px] sm:text-xs text-muted-foreground">رصيد الافتتاح</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground">{isEn ? "Opening Balance" : "رصيد الافتتاح"}</p>
                 <p className="text-sm sm:text-base font-black text-foreground font-mono mt-0.5">
                   {m.fmt(activeShift.openingCash)}
                 </p>
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
                   <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                  المبيعات
+                  {isEn ? "Sales" : "المبيعات"}
                 </p>
                 <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
                   +{m.fmt(activeShift.salesTotal)}
@@ -299,9 +302,9 @@ export default function Cashbox() {
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
                   <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                  الإيداعات
+                  {isEn ? "Deposits" : "الإيداعات"}
                 </p>
                 <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
                   +{m.fmt(activeShift.depositsTotal)}
@@ -309,9 +312,9 @@ export default function Cashbox() {
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
                   <ArrowDownRight className="w-3 h-3 text-destructive" />
-                  المصاريف
+                  {isEn ? "Expenses" : "المصاريف"}
                 </p>
                 <p className="text-sm sm:text-base font-black text-destructive font-mono mt-0.5">
                   -{m.fmt(activeShift.expensesTotal)}
@@ -319,9 +322,9 @@ export default function Cashbox() {
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
                   <ArrowDownRight className="w-3 h-3 text-destructive" />
-                  السحوبات
+                  {isEn ? "Withdrawals" : "السحوبات"}
                 </p>
                 <p className="text-sm sm:text-base font-black text-destructive font-mono mt-0.5">
                   -{m.fmt(activeShift.withdrawalsTotal)}
@@ -329,9 +332,9 @@ export default function Cashbox() {
               </div>
 
               <div className="bg-primary/10 rounded-xl p-3 border border-primary/30">
-                <p className="text-[10px] sm:text-xs text-primary font-bold flex items-center gap-1">
+                <p className="text-[11px] sm:text-xs text-primary font-bold flex items-center gap-1">
                   <Calculator className="w-3 h-3" />
-                  الرصيد المتوقع
+                  {isEn ? "Expected Balance" : "الرصيد المتوقع"}
                 </p>
                 <p className="text-sm sm:text-base font-black text-primary font-mono mt-0.5">
                   {m.fmt(expectedClosing)}
@@ -345,28 +348,28 @@ export default function Cashbox() {
       {/* Compact 4-Metric Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 text-center select-none">
         <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[9.5px] text-muted-foreground font-medium block truncate">حالة الوردية</span>
+          <span className="text-[11px] text-muted-foreground font-medium block truncate">{isEn ? "Shift Status" : "حالة الوردية"}</span>
           <span className={cn(
             "text-xs sm:text-sm font-black tabular-nums block mt-0.5",
             activeShift ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"
           )}>
-            {activeShift ? 'مفتوحة' : 'مغلقة'}
+            {activeShift ? (isEn ? 'Open' : 'مفتوحة') : (isEn ? 'Closed' : 'مغلقة')}
           </span>
         </div>
         <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[9.5px] text-primary font-medium block truncate">الرصيد الحالي</span>
+          <span className="text-[11px] text-primary font-medium block truncate">{isEn ? "Current Balance" : "الرصيد الحالي"}</span>
           <span className="text-xs sm:text-sm font-black text-primary font-mono tabular-nums block mt-0.5">
             {m.fmt(cashboxState.currentBalance)}
           </span>
         </div>
         <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-medium block truncate">إجمالي الفائض</span>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium block truncate">{isEn ? "Total Surplus" : "إجمالي الفائض"}</span>
           <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums block mt-0.5">
             {m.fmt(stats.totalSurplus)}
           </span>
         </div>
         <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[9.5px] text-destructive font-medium block truncate">إجمالي العجز</span>
+          <span className="text-[11px] text-destructive font-medium block truncate">{isEn ? "Total Shortage" : "إجمالي العجز"}</span>
           <span className="text-xs sm:text-sm font-black text-destructive font-mono tabular-nums block mt-0.5">
             {m.fmt(stats.totalShortage)}
           </span>
@@ -378,14 +381,14 @@ export default function Cashbox() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="w-5 h-5 text-primary" />
-            آخر الورديات
+            {isEn ? "Recent Shifts" : "آخر الورديات"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {shifts.filter(s => s.status === 'closed').slice(0, 5).length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>لا توجد ورديات مغلقة</p>
+              <p>{isEn ? "No closed shifts yet" : "لا توجد ورديات مغلقة"}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -395,7 +398,7 @@ export default function Cashbox() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{shift.userName}</span>
                       <Badge variant={shift.discrepancy === 0 ? 'default' : shift.discrepancy! > 0 ? 'secondary' : 'destructive'}>
-                        {shift.discrepancy === 0 ? 'متطابق' : shift.discrepancy! > 0 ? 'فائض' : 'عجز'}
+                        {shift.discrepancy === 0 ? (isEn ? 'Balanced' : 'متطابق') : shift.discrepancy! > 0 ? (isEn ? 'Surplus' : 'فائض') : (isEn ? 'Shortage' : 'عجز')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -407,13 +410,13 @@ export default function Cashbox() {
                     </p>
                   </div>
 
-                  <div className="text-left">
-                    <p className="text-sm text-muted-foreground">المبيعات</p>
+                  <div className="text-end">
+                    <p className="text-sm text-muted-foreground">{isEn ? "Sales" : "المبيعات"}</p>
                     <p className="font-bold text-green-600">{m.fmt(shift.salesTotal)}</p>
                   </div>
 
-                  <div className="text-left mr-4">
-                    <p className="text-sm text-muted-foreground">الفارق</p>
+                  <div className="text-end ms-4">
+                    <p className="text-sm text-muted-foreground">{isEn ? "Variance" : "الفارق"}</p>
                     <p className={cn(
                       "font-bold",
                       shift.discrepancy === 0 ? "text-foreground" : shift.discrepancy! > 0 ? "text-green-600" : "text-red-600"
@@ -434,33 +437,33 @@ export default function Cashbox() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Play className="w-5 h-5 text-primary" />
-              فتح وردية جديدة
+              {isEn ? "Open New Shift" : "فتح وردية جديدة"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>الرصيد الافتتاحي</Label>
+              <Label>{isEn ? "Opening Balance" : "الرصيد الافتتاحي"}</Label>
               <Input
                 type="number"
                 value={openingAmount}
                 onChange={(e) => setOpeningAmount(e.target.value)}
-                placeholder="أدخل المبلغ الموجود في الصندوق"
+                placeholder={isEn ? "Enter opening cash amount" : "أدخل المبلغ الموجود في الصندوق"}
                 min="0"
                 step="0.01"
               />
               <p className="text-xs text-muted-foreground">
-                أدخل المبلغ النقدي الموجود فعلياً في الصندوق عند بدء الوردية
+                {isEn ? "Enter the actual cash currently in the drawer when starting the shift" : "أدخل المبلغ النقدي الموجود فعلياً في الصندوق عند بدء الوردية"}
               </p>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowOpenDialog(false)}>
-              إلغاء
+              {isEn ? 'Cancel' : 'إلغاء'}
             </Button>
             <Button onClick={handleOpenShift}>
-              فتح الوردية
+              {isEn ? "Open Shift" : "فتح الوردية"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -472,7 +475,7 @@ export default function Cashbox() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Square className="w-5 h-5 text-destructive" />
-              إغلاق الوردية
+              {isEn ? 'Close Shift' : 'إغلاق الوردية'}
             </DialogTitle>
           </DialogHeader>
 
@@ -480,21 +483,21 @@ export default function Cashbox() {
             {/* Expected vs Actual */}
             <div className="bg-muted rounded-xl p-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-muted-foreground">الرصيد المتوقع:</span>
+                <span className="text-muted-foreground">{isEn ? "Expected Balance:" : "الرصيد المتوقع:"}</span>
                 <span className="font-bold text-primary">{m.fmt(expectedClosing)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                = الافتتاح + المبيعات + الإيداعات - المصاريف - السحوبات
+                {isEn ? "= Opening + Sales + Deposits - Expenses - Withdrawals" : "= الافتتاح + المبيعات + الإيداعات - المصاريف - السحوبات"}
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label>الرصيد الفعلي</Label>
+              <Label>{isEn ? "Actual Balance" : "الرصيد الفعلي"}</Label>
               <Input
                 type="number"
                 value={closingAmount}
                 onChange={(e) => setClosingAmount(e.target.value)}
-                placeholder="أدخل المبلغ الفعلي في الصندوق"
+                placeholder={isEn ? "Enter actual counted cash" : "أدخل المبلغ الفعلي في الصندوق"}
                 min="0"
                 step="0.01"
               />
@@ -517,10 +520,10 @@ export default function Cashbox() {
                   )}
                   <span className="font-medium">
                     {parseFloat(closingAmount) === expectedClosing
-                      ? 'الصندوق متطابق ✓'
+                      ? (isEn ? 'Cashbox Balanced ✓' : 'الصندوق متطابق ✓')
                       : parseFloat(closingAmount) > expectedClosing
-                        ? `فائض: ${m.fmt(parseFloat(closingAmount) - expectedClosing)}`
-                        : `عجز: ${m.fmt(expectedClosing - parseFloat(closingAmount))}`
+                        ? (isEn ? `Surplus: ${m.fmt(parseFloat(closingAmount) - expectedClosing)}` : `فائض: ${m.fmt(parseFloat(closingAmount) - expectedClosing)}`)
+                        : (isEn ? `Shortage: ${m.fmt(expectedClosing - parseFloat(closingAmount))}` : `عجز: ${m.fmt(expectedClosing - parseFloat(closingAmount))}`)
                     }
                   </span>
                 </div>
@@ -535,15 +538,15 @@ export default function Cashbox() {
                         className="w-full text-red-600 border-red-300 hover:bg-red-50"
                         onClick={() => {
                           const diff = expectedClosing - parseFloat(closingAmount);
-                          const success = addShiftAdjustment('expense_added', diff, 'عجز في الصندوق');
+                          const success = addShiftAdjustment('expense_added', diff, isEn ? 'Cashbox shortage' : 'عجز في الصندوق');
                           if (success) {
-                            toast.success(`تم تسجيل ${m.fmt(diff)} كمصروف`);
+                            toast.success(isEn ? `Recorded ${m.fmt(diff)} as expense` : `تم تسجيل ${m.fmt(diff)} كمصروف`);
                             loadData();
                           }
                         }}
                       >
                         <ArrowDownRight className="w-4 h-4" />
-                        تسجيل {m.fmt(expectedClosing - parseFloat(closingAmount))} كمصروف
+                        {isEn ? `Record ${m.fmt(expectedClosing - parseFloat(closingAmount))} as Expense` : `تسجيل ${m.fmt(expectedClosing - parseFloat(closingAmount))} كمصروف`}
                       </Button>
                     ) : (
                       <Button
@@ -552,19 +555,19 @@ export default function Cashbox() {
                         className="w-full text-green-600 border-green-300 hover:bg-green-50"
                         onClick={() => {
                           const diff = parseFloat(closingAmount) - expectedClosing;
-                          const success = addShiftAdjustment('income_added', diff, 'فائض في الصندوق');
+                          const success = addShiftAdjustment('income_added', diff, isEn ? 'Cashbox surplus' : 'فائض في الصندوق');
                           if (success) {
-                            toast.success(`تم تسجيل ${m.fmt(diff)} كإيراد إضافي`);
+                            toast.success(isEn ? `Recorded ${m.fmt(diff)} as extra income` : `تم تسجيل ${m.fmt(diff)} كإيراد إضافي`);
                             loadData();
                           }
                         }}
                       >
                         <ArrowUpRight className="w-4 h-4" />
-                        تسجيل {m.fmt(parseFloat(closingAmount) - expectedClosing)} كإيراد
+                        {isEn ? `Record ${m.fmt(parseFloat(closingAmount) - expectedClosing)} as Income` : `تسجيل ${m.fmt(parseFloat(closingAmount) - expectedClosing)} كإيراد`}
                       </Button>
                     )}
                     <p className="text-xs text-muted-foreground mt-2 text-center">
-                      سيتم تعديل المجاميع لمطابقة الرصيد الفعلي
+                      {isEn ? "Totals will be adjusted to match the actual balance" : "سيتم تعديل المجاميع لمطابقة الرصيد الفعلي"}
                     </p>
                   </div>
                 )}
@@ -572,11 +575,11 @@ export default function Cashbox() {
             )}
 
             <div className="space-y-2">
-              <Label>ملاحظات (اختياري)</Label>
+              <Label>{isEn ? "Notes (Optional)" : "ملاحظات (اختياري)"}</Label>
               <Textarea
                 value={closingNotes}
                 onChange={(e) => setClosingNotes(e.target.value)}
-                placeholder="أي ملاحظات حول الفارق أو الوردية..."
+                placeholder={isEn ? "Any notes about variance or shift..." : "أي ملاحظات حول الفارق أو الوردية..."}
                 rows={2}
               />
             </div>
@@ -584,10 +587,10 @@ export default function Cashbox() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCloseDialog(false)}>
-              إلغاء
+              {isEn ? 'Cancel' : 'إلغاء'}
             </Button>
             <Button variant="destructive" onClick={handleCloseShift}>
-              إغلاق الوردية
+              {isEn ? 'Close Shift' : 'إغلاق الوردية'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -599,7 +602,7 @@ export default function Cashbox() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-primary" />
-              سجل الورديات
+              {isEn ? 'Shift History' : 'سجل الورديات'}
             </DialogTitle>
           </DialogHeader>
 
@@ -607,7 +610,7 @@ export default function Cashbox() {
             {shifts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>لا توجد ورديات</p>
+                <p>{isEn ? "No shifts found" : "لا توجد ورديات"}</p>
               </div>
             ) : (
               shifts.map(shift => (
@@ -615,11 +618,11 @@ export default function Cashbox() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Badge variant={shift.status === 'open' ? 'default' : 'secondary'}>
-                        {shift.status === 'open' ? 'مفتوحة' : 'مغلقة'}
+                        {shift.status === 'open' ? (isEn ? 'Open' : 'مفتوحة') : (isEn ? 'Closed' : 'مغلقة')}
                       </Badge>
                       {shift.status === 'closed' && (
                         <Badge variant={shift.discrepancy === 0 ? 'outline' : shift.discrepancy! > 0 ? 'secondary' : 'destructive'}>
-                          {shift.discrepancy === 0 ? 'متطابق' : shift.discrepancy! > 0 ? 'فائض' : 'عجز'}
+                          {shift.discrepancy === 0 ? (isEn ? 'Balanced' : 'متطابق') : shift.discrepancy! > 0 ? (isEn ? 'Surplus' : 'فائض') : (isEn ? 'Shortage' : 'عجز')}
                         </Badge>
                       )}
                     </div>
@@ -628,39 +631,39 @@ export default function Cashbox() {
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div>
-                      <span className="text-muted-foreground">الافتتاح:</span>
-                      <span className="font-medium mr-1">{m.fmt(shift.openingCash)}</span>
+                      <span className="text-muted-foreground">{isEn ? "Opening:" : "الافتتاح:"}</span>
+                      <span className="font-medium ms-1">{m.fmt(shift.openingCash)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">المبيعات:</span>
-                      <span className="font-medium text-green-600 mr-1">+{m.fmt(shift.salesTotal)}</span>
+                      <span className="text-muted-foreground">{isEn ? "Sales:" : "المبيعات:"}</span>
+                      <span className="font-medium text-green-600 ms-1">+{m.fmt(shift.salesTotal)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">المصاريف:</span>
-                      <span className="font-medium text-red-600 mr-1">-{m.fmt(shift.expensesTotal)}</span>
+                      <span className="text-muted-foreground">{isEn ? "Expenses:" : "المصاريف:"}</span>
+                      <span className="font-medium text-red-600 ms-1">-{m.fmt(shift.expensesTotal)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">الإيداعات:</span>
-                      <span className="font-medium text-green-600 mr-1">+{m.fmt(shift.depositsTotal)}</span>
+                      <span className="text-muted-foreground">{isEn ? "Deposits:" : "الإيداعات:"}</span>
+                      <span className="font-medium text-green-600 ms-1">+{m.fmt(shift.depositsTotal)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">السحوبات:</span>
-                      <span className="font-medium text-red-600 mr-1">-{m.fmt(shift.withdrawalsTotal)}</span>
+                      <span className="text-muted-foreground">{isEn ? "Withdrawals:" : "السحوبات:"}</span>
+                      <span className="font-medium text-red-600 ms-1">-{m.fmt(shift.withdrawalsTotal)}</span>
                     </div>
                     {shift.status === 'closed' && (
                       <>
                         <div>
-                          <span className="text-muted-foreground">المتوقع:</span>
-                          <span className="font-medium text-primary mr-1">{m.fmt(shift.expectedCash || 0)}</span>
+                          <span className="text-muted-foreground">{isEn ? "Expected:" : "المتوقع:"}</span>
+                          <span className="font-medium text-primary ms-1">{m.fmt(shift.expectedCash || 0)}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">الإغلاق:</span>
-                          <span className="font-medium mr-1">{m.fmt(shift.closingCash || 0)}</span>
+                          <span className="text-muted-foreground">{isEn ? "Closing:" : "الإغلاق:"}</span>
+                          <span className="font-medium ms-1">{m.fmt(shift.closingCash || 0)}</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">الفارق:</span>
+                          <span className="text-muted-foreground">{isEn ? "Variance:" : "الفارق:"}</span>
                           <span className={cn(
-                            "font-medium mr-1",
+                            "font-medium ms-1",
                             shift.discrepancy === 0 ? "" : shift.discrepancy! > 0 ? "text-green-600" : "text-red-600"
                           )}>
                             {shift.discrepancy === 0 ? '0' : (shift.discrepancy! > 0 ? '+' : '') + m.fmt(shift.discrepancy!)}
@@ -673,7 +676,7 @@ export default function Cashbox() {
                   {/* التعديلات */}
                   {shift.adjustments && shift.adjustments.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-border">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">التعديلات:</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{isEn ? "Adjustments:" : "التعديلات:"}</p>
                       <div className="space-y-1">
                         {shift.adjustments.map(adj => (
                           <div key={adj.id} className={cn(
@@ -681,7 +684,7 @@ export default function Cashbox() {
                             adj.type === 'expense_added' ? "bg-red-500/10 text-red-700" : "bg-green-500/10 text-green-700"
                           )}>
                             <span>
-                              {adj.type === 'expense_added' ? '📉 مصروف' : '📈 إيراد'}: {adj.reason}
+                              {adj.type === 'expense_added' ? (isEn ? '📉 Expense' : '📉 مصروف') : (isEn ? '📈 Income' : '📈 إيراد')}: {adj.reason}
                             </span>
                             <span className="font-medium">{m.fmt(adj.amount)}</span>
                           </div>

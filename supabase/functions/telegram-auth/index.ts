@@ -59,6 +59,33 @@ async function findAuthUserByEmail(client: any, email: string) {
   }
 }
 
+// Find a profile by phone across every page (PostgREST caps a single select at 1000 rows)
+async function findProfileByPhone(
+  client: any,
+  rawPhone: string,
+  selectCols: string,
+  excludeUserId?: string,
+) {
+  const PAGE_SIZE = 1000;
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let q = client
+      .from("profiles")
+      .select(selectCols)
+      .not("phone", "is", null)
+      .range(from, from + PAGE_SIZE - 1);
+    if (excludeUserId) q = q.neq("user_id", excludeUserId);
+    const { data, error } = await q;
+    if (error) {
+      console.error("[TelegramAuth] profiles query error:", error);
+      return null;
+    }
+    const rows = data || [];
+    const matched = rows.find((p: any) => isPhoneMatch(p.phone, rawPhone));
+    if (matched) return matched;
+    if (rows.length < PAGE_SIZE) return null;
+  }
+}
+
 // Telegram message sender
 async function sendTelegramMessage(botToken: string, chatId: string | number, text: string, replyMarkup?: any) {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -376,8 +403,6 @@ serve(async (req) => {
         console.log(`[TelegramAuth] Contact received from chat ${chatId}`);
 
         // 1. CRITICAL SECURITY CHECK: contact.user_id must exist AND equal message.from.id.
-        // جهة اتصال محوَّلة أو مكتوبة يدوياً لا تحمل user_id: كانت تمر وتربط محادثة المهاجم
-        // بحساب الضحية ثم تُرسل له رموز الاستعادة (استيلاء على الحساب). نرفضها الآن.
         if (!contact.user_id || !fromId || contact.user_id !== fromId) {
           console.warn(`[TelegramAuth] Security alert: contact.user_id (${contact.user_id}) !== fromId (${fromId})`);
           await sendTelegramMessage(
@@ -395,16 +420,12 @@ serve(async (req) => {
 
         const rawPhone = contact.phone_number || "";
 
-        // 2. Query profiles to match phone
-        const { data: profiles, error: profErr } = await serviceClient
-          .from("profiles")
-          .select("id, user_id, phone, full_name");
-
-        if (profErr) {
-          console.error("[TelegramAuth] Error querying profiles:", profErr);
-        }
-
-        const matchedProfile = (profiles || []).find((p: any) => isPhoneMatch(p.phone, rawPhone));
+        // 2. Paginated query across profiles to match phone
+        const matchedProfile = await findProfileByPhone(
+          serviceClient,
+          rawPhone,
+          "id, user_id, phone, full_name",
+        );
 
         if (matchedProfile) {
           console.log(`[TelegramAuth] Match found for user ${matchedProfile.user_id}`);
@@ -547,17 +568,13 @@ serve(async (req) => {
         }
       }
 
-      // B. If not found or identifier is phone, check profiles
+      // B. If not found or identifier is phone, check profiles (paginated)
       if (!targetUserId) {
-        const { data: profiles, error: pErr } = await serviceClient
-          .from("profiles")
-          .select("id, user_id, phone, full_name, telegram_chat_id");
-
-        if (pErr) {
-          console.error("[TelegramAuth] profiles query error:", pErr);
-        }
-
-        const matched = (profiles || []).find((p: any) => isPhoneMatch(p.phone, identifier));
+        const matched = await findProfileByPhone(
+          serviceClient,
+          identifier,
+          "id, user_id, phone, full_name, telegram_chat_id",
+        );
 
         if (matched) {
           targetUserId = matched.user_id;
@@ -667,8 +684,11 @@ serve(async (req) => {
       }
 
       if (!targetUserId) {
-        const { data: profiles } = await serviceClient.from("profiles").select("id, user_id, phone, telegram_chat_id");
-        const matched = (profiles || []).find((p: any) => isPhoneMatch(p.phone, identifier));
+        const matched = await findProfileByPhone(
+          serviceClient,
+          identifier,
+          "id, user_id, phone, telegram_chat_id",
+        );
         if (matched) {
           targetUserId = matched.user_id;
           telegramChatId = matched.telegram_chat_id || null;
@@ -772,7 +792,6 @@ serve(async (req) => {
         });
       }
 
-      // Send security alert on Telegram
       // تسجيل الخروج من كل الأجهزة بعد تغيير كلمة المرور
       try {
         await serviceClient.rpc("revoke_user_sessions", { p_user_id: targetUserId });
@@ -830,17 +849,13 @@ serve(async (req) => {
         });
       }
 
-      // البحث عن الحساب المرتبط بالرقم حالياً
-      const { data: profiles, error: pErr } = await serviceClient
-        .from("profiles")
-        .select("user_id, phone, full_name, telegram_chat_id")
-        .neq("user_id", targetUserId);
-
-      if (pErr) {
-        console.error("[TelegramAuth] profiles query error:", pErr);
-      }
-
-      const matchedProfile = (profiles || []).find((p: any) => isPhoneMatch(p.phone, rawPhone));
+      // البحث عن الحساب المرتبط بالرقم حالياً (بترقيم الصفحات)
+      const matchedProfile = await findProfileByPhone(
+        serviceClient,
+        rawPhone,
+        "user_id, phone, full_name, telegram_chat_id",
+        targetUserId,
+      );
 
       if (!matchedProfile) {
         return new Response(

@@ -80,7 +80,7 @@ const DialogContent = React.forwardRef<
         {children}
         <DialogPrimitive.Close className="absolute end-3.5 top-3.5 z-10 inline-flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground opacity-80 ring-offset-background transition-opacity hover:bg-muted hover:opacity-100 active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{typeof document !== "undefined" && document.documentElement.dir === "rtl" ? "إغلاق" : "Close"}</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>

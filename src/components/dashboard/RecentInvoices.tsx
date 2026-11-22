@@ -23,6 +23,7 @@ import { getStoreSettings, getPrintSettings } from '@/lib/print-utils';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { EVENTS } from '@/lib/events';
 import { useActionGuard } from '@/hooks/use-action-guard';
+import { useLanguage } from '@/hooks/use-language';
 
 const statusStyles: Record<string, string> = {
   paid: 'bg-success/10 text-success',
@@ -30,14 +31,14 @@ const statusStyles: Record<string, string> = {
   cancelled: 'bg-destructive/10 text-destructive',
 };
 
-const statusLabels: Record<string, string> = {
-  paid: 'مكتملة',
-  pending: 'معلقة',
-  cancelled: 'ملغاة',
-};
-
 export function RecentInvoices() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const isEn = language === 'en';
+  const locale = isEn ? 'en-US' : 'ar-SA';
+  const statusLabels: Record<string, string> = isEn
+    ? { paid: 'Completed', pending: 'Pending', cancelled: 'Cancelled' }
+    : { paid: 'مكتملة', pending: 'معلقة', cancelled: 'ملغاة' };
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -70,8 +71,8 @@ export function RecentInvoices() {
   const handleShareInvoice = async (invoice: Invoice) => {
     const storeSettings = getStoreSettings();
     const invoiceDate = new Date(invoice.createdAt);
-    const dateStr = invoiceDate.toLocaleDateString('ar-SA');
-    const timeStr = invoiceDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = invoiceDate.toLocaleDateString(locale);
+    const timeStr = invoiceDate.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
     const rate = (typeof invoice.exchangeRate === 'number' && invoice.exchangeRate > 0) ? invoice.exchangeRate : 1;
     const isForeign = invoice.currency && invoice.currency !== 'USD';
@@ -106,35 +107,35 @@ export function RecentInvoices() {
 
     const success = await shareInvoice(shareData);
     if (success) {
-      toast.success('تم فتح نافذة المشاركة');
+      toast.success(isEn ? 'Share dialog opened' : 'تم فتح نافذة المشاركة');
     }
   };
 
   const handleCopyInvoice = (invoice: Invoice) => {
     navigator.clipboard.writeText(invoice.id);
-    toast.success('تم نسخ رقم الفاتورة');
+    toast.success(isEn ? 'Invoice number copied' : 'تم نسخ رقم الفاتورة');
   };
 
   const handleEditInvoice = (invoice: Invoice) => {
-    toast.info(`تعديل الفاتورة ${invoice.id}`);
+    toast.info(isEn ? `Editing invoice ${invoice.id}` : `تعديل الفاتورة ${invoice.id}`);
     navigate('/pos');
   };
 
   const handleDeleteInvoice = (invoice: Invoice) => deleteGuard.run(async () => {
     const toastId = `delete-invoice-${invoice.id}`;
-    toast.loading(`جاري حذف الفاتورة ${invoice.id}...`, { id: toastId });
+    toast.loading(isEn ? `Deleting invoice ${invoice.id}...` : `جاري حذف الفاتورة ${invoice.id}...`, { id: toastId });
     try {
       const success = await deleteInvoiceCloud(invoice.id);
       if (success) {
-        toast.success(`تم حذف الفاتورة ${invoice.id}`, { id: toastId });
+        toast.success(isEn ? `Invoice ${invoice.id} deleted` : `تم حذف الفاتورة ${invoice.id}`, { id: toastId });
         loadData();
         setShowViewDialog(false);
       } else {
-        toast.error('فشل في حذف الفاتورة', { id: toastId });
+        toast.error(isEn ? 'Failed to delete invoice' : 'فشل في حذف الفاتورة', { id: toastId });
       }
     } catch (err) {
       console.error('[handleDeleteInvoice]', err);
-      toast.error('فشل في حذف الفاتورة', { id: toastId });
+      toast.error(isEn ? 'Failed to delete invoice' : 'فشل في حذف الفاتورة', { id: toastId });
     }
   });
 
@@ -144,12 +145,12 @@ export function RecentInvoices() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('ar-SA');
+    return date.toLocaleDateString(locale);
   };
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   };
 
   const shortenId = (id: string) => {
@@ -161,26 +162,26 @@ export function RecentInvoices() {
     <>
       <div className="glass rounded-2xl p-4 md:p-6 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">آخر الفواتير</h3>
+          <h3 className="text-lg font-semibold text-foreground">{isEn ? 'Recent Invoices' : 'آخر الفواتير'}</h3>
           <button
             onClick={handleViewAll}
             className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
           >
-            عرض الكل
+            {isEn ? 'View All' : 'عرض الكل'}
           </button>
         </div>
 
         {invoices.length === 0 ? (
           <div className="p-8 text-center">
             <FileX className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">لا توجد فواتير بعد</p>
-            <p className="text-sm text-muted-foreground/70 mt-1">ابدأ بإنشاء فاتورة جديدة من نقطة البيع</p>
+            <p className="text-muted-foreground">{isEn ? 'No invoices yet' : 'لا توجد فواتير بعد'}</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">{isEn ? 'Start by creating a new invoice from POS' : 'ابدأ بإنشاء فاتورة جديدة من نقطة البيع'}</p>
             <Button
               variant="outline"
               className="mt-4"
               onClick={() => navigate('/pos')}
             >
-              انتقل إلى نقطة البيع
+              {isEn ? 'Go to POS' : 'انتقل إلى نقطة البيع'}
             </Button>
           </div>
         ) : (
@@ -189,12 +190,12 @@ export function RecentInvoices() {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border/50 text-right">
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">رقم الفاتورة</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">العميل</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">المبلغ</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">الحالة</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">إجراءات</th>
+                  <tr className="border-b border-border/50 text-start">
+                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Invoice #' : 'رقم الفاتورة'}</th>
+                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Customer' : 'العميل'}</th>
+                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Amount' : 'المبلغ'}</th>
+                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Status' : 'الحالة'}</th>
+                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Actions' : 'إجراءات'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -229,14 +230,14 @@ export function RecentInvoices() {
                           <button
                             className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                             onClick={() => handleViewInvoice(invoice)}
-                            title="عرض الفاتورة"
+                            title={isEn ? "View invoice" : "عرض الفاتورة"}
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary hover:bg-primary/10"
                             onClick={() => handleShareInvoice(invoice)}
-                            title="مشاركة الفاتورة كصورة"
+                            title={isEn ? "Share invoice as image" : "مشاركة الفاتورة كصورة"}
                           >
                             <Share2 className="w-4 h-4" />
                           </button>
@@ -249,15 +250,15 @@ export function RecentInvoices() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleViewInvoice(invoice)}>
                                 <Eye className="w-4 h-4" />
-                                عرض التفاصيل
+                                {isEn ? 'View Details' : 'عرض التفاصيل'}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleCopyInvoice(invoice)}>
                                 <Copy className="w-4 h-4" />
-                                نسخ الرقم
+                                {isEn ? 'Copy Number' : 'نسخ الرقم'}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleEditInvoice(invoice)}>
                                 <Edit className="w-4 h-4" />
-                                تعديل
+                                {isEn ? 'Edit' : 'تعديل'}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -266,7 +267,7 @@ export function RecentInvoices() {
                                 className="text-destructive focus:text-destructive"
                               >
                                 <Trash2 className="w-4 h-4" />
-                                {deleteGuard.isRunning ? 'جاري الحذف...' : 'حذف'}
+                                {deleteGuard.isRunning ? (isEn ? 'Deleting...' : 'جاري الحذف...') : (isEn ? 'Delete' : 'حذف')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -311,7 +312,7 @@ export function RecentInvoices() {
                       {invoice.currencySymbol}{formatNumber(invoice.totalInCurrency)}
                     </span>
                     <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap",
+                      "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap",
                       statusStyles[invoice.status]
                     )}>
                       {statusLabels[invoice.status]}
@@ -328,7 +329,7 @@ export function RecentInvoices() {
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
         <DialogContent className="sm:max-w-lg glass border-white/10">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle>تفاصيل الفاتورة {selectedInvoice?.id}</DialogTitle>
+            <DialogTitle>{isEn ? `Invoice Details ${selectedInvoice?.id}` : `تفاصيل الفاتورة ${selectedInvoice?.id}`}</DialogTitle>
             <Button
               variant="ghost"
               size="icon"
@@ -342,37 +343,37 @@ export function RecentInvoices() {
             <div className="space-y-4 py-4">
               <div className="bg-muted/50 rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">العميل:</span>
+                  <span className="text-muted-foreground">{isEn ? 'Customer:' : 'العميل:'}</span>
                   <span className="font-semibold">{selectedInvoice.customerName}</span>
                 </div>
                 {selectedInvoice.customerPhone && (
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-muted-foreground">الهاتف:</span>
+                    <span className="text-muted-foreground">{isEn ? 'Phone:' : 'الهاتف:'}</span>
                     <span>{selectedInvoice.customerPhone}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">التاريخ:</span>
+                  <span className="text-muted-foreground">{isEn ? 'Date:' : 'التاريخ:'}</span>
                   <span>{formatDate(selectedInvoice.createdAt)}</span>
                 </div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">الوقت:</span>
+                  <span className="text-muted-foreground">{isEn ? 'Time:' : 'الوقت:'}</span>
                   <span>{formatTime(selectedInvoice.createdAt)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">نوع الدفع:</span>
-                  <span>{selectedInvoice.paymentType === 'cash' ? 'نقدي' : 'آجل'}</span>
+                  <span className="text-muted-foreground">{isEn ? 'Payment Type:' : 'نوع الدفع:'}</span>
+                  <span>{selectedInvoice.paymentType === 'cash' ? (isEn ? 'Cash' : 'نقدي') : (isEn ? 'Credit' : 'آجل')}</span>
                 </div>
               </div>
 
               <div>
-                <h4 className="font-semibold mb-3">المنتجات</h4>
+                <h4 className="font-semibold mb-3">{isEn ? 'Items' : 'المنتجات'}</h4>
                 <div className="space-y-2">
                   {selectedInvoice.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">الكمية: {item.quantity}</p>
+                        <p className="text-sm text-muted-foreground">{isEn ? 'Qty:' : 'الكمية:'} {item.quantity}</p>
                       </div>
                       <span className="font-semibold">{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{item.total}</span>
                     </div>
@@ -383,12 +384,12 @@ export function RecentInvoices() {
               <div className="border-t border-border/50 pt-4">
                 {selectedInvoice.discount > 0 && (
                   <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-                    <span>الخصم:</span>
+                    <span>{isEn ? 'Discount:' : 'الخصم:'}</span>
                     <span>{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{selectedInvoice.discount}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center text-lg font-bold">
-                  <span>المجموع:</span>
+                  <span>{isEn ? 'Total:' : 'المجموع:'}</span>
                   <span className="text-primary">{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{formatNumber(selectedInvoice.totalInCurrency)}</span>
                 </div>
               </div>
@@ -408,7 +409,7 @@ export function RecentInvoices() {
                   onClick={() => handleShareInvoice(selectedInvoice)}
                 >
                   <Share2 className="w-4 h-4" />
-                  مشاركة الفاتورة كصورة
+                  {isEn ? 'Share Invoice Image' : 'مشاركة الفاتورة كصورة'}
                 </Button>
                 <Button
                   className="flex-1"
@@ -418,7 +419,7 @@ export function RecentInvoices() {
                   }}
                 >
                   <Edit className="w-4 h-4" />
-                  تعديل
+                  {isEn ? 'Edit' : 'تعديل'}
                 </Button>
               </div>
               <Button
@@ -427,7 +428,7 @@ export function RecentInvoices() {
                 onClick={() => setShowViewDialog(false)}
               >
                 <X className="w-4 h-4" />
-                إغلاق
+                {isEn ? 'Close' : 'إغلاق'}
               </Button>
             </div>
           )}

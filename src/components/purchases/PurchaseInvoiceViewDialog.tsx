@@ -36,6 +36,7 @@ import {
   EditPurchaseInvoiceLine
 } from '@/lib/cloud/purchase-invoices-cloud';
 import { useUserRole } from '@/hooks/use-user-role';
+import { useLanguage } from '@/hooks/use-language';
 import { formatNumber, formatCurrency } from '@/lib/utils';
 import { useMoney } from '@/hooks/use-money';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
@@ -59,6 +60,8 @@ export function PurchaseInvoiceViewDialog({
   onEdited,
 }: PurchaseInvoiceViewDialogProps) {
   const { isOwner, isAdmin, isBoss } = useUserRole();
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const canEdit = isOwner || isAdmin || isBoss;
 
   const [invoice, setInvoice] = useState<PurchaseInvoice | null>(null);
@@ -94,7 +97,7 @@ export function PurchaseInvoiceViewDialog({
     }
     return m.fmt(val);
   };
-  const [editReason, setEditReason] = useState('تعديل فاتورة مشتريات');
+  const [editReason, setEditReason] = useState(() => (isEn ? 'Edit purchase invoice' : 'تعديل فاتورة مشتريات'));
 
   const fetchInvoice = (id: string) => {
     setLoading(true);
@@ -106,7 +109,7 @@ export function PurchaseInvoiceViewDialog({
       })
       .catch((err) => {
         console.error('Error loading purchase invoice details:', err);
-        toast.error('فشل تحميل تفاصيل فاتورة المشتريات');
+        toast.error(isEn ? 'Failed to load purchase invoice details' : 'فشل تحميل تفاصيل فاتورة المشتريات');
       })
       .finally(() => {
         setLoading(false);
@@ -138,7 +141,7 @@ export function PurchaseInvoiceViewDialog({
         ...(Array.isArray(i.serials) && i.serials.length > 0 ? { serials: i.serials } : {}),
       }))
     );
-    setEditReason('تصحيح كميات وأسعار فاتورة الشراء');
+    setEditReason(isEn ? 'Correct purchase invoice quantities and prices' : 'تصحيح كميات وأسعار فاتورة الشراء');
     setIsEditing(true);
   };
 
@@ -176,12 +179,12 @@ export function PurchaseInvoiceViewDialog({
   const handleSaveEdit = async () => {
     if (!invoice) return;
     if (editLines.length === 0) {
-      toast.error('يجب أن تحتوي الفاتورة على صنف واحد على الأقل');
+      toast.error(isEn ? 'Invoice must contain at least one item' : 'يجب أن تحتوي الفاتورة على صنف واحد على الأقل');
       return;
     }
     const hasInvalidQty = editLines.some((l) => !l.quantity || l.quantity <= 0);
     if (hasInvalidQty) {
-      toast.error('الكمية يجب أن تكون أكبر من صفر لجميع الأصناف');
+      toast.error(isEn ? 'Quantity must be greater than zero for all items' : 'الكمية يجب أن تكون أكبر من صفر لجميع الأصناف');
       return;
     }
 
@@ -191,37 +194,37 @@ export function PurchaseInvoiceViewDialog({
     setSavingEdit(false);
 
     if (result.success && result.newInvoiceId) {
-      toast.success('تم تعديل الفاتورة وإعادة احتساب المخزون والتكلفة بنجاح');
+      toast.success(isEn ? 'Invoice updated and inventory/cost recalculated successfully' : 'تم تعديل الفاتورة وإعادة احتساب المخزون والتكلفة بنجاح');
       emitEvent(EVENTS.PURCHASES_UPDATED);
       emitEvent(EVENTS.PRODUCTS_UPDATED);
       setIsEditing(false);
       onEdited?.(result.newInvoiceId);
       fetchInvoice(result.newInvoiceId);
     } else {
-      toast.error(result.error || 'تعذر تعديل الفاتورة، يرجى التحقق من توفر المخزون');
+      toast.error(result.error || (isEn ? 'Unable to update invoice. Please check stock availability' : 'تعذر تعديل الفاتورة، يرجى التحقق من توفر المخزون'));
     }
   };
 
   const handleDelete = async () => {
     if (!invoice) return;
-    if (!window.confirm(`هل أنت متأكد من إلغاء فاتورة المشتريات رقم #${invoice.invoice_number}؟ سيتم عكس المخزون والتكلفة بأمان.`)) {
+    if (!window.confirm(isEn ? `Are you sure you want to cancel purchase invoice #${invoice.invoice_number}? Its inventory and cost impact will be reversed safely.` : `هل أنت متأكد من إلغاء فاتورة المشتريات رقم #${invoice.invoice_number}؟ سيتم عكس المخزون والتكلفة بأمان.`)) {
       return;
     }
     setDeleting(true);
     try {
       const success = await deletePurchaseInvoiceCloud(invoice.id);
       if (success) {
-        toast.success(`تم إلغاء فاتورة المشتريات #${invoice.invoice_number} وعكس أثرها المخزني بنجاح`);
+        toast.success(isEn ? `Purchase invoice #${invoice.invoice_number} cancelled and inventory impact reversed successfully` : `تم إلغاء فاتورة المشتريات #${invoice.invoice_number} وعكس أثرها المخزني بنجاح`);
         emitEvent(EVENTS.PURCHASES_UPDATED);
         emitEvent(EVENTS.PRODUCTS_UPDATED);
         onOpenChange(false);
         onDeleted?.();
       } else {
-        toast.error('تعذر حذف فاتورة المشتريات');
+        toast.error(isEn ? 'Unable to delete purchase invoice' : 'تعذر حذف فاتورة المشتريات');
       }
     } catch (error) {
       console.error('Error deleting purchase invoice:', error);
-      toast.error('حدث خطأ أثناء الحذف');
+      toast.error(isEn ? 'An error occurred while deleting' : 'حدث خطأ أثناء الحذف');
     } finally {
       setDeleting(false);
     }
@@ -273,7 +276,7 @@ export function PurchaseInvoiceViewDialog({
 
     const success = await shareInvoice(shareData);
     if (success) {
-      toast.success('تم فتح نافذة المشاركة');
+      toast.success(isEn ? 'Share dialog opened' : 'تم فتح نافذة المشاركة');
     }
   };
 
@@ -299,27 +302,27 @@ export function PurchaseInvoiceViewDialog({
               </div>
               <div className="min-w-0">
                 <div className="truncate font-bold">
-                  {isEditing ? 'تعديل فاتورة مشتريات' : `فاتورة مشتريات #${invoice?.invoice_number || ''}`}
+                  {isEditing ? (isEn ? 'Edit Purchase Invoice' : 'تعديل فاتورة مشتريات') : (isEn ? `Purchase Invoice #${invoice?.invoice_number || ''}` : `فاتورة مشتريات #${invoice?.invoice_number || ''}`)}
                 </div>
                 {!isEditing && (
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {invoice?.status === 'superseded' ? (
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                        مستبدلة بتعديل لاحق
+                        {isEn ? "Superseded by later edit" : "مستبدلة بتعديل لاحق"}
                       </span>
                     ) : invoice?.status === 'cancelled' ? (
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
-                        ملغاة (تم عكس المخزون والتكلفة)
+                        {isEn ? "Cancelled (Inventory & cost reversed)" : "ملغاة (تم عكس المخزون والتكلفة)"}
                       </span>
                     ) : invoice?.status === 'finalized' ? (
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                         <CheckCircle2 className="w-3 h-3" />
-                        مؤكدة بالمخزون
+                        {isEn ? "Confirmed in inventory" : "مؤكدة بالمخزون"}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
                         <Clock className="w-3 h-3" />
-                        مسودة
+                        {isEn ? "Draft" : "مسودة"}
                       </span>
                     )}
                   </div>
@@ -339,12 +342,12 @@ export function PurchaseInvoiceViewDialog({
                     disabled={loading}
                   >
                     <Edit2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">تعديل</span>
+                    <span className="hidden sm:inline">{isEn ? "Edit" : "تعديل"}</span>
                   </Button>
                 )}
                 {canEdit && invoice.status === 'finalized' && (
                   <Button variant="outline" size="sm" className="gap-1 h-8 px-2.5 text-xs" onClick={() => setShowReturn(true)} disabled={loading}>
-                    <span>مرتجع</span>
+                    <span>{isEn ? "Return" : "مرتجع"}</span>
                   </Button>
                 )}
                 <Button
@@ -355,7 +358,7 @@ export function PurchaseInvoiceViewDialog({
                   disabled={loading || deleting || invoice.status === 'cancelled'}
                 >
                   {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline">{invoice.status === 'cancelled' ? 'ملغاة' : 'إلغاء'}</span>
+                  <span className="hidden sm:inline">{invoice.status === 'cancelled' ? (isEn ? 'Cancelled' : 'ملغاة') : (isEn ? 'Cancel' : 'إلغاء')}</span>
                 </Button>
               </div>
             )}
@@ -367,11 +370,11 @@ export function PurchaseInvoiceViewDialog({
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
-              <p className="text-sm">جاري تحميل تفاصيل الفاتورة والأصناف...</p>
+              <p className="text-sm">{isEn ? "Loading invoice details and items..." : "جاري تحميل تفاصيل الفاتورة والأصناف..."}</p>
             </div>
           ) : !invoice ? (
             <div className="py-12 text-center text-muted-foreground">
-              <p>لم يتم العثور على الفاتورة المطلوبة</p>
+              <p>{isEn ? "Purchase invoice not found" : "لم يتم العثور على الفاتورة المطلوبة"}</p>
             </div>
           ) : (
             <>
@@ -379,7 +382,7 @@ export function PurchaseInvoiceViewDialog({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-xl bg-muted/40 border border-border/50 text-xs sm:text-sm">
                 <div className="flex items-center gap-2 text-foreground font-medium">
                   <User className="w-4 h-4 text-primary shrink-0" />
-                  <span>المورد:</span>
+                  <span>{isEn ? "Supplier:" : "المورد:"}</span>
                   <span className="text-foreground font-bold">{invoice.supplier_name}</span>
                   {invoice.supplier_company && (
                     <span className="text-xs text-muted-foreground">({invoice.supplier_company})</span>
@@ -387,7 +390,7 @@ export function PurchaseInvoiceViewDialog({
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Calendar className="w-4 h-4 text-primary shrink-0" />
-                  <span>تاريخ الشراء:</span>
+                  <span>{isEn ? "Purchase Date:" : "تاريخ الشراء:"}</span>
                   <span className="text-foreground font-medium">{invoice.invoice_date}</span>
                 </div>
               </div>
@@ -395,19 +398,19 @@ export function PurchaseInvoiceViewDialog({
               {/* Quick Summary Cards */}
               <div className="grid grid-cols-3 gap-2">
                 <div className="p-2.5 rounded-xl bg-card border border-border text-center">
-                  <div className="text-[11px] text-muted-foreground mb-0.5">عدد الأصناف</div>
+                  <div className="text-[11px] text-muted-foreground mb-0.5">{isEn ? "Items Count" : "عدد الأصناف"}</div>
                   <div className="text-sm sm:text-base font-bold text-foreground">
-                    {isEditing ? editLines.length : items.length} صنف
+                    {isEditing ? editLines.length : items.length} {isEn ? "items" : "صنف"}
                   </div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-card border border-border text-center">
-                  <div className="text-[11px] text-muted-foreground mb-0.5">إجمالي الكمية</div>
+                  <div className="text-[11px] text-muted-foreground mb-0.5">{isEn ? "Total Quantity" : "إجمالي الكمية"}</div>
                   <div className="text-sm sm:text-base font-bold text-primary">
                     {formatNumber(currentTotalQty)}
                   </div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-card border border-border text-center">
-                  <div className="text-[11px] text-muted-foreground mb-0.5">المجموع الإجمالي</div>
+                  <div className="text-[11px] text-muted-foreground mb-0.5">{isEn ? "Grand Total" : "المجموع الإجمالي"}</div>
                   <div className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400">
                     {displayMoney(currentGrandTotal)}
                     {invSnap && invSnap.currency_code !== 'USD' && (
@@ -424,17 +427,17 @@ export function PurchaseInvoiceViewDialog({
                 <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2 text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-300">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>تعديل محاسبي ذري محمي</span>
+                    <span>{isEn ? "Protected Atomic Accounting Edit" : "تعديل محاسبي ذري محمي"}</span>
                   </div>
                   <p className="text-muted-foreground leading-relaxed">
-                    سيتم عكس حركة المخزون والذمة للأسطر القديمة وتسجيل الأسطر المعدلة كحركات جديدة وإعادة احتساب متوسط التكلفة آلياً، وتعليم الفاتورة القديمة كمستبدلة.
+                    {isEn ? "Saving this edit atomically reverses original stock and balance entries, records the updated lines, recalculates weighted-average cost, and marks the previous invoice as superseded." : "سيتم عكس حركة المخزون والذمة للأسطر القديمة وتسجيل الأسطر المعدلة كحركات جديدة وإعادة احتساب متوسط التكلفة آلياً، وتعليم الفاتورة القديمة كمستبدلة."}
                   </p>
                   <div>
-                    <label className="block text-[11px] font-medium text-foreground mb-1">سبب التعديل:</label>
+                    <label className="block text-[11px] font-medium text-foreground mb-1">{isEn ? "Edit Reason:" : "سبب التعديل:"}</label>
                     <Input
                       value={editReason}
                       onChange={(e) => setEditReason(e.target.value)}
-                      placeholder="اكتب سبب تعديل الفاتورة للتدقيق..."
+                      placeholder={isEn ? "Enter the reason for editing this invoice for audit..." : "اكتب سبب تعديل الفاتورة للتدقيق..."}
                       className="h-8 text-xs bg-background"
                     />
                   </div>
@@ -446,7 +449,7 @@ export function PurchaseInvoiceViewDialog({
                 <div className="flex items-center gap-2 mb-2">
                   <Package className="w-4 h-4 text-primary" />
                   <h4 className="text-xs sm:text-sm font-semibold text-foreground">
-                    {isEditing ? 'تعديل بنود الفاتورة' : `المنتجات المشتراة في هذه الفاتورة (${items.length})`}
+                    {isEditing ? (isEn ? 'Edit Invoice Items' : 'تعديل بنود الفاتورة') : (isEn ? `Purchased Products in This Invoice (${items.length})` : `المنتجات المشتراة في هذه الفاتورة (${items.length})`)}
                   </h4>
                 </div>
 
@@ -467,7 +470,7 @@ export function PurchaseInvoiceViewDialog({
                       {isEditing ? (
                         <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/40">
                           <div>
-                            <label className="text-[10px] text-muted-foreground block mb-0.5">الكمية:</label>
+                            <label className="text-[10px] text-muted-foreground block mb-0.5">{isEn ? "Qty:" : "الكمية:"}</label>
                             <Input
                               type="number"
                               min="1"
@@ -478,7 +481,7 @@ export function PurchaseInvoiceViewDialog({
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] text-muted-foreground block mb-0.5">التكلفة:</label>
+                            <label className="text-[10px] text-muted-foreground block mb-0.5">{isEn ? "Cost:" : "التكلفة:"}</label>
                             <Input
                               type="number"
                               min="0"
@@ -492,15 +495,15 @@ export function PurchaseInvoiceViewDialog({
                       ) : (
                         <div className="grid grid-cols-3 gap-1 text-[11px] pt-1 border-t border-border/40">
                           <div>
-                            <span className="text-muted-foreground block text-[10px]">الكمية:</span>
+                            <span className="text-muted-foreground block text-[10px]">{isEn ? "Qty:" : "الكمية:"}</span>
                             <span className="font-bold text-primary">{formatNumber(item.quantity)}</span>
                           </div>
                           <div>
-                            <span className="text-muted-foreground block text-[10px]">التكلفة:</span>
+                            <span className="text-muted-foreground block text-[10px]">{isEn ? "Cost:" : "التكلفة:"}</span>
                             <span>{displayMoney(item.cost_price)}</span>
                           </div>
-                          <div className="text-left">
-                            <span className="text-muted-foreground block text-[10px]">الإجمالي:</span>
+                          <div className="text-end">
+                            <span className="text-muted-foreground block text-[10px]">{isEn ? "Total:" : "الإجمالي:"}</span>
                             <span className="font-bold text-foreground">
                               {displayMoney((item as any).total_cost || item.quantity * item.cost_price)}
                             </span>
@@ -514,14 +517,14 @@ export function PurchaseInvoiceViewDialog({
                 {/* Desktop / Tablet Table View (>=sm) */}
                 <div className="hidden sm:block border border-border rounded-xl overflow-hidden">
                   <div className="overflow-x-auto max-h-80">
-                    <table className="w-full text-xs sm:text-sm text-right">
+                    <table className="w-full text-xs sm:text-sm text-start">
                       <thead className="bg-muted/70 text-muted-foreground sticky top-0 z-10">
                         <tr>
                           <th className="p-2.5 text-center w-8">#</th>
-                          <th className="p-2.5">اسم المنتج</th>
-                          <th className="p-2.5 text-center w-28">الكمية</th>
-                          <th className="p-2.5 text-center w-28">سعر التكلفة</th>
-                          <th className="p-2.5 text-left">الإجمالي</th>
+                          <th className="p-2.5">{isEn ? "Product Name" : "اسم المنتج"}</th>
+                          <th className="p-2.5 text-center w-28">{isEn ? "Qty" : "الكمية"}</th>
+                          <th className="p-2.5 text-center w-28">{isEn ? "Unit Cost" : "سعر التكلفة"}</th>
+                          <th className="p-2.5 text-end">{isEn ? "Total" : "الإجمالي"}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -562,7 +565,7 @@ export function PurchaseInvoiceViewDialog({
                                 <span className="text-muted-foreground">{displayMoney(item.cost_price)}</span>
                               )}
                             </td>
-                            <td className="p-2.5 text-left font-bold text-foreground">
+                            <td className="p-2.5 text-end font-bold text-foreground">
                               {displayMoney((item as any).total_cost || item.quantity * item.cost_price)}
                             </td>
                           </tr>
@@ -576,7 +579,7 @@ export function PurchaseInvoiceViewDialog({
               {/* Serial numbers editing (only lines that track serials) */}
               {isEditing && editLines.some((l) => Array.isArray(l.serials)) && (
                 <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-3">
-                  <div className="text-xs font-bold">الأرقام التسلسلية (رقم في كل سطر)</div>
+                  <div className="text-xs font-bold">{isEn ? "Serial Numbers (one per line)" : "الأرقام التسلسلية (رقم في كل سطر)"}</div>
                   {editLines.map((l, idx) =>
                     Array.isArray(l.serials) ? (
                       <div key={idx}>
@@ -601,7 +604,7 @@ export function PurchaseInvoiceViewDialog({
                 <div className="p-3 bg-muted/30 border border-border rounded-xl flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ImageIcon className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-medium">صورة الفاتورة المرفقة</span>
+                    <span className="text-xs font-medium">{isEn ? "Attached Invoice Image" : "صورة الفاتورة المرفقة"}</span>
                   </div>
                   <Button
                     variant="outline"
@@ -610,7 +613,7 @@ export function PurchaseInvoiceViewDialog({
                     onClick={() => setPreviewImage(invoice.image_url || null)}
                   >
                     <ExternalLink className="w-3 h-3" />
-                    عرض الصورة
+                    {isEn ? "View Image" : "عرض الصورة"}
                   </Button>
                 </div>
               )}
@@ -618,7 +621,7 @@ export function PurchaseInvoiceViewDialog({
               {/* Notes if present */}
               {invoice.notes && (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-900 dark:text-amber-200">
-                  <span className="font-semibold ml-1">ملاحظات:</span>
+                  <span className="font-semibold me-1">{isEn ? "Notes:" : "ملاحظات:"}</span>
                   <span>{invoice.notes}</span>
                 </div>
               )}
@@ -638,7 +641,7 @@ export function PurchaseInvoiceViewDialog({
                 disabled={savingEdit}
               >
                 <X className="w-3.5 h-3.5" />
-                إلغاء التعديل
+                {isEn ? "Cancel Edit" : "إلغاء التعديل"}
               </Button>
               <Button
                 size="sm"
@@ -649,12 +652,12 @@ export function PurchaseInvoiceViewDialog({
                 {savingEdit ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    جارٍ الحفظ والاحتساب...
+                    {isEn ? "Saving & recalculating..." : "جارٍ الحفظ والاحتساب..."}
                   </>
                 ) : (
                   <>
                     <Save className="w-3.5 h-3.5" />
-                    حفظ التعديل المحاسبي
+                    {isEn ? "Save Accounting Edit" : "حفظ التعديل المحاسبي"}
                   </>
                 )}
               </Button>
@@ -669,7 +672,7 @@ export function PurchaseInvoiceViewDialog({
                 disabled={loading || !invoice}
               >
                 <Share2 className="w-3.5 h-3.5" />
-                مشاركة الفاتورة كصورة
+                {isEn ? "Share Invoice as Image" : "مشاركة الفاتورة كصورة"}
               </Button>
               <Button
                 variant="ghost"
@@ -677,7 +680,7 @@ export function PurchaseInvoiceViewDialog({
                 className="h-9 px-4 text-xs"
                 onClick={() => onOpenChange(false)}
               >
-                إغلاق
+                {isEn ? "Close" : "إغلاق"}
               </Button>
             </>
           )}
@@ -689,7 +692,7 @@ export function PurchaseInvoiceViewDialog({
             <DialogContent className="max-w-3xl p-2">
               <img
                 src={previewImage}
-                alt="معاينة فاتورة المشتريات"
+                alt={isEn ? "Purchase invoice preview" : "معاينة فاتورة المشتريات"}
                 className="w-full max-h-[80vh] object-contain rounded-lg"
               />
             </DialogContent>

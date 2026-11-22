@@ -61,6 +61,7 @@ interface ExistingProductOption {
 
 export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurchaseDialogProps) {
   const { t, language } = useLanguage();
+  const isEn = language === 'en';
   const [loading, setLoading] = useState(false);
   const m = useMoney();
   const [inputCurrency, setInputCurrency] = useState<string>(() => m.activeCode);
@@ -308,7 +309,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
         productId: selectedProduct?.id,
       }, 10);
       if (operation.status === 'failed') {
-        toast.error(operation.error || 'تعذر وضع الشراء في قائمة المزامنة');
+        toast.error(operation.error || (isEn ? 'Could not queue purchase for sync' : 'تعذر وضع الشراء في قائمة المزامنة'));
         return;
       }
 
@@ -370,7 +371,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                 <div className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-primary shrink-0" />
                   <span className="font-medium text-primary">
-                    منتج مسجل مسبقاً: <strong>{selectedProduct.name}</strong> (المخزون الحالي: {selectedProduct.quantity ?? 0})
+                    {isEn ? (<>Existing product: <strong>{selectedProduct.name}</strong> (Current stock: {selectedProduct.quantity ?? 0})</>) : (<>منتج مسجل مسبقاً: <strong>{selectedProduct.name}</strong> (المخزون الحالي: {selectedProduct.quantity ?? 0})</>)}
                   </span>
                 </div>
                 <Button
@@ -380,7 +381,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                   onClick={handleClearSelectedProduct}
                 >
                   <X className="w-3.5 h-3.5" />
-                  إلغاء التحديد
+                  {isEn ? "Clear Selection" : "إلغاء التحديد"}
                 </Button>
               </div>
             )}
@@ -422,7 +423,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
               {showSearchDropdown && searchResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
                   <div className="p-1.5 bg-muted/60 text-[11px] font-medium text-muted-foreground">
-                    منتجات مطابقة موجودة بالمخزون:
+                    {isEn ? "Matching products in stock:" : "منتجات مطابقة موجودة بالمخزون:"}
                   </div>
                   {searchResults.map((item) => (
                     <button
@@ -434,14 +435,14 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                       <div className="flex flex-col">
                         <span className="font-semibold text-foreground">{item.name}</span>
                         <span className="text-[11px] text-muted-foreground">
-                          {item.barcode ? `باركود: ${item.barcode}` : 'بدون باركود'}
+                          {item.barcode ? (isEn ? `Barcode: ${item.barcode}` : `باركود: ${item.barcode}`) : (isEn ? 'No barcode' : 'بدون باركود')}
                           {item.category ? ` • ${item.category}` : ''}
                         </span>
                       </div>
                       <div className="text-left font-mono">
                         <span className="text-primary font-bold">${item.cost_price?.toFixed(2) || '0.00'}</span>
                         <span className="text-[10px] text-muted-foreground block">
-                          المتوفر: {item.quantity ?? 0}
+                          {isEn ? 'In stock:' : 'المتوفر:'} {item.quantity ?? 0}
                         </span>
                       </div>
                     </button>
@@ -456,13 +457,13 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
               <div className="space-y-1.5">
                 <Label className="text-xs sm:text-sm font-medium flex items-center justify-between">
                   <span>{t('products.barcode') || 'الباركود'}</span>
-                  <span className="text-[10px] text-muted-foreground font-normal">اختياري</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">{isEn ? "Optional" : "اختياري"}</span>
                 </Label>
                 <div className="flex gap-1.5">
                   <Input
                     value={barcode}
                     onChange={(e) => setBarcode(e.target.value)}
-                    placeholder="امسح أو اكتب الباركود"
+                    placeholder={isEn ? "Scan or enter barcode" : "امسح أو اكتب الباركود"}
                     className="h-10 text-sm font-mono"
                     dir="ltr"
                   />
@@ -472,7 +473,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     size="icon"
                     className="h-10 w-10 shrink-0"
                     onClick={() => setShowScanner(true)}
-                    title="مسح الباركود بالكاميرا"
+                    title={isEn ? "Scan barcode with camera" : "مسح الباركود بالكاميرا"}
                   >
                     <ScanLine className="w-4 h-4 text-primary" />
                   </Button>
@@ -500,7 +501,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                   <Input
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    placeholder="أو اكتب جديدة"
+                    placeholder={isEn ? "Or type a new one" : "أو اكتب جديدة"}
                     className="h-10 text-sm w-32 hidden sm:block"
                   />
                 </div>
@@ -510,7 +511,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
             {/* Currency Selector */}
             <div className="flex items-center justify-between bg-muted/30 px-3 py-1.5 rounded-lg border border-border/60">
               <span className="text-xs font-medium text-muted-foreground">
-                عملة إدخال الشراء:
+                {isEn ? "Purchase Currency:" : "عملة إدخال الشراء:"}
               </span>
               <div className="flex items-center gap-1 bg-background p-0.5 rounded-md border border-border/60">
                 {m.enabledCurrencies.map((curr) => (
@@ -641,7 +642,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
 
               {/* Payment Method Selector */}
               <div className="space-y-1.5 pt-1">
-                <Label className="text-xs sm:text-sm font-medium">طريقة سداد المشتريات</Label>
+                <Label className="text-xs sm:text-sm font-medium">{isEn ? "Purchase Payment Method" : "طريقة سداد المشتريات"}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -653,7 +654,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                         : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
                     )}
                   >
-                    <span>💵 نقداً من الصندوق</span>
+                    <span>{isEn ? "💵 Cash from Drawer" : "💵 نقداً من الصندوق"}</span>
                   </button>
                   <button
                     type="button"
@@ -665,12 +666,12 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                         : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
                     )}
                   >
-                    <span>📋 آجل (ذمة مورد)</span>
+                    <span>{isEn ? "📋 Credit (Supplier Balance)" : "📋 آجل (ذمة مورد)"}</span>
                   </button>
                 </div>
                 {paymentMethod === 'cash' && (
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    سيتم خصم المبلغ تلقائياً من الوردية الحالية المفتوحة لمنع أي عجز بالصندوق.
+                    {isEn ? "Amount will be deducted automatically from the open shift to keep the cashbox balanced." : "سيتم خصم المبلغ تلقائياً من الوردية الحالية المفتوحة لمنع أي عجز بالصندوق."}
                   </p>
                 )}
               </div>
@@ -711,7 +712,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                 <Button variant="ghost" className="w-full flex items-center justify-between p-1 h-auto text-xs font-semibold text-foreground">
                   <div className="flex items-center gap-1.5">
                     <Layers className="w-4 h-4 text-primary" />
-                    <span>إعدادات وحدات التجزئة والكرتونة (اختياري)</span>
+                    <span>{isEn ? "Retail & Carton Unit Settings (Optional)" : "إعدادات وحدات التجزئة والكرتونة (اختياري)"}</span>
                   </div>
                   {showUnitSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </Button>
@@ -719,27 +720,27 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
               <CollapsibleContent className="space-y-3 pt-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">الوحدة الكبرى (كرتونة/صندوق)</Label>
+                    <Label className="text-xs">{isEn ? "Bulk Unit (Carton / Box)" : "الوحدة الكبرى (كرتونة/صندوق)"}</Label>
                     <Input
                       value={bulkUnit}
                       onChange={(e) => setBulkUnit(e.target.value)}
-                      placeholder="كرتونة"
+                      placeholder={isEn ? "Carton" : "كرتونة"}
                       className="h-9 text-xs"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">الوحدة الصغرى (قطعة/علبة)</Label>
+                    <Label className="text-xs">{isEn ? "Small Unit (Piece / Pack)" : "الوحدة الصغرى (قطعة/علبة)"}</Label>
                     <Input
                       value={smallUnit}
                       onChange={(e) => setSmallUnit(e.target.value)}
-                      placeholder="قطعة"
+                      placeholder={isEn ? "Piece" : "قطعة"}
                       className="h-9 text-xs"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px]">معامل التحويل (قطع)</Label>
+                    <Label className="text-[11px]">{isEn ? "Conversion Factor (pcs)" : "معامل التحويل (قطع)"}</Label>
                     <Input
                       type="number"
                       min="1"
@@ -749,7 +750,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px]">تكلفة الكرتونة ({currencySymbol})</Label>
+                    <Label className="text-[11px]">{isEn ? "Carton Cost" : "تكلفة الكرتونة"} ({currencySymbol})</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -761,7 +762,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px]">سعر بيع الكرتونة ({currencySymbol})</Label>
+                    <Label className="text-[11px]">{isEn ? "Carton Sale Price" : "سعر بيع الكرتونة"} ({currencySymbol})</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -779,7 +780,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
             {/* Product / Receipt Photo */}
             <div className="space-y-2">
               <Label className="text-xs sm:text-sm font-medium">
-                صورة المنتج أو الفاتورة
+                {isEn ? "Product or Invoice Image" : "صورة المنتج أو الفاتورة"}
               </Label>
               {imagePreview ? (
                 <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border group bg-black/5">
@@ -787,7 +788,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                   {imgStatus === 'syncing' && (
                     <div className="absolute top-2 left-2 bg-black/70 rounded-full px-2 py-1 flex items-center gap-1.5 text-[11px] text-white">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      <span>جارٍ المزامنة...</span>
+                      <span>{isEn ? "Syncing..." : "جارٍ المزامنة..."}</span>
                     </div>
                   )}
                   <Button
@@ -810,7 +811,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     onClick={() => setShowCameraPreview(true)}
                   >
                     <Camera className="w-4 h-4 text-primary" />
-                    التقاط بالكاميرا
+                    {isEn ? "Take Photo" : "التقاط بالكاميرا"}
                   </Button>
                   <label className="flex-1">
                     <Button
@@ -822,7 +823,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     >
                       <span>
                         <ImageIcon className="w-4 h-4 text-primary" />
-                        اختيار من المعرض
+                        {isEn ? "Choose from Gallery" : "اختيار من المعرض"}
                       </span>
                     </Button>
                     <input
@@ -857,13 +858,13 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin ml-1" />
+                  <Loader2 className="w-4 h-4 animate-spin me-1" />
                   <span>{t('common.loading') || 'جارٍ الحفظ...'}</span>
                 </>
               ) : (
                 <>
-                  <Package className="w-4 h-4 ml-1" />
-                  <span>{selectedProduct ? 'تحديث المخزون والفاتورة' : 'حفظ المنتج وتحديث المخزون'}</span>
+                  <Package className="w-4 h-4 me-1" />
+                  <span>{selectedProduct ? (isEn ? 'Update Stock & Invoice' : 'تحديث المخزون والفاتورة') : (isEn ? 'Save Product & Update Stock' : 'حفظ المنتج وتحديث المخزون')}</span>
                 </>
               )}
             </Button>

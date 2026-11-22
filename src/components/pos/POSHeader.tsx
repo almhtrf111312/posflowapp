@@ -28,7 +28,8 @@ export function POSHeader({
   onMenuClick
 }: POSHeaderProps) {
   const isMobile = useIsMobile();
-  const { t, tDynamic } = useLanguage();
+  const { t, tDynamic, language } = useLanguage();
+  const isEn = language === 'en';
   const navigate = useNavigate();
   const { isBoss, isAdmin, canAccessSettings } = useUserRole();
   const supportUnread = useSupportUnread();
@@ -42,7 +43,7 @@ export function POSHeader({
           <button
             type="button"
             onClick={onMenuClick}
-            aria-label="القائمة الرئيسية"
+            aria-label={isEn ? "Main Menu" : "القائمة الرئيسية"}
             className="w-11 h-11 rounded-xl bg-muted/60 border border-border/40 text-foreground flex items-center justify-center shrink-0 hover:bg-muted active:scale-95 transition-opacity cursor-pointer"
           >
             <Menu className="w-5 h-5 text-foreground" />
@@ -69,7 +70,7 @@ export function POSHeader({
           variant="ghost"
           size="icon"
           onClick={() => navigate('/contact')}
-          title="التواصل مع المطور"
+          title={isEn ? "Contact Developer" : "التواصل مع المطور"}
           className="relative h-9 w-9 md:h-10 md:w-10 rounded-xl hover:bg-muted"
         >
           <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground hover:text-foreground transition-colors" />
@@ -86,7 +87,7 @@ export function POSHeader({
             variant="ghost"
             size="icon"
             onClick={() => navigate('/settings')}
-            title="الإعدادات"
+            title={isEn ? "Settings" : "الإعدادات"}
             className="h-9 w-9 md:h-10 md:w-10 rounded-xl hover:bg-muted"
           >
             <Settings className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground hover:text-foreground transition-colors" />

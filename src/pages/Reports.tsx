@@ -139,8 +139,9 @@ export interface ReportEntry {
 // التجربة المجانية لا تصل إلى التقارير: نعرض رسالة الاشتراك بدل المحتوى
 export default function Reports() {
   const { isTrial, role } = useLicense();
+  const { isRTL } = useLanguage();
   if (isTrial && role !== 'boss') {
-    return <SubscriptionLockNotice sectionName="التقارير" />;
+    return <SubscriptionLockNotice sectionName={!isRTL ? "Reports" : "التقارير"} />;
   }
   return <ReportsContent />;
 }
@@ -150,6 +151,7 @@ function ReportsContent() {
   const { isActive: isPageActive } = usePageActivity();
   const deferWhileHidden = useDeferWhileHidden();
   const { t, isRTL } = useLanguage();
+  const isEn = !isRTL;
   const { isAdmin: isStoreOwnerRole, isBoss: isBossRole } = useUserRole();
   const [searchParams] = useSearchParams();
   const storeType = getCurrentStoreType();
@@ -967,7 +969,7 @@ function ReportsContent() {
             label: isRTL ? 'الربح المحقق' : 'Realized profit',
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
-            subtext: `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,
+            subtext: isEn ? `Net after expenses: ${formatReportAmount(netProfit)}` : `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,
           },
           {
             icon: ShoppingBag,
@@ -1016,15 +1018,15 @@ function ReportsContent() {
           {
             icon: Receipt,
             value: formatReportAmount(totalExpenses),
-            label: 'المصروفات التشغيلية',
+            label: isEn ? 'Operating Expenses' : 'المصروفات التشغيلية',
             color: 'text-rose-600',
             bg: 'bg-rose-500/10',
-            subtext: 'إجمالي مصاريف الفترة المحددة',
+            subtext: isEn ? 'Total expenses for the selected period' : 'إجمالي مصاريف الفترة المحددة',
           },
           {
             icon: Coins,
             value: formatReportAmount(netProfit),
-            label: 'صافي الربح الفعلي (Net Profit)',
+            label: isEn ? 'Actual Net Profit' : 'صافي الربح الفعلي (Net Profit)',
             color: netProfit >= 0 ? 'text-emerald-600' : 'text-destructive',
             bg: netProfit >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10',
             subtext: isRTL ? `هامش الصافي: ${netProfitMargin}% (بعد المصاريف والديون المعدومة)` : `Net margin: ${netProfitMargin}% (after expenses and bad debts)`,
@@ -1298,7 +1300,7 @@ function ReportsContent() {
             label: t('reports.totalExpenses'),
             color: 'text-destructive',
             bg: 'bg-destructive/10',
-            subtext: 'إجمالي النفقات بالفترة',
+            subtext: isEn ? 'Total period expenses' : 'إجمالي النفقات بالفترة',
           },
           {
             icon: FileText,
@@ -1306,15 +1308,15 @@ function ReportsContent() {
             label: t('reports.expenseVouchersCount'),
             color: 'text-blue-600',
             bg: 'bg-blue-500/10',
-            subtext: 'سندات صرف مسجلة',
+            subtext: isEn ? 'Recorded expense vouchers' : 'سندات صرف مسجلة',
           },
           {
             icon: TrendingUp,
-            value: topExp ? topExp.type : 'لا يوجد',
+            value: topExp ? topExp.type : (isEn ? 'None' : 'لا يوجد'),
             label: t('reports.largestExpenseItem'),
             color: 'text-amber-600',
             bg: 'bg-amber-500/10',
-            subtext: topExp ? `بقيمة: ${formatReportAmount(topExp.amount)}` : 'لا توجد مصاريف',
+            subtext: topExp ? (isEn ? `Amount: ${formatReportAmount(topExp.amount)}` : `بقيمة: ${formatReportAmount(topExp.amount)}`) : (isEn ? 'No expenses' : 'لا توجد مصاريف'),
           },
           {
             icon: Calendar,
@@ -1322,7 +1324,7 @@ function ReportsContent() {
             label: t('reports.avgDailyExpense'),
             color: 'text-primary',
             bg: 'bg-primary/10',
-            subtext: 'معدل الإنفاق اليومي',
+            subtext: isEn ? 'Daily spend rate' : 'معدل الإنفاق اليومي',
           },
         ];
       }
@@ -1336,7 +1338,7 @@ function ReportsContent() {
             label: t('reports.partnersProfitInPeriod'),
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
-            subtext: 'صافي نصيب الشركاء',
+            subtext: isEn ? 'Net partners share' : 'صافي نصيب الشركاء',
           },
           {
             icon: Wallet,
@@ -1344,7 +1346,7 @@ function ReportsContent() {
             label: t('reports.totalDueBalance'),
             color: 'text-primary',
             bg: 'bg-primary/10',
-            subtext: 'أرصدة الشركاء الحالية',
+            subtext: isEn ? 'Current partners balances' : 'أرصدة الشركاء الحالية',
           },
           {
             icon: Banknote,
@@ -1352,7 +1354,7 @@ function ReportsContent() {
             label: t('reports.withdrawnInPeriod'),
             color: 'text-amber-600',
             bg: 'bg-amber-500/10',
-            subtext: 'دفعات مسحوبة للشركاء',
+            subtext: isEn ? 'Partner withdrawals' : 'دفعات مسحوبة للشركاء',
           },
           {
             icon: UsersRound,
@@ -1360,7 +1362,7 @@ function ReportsContent() {
             label: t('reports.partnersCount'),
             color: 'text-blue-600',
             bg: 'bg-blue-500/10',
-            subtext: 'شركاء مسجلون بالنظام',
+            subtext: isEn ? 'Registered partners' : 'شركاء مسجلون بالنظام',
           },
         ];
 
@@ -1378,7 +1380,7 @@ function ReportsContent() {
             label: t('reports.todaySales'),
             color: 'text-primary',
             bg: 'bg-primary/10',
-            subtext: `تاريخ: ${targetDate}`,
+            subtext: isEn ? `Date: ${targetDate}` : `تاريخ: ${targetDate}`,
           },
           {
             icon: TrendingUp,
@@ -1386,7 +1388,7 @@ function ReportsContent() {
             label: t('reports.todayNetProfit'),
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
-            subtext: dSales > 0 ? `هامش ربح: ${Math.round((dProfit / dSales) * 100)}%` : 'صافي ربح اليوم',
+            subtext: dSales > 0 ? (isEn ? `Profit margin: ${Math.round((dProfit / dSales) * 100)}%` : `هامش ربح: ${Math.round((dProfit / dSales) * 100)}%`) : (isEn ? 'Today net profit' : 'صافي ربح اليوم'),
           },
           {
             icon: ShoppingBag,
@@ -1394,7 +1396,7 @@ function ReportsContent() {
             label: t('reports.todayInvoicesCount'),
             color: 'text-blue-600',
             bg: 'bg-blue-500/10',
-            subtext: 'فواتير اليوم المسجلة',
+            subtext: isEn ? 'Today recorded invoices' : 'فواتير اليوم المسجلة',
           },
           {
             icon: Clock,
@@ -1402,7 +1404,7 @@ function ReportsContent() {
             label: t('reports.avgDailyInvoice'),
             color: 'text-amber-600',
             bg: 'bg-amber-500/10',
-            subtext: 'متوسط الفاتورة اليومية',
+            subtext: isEn ? 'Average daily invoice' : 'متوسط الفاتورة اليومية',
           },
         ];
       }
@@ -1411,7 +1413,7 @@ function ReportsContent() {
         const invs = getFilteredInvoicesForReport();
         const cMap = new Map<string, { count: number; total: number; profit: number }>();
         invs.forEach(inv => {
-          const name = inv.cashierName || 'كاشير عام';
+          const name = inv.cashierName || (isEn ? 'General Cashier' : 'كاشير عام');
           const cur = cMap.get(name) || { count: 0, total: 0, profit: 0 };
           cur.count += 1;
           cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
@@ -1420,7 +1422,7 @@ function ReportsContent() {
         });
         const sorted = Array.from(cMap.entries()).sort((a, b) => b[1].total - a[1].total);
         const topC = sorted[0];
-        const topCName = topC ? topC[0] : 'لا يوجد';
+        const topCName = topC ? topC[0] : (isEn ? 'None' : 'لا يوجد');
         const topCOrders = topC ? topC[1].count : 0;
         const activeCCount = sorted.length;
         const totCSales = sorted.reduce((s, c) => s + c[1].total, 0);
@@ -1432,7 +1434,7 @@ function ReportsContent() {
             label: t('reports.topSalesCashier'),
             color: 'text-primary',
             bg: 'bg-primary/10',
-            subtext: topC ? `مبيعات: ${formatReportAmount(topC[1].total)}` : 'لا توجد بيانات',
+            subtext: topC ? (isEn ? `Sales: ${formatReportAmount(topC[1].total)}` : `مبيعات: ${formatReportAmount(topC[1].total)}`) : (isEn ? 'No data' : 'لا توجد بيانات'),
           },
           {
             icon: ShoppingBag,
@@ -1440,7 +1442,7 @@ function ReportsContent() {
             label: t('reports.topCashierInvoices'),
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
-            subtext: 'أعلى إنجاز مبيعات',
+            subtext: isEn ? 'Top sales performance' : 'أعلى إنجاز مبيعات',
           },
           {
             icon: Users,
@@ -1448,7 +1450,7 @@ function ReportsContent() {
             label: t('reports.totalActiveCashiers'),
             color: 'text-blue-600',
             bg: 'bg-blue-500/10',
-            subtext: 'باشروا البيع بالفترة',
+            subtext: isEn ? 'Active in period' : 'باشروا البيع بالفترة',
           },
           {
             icon: Banknote,
@@ -1456,7 +1458,7 @@ function ReportsContent() {
             label: t('reports.avgSalesPerCashier'),
             color: 'text-amber-600',
             bg: 'bg-amber-500/10',
-            subtext: 'معدل مبيعات الموظف',
+            subtext: isEn ? 'Avg. sales per employee' : 'معدل مبيعات الموظف',
           },
         ];
       }
@@ -1474,7 +1476,7 @@ function ReportsContent() {
             label: t('reports.totalMaintenanceServices'),
             color: 'text-primary',
             bg: 'bg-primary/10',
-            subtext: 'عائد الصيانة بالفترة',
+            subtext: isEn ? 'Maintenance revenue in period' : 'عائد الصيانة بالفترة',
           },
           {
             icon: TrendingUp,
@@ -1482,7 +1484,7 @@ function ReportsContent() {
             label: t('reports.maintenanceNetProfit'),
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
-            subtext: mTot > 0 ? `هامش ربح: ${Math.round((mProf / mTot) * 100)}%` : 'أرباح الصيانة',
+            subtext: mTot > 0 ? (isEn ? `Profit margin: ${Math.round((mProf / mTot) * 100)}%` : `هامش ربح: ${Math.round((mProf / mTot) * 100)}%`) : (isEn ? 'Maintenance profit' : 'أرباح الصيانة'),
           },
           {
             icon: ShoppingBag,
@@ -1490,7 +1492,7 @@ function ReportsContent() {
             label: t('reports.maintenanceInvoicesCount'),
             color: 'text-blue-600',
             bg: 'bg-blue-500/10',
-            subtext: 'أجهزة مستلمة/مصلحة',
+            subtext: isEn ? 'Devices received / repaired' : 'أجهزة مستلمة/مصلحة',
           },
           {
             icon: Clock,
@@ -1498,7 +1500,7 @@ function ReportsContent() {
             label: t('reports.avgMaintenanceInvoice'),
             color: 'text-amber-600',
             bg: 'bg-amber-500/10',
-            subtext: 'متوسط تكلفة الخدمة',
+            subtext: isEn ? 'Average service cost' : 'متوسط تكلفة الخدمة',
           },
         ];
       }
@@ -1519,7 +1521,7 @@ function ReportsContent() {
             label: isRTL ? 'الربح المحقق' : 'Realized profit',
             color: 'text-emerald-600',
             bg: 'bg-emerald-500/10',
-            subtext: `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,
+            subtext: isEn ? `Net after expenses: ${formatReportAmount(netProfit)}` : `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,
           },
           {
             icon: ShoppingBag,
@@ -1527,7 +1529,7 @@ function ReportsContent() {
             label: t('reports.ordersCount'),
             color: 'text-blue-600',
             bg: 'bg-blue-500/10',
-            subtext: reportData.summary.totalOrders > 0 ? `${reportData.summary.totalOrders} طلب مكتمل` : 'لا توجد طلبات',
+            subtext: reportData.summary.totalOrders > 0 ? (isEn ? `${reportData.summary.totalOrders} completed orders` : `${reportData.summary.totalOrders} طلب مكتمل`) : (isEn ? 'No orders' : 'لا توجد طلبات'),
           },
           {
             icon: Clock,
@@ -1535,7 +1537,7 @@ function ReportsContent() {
             label: t('reports.avgOrderValue'),
             color: 'text-amber-600',
             bg: 'bg-amber-500/10',
-            subtext: reportData.allCustomers.length > 0 ? `${reportData.allCustomers.length} عميل بالفترة` : 'لكل طلب مسجل',
+            subtext: reportData.allCustomers.length > 0 ? (isEn ? `${reportData.allCustomers.length} customers in period` : `${reportData.allCustomers.length} عميل بالفترة`) : (isEn ? 'Per recorded order' : 'لكل طلب مسجل'),
           },
         ];
     }
@@ -1618,7 +1620,7 @@ function ReportsContent() {
         }
         case 'purchases': {
           const filteredPurchases = getFilteredPurchasesForReport();
-          if (filteredPurchases.length === 0) { toast.error('لا توجد فواتير مشتريات في الفترة المحددة للتصدير'); return; }
+          if (filteredPurchases.length === 0) { toast.error(isEn ? 'No purchase invoices in the selected period to export' : 'لا توجد فواتير مشتريات في الفترة المحددة للتصدير'); return; }
           const reportCurr = getReportCurrency();
           const currDef = getCurrencyDef(reportCurr.code);
           const exportSnapshot = {
@@ -1660,7 +1662,7 @@ function ReportsContent() {
         }
         case 'debts': {
           const filteredDebts = getFilteredDebtsForReport();
-          if (filteredDebts.length === 0) { toast.error('لا توجد ديون للتصدير'); return; }
+          if (filteredDebts.length === 0) { toast.error(isEn ? 'No debts to export' : 'لا توجد ديون للتصدير'); return; }
           const reportCurr = getReportCurrency();
           const currDef = getCurrencyDef(reportCurr.code);
           const exportSnapshot = {
@@ -1718,7 +1720,7 @@ function ReportsContent() {
           if (invoicesInRange.length === 0) { toast.error(t('reports.noDataToExport')); return; }
           const cashierMap = new Map<string, { count: number; total: number; profit: number }>();
           invoicesInRange.forEach(inv => {
-            const name = inv.cashierName || 'كاشير عام';
+            const name = inv.cashierName || (isEn ? 'General Cashier' : 'كاشير عام');
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
             cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
@@ -1752,7 +1754,7 @@ function ReportsContent() {
         }
         case 'maintenance': {
           const maintInvoices = cloudInvoices.filter(inv => inv.type === 'maintenance' && isValidActiveInvoice(inv) && isDateInRange(toLocalDateString(inv.createdAt), dateRange.from, dateRange.to));
-          if (maintInvoices.length === 0) { toast.error('لا توجد فواتير صيانة في هذه الفترة'); return; }
+          if (maintInvoices.length === 0) { toast.error(isEn ? 'No maintenance invoices in this period' : 'لا توجد فواتير صيانة في هذه الفترة'); return; }
           await exportToPDF({
             title: 'تقرير خدمات الصيانة',
             subtitle: `الفترة من ${dateRange.from} إلى ${dateRange.to}`,
@@ -1860,7 +1862,7 @@ function ReportsContent() {
           break;
         }
         default: {
-          toast.info('تم تصدير التقرير');
+          toast.info(isEn ? 'Report exported' : 'تم تصدير التقرير');
         }
       }
       toast.success(t('reports.exportSuccessPDF'));
@@ -1937,7 +1939,7 @@ function ReportsContent() {
         }
         case 'purchases': {
           const filteredPurchases = getFilteredPurchasesForReport();
-          if (filteredPurchases.length === 0) { toast.error('لا توجد فواتير مشتريات للتصدير'); return; }
+          if (filteredPurchases.length === 0) { toast.error(isEn ? 'No purchase invoices to export' : 'لا توجد فواتير مشتريات للتصدير'); return; }
           const reportCurr = getReportCurrency();
           const currDef = getCurrencyDef(reportCurr.code);
           const exportSnapshot = {
@@ -1977,7 +1979,7 @@ function ReportsContent() {
         }
         case 'debts': {
           const filteredDebts = getFilteredDebtsForReport();
-          if (filteredDebts.length === 0) { toast.error('لا توجد ديون للتصدير'); return; }
+          if (filteredDebts.length === 0) { toast.error(isEn ? 'No debts to export' : 'لا توجد ديون للتصدير'); return; }
           const reportCurr = getReportCurrency();
           const currDef = getCurrencyDef(reportCurr.code);
           const exportSnapshot = {
@@ -2032,7 +2034,7 @@ function ReportsContent() {
           if (invoicesInRange.length === 0) { toast.error(t('reports.noDataToExport')); return; }
           const cashierMap = new Map<string, { count: number; total: number; profit: number }>();
           invoicesInRange.forEach(inv => {
-            const name = inv.cashierName || 'كاشير عام';
+            const name = inv.cashierName || (isEn ? 'General Cashier' : 'كاشير عام');
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
             cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
@@ -2063,7 +2065,7 @@ function ReportsContent() {
         }
         case 'maintenance': {
           const maintInvoices = cloudInvoices.filter(inv => inv.type === 'maintenance' && isValidActiveInvoice(inv) && isDateInRange(toLocalDateString(inv.createdAt), dateRange.from, dateRange.to));
-          if (maintInvoices.length === 0) { toast.error('لا توجد فواتير صيانة للتصدير'); return; }
+          if (maintInvoices.length === 0) { toast.error(isEn ? 'No maintenance invoices to export' : 'لا توجد فواتير صيانة للتصدير'); return; }
           await exportToExcel({
             title: 'تقرير خدمات الصيانة',
             sheetName: 'خدمات الصيانة',
@@ -2159,7 +2161,7 @@ function ReportsContent() {
           break;
         }
         default: {
-          toast.info('تم تجهيز التقرير');
+          toast.info(isEn ? 'Report prepared' : 'تم تجهيز التقرير');
           return;
         }
       }
@@ -2622,7 +2624,7 @@ function ReportsContent() {
                     {card.value}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-muted-foreground truncate">
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs font-medium text-muted-foreground truncate">
                   {idx === 0 && activeReport === 'sales' && (
                     salesTrend.isUp ? (
                       <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -2716,7 +2718,7 @@ function ReportsContent() {
             <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
-            <p className="text-muted-foreground text-sm">جاري تحميل البيانات...</p>
+            <p className="text-muted-foreground text-sm">{isEn ? "Loading data..." : "جاري تحميل البيانات..."}</p>
           </div>
         )}
 
@@ -2763,9 +2765,9 @@ function ReportsContent() {
                         {reportData.topCustomers.map((cust, idx) => (
                           <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 border border-border/30">
                             <span className="text-xs font-bold text-foreground">{cust.name}</span>
-                            <div className="text-left">
+                            <div className="text-end">
                               <span className="text-xs font-black text-primary">{formatReportAmount(cust.total)}</span>
-                              <span className="text-[10px] text-muted-foreground mr-2">({cust.orders} {t('reports.orders')})</span>
+                              <span className="text-[11px] text-muted-foreground ms-2">({cust.orders} {t('reports.orders')})</span>
                             </div>
                           </div>
                         ))}
@@ -2807,14 +2809,14 @@ function ReportsContent() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
-                          <h3 className="text-sm font-bold text-foreground">المبيعات اليومية</h3>
+                          <h3 className="text-sm font-bold text-foreground">{isEn ? "Daily Sales" : "المبيعات اليومية"}</h3>
                         </div>
                         <div className="bg-muted text-foreground border border-border/70 text-xs font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
                           <span className="text-primary font-black">{formatReportAmount(activeChartDay.sales)}</span>
                           <span className="text-muted-foreground/50">|</span>
-                          <span className="text-emerald-600 font-bold">ربح: {formatReportAmount(activeChartDay.profit)}</span>
+                          <span className="text-emerald-600 font-bold">{isEn ? "Profit:" : "ربح:"} {formatReportAmount(activeChartDay.profit)}</span>
                           <span className="text-muted-foreground/50">|</span>
-                          <span className="text-muted-foreground text-[11px]">{activeChartDay.orders} طلب</span>
+                          <span className="text-muted-foreground text-[11px]">{activeChartDay.orders} {isEn ? "orders" : "طلب"}</span>
                         </div>
                       </div>
 
@@ -2834,7 +2836,7 @@ function ReportsContent() {
                                 className="flex flex-col items-center justify-end h-full gap-2 cursor-pointer group"
                               >
                                 {isSelected && day.sales > 0 && (
-                                  <span className="text-[10px] font-black text-primary animate-in fade-in zoom-in-95 duration-200">
+                                  <span className="text-[11px] font-black text-primary animate-in fade-in zoom-in-95 duration-200">
                                     {formatReportAmount(Math.round(day.sales))}
                                   </span>
                                 )}
@@ -2870,13 +2872,13 @@ function ReportsContent() {
                         {activeChartDay.sales > 0 && activeChartDay.date === topChartDay.date ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                             <Sparkles className="w-3.5 h-3.5" />
-                            أعلى مبيعات للأسبوع ({formatReportAmount(activeChartDay.sales)})
+                            {isEn ? `Top Weekly Sales (${formatReportAmount(activeChartDay.sales)})` : `أعلى مبيعات للأسبوع (${formatReportAmount(activeChartDay.sales)})`}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">{activeChartDay.orders} طلبات مسجلة</span>
+                          <span className="text-muted-foreground">{activeChartDay.orders} {isEn ? "recorded orders" : "طلبات مسجلة"}</span>
                         )}
                         <span className="text-muted-foreground font-mono text-[11px]">
-                          التاريخ: {activeChartDay.date}
+                          {isEn ? "Date:" : "التاريخ:"} {activeChartDay.date}
                         </span>
                       </div>
                     </div>
@@ -2971,7 +2973,7 @@ function ReportsContent() {
                                     <p className="text-[11px] text-muted-foreground mt-0.5">{t('reports.salesQuantity')}: {product.sales}</p>
                                   </div>
                                 </div>
-                                <div className="text-left">
+                                <div className="text-end">
                                   <p className="text-xs sm:text-sm font-black text-foreground">{formatReportAmount(product.revenue)}</p>
                                   <p className="text-[11px] font-semibold text-emerald-600 mt-0.5">
                                     {t('reports.profit')}: {formatReportAmount(product.profit)}
@@ -3182,9 +3184,9 @@ function ReportsContent() {
                         <span className="w-7 h-7 rounded-lg bg-primary/10 text-primary text-xs font-bold flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">{idx + 1}</span>
                         <span className="font-medium text-sm">{product.name}</span>
                       </div>
-                      <div className="text-left">
+                      <div className="text-end">
                         <p className="font-bold text-sm text-foreground">{formatReportAmount(product.revenue)}</p>
-                        <p className="text-[10px] text-muted-foreground">{product.sales} {t('reports.pieces')}</p>
+                        <p className="text-[11px] text-muted-foreground">{product.sales} {t('reports.pieces')}</p>
                       </div>
                     </div>
                   ))}
@@ -3199,20 +3201,20 @@ function ReportsContent() {
         {/* Inventory */}
         {activeReport === 'inventory' && (
           <div className="bg-card rounded-2xl border border-border p-4 md:p-6">
-            <h3 className="text-lg font-semibold mb-4">تقرير المخزون</h3>
+            <h3 className="text-lg font-semibold mb-4">{isEn ? "Inventory Report" : "تقرير المخزون"}</h3>
             {cloudProducts.length > 0 ? (
               <div className="w-full max-w-full overflow-x-auto rounded-2xl border border-border bg-card">
                 <table className="min-w-[620px] w-full text-xs">
                   <thead className="bg-muted">
                     <tr>
-                      <th className="p-2 text-right">#</th>
-                      <th className="p-2 text-right">الاسم</th>
-                      <th className="p-2 text-center">الباركود</th>
-                      <th className="p-2 text-center">التصنيف</th>
-                      <th className="p-2 text-center">الكمية</th>
-                      <th className="p-2 text-center">سعر الشراء</th>
-                      <th className="p-2 text-center">سعر البيع</th>
-                      <th className="p-2 text-center">الإجمالي</th>
+                      <th className="p-2 text-start">#</th>
+                      <th className="p-2 text-start">{isEn ? "Name" : "الاسم"}</th>
+                      <th className="p-2 text-center">{isEn ? "Barcode" : "الباركود"}</th>
+                      <th className="p-2 text-center">{isEn ? "Category" : "التصنيف"}</th>
+                      <th className="p-2 text-center">{isEn ? "Qty" : "الكمية"}</th>
+                      <th className="p-2 text-center">{isEn ? "Purchase Price" : "سعر الشراء"}</th>
+                      <th className="p-2 text-center">{isEn ? "Sale Price" : "سعر البيع"}</th>
+                      <th className="p-2 text-center">{isEn ? "Total" : "الإجمالي"}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3238,7 +3240,7 @@ function ReportsContent() {
                 </table>
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">لا توجد منتجات</p>
+              <p className="text-muted-foreground text-center py-4">{isEn ? "No products found" : "لا توجد منتجات"}</p>
             )}
           </div>
         )}
@@ -3250,7 +3252,7 @@ function ReportsContent() {
         {activeReport === 'inventory-stock' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between bg-card p-1.5 rounded-xl border border-border/70">
-              <div className="text-xs font-semibold text-muted-foreground px-2">نوع التدقيق المخزني:</div>
+              <div className="text-xs font-semibold text-muted-foreground px-2">{isEn ? "Inventory Audit Type:" : "نوع التدقيق المخزني:"}</div>
               <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg">
                 <button
                   type="button"
@@ -3261,7 +3263,7 @@ function ReportsContent() {
                   )}
                 >
                   <PackageSearch className="w-3.5 h-3.5" />
-                  <span>جلسات الجرد الفعلي</span>
+                  <span>{isEn ? "Physical Stocktake Sessions" : "جلسات الجرد الفعلي"}</span>
                 </button>
                 <button
                   type="button"
@@ -3272,7 +3274,7 @@ function ReportsContent() {
                   )}
                 >
                   <Activity className="w-3.5 h-3.5" />
-                  <span>كاشف العجز وفروقات المخزون</span>
+                  <span>{isEn ? "Shortage & Stock Variance Detector" : "كاشف العجز وفروقات المخزون"}</span>
                 </button>
               </div>
             </div>
@@ -3374,9 +3376,9 @@ function ReportsContent() {
                         <span className="w-7 h-7 rounded-lg bg-primary/10 text-primary text-xs font-bold flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">{idx + 1}</span>
                         <span className="font-medium text-sm">{customer.name}</span>
                       </div>
-                      <div className="text-left">
+                      <div className="text-end">
                         <p className="font-bold text-sm text-foreground">{formatReportAmount(customer.total)}</p>
-                        <p className="text-[10px] text-muted-foreground">{customer.orders} {t('reports.order')}</p>
+                        <p className="text-[11px] text-muted-foreground">{customer.orders} {t('reports.order')}</p>
                       </div>
                     </div>
                   ))}
@@ -3409,13 +3411,13 @@ function ReportsContent() {
             {!partnerReportData.hasData && partnerReportData.allPartners.length === 0 ? (
               <div className="bg-card rounded-2xl border border-border p-8 text-center">
                 <UsersRound className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">لا يوجد شركاء مسجلين</p>
+                <p className="text-muted-foreground">{isEn ? "No registered partners" : "لا يوجد شركاء مسجلين"}</p>
               </div>
             ) : (
               <>
                 {partnerReportData.aggregatedCategoryProfits.length > 0 && (
                   <div className="bg-card rounded-2xl border border-border p-6">
-                    <h3 className="text-lg font-semibold mb-4">الأرباح حسب الصنف</h3>
+                    <h3 className="text-lg font-semibold mb-4">{isEn ? "Profit by Category" : "الأرباح حسب الصنف"}</h3>
                     <div className="space-y-3">
                       {partnerReportData.aggregatedCategoryProfits.map((cat, idx) => {
                         const maxCatProfit = Math.max(...partnerReportData.aggregatedCategoryProfits.map(c => c.amount), 1);
@@ -3425,9 +3427,9 @@ function ReportsContent() {
                             <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
                               <div className="h-full bg-gradient-to-l from-primary to-primary/60 rounded-lg transition-[width] duration-500" style={{ width: `${(cat.amount / maxCatProfit) * 100}%` }} />
                             </div>
-                            <div className="text-left w-28">
+                            <div className="text-end w-28">
                               <p className="text-sm font-semibold">{formatReportAmount(cat.amount)}</p>
-                              <p className="text-xs text-muted-foreground">{cat.count} عملية</p>
+                              <p className="text-xs text-muted-foreground">{cat.count} {isEn ? "txns" : "عملية"}</p>
                             </div>
                           </div>
                         );
@@ -3448,34 +3450,34 @@ function ReportsContent() {
                           </p>
                         </div>
                       </div>
-                      <div className="text-left">
+                      <div className="text-end">
                         <p className="text-lg font-bold text-green-600">{formatReportAmount(partner.totalProfitInPeriod)}</p>
-                        <p className="text-xs text-muted-foreground">أرباح الفترة</p>
+                        <p className="text-xs text-muted-foreground">{isEn ? "Period Profit" : "أرباح الفترة"}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                       <div className="bg-muted rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground">الرصيد المتاح</p>
+                        <p className="text-xs text-muted-foreground">{isEn ? "Available Balance" : "الرصيد المتاح"}</p>
                         <p className="text-lg font-bold text-foreground">{formatReportAmount(partner.currentBalance)}</p>
                       </div>
                       <div className="bg-muted rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground">رأس المال</p>
+                        <p className="text-xs text-muted-foreground">{isEn ? "Capital" : "رأس المال"}</p>
                         <p className="text-lg font-bold text-foreground">{formatReportAmount(partner.currentCapital)}</p>
                       </div>
                       <div className="bg-muted rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground">أرباح معلقة</p>
+                        <p className="text-xs text-muted-foreground">{isEn ? "Pending Profits" : "أرباح معلقة"}</p>
                         <p className="text-lg font-bold text-amber-600">{formatReportAmount(partner.pendingProfit)}</p>
                       </div>
                       <div className="bg-muted rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground">المسحوب في الفترة</p>
+                        <p className="text-xs text-muted-foreground">{isEn ? "Withdrawn in Period" : "المسحوب في الفترة"}</p>
                         <p className="text-lg font-bold text-foreground">{formatReportAmount(partner.totalWithdrawnInPeriod)}</p>
                       </div>
                     </div>
 
                     {partner.profitByCategory.length > 0 && (
                       <div className="mb-4">
-                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">توزيع الأرباح حسب الصنف</h4>
+                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">{isEn ? "Profit Distribution by Category" : "توزيع الأرباح حسب الصنف"}</h4>
                         <div className="flex flex-wrap gap-2">
                           {partner.profitByCategory.slice(0, 5).map((cat, idx) => (
                             <span key={idx} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
@@ -3488,7 +3490,7 @@ function ReportsContent() {
 
                     {partner.dailyProfit.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">الأرباح اليومية</h4>
+                        <h4 className="text-sm font-semibold mb-2 text-muted-foreground">{isEn ? "Daily Profits" : "الأرباح اليومية"}</h4>
                         <div className="space-y-2">
                           {partner.dailyProfit.slice(-5).map((day, idx) => {
                             const maxDayProfit = Math.max(...partner.dailyProfit.map(d => d.amount), 1);
@@ -3498,7 +3500,7 @@ function ReportsContent() {
                                 <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
                                   <div className="h-full bg-green-500/70 rounded transition-[width] duration-500" style={{ width: `${(day.amount / maxDayProfit) * 100}%` }} />
                                 </div>
-                                <span className="text-xs font-semibold w-20 text-left">{formatReportAmount(day.amount)}</span>
+                                <span className="text-xs font-semibold w-20 text-end">{formatReportAmount(day.amount)}</span>
                               </div>
                             );
                           })}
@@ -3580,12 +3582,12 @@ function ReportsContent() {
             {!expenseReportData.hasData ? (
               <div className="bg-card rounded-2xl border border-border p-8 text-center">
                 <Receipt className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">لا توجد مصاريف في الفترة المحددة</p>
+                <p className="text-muted-foreground">{isEn ? "No expenses in the selected period" : "لا توجد مصاريف في الفترة المحددة"}</p>
               </div>
             ) : (
               <>
                 <div className="bg-card rounded-2xl border border-border p-6">
-                  <h3 className="text-lg font-semibold mb-4">المصاريف حسب النوع</h3>
+                  <h3 className="text-lg font-semibold mb-4">{isEn ? "Expenses by Type" : "المصاريف حسب النوع"}</h3>
                   <div className="space-y-3">
                     {expenseReportData.byType.map((type, idx) => {
                       const maxAmount = Math.max(...expenseReportData.byType.map(t => t.amount), 1);
@@ -3595,9 +3597,9 @@ function ReportsContent() {
                           <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
                             <div className="h-full bg-gradient-to-l from-destructive to-destructive/60 rounded-lg transition-[width] duration-500" style={{ width: `${(type.amount / maxAmount) * 100}%` }} />
                           </div>
-                          <div className="text-left w-28">
+                          <div className="text-end w-28">
                             <p className="text-sm font-semibold">{formatReportAmount(type.amount)}</p>
-                            <p className="text-xs text-muted-foreground">{type.count} مصروف</p>
+                            <p className="text-xs text-muted-foreground">{type.count} {isEn ? "expenses" : "مصروف"}</p>
                           </div>
                         </div>
                       );
@@ -3606,7 +3608,7 @@ function ReportsContent() {
                 </div>
 
                 <div className="bg-card rounded-2xl border border-border p-6">
-                  <h3 className="text-lg font-semibold mb-4">توزيع المصاريف على الشركاء</h3>
+                  <h3 className="text-lg font-semibold mb-4">{isEn ? "Expense Distribution by Partner" : "توزيع المصاريف على الشركاء"}</h3>
                   <div className="space-y-4">
                     {expenseReportData.partnerExpenses.map((partner, idx) => (
                       <div key={idx} className="bg-muted rounded-xl p-4">
@@ -3615,7 +3617,7 @@ function ReportsContent() {
                             <div className="w-10 h-10 rounded-full bg-primary/20 text-primary font-bold flex items-center justify-center">{partner.name.charAt(0)}</div>
                             <div>
                               <h4 className="font-semibold">{partner.name}</h4>
-                              <p className="text-sm text-muted-foreground">{formatNumber(Math.round(partner.percentage))}% من الإجمالي</p>
+                              <p className="text-sm text-muted-foreground">{formatNumber(Math.round(partner.percentage))}% {isEn ? "of total" : "من الإجمالي"}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -3635,7 +3637,7 @@ function ReportsContent() {
 
                 {expenseReportData.dailyExpenses.length > 0 && (
                   <div className="bg-card rounded-2xl border border-border p-6">
-                    <h3 className="text-lg font-semibold mb-4">المصاريف اليومية</h3>
+                    <h3 className="text-lg font-semibold mb-4">{isEn ? "Daily Expenses" : "المصاريف اليومية"}</h3>
                     <div className="space-y-3">
                       {expenseReportData.dailyExpenses.slice(-7).map((day, idx) => {
                         const maxDaily = Math.max(...expenseReportData.dailyExpenses.map(d => d.amount), 1);
@@ -3645,7 +3647,7 @@ function ReportsContent() {
                             <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
                               <div className="h-full bg-destructive/60 rounded-lg transition-[width] duration-500" style={{ width: `${(day.amount / maxDaily) * 100}%` }} />
                             </div>
-                            <span className="text-sm font-semibold w-24 text-left">{formatReportAmount(day.amount)}</span>
+                            <span className="text-sm font-semibold w-24 text-end">{formatReportAmount(day.amount)}</span>
                           </div>
                         );
                       })}
@@ -3654,7 +3656,7 @@ function ReportsContent() {
                 )}
 
                 <div className="bg-card rounded-2xl border border-border p-6">
-                  <h3 className="text-lg font-semibold mb-4">قائمة المصاريف</h3>
+                  <h3 className="text-lg font-semibold mb-4">{isEn ? "Expenses List" : "قائمة المصاريف"}</h3>
                   <div className="space-y-3">
                     {expenseReportData.expenses.slice(0, 10).map((expense, idx) => (
                       <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded-xl">
@@ -3667,9 +3669,9 @@ function ReportsContent() {
                             <p className="text-xs text-muted-foreground">{expense.date}</p>
                           </div>
                         </div>
-                        <div className="text-left">
+                        <div className="text-end">
                           <p className="font-bold text-destructive">-{formatReportAmount(expense.amount)}</p>
-                          <p className="text-xs text-muted-foreground">{expense.distributions.length} شريك</p>
+                          <p className="text-xs text-muted-foreground">{expense.distributions.length} {isEn ? "partners" : "شريك"}</p>
                         </div>
                       </div>
                     ))}

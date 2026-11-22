@@ -1,3 +1,4 @@
+﻿import { useLanguage } from '@/hooks/use-language';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, X, Save, Tag, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,16 +33,18 @@ interface CategoryManagerProps {
   onClose: () => void;
   onCategoriesChange?: () => void;
   usedCategories?: string[]; // Categories that are in use and cannot be deleted
-  inline?: boolean; // عرض كصفحة داخل الشاشة بدل نافذة عائمة
+  inline?: boolean; // ط¹ط±ط¶ ظƒطµظپط­ط© ط¯ط§ط®ظ„ ط§ظ„ط´ط§ط´ط© ط¨ط¯ظ„ ظ†ط§ظپط°ط© ط¹ط§ط¦ظ…ط©
 }
 
-export function CategoryManager({ 
+export function CategoryManager({
   isOpen, 
   onClose, 
   onCategoriesChange,
   usedCategories = [],
   inline = false
 }: CategoryManagerProps) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,14 +84,14 @@ export function CategoryManager({
   const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) {
-      toast.error('يرجى إدخال اسم التصنيف');
+      toast.error(isEn ? 'Please enter a category name' : 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط§ط³ظ… ط§ظ„طھطµظ†ظٹظپ');
       return;
     }
     
     // Check for duplicate (case-insensitive and trimmed)
     const norm = name.toLowerCase();
     if (categories.some(c => c.name.trim().toLowerCase() === norm)) {
-      toast.error('هذا التصنيف موجود بالفعل');
+      toast.error(isEn ? 'This category already exists' : 'ظ‡ط°ط§ ط§ظ„طھطµظ†ظٹظپ ظ…ظˆط¬ظˆط¯ ط¨ط§ظ„ظپط¹ظ„');
       return;
     }
     
@@ -99,11 +102,11 @@ export function CategoryManager({
     if (newCategory) {
       setNewCategoryName('');
       onCategoriesChange?.();
-      toast.success('تم إضافة التصنيف بنجاح');
+      toast.success(isEn ? 'Category added successfully' : 'طھظ… ط¥ط¶ط§ظپط© ط§ظ„طھطµظ†ظٹظپ ط¨ظ†ط¬ط§ط­');
       loadData();
       if (!inline) onClose();
     } else {
-      toast.error('فشل في إضافة التصنيف');
+      toast.error(isEn ? 'Failed to add category' : 'ظپط´ظ„ ظپظٹ ط¥ط¶ط§ظپط© ط§ظ„طھطµظ†ظٹظپ');
     }
   };
 
@@ -112,14 +115,14 @@ export function CategoryManager({
     
     const name = editName.trim();
     if (!name) {
-      toast.error('يرجى إدخال اسم التصنيف');
+      toast.error(isEn ? 'Please enter a category name' : 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط§ط³ظ… ط§ظ„طھطµظ†ظٹظپ');
       return;
     }
     
     // Check for duplicate (excluding current)
     const norm = name.toLowerCase();
     if (categories.some(c => c.name.trim().toLowerCase() === norm && c.id !== editingCategory.id)) {
-      toast.error('هذا التصنيف موجود بالفعل');
+      toast.error(isEn ? 'This category already exists' : 'ظ‡ط°ط§ ط§ظ„طھطµظ†ظٹظپ ظ…ظˆط¬ظˆط¯ ط¨ط§ظ„ظپط¹ظ„');
       return;
     }
     
@@ -131,10 +134,10 @@ export function CategoryManager({
       setEditingCategory(null);
       setEditName('');
       onCategoriesChange?.();
-      toast.success('تم تعديل التصنيف بنجاح');
+      toast.success(isEn ? 'Category updated successfully' : 'طھظ… طھط¹ط¯ظٹظ„ ط§ظ„طھطµظ†ظٹظپ ط¨ظ†ط¬ط§ط­');
       loadData();
     } else {
-      toast.error('فشل في تعديل التصنيف');
+      toast.error(isEn ? 'Failed to update category' : 'ظپط´ظ„ ظپظٹ طھط¹ط¯ظٹظ„ ط§ظ„طھطµظ†ظٹظپ');
     }
   };
 
@@ -148,10 +151,10 @@ export function CategoryManager({
     if (success) {
       setDeleteCategory(null);
       onCategoriesChange?.();
-      toast.success('تم حذف التصنيف بنجاح');
+      toast.success(isEn ? 'Category deleted successfully' : 'طھظ… ط­ط°ظپ ط§ظ„طھطµظ†ظٹظپ ط¨ظ†ط¬ط§ط­');
       loadData();
     } else {
-      toast.error('فشل في حذف التصنيف');
+      toast.error(isEn ? 'Failed to delete category' : 'ظپط´ظ„ ظپظٹ ط­ط°ظپ ط§ظ„طھطµظ†ظٹظپ');
     }
   };
 
@@ -174,7 +177,7 @@ export function CategoryManager({
             <Input
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="اسم التصنيف الجديد..."
+              placeholder={isEn ? "New category name..." : "ط§ط³ظ… ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¬ط¯ظٹط¯..."}
               className="flex-1"
               onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
               disabled={isSaving}
@@ -221,7 +224,7 @@ export function CategoryManager({
                           <span className="font-medium">{category.name}</span>
                           {isCategoryInUse(category.name) && (
                             <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                              مستخدم
+                              {isEn ? "In use" : "ظ…ط³طھط®ط¯ظ…"}
                             </span>
                           )}
                         </div>
@@ -240,7 +243,7 @@ export function CategoryManager({
                             onClick={() => setDeleteCategory(category)}
                             className="h-8 w-8 text-red-600 hover:text-red-700"
                             disabled={isCategoryInUse(category.name)}
-                            title={isCategoryInUse(category.name) ? 'لا يمكن حذف تصنيف مستخدم' : ''}
+                            title={isCategoryInUse(category.name) ? (isEn ? 'Cannot delete a category in use' : 'ظ„ط§ ظٹظ…ظƒظ† ط­ط°ظپ طھطµظ†ظٹظپ ظ…ط³طھط®ط¯ظ…') : ''}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -253,7 +256,7 @@ export function CategoryManager({
                 {categories.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Tag className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>لا توجد تصنيفات</p>
+                    <p>{isEn ? "No categories yet" : "ظ„ط§ طھظˆط¬ط¯ طھطµظ†ظٹظپط§طھ"}</p>
                   </div>
                 )}
               </>
@@ -267,7 +270,7 @@ export function CategoryManager({
           <SheetHeader className="p-4 border-b border-border/50 shrink-0 bg-muted/20">
             <SheetTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Tag className="w-5 h-5 text-primary" />
-              إدارة التصنيفات
+              {isEn ? "Manage Categories" : "ط¥ط¯ط§ط±ط© ط§ظ„طھطµظ†ظٹظپط§طھ"}
             </SheetTitle>
           </SheetHeader>
 
@@ -276,7 +279,7 @@ export function CategoryManager({
             <Input
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="اسم التصنيف الجديد..."
+              placeholder={isEn ? "New category name..." : "ط§ط³ظ… ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¬ط¯ظٹط¯..."}
               className="flex-1"
               onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
               disabled={isSaving}
@@ -323,7 +326,7 @@ export function CategoryManager({
                           <span className="font-medium">{category.name}</span>
                           {isCategoryInUse(category.name) && (
                             <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                              مستخدم
+                              {isEn ? "In use" : "ظ…ط³طھط®ط¯ظ…"}
                             </span>
                           )}
                         </div>
@@ -342,7 +345,7 @@ export function CategoryManager({
                             onClick={() => setDeleteCategory(category)}
                             className="h-8 w-8 text-red-600 hover:text-red-700"
                             disabled={isCategoryInUse(category.name)}
-                            title={isCategoryInUse(category.name) ? 'لا يمكن حذف تصنيف مستخدم' : ''}
+                            title={isCategoryInUse(category.name) ? (isEn ? 'Cannot delete a category in use' : 'ظ„ط§ ظٹظ…ظƒظ† ط­ط°ظپ طھطµظ†ظٹظپ ظ…ط³طھط®ط¯ظ…') : ''}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -355,7 +358,7 @@ export function CategoryManager({
                 {categories.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Tag className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>لا توجد تصنيفات</p>
+                    <p>{isEn ? "No categories yet" : "ظ„ط§ طھظˆط¬ط¯ طھطµظ†ظٹظپط§طھ"}</p>
                   </div>
                 )}
               </>
@@ -364,7 +367,7 @@ export function CategoryManager({
 
           <div className="pt-2 border-t">
             <Button variant="outline" onClick={onClose} className="w-full">
-              إغلاق
+              {isEn ? "Close" : "ط¥ط؛ظ„ط§ظ‚"}
             </Button>
           </div>
         </SheetContent>
@@ -375,22 +378,22 @@ export function CategoryManager({
       <AlertDialog open={!!deleteCategory} onOpenChange={() => setDeleteCategory(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف التصنيف</AlertDialogTitle>
+            <AlertDialogTitle>{isEn ? "Delete Category" : "ط­ط°ظپ ط§ظ„طھطµظ†ظٹظپ"}</AlertDialogTitle>
             <AlertDialogDescription>
-              هل أنت متأكد من حذف التصنيف "{deleteCategory?.name}"؟
+              {isEn ? `Are you sure you want to delete category "${deleteCategory?.name}"?` : `ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ط§ظ„طھطµظ†ظٹظپ "${deleteCategory?.name}"طں`}
               <br />
-              لا يمكن التراجع عن هذا الإجراء.
+              {isEn ? "This action cannot be undone." : "ظ„ط§ ظٹظ…ظƒظ† ط§ظ„طھط±ط§ط¬ط¹ ط¹ظ† ظ‡ط°ط§ ط§ظ„ط¥ط¬ط±ط§ط،."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel disabled={isSaving}>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSaving}>{isEn ? "Cancel" : "ط¥ظ„ط؛ط§ط،"}</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteCategory}
               className="bg-red-600 hover:bg-red-700"
               disabled={isSaving}
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              حذف
+              {isEn ? "Delete" : "ط­ط°ظپ"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

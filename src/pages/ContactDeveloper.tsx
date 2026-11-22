@@ -13,7 +13,8 @@ import { Download, Loader2 } from 'lucide-react';
 import { InlineSupportChatPanel } from '@/components/support/InlineSupportChatPanel';
 
 export default function ContactDeveloper() {
-  const { direction, isRTL } = useLanguage();
+  const { direction, isRTL, language } = useLanguage();
+  const isEn = language === 'en';
   const location = useLocation();
   const navigate = useNavigate();
   const supportReason = (location.state as any)?.supportReason as string | undefined;
@@ -32,10 +33,10 @@ export default function ContactDeveloper() {
       if (compareReleaseVersions(release.version, CURRENT_VERSION_NAME) > 0) {
         window.location.assign(release.url);
       } else {
-        toast.info('نسختك محدّثة.');
+        toast.info(isEn ? 'Your app is up to date.' : 'نسختك محدّثة.');
       }
     } catch {
-      toast.error('تعذّر فحص الإصدار المنشور. حاول مجدداً.');
+      toast.error(isEn ? 'Could not check the latest version. Please try again.' : 'تعذّر فحص الإصدار المنشور. حاول مجدداً.');
     } finally {
       setCheckingUpdate(false);
     }
@@ -58,38 +59,38 @@ export default function ContactDeveloper() {
     switch (supportReason) {
       case 'inactive':
         return {
-          title: 'الحساب معطل',
-          desc: 'تم تعطيل هذا الحساب من قبل الإدارة. يرجى التواصل مع الدعم الفني أو المطور لإعادة التنشيط.',
+          title: isEn ? 'Account Disabled' : 'الحساب معطل',
+          desc: isEn ? 'This account has been disabled by administration. Please contact support or the developer to reactivate it.' : 'تم تعطيل هذا الحساب من قبل الإدارة. يرجى التواصل مع الدعم الفني أو المطور لإعادة التنشيط.',
           severity: 'destructive',
         };
       case 'owner_inactive':
         return {
-          title: 'حساب المتجر متوقف',
-          desc: 'تم إيقاف حساب المتجر الأساسي التابع له. يرجى مراجعة إدارة متجرك أو التواصل مع المطور.',
+          title: isEn ? 'Store Account Suspended' : 'حساب المتجر متوقف',
+          desc: isEn ? 'The primary store account is suspended. Please contact your store manager or the developer.' : 'تم إيقاف حساب المتجر الأساسي التابع له. يرجى مراجعة إدارة متجرك أو التواصل مع المطور.',
           severity: 'destructive',
         };
       case 'revoked':
         return {
-          title: 'تم إلغاء الترخيص',
-          desc: 'تم إلغاء ترخيص هذا الحساب أو الجهاز. يرجى التواصل مع المطور لتسوية الترخيص وإعادة التفعيل.',
+          title: isEn ? 'License Revoked' : 'تم إلغاء الترخيص',
+          desc: isEn ? 'The license for this account or device has been revoked. Please contact the developer to restore access.' : 'تم إلغاء ترخيص هذا الحساب أو الجهاز. يرجى التواصل مع المطور لتسوية الترخيص وإعادة التفعيل.',
           severity: 'destructive',
         };
       case 'expired':
         return {
-          title: 'انتهت صلاحية الترخيص',
-          desc: 'انتهت فترة صلاحية الترخيص (تجريبي أو سنوي). يرجى التواصل مع المطور لتجديد الاشتراك.',
+          title: isEn ? 'License Expired' : 'انتهت صلاحية الترخيص',
+          desc: isEn ? 'Your license period (trial or annual) has expired. Please contact the developer to renew.' : 'انتهت فترة صلاحية الترخيص (تجريبي أو سنوي). يرجى التواصل مع المطور لتجديد الاشتراك.',
           severity: 'warning',
         };
       case 'activation_required':
         return {
-          title: 'مطلوب كود التفعيل',
-          desc: 'يتطلب النظام كود تفعيل للمتابعة. يمكنك طلب كود التفعيل عبر قنوات الدعم أدناه.',
+          title: isEn ? 'Activation Code Required' : 'مطلوب كود التفعيل',
+          desc: isEn ? 'An activation code is required to continue. Request one via the support channels below.' : 'يتطلب النظام كود تفعيل للمتابعة. يمكنك طلب كود التفعيل عبر قنوات الدعم أدناه.',
           severity: 'info',
         };
       default:
         return supportReason ? {
-          title: 'مطلوب مراجعة الدعم الفني',
-          desc: 'يتطلب حسابك التواصل مع الدعم الفني لمتابعة الاستخدام.',
+          title: isEn ? 'Support Review Required' : 'مطلوب مراجعة الدعم الفني',
+          desc: isEn ? 'Your account requires contacting technical support to continue.' : 'يتطلب حسابك التواصل مع الدعم الفني لمتابعة الاستخدام.',
           severity: 'warning',
         } : null;
     }
@@ -107,18 +108,18 @@ export default function ContactDeveloper() {
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">تجديد وترقية الاشتراك</h3>
+              <h3 className="text-base font-bold text-foreground">{isEn ? "Renew & Upgrade Subscription" : "تجديد وترقية الاشتراك"}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {licenseState.isExpired 
-                  ? 'انتهى اشتراكك الحالي. يمكنك التجديد فوراً لمتابعة العمل.'
+                  ? (isEn ? 'Your current subscription has expired. Renew now to continue.' : 'انتهى اشتراكك الحالي. يمكنك التجديد فوراً لمتابعة العمل.')
                   : licenseState.remainingDays !== null && licenseState.remainingDays !== undefined
-                    ? `المتبقي في اشتراكك: ${licenseState.remainingDays} يوماً`
-                    : 'اختر باقة الاشتراك المناسبة لمتجرك وسعة منتجاتك'}
+                    ? (isEn ? `Remaining in your subscription: ${licenseState.remainingDays} days` : `المتبقي في اشتراكك: ${licenseState.remainingDays} يوماً`)
+                    : (isEn ? 'Choose the subscription plan that fits your store and product capacity' : 'اختر باقة الاشتراك المناسبة لمتجرك وسعة منتجاتك')}
               </p>
             </div>
           </div>
           <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0 w-full sm:w-auto">
-            تجديد / ترقية الآن
+            {isEn ? "Renew / Upgrade Now" : "تجديد / ترقية الآن"}
             {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
           </Button>
         </div>
@@ -151,7 +152,7 @@ export default function ContactDeveloper() {
               </p>
               {userEmail && (
                 <div className="pt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>البريد الإلكتروني المرتبط:</span>
+                  <span>{isEn ? "Linked Email:" : "البريد الإلكتروني المرتبط:"}</span>
                   <code className="font-mono bg-background/80 px-2 py-0.5 rounded border border-border text-foreground font-semibold" dir="ltr">
                     {userEmail}
                   </code>
@@ -168,7 +169,7 @@ export default function ContactDeveloper() {
               className="gap-2 text-xs"
             >
               {isRTL ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
-              العودة لتسجيل الدخول
+              {isEn ? "Back to Login" : "العودة لتسجيل الدخول"}
             </Button>
           </div>
         </div>
@@ -176,15 +177,15 @@ export default function ContactDeveloper() {
 
       <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold">تحديث التطبيق</p>
+          <p className="text-xs font-semibold">{isEn ? "App Update" : "تحديث التطبيق"}</p>
           <p className="text-[11px] text-muted-foreground">
-            المثبّت <bdi>v{CURRENT_VERSION_NAME}</bdi>
-            {publishedVersion && <> · المنشور <bdi>v{publishedVersion}</bdi></>}
+            {isEn ? "Installed" : "المثبّت"} <bdi>v{CURRENT_VERSION_NAME}</bdi>
+            {publishedVersion && <> · {isEn ? "Latest" : "المنشور"} <bdi>v{publishedVersion}</bdi></>}
           </p>
         </div>
         <Button type="button" size="sm" className="h-8 shrink-0 gap-1 px-2 text-xs" disabled={checkingUpdate} onClick={() => void checkUpdate()}>
           {checkingUpdate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-          {checkingUpdate ? 'جاري الفحص…' : 'فحص التحديثات'}
+          {checkingUpdate ? (isEn ? 'Checking…' : 'جاري الفحص…') : (isEn ? 'Check Updates' : 'فحص التحديثات')}
         </Button>
       </div>
 
@@ -196,15 +197,15 @@ export default function ContactDeveloper() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <h2 className="text-sm font-bold text-foreground">
-              الدعم الفني المباشر
+              {isEn ? "Live Technical Support" : "الدعم الفني المباشر"}
             </h2>
             <Badge className="text-[9px] px-1.5 py-0 h-4 bg-green-500/20 text-green-600 border-green-500/30">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse me-1 inline-block" />
-              متصل
+              {isEn ? "Online" : "متصل"}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            تواصل مع المطور مباشرة — سنرد عليك في أقرب وقت ممكن
+            {isEn ? "Chat directly with the developer — we will reply as soon as possible" : "تواصل مع المطور مباشرة — سنرد عليك في أقرب وقت ممكن"}
           </p>
         </div>
         <Button
@@ -213,7 +214,7 @@ export default function ContactDeveloper() {
           className="shrink-0 gap-1.5"
         >
           <MessageCircle className="w-3.5 h-3.5" />
-          ابدأ المحادثة
+          {isEn ? "Start Chat" : "ابدأ المحادثة"}
         </Button>
       </div>}
 

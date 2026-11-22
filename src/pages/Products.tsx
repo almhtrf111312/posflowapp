@@ -156,6 +156,7 @@ export default function Products() {
   const deferWhileHidden = useDeferWhileHidden();
   const { user, profile } = useAuth();
   const { t, tDynamic, storeType, isRTL, language } = useLanguage();
+  const isEn = language === 'en';
   const visible = getVisibleSections(storeType);
   const { isBoss, isAdmin, isCashier } = useUserRole();
   const noInventory = isNoInventoryMode();
@@ -1001,7 +1002,7 @@ export default function Products() {
 
     // 1. فحص اسم المنتج
     if (!formData.name || !formData.name.trim()) {
-      toast.error('يجب كتابة اسم المنتج');
+      toast.error(isEn ? 'Product name is required' : 'يجب كتابة اسم المنتج');
       return;
     }
 
@@ -1009,7 +1010,7 @@ export default function Products() {
     const salePriceNum = Number(formData.salePrice);
     const bulkSalePriceNum = Number(formData.bulkSalePrice);
     if (!(salePriceNum > 0) && !(bulkSalePriceNum > 0)) {
-      toast.error('يرجى تحديد سعر بيع صالح أكبر من 0');
+      toast.error(isEn ? 'Please enter a valid sale price greater than 0' : 'يرجى تحديد سعر بيع صالح أكبر من 0');
       return;
     }
 
@@ -1025,7 +1026,7 @@ export default function Products() {
         p.barcode === bc || p.barcode2 === bc || p.barcode3 === bc
       );
       if (duplicate) {
-        toast.error(`هذا الباركود مستخدم بالفعل لمنتج آخر: ${duplicate.name}`);
+        toast.error(isEn ? `This barcode is already used by another product: ${duplicate.name}` : `هذا الباركود مستخدم بالفعل لمنتج آخر: ${duplicate.name}`);
         return;
       }
     }
@@ -1033,7 +1034,7 @@ export default function Products() {
     // Validate required custom fields
     for (const field of customFields) {
       if (field.required && !customFieldValues[field.id]) {
-        toast.error(`حقل "${field.name}" مطلوب`);
+        toast.error(isEn ? `Field "${field.name}" is required` : `حقل "${field.name}" مطلوب`);
         return;
       }
     }
@@ -1109,8 +1110,8 @@ export default function Products() {
       toast.success(t('products.addSuccess'));
       loadData();
     } else {
-      toast.error('فشل في إضافة المنتج', {
-        description: 'تعذر الحفظ في قاعدة البيانات. تحقق من صحة البيانات أو الصلاحيات.'
+      toast.error(isEn ? 'Failed to add product' : 'فشل في إضافة المنتج', {
+        description: isEn ? 'Could not save to database. Please check your data or permissions.' : 'تعذر الحفظ في قاعدة البيانات. تحقق من صحة البيانات أو الصلاحيات.'
       });
     }
 
@@ -1122,7 +1123,7 @@ export default function Products() {
 
     // 1. فحص اسم المنتج
     if (!formData.name || !formData.name.trim()) {
-      toast.error('يجب كتابة اسم المنتج');
+      toast.error(isEn ? 'Product name is required' : 'يجب كتابة اسم المنتج');
       return;
     }
 
@@ -1130,7 +1131,7 @@ export default function Products() {
     const salePriceNum = Number(formData.salePrice);
     const bulkSalePriceNum = Number(formData.bulkSalePrice);
     if (!(salePriceNum > 0) && !(bulkSalePriceNum > 0)) {
-      toast.error('يرجى تحديد سعر بيع صالح أكبر من 0');
+      toast.error(isEn ? 'Please enter a valid sale price greater than 0' : 'يرجى تحديد سعر بيع صالح أكبر من 0');
       return;
     }
 
@@ -1145,7 +1146,7 @@ export default function Products() {
         (p.barcode === bc || p.barcode2 === bc || p.barcode3 === bc)
       );
       if (duplicate) {
-        toast.error(`هذا الباركود مستخدم بالفعل لمنتج آخر: ${duplicate.name}`);
+        toast.error(isEn ? `This barcode is already used by another product: ${duplicate.name}` : `هذا الباركود مستخدم بالفعل لمنتج آخر: ${duplicate.name}`);
         return;
       }
     }
@@ -1153,7 +1154,7 @@ export default function Products() {
     // Validate required custom fields
     for (const field of customFields) {
       if (field.required && !customFieldValues[field.id]) {
-        toast.error(`حقل "${field.name}" مطلوب`);
+        toast.error(isEn ? `Field "${field.name}" is required` : `حقل "${field.name}" مطلوب`);
         return;
       }
     }
@@ -1550,7 +1551,7 @@ export default function Products() {
                     : (tDynamic('editProduct') ? `${tDynamic('editProduct')}: ${formData.name || ''}` : `${t('common.edit')}: ${formData.name || ''}`))}
             </h2>
             <p className="text-[11px] text-muted-foreground">
-              {activeView === 'add' ? 'أدخل تفاصيل وبيانات المنتج والمخزون' : 'تحديث أسعار وكميات وبيانات المنتج'}
+              {activeView === 'add' ? (isEn ? 'Enter product details, pricing, and inventory' : 'أدخل تفاصيل وبيانات المنتج والمخزون') : (isEn ? 'Update product pricing, stock, and details' : 'تحديث أسعار وكميات وبيانات المنتج')}
             </p>
           </div>
         </div>
@@ -2250,7 +2251,7 @@ export default function Products() {
               {t('products.archive') || 'الأرشيف'}
               {mergedArchivedProducts.length > 0 && (
                 <span className={cn(
-                  "px-1.5 py-0.2 text-[9px] rounded-full font-bold leading-none shrink-0",
+                  "px-1.5 py-0.2 text-[11px] rounded-full font-bold leading-none shrink-0",
                   mainTab === 'archive'
                     ? "bg-white/25 !text-white"
                     : "bg-red-500/20 !text-red-700 dark:!text-red-300"
@@ -2282,7 +2283,7 @@ export default function Products() {
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
                   <span className="text-xs sm:text-base font-bold text-foreground leading-none">{stats.total}</span>
-                  <span className="text-[9px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.total')}</span>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.total')}</span>
                 </div>
               </button>
               <button
@@ -2298,7 +2299,7 @@ export default function Products() {
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
                   <span className="text-xs sm:text-base font-bold text-foreground leading-none">{stats.inStock}</span>
-                  <span className="text-[9px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.available')}</span>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.available')}</span>
                 </div>
               </button>
               <button
@@ -2314,7 +2315,7 @@ export default function Products() {
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
                   <span className="text-xs sm:text-base font-bold text-foreground leading-none">{stats.lowStock}</span>
-                  <span className="text-[9px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.low')}</span>
+                  <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.low')}</span>
                 </div>
               </button>
             </div>
@@ -2500,7 +2501,7 @@ export default function Products() {
                           {product.name}
                         </h4>
                         <span className={cn(
-                          "text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0",
+                          "text-[11px] px-1.5 py-0.5 rounded-md font-medium shrink-0",
                           product.archived
                             ? "bg-destructive/15 text-destructive"
                             : "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold"
@@ -2521,12 +2522,12 @@ export default function Products() {
                           </p>
                         )}
                         {product.barcode2 && (
-                          <p className="font-mono text-[10px] truncate text-muted-foreground/80" dir="ltr">
+                          <p className="font-mono text-[11px] truncate text-muted-foreground/80" dir="ltr">
                             {t('products.barcode2')}: {product.barcode2}
                           </p>
                         )}
                         {product.barcode3 && (
-                          <p className="font-mono text-[10px] truncate text-muted-foreground/80" dir="ltr">
+                          <p className="font-mono text-[11px] truncate text-muted-foreground/80" dir="ltr">
                             {t('products.barcode3')}: {product.barcode3}
                           </p>
                         )}
@@ -2534,15 +2535,15 @@ export default function Products() {
 
                       <div className="grid grid-cols-3 gap-1 mt-2.5 pt-2 border-t border-border/40 text-center">
                         <div className="bg-muted/40 p-1 rounded">
-                          <span className="text-[10px] text-muted-foreground block">{t('products.salePrice')}</span>
+                          <span className="text-[11px] text-muted-foreground block">{t('products.salePrice')}</span>
                           <span className="font-bold text-xs text-foreground">{formatPrice(product.salePrice)}</span>
                         </div>
                         <div className="bg-muted/40 p-1 rounded">
-                          <span className="text-[10px] text-muted-foreground block">{t('products.costPrice')}</span>
+                          <span className="text-[11px] text-muted-foreground block">{t('products.costPrice')}</span>
                           <span className="text-xs text-foreground/80">{formatPrice(product.costPrice)}</span>
                         </div>
                         <div className="bg-muted/40 p-1 rounded">
-                          <span className="text-[10px] text-muted-foreground block">{t('products.currentStock')}</span>
+                          <span className="text-[11px] text-muted-foreground block">{t('products.currentStock')}</span>
                           <span className={cn("text-xs font-bold", product.quantity <= 0 ? "text-destructive" : "text-muted-foreground")}>
                             {formatNumber(product.quantity)}
                           </span>
@@ -2711,13 +2712,13 @@ export default function Products() {
                       {/* Stock Count (Aligned to Right) */}
                       {!noInventory ? (
                         <div className="flex items-center gap-1 text-muted-foreground font-bold shrink-0">
-                          <span className="text-muted-foreground/70 text-[10px]">{t('products.stock') || 'المخزون'}:</span>
+                          <span className="text-muted-foreground/70 text-[11px]">{t('products.stock') || 'المخزون'}:</span>
                           <span className="font-mono text-foreground font-black text-xs">{product.quantity}</span>
-                          <span className="text-muted-foreground/70 text-[10px] font-sans">
+                          <span className="text-muted-foreground/70 text-[11px] font-sans">
                             {getLocalizedUnit(product.smallUnit, false)}
                           </span>
                           {product.conversionFactor && product.conversionFactor > 1 && (
-                            <span className="text-[10px] text-muted-foreground/80 font-normal">
+                            <span className="text-[11px] text-muted-foreground/80 font-normal">
                               ({Math.floor(product.quantity / product.conversionFactor)} {getLocalizedUnit(product.bulkUnit, true)}
                               {product.quantity % product.conversionFactor > 0 && ` + ${product.quantity % product.conversionFactor} ${getLocalizedUnit(product.smallUnit, false)}`})
                             </span>
@@ -2754,7 +2755,7 @@ export default function Products() {
                           })()}
                         </div>
                       ) : (
-                        <div className="text-[10px] text-muted-foreground truncate">
+                        <div className="text-[11px] text-muted-foreground truncate">
                           {product.category}
                         </div>
                       )}
@@ -2823,13 +2824,13 @@ export default function Products() {
                         {/* Stock Count */}
                         {!noInventory ? (
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-bold">
-                            <span className="text-muted-foreground/70 text-[10px]">{t('products.stock') || 'المخزون'}:</span>
+                            <span className="text-muted-foreground/70 text-[11px]">{t('products.stock') || 'المخزون'}:</span>
                             <span className="font-mono text-foreground font-black text-xs">{product.quantity}</span>
-                            <span className="bg-muted text-muted-foreground text-[9px] px-1 py-0.2 rounded font-bold">
+                            <span className="bg-muted text-muted-foreground text-[11px] px-1 py-0.2 rounded font-bold">
                               {getLocalizedUnit(product.smallUnit, false)}
                             </span>
                             {product.conversionFactor && product.conversionFactor > 1 && (
-                              <span className="text-[10px] text-muted-foreground/80 font-normal">
+                              <span className="text-[11px] text-muted-foreground/80 font-normal">
                                 ({Math.floor(product.quantity / product.conversionFactor)} {getLocalizedUnit(product.bulkUnit, true)}
                                 {product.quantity % product.conversionFactor > 0 && ` + ${product.quantity % product.conversionFactor} ${getLocalizedUnit(product.smallUnit, false)}`})
                               </span>
@@ -2875,12 +2876,12 @@ export default function Products() {
                         <div className="flex items-center gap-1.5 font-mono text-[11px] shrink-0">
                           {!noInventory && (
                             <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-md border border-border/70 shadow-2xs">
-                              <span className="text-[9px] font-sans text-muted-foreground font-medium">{t('products.buy') || 'شراء'}:</span>
+                              <span className="text-[11px] font-sans text-muted-foreground font-medium">{t('products.buy') || 'شراء'}:</span>
                               <span className="text-foreground font-bold tabular-nums">{formatPrice(product.costPrice)}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 shadow-2xs text-primary">
-                            <span className="text-[9px] font-sans text-primary/80 font-medium">{t('products.sell') || 'بيع'}:</span>
+                            <span className="text-[11px] font-sans text-primary/80 font-medium">{t('products.sell') || 'بيع'}:</span>
                             <span className="text-foreground font-black tabular-nums">{formatPrice(product.salePrice)}</span>
                           </div>
                         </div>
@@ -2954,7 +2955,7 @@ export default function Products() {
                             title={t('products.clickToCopyBarcode') || 'انقر لنسخ الباركود'}
                           >
                             <Copy className="w-3 h-3 text-muted-foreground/70 flex-shrink-0" />
-                            <span className="font-mono text-[10px] font-bold tracking-wider">{product.barcode}</span>
+                            <span className="font-mono text-[11px] font-bold tracking-wider">{product.barcode}</span>
                           </div>
                         )}
 
@@ -2978,11 +2979,11 @@ export default function Products() {
                         <div className="flex items-center gap-1.5 text-xs text-foreground/80 font-bold">
                           <span>{t('products.stock') || 'المخزون'}:</span>
                           <span className="font-mono text-sm text-foreground font-black">{product.quantity}</span>
-                          <span className="bg-muted text-muted-foreground text-[10px] px-1.5 py-0.5 rounded-md font-bold">
+                          <span className="bg-muted text-muted-foreground text-[11px] px-1.5 py-0.5 rounded-md font-bold">
                             {getLocalizedUnit(product.smallUnit, false)}
                           </span>
                           {product.conversionFactor && product.conversionFactor > 1 && (
-                            <span className="text-[10px] text-muted-foreground/80 font-normal">
+                            <span className="text-[11px] text-muted-foreground/80 font-normal">
                               ({Math.floor(product.quantity / product.conversionFactor)} {getLocalizedUnit(product.bulkUnit, true)}
                               {product.quantity % product.conversionFactor > 0 && ` + ${product.quantity % product.conversionFactor} ${getLocalizedUnit(product.smallUnit, false)}`})
                             </span>
@@ -2995,7 +2996,7 @@ export default function Products() {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-0.5 text-[10px] text-primary font-medium mr-1 cursor-help">
+                                      <span className="inline-flex items-center gap-0.5 text-[11px] text-primary font-medium mr-1 cursor-help">
                                         <Truck className="w-2.5 h-2.5" />
                                         {custodyQty} {t('products.custody') || 'عهدة'}
                                       </span>
@@ -3027,8 +3028,8 @@ export default function Products() {
                       {/* Size/Color badges if enabled */}
                       {fieldsConfig.sizeColor && (product.size || product.color) && (
                         <div className="flex flex-wrap gap-1">
-                          {product.size && <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">{product.size}</span>}
-                          {product.color && <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{product.color}</span>}
+                          {product.size && <span className="text-[11px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">{product.size}</span>}
+                          {product.color && <span className="text-[11px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{product.color}</span>}
                         </div>
                       )}
                   {/* Bottom 3-Metric Price Row (الشراء | البيع | الربح) */}
@@ -3037,26 +3038,26 @@ export default function Products() {
                       {isRepairMode ? (
                         <>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
-                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.pieceCost')}</span>
+                            <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.pieceCost')}</span>
                             <span className="text-[11px] font-black leading-tight text-foreground font-mono">{formatPrice(product.costPrice)}</span>
                           </div>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
-                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.laborCost')}</span>
+                            <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.laborCost')}</span>
                             <span className="text-[11px] font-black leading-tight text-foreground font-mono">${formatNumber(product.laborCost || 0, 2)}</span>
                           </div>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
-                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('common.total')}</span>
+                            <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('common.total')}</span>
                             <span className="text-[11px] font-black leading-tight text-primary font-mono">{formatPrice(product.costPrice + (product.laborCost || 0))}</span>
                           </div>
                         </>
                       ) : (
                         <>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
-                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.salePrice') || 'البيع'}</span>
+                            <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.salePrice') || 'البيع'}</span>
                             <span className="text-[11px] font-black leading-tight text-primary font-mono">{formatPrice(product.salePrice)}</span>
                           </div>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
-                            <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.wholesalePrice')}</span>
+                            <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.wholesalePrice')}</span>
                             <span className="text-[11px] font-black leading-tight text-foreground font-mono">{formatPrice(product.wholesalePrice || 0)}</span>
                           </div>
                         </>
@@ -3066,12 +3067,12 @@ export default function Products() {
                     <div className="grid grid-cols-3 gap-0.5 text-center bg-muted/40 p-0.5 rounded-lg border border-border/80 mt-1">
                       {/* الشراء */}
                       <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
-                        <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.costPrice') || 'الشراء'}</span>
+                        <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.costPrice') || 'الشراء'}</span>
                         <span className="text-[11px] font-black leading-tight text-foreground font-mono">{formatPrice(product.costPrice)}</span>
                       </div>
                       {/* البيع */}
                       <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
-                        <span className="text-[9px] text-muted-foreground font-bold block leading-tight truncate">{t('products.salePrice') || 'البيع'}</span>
+                        <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.salePrice') || 'البيع'}</span>
                         <span className="text-[11px] font-black leading-tight text-primary font-mono">{formatPrice(product.salePrice)}</span>
                       </div>
                       {/* الربح */}
@@ -3083,7 +3084,7 @@ export default function Products() {
                           ? "bg-destructive/10 text-destructive border-destructive/20"
                           : "bg-card border-border/70 text-muted-foreground"
                       )}>
-                        <span className="text-[9px] font-bold block leading-tight truncate">
+                        <span className="text-[11px] font-bold block leading-tight truncate">
                           {profit >= 0 ? (t('products.profit') || "الربح") : (t('products.loss') || "الخسارة")}
                         </span>
                         <span className="text-[11px] font-black leading-tight font-mono">

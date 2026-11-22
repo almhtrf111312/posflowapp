@@ -98,6 +98,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   };
   const { user, profile } = useAuth();
   const { t, language } = useLanguage();
+  const isEn = language === 'en';
   const m = useMoney();
   const [searchParams, setSearchParams] = useSearchParams();
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -142,7 +143,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   });
 
   const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
-    pending: { label: 'قيد المزامنة', icon: Clock, color: 'badge-warning' },
+    pending: { label: isEn ? 'Syncing' : 'قيد المزامنة', icon: Clock, color: 'badge-warning' },
     due: { label: t('debts.statusDue'), icon: Clock, color: 'badge-info' },
     partially_paid: { label: t('debts.statusPartiallyPaid'), icon: Banknote, color: 'badge-warning' },
     overdue: { label: t('debts.statusOverdue'), icon: AlertTriangle, color: 'badge-danger' },
@@ -150,8 +151,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   };
 
   const filterOptions = [
-    { key: 'active', label: 'الديون النشطة' },
-    { key: 'fully_paid', label: 'الديون المسددة' },
+    { key: 'active', label: isEn ? 'Active Debts' : 'الديون النشطة' },
+    { key: 'fully_paid', label: isEn ? 'Paid Debts' : 'الديون المسددة' },
     { key: 'all', label: t('common.all') },
     { key: 'due', label: t('debts.statusDue') },
     { key: 'partially_paid', label: t('debts.statusPartiallyPaid') },
@@ -317,8 +318,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
         const { getInvoiceByIdCloud } = await import('@/lib/cloud/invoices-cloud');
         const invoice = await getInvoiceByIdCloud(debt.invoiceId);
         if (invoice && invoice.status === 'refunded') {
-          toast.warning('⚠️ هذا الدين مرتبط بفاتورة مستردة', {
-            description: `الفاتورة رقم ${debt.invoiceId} تم استردادها مسبقاً. لا يمكن تسديد هذا الدين.`,
+          toast.warning(isEn ? '⚠️ This debt is linked to a refunded invoice' : '⚠️ هذا الدين مرتبط بفاتورة مستردة', {
+            description: isEn ? `Invoice #${debt.invoiceId} has already been refunded. This debt cannot be paid.` : `الفاتورة رقم ${debt.invoiceId} تم استردادها مسبقاً. لا يمكن تسديد هذا الدين.`,
             duration: 5000,
           });
           return;
@@ -462,7 +463,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       // Log activity
       if (user) {
         const currDesc = paymentCurrency !== 'USD'
-          ? `${paymentAmountInput} ${paymentCurrency} (يعادل ${formatMoney(finalPaymentUSD, 'USD')} بسعر صرف ${currentRate})`
+          ? (isEn ? `${paymentAmountInput} ${paymentCurrency} (equivalent to ${formatMoney(finalPaymentUSD, 'USD')} at rate ${currentRate})` : `${paymentAmountInput} ${paymentCurrency} (يعادل ${formatMoney(finalPaymentUSD, 'USD')} بسعر صرف ${currentRate})`)
           : formatMoney(finalPaymentUSD, paymentCurrency);
         addActivityLog(
           'debt_paid',
@@ -496,15 +497,15 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       setPaymentAmount(0);
       showSmartToast({
         type: 'debt_sale',
-        title: 'تم تسجيل دفعة الدين بنجاح',
-        subtitle: customerSnapshot ? `العميل: ${customerSnapshot}` : undefined,
-        primaryLabel: 'المبلغ المدفوع',
+        title: isEn ? 'Debt payment recorded successfully' : 'تم تسجيل دفعة الدين بنجاح',
+        subtitle: customerSnapshot ? (isEn ? `Customer: ${customerSnapshot}` : `العميل: ${customerSnapshot}`) : undefined,
+        primaryLabel: isEn ? 'Amount Paid' : 'المبلغ المدفوع',
         primaryValue: `${paidAmountSnapshot} ${paymentCurrency}`,
-        operation: 'سداد دين',
+        operation: isEn ? 'Debt Payment' : 'سداد دين',
         duration: 4000,
       });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'ظپط´ظ„ طھط³ط¬ظٹظ„ ط§ظ„ط¯ظپط¹ط©');
+      toast.error(err instanceof Error ? err.message : (isEn ? 'Failed to record payment' : 'فشل تسجيل الدفعة'));
     } finally {
       paymentBusyRef.current = false;
       setIsSubmitting(false);
@@ -566,11 +567,11 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       });
       showSmartToast({
         type: 'debt_sale',
-        title: t('debts.debtAddedSuccess') || 'تمت إضافة الدين بنجاح',
-        subtitle: `العميل: ${addedDebtCustomer}`,
-        primaryLabel: 'قيمة الدين',
+        title: t('debts.debtAddedSuccess') || (isEn ? 'Debt added successfully' : 'تمت إضافة الدين بنجاح'),
+        subtitle: isEn ? `Customer: ${addedDebtCustomer}` : `العميل: ${addedDebtCustomer}`,
+        primaryLabel: isEn ? 'Debt Amount' : 'قيمة الدين',
         primaryValue: `${addedDebtAmount} ${currencySymbols?.[addedDebtCurrency] || addedDebtCurrency}`,
-        operation: 'دين جديد',
+        operation: isEn ? 'New Debt' : 'دين جديد',
         duration: 4000,
       });
     } finally {
@@ -646,8 +647,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
           ))}
         </div>
         <div className="flex items-center justify-between text-muted-foreground text-[10.5px] px-1 font-semibold">
-          <span>قائمة الديون</span>
-          <span className="font-mono">{filteredDebts.length} ديون معروضة</span>
+          <span>{isEn ? 'Debts List' : 'قائمة الديون'}</span>
+          <span className="font-mono">{filteredDebts.length} {isEn ? "debts shown" : "ديون معروضة"}</span>
         </div>
       </div>
 
@@ -656,7 +657,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
         {filteredDebts.length === 0 ? (
           <div className="bg-card rounded-2xl border border-border p-8 text-center">
             <CreditCard className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
-            <p className="text-sm text-muted-foreground">لا توجد ديون مطابقة</p>
+            <p className="text-sm text-muted-foreground">{isEn ? "No matching debts found" : "لا توجد ديون مطابقة"}</p>
           </div>
         ) : (
           filteredDebts.map((debt) => {
@@ -681,16 +682,16 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                     <DropdownMenuContent align="start" className="w-44 text-xs font-bold">
                       {debt.remainingDebt > 0 && (
                         <DropdownMenuItem onClick={() => openPaymentDialog(debt)} className="justify-between cursor-pointer">
-                          <span>تسديد دفعة</span>
+                          <span>{isEn ? 'Record Payment' : 'تسديد دفعة'}</span>
                           <Banknote className="w-4 h-4 text-emerald-600" />
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={() => openViewDialog(debt)} className="justify-between cursor-pointer">
-                        <span>تفاصيل الدين</span>
+                        <span>{isEn ? 'Debt Details' : 'تفاصيل الدين'}</span>
                         <Eye className="w-4 h-4 text-muted-foreground" />
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleShareDebt(debt)} className="justify-between cursor-pointer">
-                        <span>مشاركة كشف الدين</span>
+                        <span>{isEn ? 'Share Debt Statement' : 'مشاركة كشف الدين'}</span>
                         <Share2 className="w-4 h-4 text-muted-foreground" />
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -704,7 +705,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                           }}
                           className="justify-between text-amber-600 cursor-pointer"
                         >
-                          <span>شطب كدين معدوم</span>
+                          <span>{isEn ? 'Write Off as Bad Debt' : 'شطب كدين معدوم'}</span>
                           <FileX2 className="w-4 h-4 text-amber-600" />
                         </DropdownMenuItem>
                       )}
@@ -716,7 +717,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                         }}
                         className="justify-between text-destructive cursor-pointer"
                       >
-                        <span>حذف الدين</span>
+                        <span>{isEn ? 'Delete Debt' : 'حذف الدين'}</span>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -727,7 +728,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 <div className="flex items-center gap-2 pr-0 pl-8 flex-wrap min-w-0">
                   <span className="font-black text-foreground text-sm truncate max-w-full" title={debt.customerName}>{debt.customerName}</span>
                   <span className={cn(
-                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border",
+                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-bold border",
                     debt.status === 'fully_paid' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" :
                     debt.status === 'overdue' ? "bg-destructive/10 text-destructive border-destructive/20" :
                     debt.status === 'partially_paid' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" :
@@ -737,16 +738,16 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                     <span>{status.label}</span>
                   </span>
                   {debt.isCashDebt && (
-                    <span className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold px-1.5 py-0.5 rounded">
-                      سلفة نقدية
+                    <span className="bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold px-1.5 py-0.5 rounded">
+                      {isEn ? "Cash Advance" : "سلفة نقدية"}
                     </span>
                   )}
                   {debt.pending_sync && (
                     <span className={cn(
-                      "text-[9px] px-1.5 py-0.5 rounded border font-semibold",
+                      "text-[11px] px-1.5 py-0.5 rounded border font-semibold",
                       debt.sync_failed ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-primary/10 text-primary border-primary/20"
                     )}>
-                      {isSyncPendingSubscription() ? SYNC_PENDING_SUBSCRIPTION_SHORT : debt.sync_failed ? 'فشل المزامنة' : 'غير متزامنة'}
+                      {isSyncPendingSubscription() ? SYNC_PENDING_SUBSCRIPTION_SHORT : debt.sync_failed ? (isEn ? 'Sync Failed' : 'فشل المزامنة') : (isEn ? 'Unsynced' : 'غير متزامنة')}
                     </span>
                   )}
                 </div>
@@ -758,7 +759,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                   </span>
                   {debt.dueDate && (
                     <span className="text-muted-foreground font-medium flex items-center gap-1">
-                      📅 استحقاق: <span dir="ltr">{debt.dueDate}</span>
+                      📅 {isEn ? "Due:" : "استحقاق:"} <span dir="ltr">{debt.dueDate}</span>
                     </span>
                   )}
                   {debt.invoiceId && (
@@ -775,9 +776,9 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
 
                 {/* Progress Line */}
                 <div className="mt-2 space-y-1">
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                    <span>نسبة السداد: <b className="text-foreground font-mono">{progress}%</b></span>
-                    <span>الأصل: <b className="text-foreground font-mono">{formatInCurrency(debt.totalDebt, currencyCode, exchangeRate).formatted}</b>{isNonUsd && <span className="text-[9px] text-muted-foreground font-mono mr-1">({formatInCurrency(debt.totalDebt, currencyCode, exchangeRate).usdEquivalent})</span>}</span>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{isEn ? "Repayment:" : "نسبة السداد:"} <b className="text-foreground font-mono">{progress}%</b></span>
+                    <span>{isEn ? "Principal:" : "الأصل:"} <b className="text-foreground font-mono">{formatInCurrency(debt.totalDebt, currencyCode, exchangeRate).formatted}</b>{isNonUsd && <span className="text-[11px] text-muted-foreground font-mono ms-1">({formatInCurrency(debt.totalDebt, currencyCode, exchangeRate).usdEquivalent})</span>}</span>
                   </div>
                   <div className="h-1 bg-muted rounded-full overflow-hidden">
                     <div
@@ -789,13 +790,13 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
 
                 {/* Financial Box */}
                 <div className="mt-2.5 pt-2 border-t border-dashed border-border flex items-end justify-between">
-                  <div className="text-[10px] text-muted-foreground space-y-0.5">
+                  <div className="text-[11px] text-muted-foreground space-y-0.5">
                     <div className="font-medium">
-                      المسدد: <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatInCurrency(debt.totalPaid, currencyCode, exchangeRate).formatted}</span>{isNonUsd && <span className="text-[9px] text-muted-foreground font-mono mr-1">({formatInCurrency(debt.totalPaid, currencyCode, exchangeRate).usdEquivalent})</span>}
+                      {isEn ? "Paid:" : "المسدد:"} <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{formatInCurrency(debt.totalPaid, currencyCode, exchangeRate).formatted}</span>{isNonUsd && <span className="text-[11px] text-muted-foreground font-mono ms-1">({formatInCurrency(debt.totalPaid, currencyCode, exchangeRate).usdEquivalent})</span>}
                     </div>
                   </div>
-                  <div className="text-left whitespace-nowrap shrink-0">
-                    <span className="text-[9.5px] text-muted-foreground block font-sans">المتبقي</span>
+                  <div className="text-end whitespace-nowrap shrink-0">
+                    <span className="text-[9.5px] text-muted-foreground block font-sans">{isEn ? "Remaining" : "المتبقي"}</span>
                     <div className="flex flex-col items-end gap-0.5">
                       <span className={cn(
                         "text-base font-black font-mono whitespace-nowrap",
@@ -806,7 +807,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                       {debt.remainingDebt > 0 && (
                         <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-end">
                           {getEquivalentCurrencies(debt.remainingDebt).equivalents.map(eq => (
-                            <span key={eq.code} className="text-[9px] font-mono px-1 py-0.2 bg-muted/80 text-muted-foreground rounded font-bold">
+                            <span key={eq.code} className="text-[11px] font-mono px-1 py-0.2 bg-muted/80 text-muted-foreground rounded font-bold">
                               ≈ {eq.formatted}
                             </span>
                           ))}
@@ -825,7 +826,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       <Dialog open={showAddDebtDialog} onOpenChange={handleAddDebtDialogChange}>
         <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-2xl border border-border shadow-2xl modal-dot-expand bg-card">
           <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between">
-            <DialogHeader className="p-0 space-y-0.5 text-right">
+            <DialogHeader className="p-0 space-y-0.5 text-start">
               <DialogTitle className="text-base font-bold flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <Plus className="w-4 h-4" />
@@ -915,7 +916,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       >
         <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-2xl border border-border shadow-2xl modal-dot-expand bg-card">
           <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between">
-            <DialogHeader className="p-0 space-y-0.5 text-right">
+            <DialogHeader className="p-0 space-y-0.5 text-start">
               <DialogTitle className="text-base font-bold flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                   <Banknote className="w-4 h-4" />
@@ -940,7 +941,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 </div>
                 <div className="flex justify-between pt-2 border-t border-border/60 text-xs">
                   <span className="text-muted-foreground font-semibold">{t('debts.remaining')}</span>
-                  <div className="text-left">
+                  <div className="text-end">
                     <span className="font-black font-mono text-sm text-destructive block whitespace-nowrap">{formatCurrency(selectedDebt.remainingDebt)}</span>
                     {paymentCurrency !== 'USD' && (
                       <span className="text-[11px] text-muted-foreground block font-mono">
@@ -953,7 +954,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
 
               {/* اختيار عملة السداد */}
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">عملة الدفع المستلمة</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">{isEn ? "Received Payment Currency" : "عملة الدفع المستلمة"}</label>
                 <div className="flex gap-2 flex-wrap">
                   {availableCurrencies.map((curr) => (
                     <button
@@ -973,13 +974,13 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                       )}
                     >
                       <span className="text-xs font-bold">{curr.symbol} {curr.name}</span>
-                      <span className="text-[10px] opacity-80">({curr.code})</span>
+                      <span className="text-[11px] opacity-80">({curr.code})</span>
                     </button>
                   ))}
                 </div>
                 {paymentCurrency !== 'USD' && (
                   <p className="text-[11px] text-muted-foreground mt-1.5 px-1 flex items-center justify-between">
-                    <span>سعر الصرف المعتمد:</span>
+                    <span>{isEn ? "Exchange Rate:" : "سعر الصرف المعتمد:"}</span>
                     <span className="font-mono font-bold text-foreground">1 $ = {currentRate} {currencySymbols[paymentCurrency] || paymentCurrency}</span>
                   </p>
                 )}
@@ -989,7 +990,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
               <div>
                 <div className="flex justify-between items-center mb-1.5">
                   <label className="text-xs font-semibold text-muted-foreground">
-                    مبلغ الدفعة ({currencySymbols[paymentCurrency] || (paymentCurrency === 'USD' ? '$' : paymentCurrency)})
+                    {isEn ? 'Payment Amount' : 'مبلغ الدفعة'} ({currencySymbols[paymentCurrency] || (paymentCurrency === 'USD' ? '$' : paymentCurrency)})
                   </label>
                   {paymentCurrency !== 'USD' && amountUSD > 0 && (
                     <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
@@ -1011,7 +1012,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 {/* المعادل بالدولار إذا كانت العملة أجنبية */}
                 {paymentCurrency !== 'USD' && (
                   <div className="mt-2 p-2.5 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">المبلغ المخصوم من الدين:</span>
+                    <span className="text-muted-foreground">{isEn ? "Amount Deducted from Debt:" : "المبلغ المخصوم من الدين:"}</span>
                     <span className="font-bold text-primary font-mono">${formatNumber(amountUSD)}</span>
                   </div>
                 )}
@@ -1056,7 +1057,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>جاري الدفع...</span>
+                  <span>{isEn ? "Processing payment..." : "جاري الدفع..."}</span>
                 </>
               ) : (
                 <>
@@ -1073,7 +1074,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
         <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-2xl border border-border shadow-2xl modal-dot-expand bg-card">
           <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between">
-            <DialogHeader className="p-0 space-y-0.5 text-right">
+            <DialogHeader className="p-0 space-y-0.5 text-start">
               <DialogTitle className="text-base font-bold flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <Eye className="w-4 h-4" />
@@ -1081,7 +1082,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 <span>{t('debts.debtDetails')}</span>
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mr-10">
-                تفاصيل دين {selectedDebt?.customerName}
+                {isEn ? `Debt Details — ${selectedDebt?.customerName || ""}` : `تفاصيل دين ${selectedDebt?.customerName || ""}`}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1132,7 +1133,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                   <span className="text-xs font-semibold text-muted-foreground">{t('invoices.products')}:</span>
                   {isLoadingItems ? (
                     <div className="py-3 text-center text-xs text-muted-foreground">
-                      جاري التحميل...
+                      {isEn ? "Loading..." : "جاري التحميل..."}
                     </div>
                   ) : debtItems.length > 0 ? (
                     <div className="bg-muted/40 rounded-xl p-2.5 space-y-1.5 max-h-36 overflow-y-auto border border-border/50">
@@ -1145,7 +1146,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                     </div>
                   ) : (
                     <div className="py-2 text-center text-xs text-muted-foreground italic">
-                      لا توجد أصناف
+                      {isEn ? "No items found" : "لا توجد أصناف"}
                     </div>
                   )}
                 </div>
@@ -1165,7 +1166,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
               className="flex-1 h-9 rounded-xl text-xs"
               onClick={() => setShowViewDialog(false)}
             >
-              {t('common.close') || 'إغلاق'}
+              {t('common.close') || (isEn ? 'Close' : 'إغلاق')}
             </Button>
             {selectedDebt && selectedDebt.remainingDebt > 0 && (
               <Button
@@ -1187,20 +1188,20 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       {/* شطب الدين كدين معدوم (لمالك المتجر) */}
       <AlertDialog open={showWriteoffDialog} onOpenChange={setShowWriteoffDialog}>
         <AlertDialogContent className="max-w-md w-[95vw] rounded-3xl p-5 border border-border shadow-2xl modal-dot-expand bg-card">
-          <AlertDialogHeader className="text-right">
+          <AlertDialogHeader className="text-start">
             <AlertDialogTitle className="flex items-center gap-2 text-base font-bold">
               <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
                 <FileX2 className="w-4 h-4" />
               </div>
-              <span>شطب الدين كدين معدوم</span>
+              <span>{isEn ? "Write Off Debt as Bad Debt" : "شطب الدين كدين معدوم"}</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground pt-2 leading-relaxed">
               {selectedDebt && (
                 <>
-                  سيُشطب المتبقي من دين <strong>{selectedDebt.customerName}</strong> وقيمته <strong className="font-mono text-destructive">{formatCurrency(selectedDebt.remainingDebt)}</strong>.
+                  {isEn ? (<>The remaining debt of <strong>{selectedDebt.customerName}</strong> (<strong className="font-mono text-destructive">{formatCurrency(selectedDebt.remainingDebt)}</strong>) will be written off.</>) : (<>سيُشطب المتبقي من دين <strong>{selectedDebt.customerName}</strong> وقيمته <strong className="font-mono text-destructive">{formatCurrency(selectedDebt.remainingDebt)}</strong>.</>)}
                   <br />
-                  يُلغى ربحه المعلّق وتُسجَّل الخسارة في سجل الديون المشطوبة. إن كان الدين من فاتورة توزَّع خسارته على الشركاء بنسبهم، وإن كان ديناً نقدياً فكلها على المالك.
-                  <span className="text-destructive font-medium mt-1 block">بعد الشطب لا يقبل الدين دفعات ولا تُسترد فاتورته، ولا يمكن التراجع.</span>
+                  {isEn ? "Pending profit is cancelled and the loss is recorded in the written-off debts log. Invoice debts are distributed among partners by share; cash debts are borne by the owner." : "يُلغى ربحه المعلّق وتُسجَّل الخسارة في سجل الديون المشطوبة. إن كان الدين من فاتورة توزَّع خسارته على الشركاء بنسبهم، وإن كان ديناً نقدياً فكلها على المالك."}
+                  <span className="text-destructive font-medium mt-1 block">{isEn ? "Once written off, no further payments or invoice refunds are allowed, and this action cannot be undone." : "بعد الشطب لا يقبل الدين دفعات ولا تُسترد فاتورته، ولا يمكن التراجع."}</span>
                 </>
               )}
             </AlertDialogDescription>
@@ -1208,7 +1209,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
           <Input
             value={writeoffReason}
             onChange={(e) => setWriteoffReason(e.target.value)}
-            placeholder="سبب الشطب (إلزامي)"
+            placeholder={isEn ? "Write-off reason (required)" : "سبب الشطب (إلزامي)"}
             maxLength={200}
             className="h-9 text-xs"
           />
@@ -1224,7 +1225,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 const toastId = `writeoff-debt-${debtSnapshot.id}`;
                 setShowWriteoffDialog(false);
                 setSelectedDebt(null);
-                toast.loading('جاري شطب الدين...', { id: toastId });
+                toast.loading(isEn ? 'Writing off debt...' : 'جاري شطب الدين...', { id: toastId });
                 try {
                   // يُنفَّذ على الخادم مباشرة ولا يوضع في طابور: الخسارة وحصص الشركاء تُحسب هناك لحظتها
                   const outcome = await writeOffDebtNowCloud(debtSnapshot.id, reason);
@@ -1235,25 +1236,25 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                     emitEvent(EVENTS.DEBTS_UPDATED, null);
                     emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
                     emitEvent(EVENTS.PARTNERS_UPDATED, null);
-                    toast.success('تم شطب الدين وتسجيله في سجل الديون المشطوبة', { id: toastId });
+                    toast.success(isEn ? 'Debt written off and recorded in the written-off debts log' : 'تم شطب الدين وتسجيله في سجل الديون المشطوبة', { id: toastId });
                     setDebts(await loadDebtsCloud());
                   } else {
                     toast.error(outcome.message, { id: toastId, duration: 9000 });
                   }
                 } catch (error) {
                   console.error('Write-off debt error:', error);
-                  toast.error(error instanceof Error && error.message ? error.message : 'تعذّر شطب الدين', { id: toastId, duration: 8000 });
+                  toast.error(error instanceof Error && error.message ? error.message : (isEn ? 'Failed to write off debt' : 'تعذّر شطب الدين'), { id: toastId, duration: 8000 });
                 }
               })}
             >
-              {writeoffGuard.isRunning ? 'جاري الشطب...' : 'شطب الدين'}
+              {writeoffGuard.isRunning ? (isEn ? 'Writing off...' : 'جاري الشطب...') : (isEn ? 'Write Off Debt' : 'شطب الدين')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="max-w-md w-[95vw] rounded-3xl p-5 border border-border shadow-2xl modal-dot-expand bg-card">
-          <AlertDialogHeader className="text-right">
+          <AlertDialogHeader className="text-start">
             <AlertDialogTitle className="flex items-center gap-2 text-base font-bold">
               <div className="w-8 h-8 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
                 <Trash2 className="w-4 h-4" />
@@ -1263,9 +1264,9 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
             <AlertDialogDescription className="text-xs text-muted-foreground pt-2">
               {selectedDebt && (
                 <>
-                  هل أنت متأكد من حذف دين <strong>{selectedDebt.customerName}</strong> بقيمة <strong className="font-mono text-destructive">{formatCurrency(selectedDebt.totalDebt)}</strong>؟
+                  {isEn ? (<>Are you sure you want to delete the debt for <strong>{selectedDebt.customerName}</strong> (<strong className="font-mono text-destructive">{formatCurrency(selectedDebt.totalDebt)}</strong>)?</>) : (<>هل أنت متأكد من حذف دين <strong>{selectedDebt.customerName}</strong> بقيمة <strong className="font-mono text-destructive">{formatCurrency(selectedDebt.totalDebt)}</strong>؟</>)}
                   <br />
-                  <span className="text-destructive font-medium mt-1 block">هذا الإجراء لا يمكن التراجع عنه.</span>
+                  <span className="text-destructive font-medium mt-1 block">{isEn ? "This action cannot be undone." : "هذا الإجراء لا يمكن التراجع عنه."}</span>
                 </>
               )}
             </AlertDialogDescription>
@@ -1282,7 +1283,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 // Close dialog immediately for responsive UX
                 setShowDeleteDialog(false);
                 setSelectedDebt(null);
-                toast.loading('جاري الحذف...', { id: toastId });
+                toast.loading(isEn ? 'Deleting...' : 'جاري الحذف...', { id: toastId });
                 try {
                   const success = await deleteDebtCloud(debtSnapshot.id);
                   if (success) {
@@ -1298,7 +1299,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 }
               })}
             >
-              {deleteGuard.isRunning ? 'جاري الحذف...' : t('common.delete')}
+              {deleteGuard.isRunning ? (isEn ? 'Deleting...' : 'جاري الحذف...') : t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

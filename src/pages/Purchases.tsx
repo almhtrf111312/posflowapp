@@ -19,6 +19,7 @@ import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 export default function Purchases() {
   const deferWhileHidden = useDeferWhileHidden();
   const { t, language } = useLanguage();
+  const isEn = language === 'en';
   const m = useMoney();
   const [invoices, setInvoices] = useState<PurchaseInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,7 +84,7 @@ export default function Purchases() {
             className={cn(capsuleItem, capsuleIdle)}
           >
             <Truck className="w-4 h-4 shrink-0 text-primary" />
-            <span>الموردون</span>
+            <span>{isEn ? "Suppliers" : "الموردون"}</span>
           </button>
         </div></div>
       </div>
@@ -143,7 +144,7 @@ export default function Purchases() {
                       </h3>
                       <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Eye className="w-3 h-3" />
-                        عرض التفاصيل
+                        {isEn ? "View Details" : "عرض التفاصيل"}
                       </span>
                     </div>
                     {invoice.supplier_company && (

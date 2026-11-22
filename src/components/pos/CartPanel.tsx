@@ -241,6 +241,7 @@ export function CartPanel({
   const { user, profile } = useAuth();
   const { isCashier } = useUserRole();
   const { t, language, isRTL } = useLanguage();
+  const isEn = language === 'en';
   const { activeWarehouse } = useWarehouse();
   // المستودع الرئيسي يخزن كمياته في المنتج نفسه وليس في جدول مخزون المستودعات
   const stockWarehouseId = activeWarehouse && activeWarehouse.type !== 'main' ? activeWarehouse.id : undefined;
@@ -1927,7 +1928,7 @@ export function CartPanel({
                       : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground"
                   )}
                 >
-                  <span>{hc.name}</span>
+                  <span>{isEn ? hc.name.replace(/^(?:السلة|سلة)\s+/, 'Cart ') : hc.name.replace(/^Cart\s+/i, 'السلة ')}</span>
                   {hc.cart.length > 0 && (
                     <span className={cn(
                       "w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold",
@@ -2414,7 +2415,7 @@ export function CartPanel({
                 onClick={() => setPayMethod(m)}
                 className={`flex-1 h-8 rounded-lg border font-semibold transition-colors ${payMethod === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground'}`}
               >
-                {m === 'cash' ? 'نقدي' : 'دفع رقمي'}
+                {m === 'cash' ? (isEn ? 'Cash' : 'نقدي') : (isEn ? 'Digital' : 'دفع رقمي')}
               </button>
             ))}
           </div>

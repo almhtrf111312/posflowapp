@@ -158,8 +158,8 @@ export function ChatMessages({
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-xs gap-2 p-6 text-center">
         <MessageCircle className="h-10 w-10 opacity-20 text-primary" />
-        <p>ابدأ محادثتك مع فريق الدعم الفني</p>
-        <p className="opacity-60">سنرد عليك في أقرب وقت ممكن</p>
+        <p>{isEn ? "Start your conversation with Technical Support" : "ابدأ محادثتك مع فريق الدعم الفني"}</p>
+        <p className="opacity-60">{isEn ? "We will reply as soon as possible" : "سنرد عليك في أقرب وقت ممكن"}</p>
       </div>
     );
   }
@@ -198,17 +198,17 @@ export function ChatMessages({
                 {/* Support label */}
                 {isSupport && !isMe && (
                   <p className="text-[10px] font-bold text-primary mb-1">
-                    فريق الدعم الفني
+                    {isEn ? "Technical Support Team" : "فريق الدعم الفني"}
                   </p>
                 )}
                 {imageUrl && imageUrl.startsWith('data:application/pdf') && (
-                  <div className="mb-1.5 rounded-xl bg-black/10 px-3 py-2 text-xs font-bold">📄 ملف PDF مرفق</div>
+                  <div className="mb-1.5 rounded-xl bg-black/10 px-3 py-2 text-xs font-bold">{isEn ? "📄 Attached PDF" : "📄 ملف PDF مرفق"}</div>
                 )}
                 {imageUrl && !imageUrl.startsWith('data:application/pdf') && (
                   <div className="mb-1.5 overflow-hidden rounded-xl cursor-pointer group">
                     <img
                       src={imageUrl}
-                      alt="صورة مرفقة"
+                      alt={isEn ? "Attached image" : "صورة مرفقة"}
                       onClick={() => setLightboxImage(imageUrl)}
                       className="max-h-56 max-w-full rounded-xl object-contain bg-black/10 hover:opacity-90 transition-opacity"
                       loading="lazy"
@@ -241,13 +241,13 @@ export function ChatMessages({
             type="button"
             onClick={() => setLightboxImage(null)}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors z-10"
-            title="إغلاق"
+            title={isEn ? "Close" : "إغلاق"}
           >
             <X className="w-6 h-6" />
           </button>
           <img
             src={lightboxImage}
-            alt="عرض الصورة بالحجم الكامل"
+            alt={isEn ? "Full-size image preview" : "عرض الصورة بالحجم الكامل"}
             className="max-w-[95vw] max-h-[90vh] object-contain rounded-xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
@@ -349,19 +349,19 @@ export function InputBar({
           <div className="relative inline-block border border-border bg-card rounded-lg p-1 shadow-xs">
             <img
               src={selectedImage}
-              alt="معاينة الصورة"
+              alt={isEn ? "Image preview" : "معاينة الصورة"}
               className="w-14 h-14 object-cover rounded-md"
             />
             <button
               type="button"
               onClick={() => setSelectedImage(null)}
               className="absolute -top-1.5 -end-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-sm hover:opacity-90 transition-opacity"
-              title="إزالة الصورة"
+              title={isEn ? "Remove image" : "إزالة الصورة"}
             >
               <X className="w-3 h-3" />
             </button>
           </div>
-          <span className="text-[11px] text-muted-foreground font-medium">صورة جاهزة للإرسال</span>
+          <span className="text-[11px] text-muted-foreground font-medium">{isEn ? "Image ready to send" : "صورة جاهزة للإرسال"}</span>
         </div>
       )}
 
@@ -380,7 +380,7 @@ export function InputBar({
           onClick={() => fileInputRef.current?.click()}
           disabled={submitting || compressing}
           className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground rounded-xl"
-          title="إرفاق صورة"
+          title={isEn ? "Attach image" : "إرفاق صورة"}
         >
           {compressing ? (
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -393,7 +393,7 @@ export function InputBar({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="اكتب رسالتك هنا..."
+          placeholder={isEn ? "Type your message here..." : "اكتب رسالتك هنا..."}
           disabled={submitting || compressing}
           className="text-xs h-9 bg-card flex-1 rounded-xl"
           dir="rtl"
@@ -404,7 +404,7 @@ export function InputBar({
           disabled={submitting || compressing || (!text.trim() && !selectedImage)}
           size="sm"
           className="h-9 px-3 gap-1 shrink-0 rounded-xl"
-          title="إرسال"
+          title={isEn ? "Send" : "إرسال"}
         >
           {submitting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />

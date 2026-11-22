@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { Headphones, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChatMessages, InputBar } from './SupportChat';
 
 export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   // Load existing user conversation
@@ -57,8 +60,8 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
             <Headphones className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-bold text-foreground leading-none">الدعم الفني</p>
-            <p className="text-xs text-muted-foreground mt-0.5">سنرد عليك في أقرب وقت</p>
+            <p className="text-sm font-bold text-foreground leading-none">{isEn ? "Technical Support" : "الدعم الفني"}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{isEn ? "We will reply as soon as possible" : "سنرد عليك في أقرب وقت"}</p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -67,7 +70,7 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
             size="sm"
             className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-destructive/10"
             onClick={onClose}
-            title="إغلاق المحادثة"
+            title={isEn ? "Close Chat" : "إغلاق المحادثة"}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -84,8 +87,8 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
         <>
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm gap-2 p-6 text-center">
             <Headphones className="h-12 w-12 opacity-20 text-primary mb-2" />
-            <p className="font-bold text-foreground text-base">مرحباً بك في الدعم الفني</p>
-            <p className="opacity-70 max-w-sm">أرسل رسالتك الأولى وسيرد عليك المطور في أقرب وقت ممكن</p>
+            <p className="font-bold text-foreground text-base">{isEn ? "Welcome to Technical Support" : "مرحباً بك في الدعم الفني"}</p>
+            <p className="opacity-70 max-w-sm">{isEn ? "Send your first message and the developer will reply as soon as possible" : "أرسل رسالتك الأولى وسيرد عليك المطور في أقرب وقت ممكن"}</p>
           </div>
           <InputBar conversationId={null} onConversationCreated={setConversationId} />
         </>

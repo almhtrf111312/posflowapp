@@ -627,13 +627,13 @@ export default function Expenses() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 md:gap-3">
         {/* Metric 1: هذا الشهر */}
         <div className="bg-card border border-border rounded-xl md:rounded-2xl p-2 md:p-3 text-center relative overflow-hidden">
-          <span className="text-[10px] md:text-xs text-muted-foreground block truncate font-medium">
+          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.thisMonth')}
           </span>
           <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-destructive block mt-0.5 truncate whitespace-nowrap">
             {m.fmt(stats.totalThisMonth)}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] md:text-[10px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-muted-foreground">
             <TrendingDown className="w-3 h-3 text-destructive shrink-0" />
             <span className="truncate">{t('expenses.expense')}</span>
           </div>
@@ -641,13 +641,13 @@ export default function Expenses() {
 
         {/* Metric 2: عمليات الشهر */}
         <div className="bg-card border border-border rounded-xl md:rounded-2xl p-2 md:p-3 text-center relative overflow-hidden">
-          <span className="text-[10px] md:text-xs text-muted-foreground block truncate font-medium">
+          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.monthlyExpenses')}
           </span>
           <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-foreground block mt-0.5 truncate">
             {stats.monthlyCount}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] md:text-[10px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-muted-foreground">
             <Receipt className="w-3 h-3 text-warning shrink-0" />
             <span className="truncate">{t('expenses.operations')}</span>
           </div>
@@ -655,13 +655,13 @@ export default function Expenses() {
 
         {/* Metric 3: إجمالي المصاريف */}
         <div className="bg-card border border-border rounded-xl md:rounded-2xl p-2 md:p-3 text-center relative overflow-hidden">
-          <span className="text-[10px] md:text-xs text-muted-foreground block truncate font-medium">
+          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.totalExpenses')}
           </span>
           <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-foreground block mt-0.5 truncate whitespace-nowrap">
             {m.fmt(stats.totalExpenses)}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] md:text-[10px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-muted-foreground">
             <DollarSign className="w-3 h-3 text-info shrink-0" />
             <span className="truncate">{t('expenses.total')}</span>
           </div>
@@ -673,13 +673,13 @@ export default function Expenses() {
           onClick={() => setShowRecurringListDialog(true)}
           title={t('expenses.manageRecurring')}
         >
-          <span className="text-[10px] md:text-xs text-muted-foreground block truncate font-medium">
+          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.fixedExpenses')}
           </span>
           <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-primary block mt-0.5 truncate">
             {recurringExpenses.length}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[9px] md:text-[10px] text-primary">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-primary">
             <RefreshCw className="w-3 h-3 shrink-0" />
             <span className="truncate font-semibold">{t('expenses.manage')}</span>
           </div>
@@ -755,7 +755,7 @@ export default function Expenses() {
                     <div className="flex items-center gap-1.5">
                       <h3 className="font-bold text-xs md:text-sm text-foreground truncate">{getLocalizedExpenseType(expense.type, expense.typeLabel)}</h3>
                       {expense.is_reversed && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
                           {t('expenses.reversed')}
                         </span>
                       )}
@@ -795,7 +795,7 @@ export default function Expenses() {
               {/* Partner Distributions */}
               {expense.distributions.length > 0 && (
                 <div className="mt-2.5 pt-2 border-t border-dashed border-border">
-                  <p className="text-[10px] text-muted-foreground mb-1.5 flex items-center gap-1 font-medium">
+                  <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1 font-medium">
                     <Users className="w-3 h-3 text-primary" />
                     <span>{t('expenses.partnerDistribution')}:</span>
                   </p>
@@ -1144,7 +1144,7 @@ export default function Expenses() {
                       <div className="flex items-center gap-2">
                         <p className="font-bold text-xs truncate text-foreground">{expense.name}</p>
                         {isPaidToday && (
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
                             {t('expenses.paidTodayBadge')}
                           </span>
                         )}
@@ -1152,7 +1152,7 @@ export default function Expenses() {
                       <p className="text-[11px] text-muted-foreground font-mono">
                         <span className="font-bold text-foreground">{expense.currency && expense.currency !== 'USD' && expense.exchangeRate ? `${m.roundForCurrency(m.fromUsd(expense.amount, expense.currency, expense.exchangeRate), expense.currency)} ${expense.currency} (≈ ${m.fmt(expense.amount)})` : m.fmt(expense.amount)}</span> - {t('expenses.every')} {expense.intervalDays} {t('expenses.days')}
                       </p>
-                      <p className="text-[10px] text-muted-foreground font-mono flex items-center gap-1.5">
+                      <p className="text-[11px] text-muted-foreground font-mono flex items-center gap-1.5">
                         <span>{t('expenses.nextDue')}: {expense.nextDueDate}</span>
                         {expense.lastPaidDate && (
                           <span className="text-muted-foreground/80">({t('expenses.lastPaid')}: {expense.lastPaidDate})</span>
@@ -1468,7 +1468,7 @@ export default function Expenses() {
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-foreground">{t('expenses.oneTimeExpense') || 'مصروف لمرة واحدة'}</span>
-                <span className="text-[10px] text-muted-foreground font-normal">فاتورة، نثرية، أو مشترى فوري</span>
+                <span className="text-[11px] text-muted-foreground font-normal">فاتورة، نثرية، أو مشترى فوري</span>
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -1483,7 +1483,7 @@ export default function Expenses() {
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-foreground">{t('expenses.recurringExpense') || 'مصروف ثابت / متكرر'}</span>
-                <span className="text-[10px] text-muted-foreground font-normal">إيجار، رواتب، اشتراكات</span>
+                <span className="text-[11px] text-muted-foreground font-normal">إيجار، رواتب، اشتراكات</span>
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>

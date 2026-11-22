@@ -32,8 +32,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/use-language';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { ar, enUS } from 'date-fns/locale';
 
 interface DiagnosticUser {
   user_id: string;
@@ -61,6 +62,8 @@ interface DiagnosticStats {
 }
 
 export function SystemDiagnostics() {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<DiagnosticUser[]>([]);
@@ -120,23 +123,23 @@ export function SystemDiagnostics() {
         
         const issues: string[] = [];
         
-        if (!role) issues.push('دور مفقود');
-        if (!profile) issues.push('ملف شخصي مفقود');
+        if (!role) issues.push(isEn ? 'Missing Role' : 'دور مفقود');
+        if (!profile) issues.push(isEn ? 'Missing Profile' : 'ملف شخصي مفقود');
         
         if (role?.role === 'admin' || role?.role === 'boss') {
           if (!license) {
-            issues.push('ترخيص مفقود');
+            issues.push(isEn ? 'Missing License' : 'ترخيص مفقود');
           } else {
-            if (new Date(license.expires_at) < now) issues.push('ترخيص منتهي');
-            if (license.is_revoked) issues.push('ترخيص ملغى');
+            if (new Date(license.expires_at) < now) issues.push(isEn ? 'Expired License' : 'ترخيص منتهي');
+            if (license.is_revoked) issues.push(isEn ? 'Revoked License' : 'ترخيص ملغى');
           }
         }
         
-        if (role && !role.is_active) issues.push('دور غير نشط');
+        if (role && !role.is_active) issues.push(isEn ? 'Inactive Role' : 'دور غير نشط');
 
         diagnosticUsers.push({
           user_id: userId,
-          email: emailMap[userId] || 'غير معروف',
+          email: emailMap[userId] || (isEn ? 'Unknown' : 'غير معروف'),
           full_name: profile?.full_name || null,
           role: role?.role || null,
           has_role: !!role,
@@ -171,7 +174,7 @@ export function SystemDiagnostics() {
       setLastRefresh(new Date());
     } catch (error) {
       console.error('Error fetching diagnostics:', error);
-      toast({ title: 'خطأ', description: 'فشل في جلب بيانات التشخيص', variant: 'destructive' });
+      toast({ title: isEn ? 'Error' : 'خطأ', description: isEn ? 'Failed to fetch diagnostic data' : 'فشل في جلب بيانات التشخيص', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
@@ -190,12 +193,12 @@ export function SystemDiagnostics() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast({ title: 'تم الحذف', description: `تم حذف الحساب "${user.full_name || user.email}" بنجاح` });
+      toast({ title: isEn ? 'Deleted' : 'تم الحذف', description: isEn ? `Account "${user.full_name || user.email}" deleted successfully` : `تم حذف الحساب "${user.full_name || user.email}" بنجاح` });
       setDeleteTarget(null);
       fetchDiagnostics();
     } catch (error: any) {
       console.error('Delete user error:', error);
-      toast({ title: 'خطأ', description: error.message || 'فشل في حذف الحساب', variant: 'destructive' });
+      toast({ title: isEn ? 'Error' : 'خطأ', description: error.message || (isEn ? 'Failed to delete account' : 'فشل في حذف الحساب'), variant: 'destructive' });
     } finally {
       setIsDeleting(false);
     }
@@ -203,12 +206,12 @@ export function SystemDiagnostics() {
 
   const handleCreateProfile = async (userId: string) => {
     try {
-      const { error } = await supabase.from('profiles').insert({ user_id: userId, full_name: 'مستخدم جديد' });
+      const { error } = await supabase.from('profiles').insert({ user_id: userId, full_name: isEn ? 'New User' : 'مستخدم جديد' });
       if (error) throw error;
-      toast({ title: 'تم', description: 'تم إنشاء الملف الشخصي' });
+      toast({ title: isEn ? 'Done' : 'تم', description: isEn ? 'Profile created' : 'تم إنشاء الملف الشخصي' });
       fetchDiagnostics();
     } catch (error: any) {
-      toast({ title: 'خطأ', description: error.message || 'فشل في إنشاء الملف الشخصي', variant: 'destructive' });
+      toast({ title: isEn ? 'Error' : 'خطأ', description: error.message || (isEn ? 'Failed to create profile' : 'فشل في إنشاء الملف الشخصي'), variant: 'destructive' });
     }
   };
 
@@ -217,26 +220,26 @@ export function SystemDiagnostics() {
 
   const getRoleBadge = (role: string | null) => {
     switch (role) {
-      case 'boss': return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">بوس</Badge>;
-      case 'admin': return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">مدير</Badge>;
-      case 'cashier': return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">كاشير</Badge>;
-      default: return <Badge variant="destructive">بدون دور</Badge>;
+      case 'boss': return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">{isEn ? 'Boss' : 'بوس'}</Badge>;
+      case 'admin': return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{isEn ? 'Admin' : 'مدير'}</Badge>;
+      case 'cashier': return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{isEn ? 'Cashier' : 'كاشير'}</Badge>;
+      default: return <Badge variant="destructive">{isEn ? 'No Role' : 'بدون دور'}</Badge>;
     }
   };
 
   const getStatusIcon = (user: DiagnosticUser) => {
     if (user.issues.length === 0) return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-    if (user.issues.some(i => i.includes('مفقود'))) return <XCircle className="w-5 h-5 text-red-500" />;
+    if (user.issues.some(i => i.includes('مفقود') || i.includes('Missing'))) return <XCircle className="w-5 h-5 text-red-500" />;
     return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
   };
 
   const getActionButtons = (user: DiagnosticUser) => {
     const buttons: React.ReactNode[] = [];
 
-    if (user.issues.includes('ملف شخصي مفقود') && user.has_role) {
+    if (!user.has_profile && user.has_role) {
       buttons.push(
         <Button key="profile" size="sm" variant="outline" className="text-xs gap-1" onClick={() => handleCreateProfile(user.user_id)}>
-          <Wrench className="w-3 h-3" /> إنشاء ملف
+          <Wrench className="w-3 h-3" /> {isEn ? "Create Profile" : "إنشاء ملف"}
         </Button>
       );
     }
@@ -245,7 +248,7 @@ export function SystemDiagnostics() {
     if (user.role !== 'boss') {
       buttons.push(
         <Button key="delete" size="sm" variant="destructive" className="text-xs gap-1" onClick={() => setDeleteTarget(user)}>
-          <Trash2 className="w-3 h-3" /> حذف الحساب
+          <Trash2 className="w-3 h-3" /> {isEn ? "Delete Account" : "حذف الحساب"}
         </Button>
       );
     }
@@ -257,7 +260,7 @@ export function SystemDiagnostics() {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="mr-2 text-muted-foreground">جاري تحميل بيانات التشخيص...</span>
+        <span className="ms-2 text-muted-foreground">{isEn ? "Loading diagnostic data..." : "جاري تحميل بيانات التشخيص..."}</span>
       </div>
     );
   }
@@ -269,15 +272,15 @@ export function SystemDiagnostics() {
         <div>
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
             <Shield className="w-6 h-6 text-primary" />
-            تشخيص النظام
+            {isEn ? "System Diagnostics" : "تشخيص النظام"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            آخر تحديث: {format(lastRefresh, 'PPpp', { locale: ar })}
+            {isEn ? 'Last updated:' : 'آخر تحديث:'} {format(lastRefresh, 'PPpp', { locale: isEn ? enUS : ar })}
           </p>
         </div>
         <Button onClick={fetchDiagnostics} variant="outline" disabled={isLoading}>
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          تحديث
+          {isEn ? "Refresh" : "تحديث"}
         </Button>
       </div>
 
@@ -292,7 +295,7 @@ export function SystemDiagnostics() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{stats.total_users}</p>
-                  <p className="text-xs text-muted-foreground">إجمالي المستخدمين</p>
+                  <p className="text-xs text-muted-foreground">{isEn ? "Total Users" : "إجمالي المستخدمين"}</p>
                 </div>
               </div>
             </CardContent>
@@ -306,7 +309,7 @@ export function SystemDiagnostics() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{stats.users_with_roles}</p>
-                  <p className="text-xs text-muted-foreground">لديهم أدوار</p>
+                  <p className="text-xs text-muted-foreground">{isEn ? "With Roles" : "لديهم أدوار"}</p>
                 </div>
               </div>
             </CardContent>
@@ -322,7 +325,7 @@ export function SystemDiagnostics() {
                   <p className={`text-2xl font-bold ${stats.users_without_roles > 0 ? 'text-red-500' : ''}`}>
                     {stats.users_without_roles}
                   </p>
-                  <p className="text-xs text-muted-foreground">بدون أدوار</p>
+                  <p className="text-xs text-muted-foreground">{isEn ? "Without Roles" : "بدون أدوار"}</p>
                 </div>
               </div>
             </CardContent>
@@ -338,7 +341,7 @@ export function SystemDiagnostics() {
                   <p className={`text-2xl font-bold ${stats.expired_licenses > 0 ? 'text-yellow-500' : ''}`}>
                     {stats.expired_licenses}
                   </p>
-                  <p className="text-xs text-muted-foreground">تراخيص منتهية</p>
+                  <p className="text-xs text-muted-foreground">{isEn ? "Expired Licenses" : "تراخيص منتهية"}</p>
                 </div>
               </div>
             </CardContent>
@@ -352,22 +355,22 @@ export function SystemDiagnostics() {
           <CardHeader className="pb-3">
             <CardTitle className="text-red-500 flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
-              مستخدمين لديهم مشاكل ({usersWithIssues.length})
+              {isEn ? `Users with Issues (${usersWithIssues.length})` : `مستخدمين لديهم مشاكل (${usersWithIssues.length})`}
             </CardTitle>
             <CardDescription>
-              هؤلاء المستخدمين لديهم مشاكل تحتاج إلى إصلاح
+              {isEn ? "These users have issues that need to be fixed" : "هؤلاء المستخدمين لديهم مشاكل تحتاج إلى إصلاح"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right">المستخدم</TableHead>
-                  <TableHead className="text-right">البريد</TableHead>
-                  <TableHead className="text-right">الدور</TableHead>
-                  <TableHead className="text-right">المشاكل</TableHead>
-                  <TableHead className="text-right">إجراءات</TableHead>
+                  <TableHead className="text-start">{isEn ? "Status" : "الحالة"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "User" : "المستخدم"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "Email" : "البريد"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "Role" : "الدور"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "Issues" : "المشاكل"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "Actions" : "إجراءات"}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -375,7 +378,7 @@ export function SystemDiagnostics() {
                   <TableRow key={user.user_id}>
                     <TableCell>{getStatusIcon(user)}</TableCell>
                     <TableCell className="font-medium">
-                      {user.full_name || 'بدون اسم'}
+                      {user.full_name || (isEn ? 'Unnamed' : 'بدون اسم')}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm font-mono">
                       {user.email}
@@ -404,24 +407,24 @@ export function SystemDiagnostics() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-green-500" />
-            مستخدمين بدون مشاكل ({healthyUsers.length})
+            {isEn ? `Users without Issues (${healthyUsers.length})` : `مستخدمين بدون مشاكل (${healthyUsers.length})`}
           </CardTitle>
           <CardDescription>
-            جميع هؤلاء المستخدمين لديهم إعدادات صحيحة
+            {isEn ? "All of these users have valid configurations" : "جميع هؤلاء المستخدمين لديهم إعدادات صحيحة"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {healthyUsers.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">لا يوجد مستخدمين</p>
+            <p className="text-muted-foreground text-center py-4">{isEn ? "No users found" : "لا يوجد مستخدمين"}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right">المستخدم</TableHead>
-                  <TableHead className="text-right">البريد</TableHead>
-                  <TableHead className="text-right">الدور</TableHead>
-                  <TableHead className="text-right">انتهاء الترخيص</TableHead>
+                  <TableHead className="text-start">{isEn ? "Status" : "الحالة"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "User" : "المستخدم"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "Email" : "البريد"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "Role" : "الدور"}</TableHead>
+                  <TableHead className="text-start">{isEn ? "License Expiry" : "انتهاء الترخيص"}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -429,7 +432,7 @@ export function SystemDiagnostics() {
                   <TableRow key={user.user_id}>
                     <TableCell>{getStatusIcon(user)}</TableCell>
                     <TableCell className="font-medium">
-                      {user.full_name || 'بدون اسم'}
+                      {user.full_name || (isEn ? 'Unnamed' : 'بدون اسم')}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm font-mono">
                       {user.email}
@@ -461,23 +464,23 @@ export function SystemDiagnostics() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Key className="w-5 h-5 text-primary" />
-            ملخص التراخيص
+            {isEn ? "License Summary" : "ملخص التراخيص"}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">تراخيص نشطة</p>
+              <p className="text-sm text-muted-foreground">{isEn ? "Active Licenses" : "تراخيص نشطة"}</p>
               <p className="text-2xl font-bold text-green-500">{stats?.users_with_licenses || 0}</p>
             </div>
             <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">تراخيص منتهية</p>
+              <p className="text-sm text-muted-foreground">{isEn ? "Expired Licenses" : "تراخيص منتهية"}</p>
               <p className={`text-2xl font-bold ${(stats?.expired_licenses || 0) > 0 ? 'text-yellow-500' : ''}`}>
                 {stats?.expired_licenses || 0}
               </p>
             </div>
             <div className="p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">تراخيص ملغاة</p>
+              <p className="text-sm text-muted-foreground">{isEn ? "Revoked Licenses" : "تراخيص ملغاة"}</p>
               <p className={`text-2xl font-bold ${(stats?.revoked_licenses || 0) > 0 ? 'text-red-500' : ''}`}>
                 {stats?.revoked_licenses || 0}
               </p>
@@ -490,20 +493,20 @@ export function SystemDiagnostics() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد حذف الحساب</AlertDialogTitle>
+            <AlertDialogTitle>{isEn ? "Confirm Account Deletion" : "تأكيد حذف الحساب"}</AlertDialogTitle>
             <AlertDialogDescription>
-              هل أنت متأكد من حذف حساب <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong> نهائياً؟
+              {isEn ? (<>Are you sure you want to permanently delete <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong>?</>) : (<>هل أنت متأكد من حذف حساب <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong> نهائياً؟</>)}
               <br />
-              سيتم حذف جميع البيانات المرتبطة بهذا الحساب ولا يمكن التراجع عن هذا الإجراء.
+              {isEn ? "All data associated with this account will be deleted and this action cannot be undone." : "سيتم حذف جميع البيانات المرتبطة بهذا الحساب ولا يمكن التراجع عن هذا الإجراء."}
               {deleteTarget?.role === 'admin' && (
                 <span className="block mt-2 text-destructive font-medium">
-                  ⚠️ هذا حساب مدير - سيتم حذف جميع الحسابات التابعة له أيضاً!
+                  {isEn ? "⚠️ This is an Admin account — all associated sub-accounts will also be deleted!" : "⚠️ هذا حساب مدير - سيتم حذف جميع الحسابات التابعة له أيضاً!"}
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>إلغاء</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>{isEn ? "Cancel" : "إلغاء"}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
@@ -513,7 +516,7 @@ export function SystemDiagnostics() {
               }}
             >
               {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              حذف نهائي
+              {isEn ? "Delete Permanently" : "حذف نهائي"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

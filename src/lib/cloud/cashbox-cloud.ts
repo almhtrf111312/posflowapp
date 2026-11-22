@@ -249,7 +249,10 @@ export const loadCloudShifts = async (limit = 50): Promise<CloudShift[]> => {
 /** حد سماح فروقات الصندوق بالدولار (من إعدادات المتجر) */
 export const loadShiftVarianceTolerance = async (): Promise<number> => {
   try {
-    const { data } = await sb.from('store_settings').select('shift_variance_tolerance_usd').limit(1).maybeSingle();
+    const userId = await ensureUserId();
+    const ownerId = userId ? ((await getOwnerIdForInsert()) || userId) : null;
+    if (!ownerId) return 1;
+    const { data } = await sb.from('store_settings').select('shift_variance_tolerance_usd').eq('user_id', ownerId).limit(1).maybeSingle();
     const v = Number((data as { shift_variance_tolerance_usd?: number } | null)?.shift_variance_tolerance_usd);
     return Number.isFinite(v) && v >= 0 ? v : 1;
   } catch {

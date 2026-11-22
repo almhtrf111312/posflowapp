@@ -448,6 +448,11 @@ serve(async (req) => {
 
     // --- Action: setup_webhook (يسجّل رابط البوت تلقائياً دون كشف التوكن) ---
     if (action === "setup_webhook") {
+      // Admin-only: the caller must present the service-role key (never exposed to clients)
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+      if (!serviceKey || req.headers.get("Authorization") !== `Bearer ${serviceKey}`) {
+        return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       if (!botToken) {
         return new Response(JSON.stringify({ error: "no bot token" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }

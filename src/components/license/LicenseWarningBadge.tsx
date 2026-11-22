@@ -57,7 +57,7 @@ export function LicenseWarningBadge() {
       type="button"
       className={cn(
         "fixed z-50 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg cursor-pointer transition-all duration-300 hover:scale-105",
-        "left-2 bottom-20 md:bottom-4 opacity-95 scale-90 origin-bottom-left",
+        "left-2 top-[calc(0.75rem+var(--app-safe-top,0px))] md:top-3 opacity-95 scale-90 origin-top-left",
         isCritical 
           ? "bg-destructive text-destructive-foreground" 
           : isUrgent 

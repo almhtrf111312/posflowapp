@@ -109,14 +109,30 @@ Deno.serve(async (req) => {
         )
       }
 
-      // If expired or revoked, and was already a trial, don't allow another trial
-      if (existingLicense.is_trial && !existingLicense.is_revoked) {
+      // A revoked license must never be re-activated through the trial endpoint
+      if (existingLicense.is_revoked) {
+        console.log('Revoked license cannot start a trial:', user.id)
+        return new Response(
+          JSON.stringify({ success: false, error: 'تم إلغاء ترخيص هذا الحساب، يرجى التواصل مع الإدارة' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Already used a trial (expired or not): no second trial
+      if (existingLicense.is_trial) {
         console.log('User already used trial:', user.id)
         return new Response(
           JSON.stringify({ success: false, error: 'لقد استخدمت الفترة التجريبية مسبقاً' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+
+      // Expired paid license: renew it, do not restart a free trial
+      console.log('Expired paid license cannot start a trial:', user.id)
+      return new Response(
+        JSON.stringify({ success: false, error: 'انتهى اشتراكك، يرجى التجديد' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // Read the currently configured default trial period (new trials only)

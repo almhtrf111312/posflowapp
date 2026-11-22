@@ -103,11 +103,16 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
     }
     case 'debt_payment': {
       if (!data.debtId || !data.operationId) throw new Error('Invalid debt payment');
-      // الوردية المفتوحة الحالية عند المزامنة (الدفعة النقدية تدخل الدرج الحالي). التحويل البنكي لا يدخل الصندوق.
+      // استخدام الوردية المحفوظة وقت الدفع أولاً، وإلا الوردية المفتوحة الحالية عند المزامنة. التحويل البنكي لا يدخل الصندوق.
+      const paymentMethod = data.method === 'transfer' ? 'transfer' : 'cash';
       let replayShiftId: string | null = null;
-      if ((data.method ?? 'cash') === 'cash') {
-        const { getActiveShift } = await import('../cashbox-store');
-        replayShiftId = getActiveShift()?.id || null;
+      if (paymentMethod === 'cash') {
+        if (typeof data.shiftId === 'string' && data.shiftId.trim().length > 0) {
+          replayShiftId = data.shiftId.trim();
+        } else {
+          const { getActiveShift } = await import('../cashbox-store');
+          replayShiftId = getActiveShift()?.id || null;
+        }
       }
       const { error } = await sb.rpc('record_debt_payment_atomic', {
         _debt_id: String(data.debtId),
@@ -117,6 +122,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         _currency: data.currency ? String(data.currency) : 'USD',
         _currency_amount: data.currencyAmount != null ? Number(data.currencyAmount) : null,
         _exchange_rate: data.exchangeRate != null ? Number(data.exchangeRate) : null,
+        _payment_method: paymentMethod,
       });
       if (error) throw new Error(error.message);
       return true;
@@ -223,13 +229,18 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
     }
     case 'expense_reverse': {
       if (!data.id) throw new Error('Missing expense id');
-      return assertSuccess(
-        sb.from('expenses').update({
-          is_reversed: true,
-          reversed_at: String(data.reversed_at || new Date().toISOString()),
-          reversed_reason: String(data.reason || 'تراجع بواسطة المستخدم'),
-        }).eq('id', String(data.id))
-      );
+      const { data: revResult, error } = await sb.rpc('delete_expense_atomic', {
+        _expense_id: String(data.id),
+        _reason: String(data.reason || 'تراجع بواسطة المستخدم'),
+        _shift_id: typeof data.shiftId === 'string' && data.shiftId.trim().length > 0 ? data.shiftId.trim() : null,
+      });
+      if (error) throw new Error(error.message);
+      const serverResult = (revResult || {}) as { success?: boolean; error?: string };
+      if (!serverResult.success) {
+        throw new Error(serverResult.error || 'رفض الخادم التراجع عن المصروف');
+      }
+      invalidatePartnersCache();
+      return true;
     }
     case 'maintenance_upsert': {
       const ownerId = await getOwnerIdForInsert();

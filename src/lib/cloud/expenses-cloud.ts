@@ -286,13 +286,26 @@ export const addExpenseCloud = async (expenseData: {
   originalCurrency?: string;
   originalAmount?: number;
   exchangeRate?: number;
+  shiftId?: string | null;
+  paidFrom?: string | null;
 }): Promise<Expense | null> => {
-  // Server does expense + partner shares together, idempotent by operation UUID.
+  // Server does expense + partner shares (+ optional shift drawer tx) together, idempotent by operation UUID.
   const operationId = crypto.randomUUID();
   const currentUid = getCurrentUserId() || '';
   const ownerId = (await getOwnerIdForInsert()) || currentUid;
   const nowIso = new Date().toISOString();
   const roundedAmount = round8(expenseData.amount);
+  const originalCurrency = expenseData.originalCurrency || 'USD';
+  const exchangeRate = expenseData.exchangeRate || 1;
+  const originalAmount = expenseData.originalAmount ?? roundedAmount;
+
+  let resolvedShiftId: string | null = expenseData.shiftId ?? null;
+  if (!resolvedShiftId && expenseData.paidFrom === 'drawer') {
+    try {
+      const { getActiveShift } = await import('../cashbox-store');
+      resolvedShiftId = getActiveShift()?.id || null;
+    } catch { /* ignore */ }
+  }
 
   const payload = {
     _operation_id: operationId,
@@ -301,6 +314,11 @@ export const addExpenseCloud = async (expenseData: {
     _description: expenseData.customType || null,
     _date: expenseData.date,
     _notes: expenseData.notes || null,
+    _shift_id: resolvedShiftId,
+    _paid_from: expenseData.paidFrom ?? (resolvedShiftId ? 'drawer' : null),
+    _original_currency: originalCurrency,
+    _original_amount: originalAmount,
+    _exchange_rate: exchangeRate,
   };
 
   const localExpense = toExpense({
@@ -374,11 +392,12 @@ export const addExpenseCloud = async (expenseData: {
 };
 
 // Delete or reverse expense
-export const deleteExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم'): Promise<boolean> => {
+export const deleteExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم', shiftId?: string | null): Promise<boolean> => {
   if (isLocalDataMode()) {
     addToQueue('expense_reverse', {
       id,
       reason,
+      shiftId: shiftId ?? null,
       reversed_at: new Date().toISOString(),
     });
     try { removeOperatingExpense(id); } catch { /* noop */ }
@@ -396,6 +415,7 @@ export const deleteExpenseCloud = async (id: string, reason: string = 'تراج�
   const { data, error } = await sb.rpc('delete_expense_atomic', {
     _expense_id: id,
     _reason: reason,
+    _shift_id: shiftId ?? null,
   });
   if (error) {
     console.error('[deleteExpenseCloud] delete_expense_atomic rejected:', error);
@@ -426,8 +446,8 @@ export const deleteExpenseCloud = async (id: string, reason: string = 'تراج�
   return success;
 };
 
-export const reverseExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم'): Promise<boolean> => {
-  return deleteExpenseCloud(id, reason);
+export const reverseExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم', shiftId?: string | null): Promise<boolean> => {
+  return deleteExpenseCloud(id, reason, shiftId);
 };
 
 // Get expense stats

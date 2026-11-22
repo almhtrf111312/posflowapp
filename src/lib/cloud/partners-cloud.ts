@@ -492,10 +492,29 @@ export const addCapitalWithCashboxCloud = async (
   return true;
 };
 
-type PartnerWithdrawalType = 'profit' | 'capital';
+type PartnerWithdrawalType = 'profit' | 'capital' | 'auto';
+
+export interface PartnerAutoWithdrawalResult {
+  success: boolean;
+  alreadyProcessed: boolean;
+  profitDeducted: number;
+  capitalDeducted: number;
+  newBalance: number;
+  newCapital: number;
+  operationId: string | null;
+}
+
+const generateWithdrawalOperationId = (partnerId: string): string => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return `pw_${crypto.randomUUID()}`;
+    }
+  } catch { /* fallback below */ }
+  return `pw_${partnerId.slice(0, 8)}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+};
 
 /**
- * سحب من رصيد الشريك (أرباح أو رأس مال) — التنفيذ الذري الوحيد عبر partner_withdrawal_atomic.
+ * سحب من رصيد الشريك (أرباح أو رأس مال أو تلقائي) — التنفيذ الذري الوحيد عبر partner_withdrawal_atomic.
  * يرمي خطأً حقيقياً عند الرفض، ولا يوجد أي تحديث مباشر لأعمدة الشريك المالية.
  */
 const executePartnerWithdrawal = async (
@@ -506,25 +525,54 @@ const executePartnerWithdrawal = async (
   notes: string | undefined,
   currency: string,
   originalAmount: number | undefined,
-  exchangeRate: number | undefined
-): Promise<void> => {
+  exchangeRate: number | undefined,
+  operationId?: string
+): Promise<PartnerAutoWithdrawalResult> => {
   const roundedAmount = Math.round(amount * 100) / 100;
   const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
   const rate = exchangeRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
-  assertFxConsistent(roundedAmount, origAmt, rate, withdrawalType === 'profit' ? 'سحب الأرباح' : 'سحب رأس المال');
+  const label =
+    withdrawalType === 'profit'
+      ? 'سحب الأرباح'
+      : withdrawalType === 'capital'
+        ? 'سحب رأس المال'
+        : 'السحب التلقائي';
+  assertFxConsistent(roundedAmount, origAmt, rate, label);
 
   if (isLocalDataMode()) throw new Error(PARTNER_OFFLINE_MSG);
 
   // تحقق من كفاية الرصيد على أحدث نسخة من الخادم قبل الإرسال
   invalidatePartnersCache();
   const live = await getPartnerByIdCloud(partnerId);
-  const available = withdrawalType === 'profit' ? (live?.currentBalance ?? partner.currentBalance) : (live?.currentCapital ?? partner.currentCapital);
+  const liveBalance = live?.currentBalance ?? partner.currentBalance;
+  const liveCapital = live?.currentCapital ?? partner.currentCapital;
+  const available =
+    withdrawalType === 'profit'
+      ? liveBalance
+      : withdrawalType === 'capital'
+        ? liveCapital
+        : Math.max(0, liveBalance) + Math.max(0, liveCapital);
+
   if (roundedAmount > available + 0.001) {
-    throw new Error(withdrawalType === 'profit' ? 'مبلغ السحب يتجاوز رصيد الأرباح المتاح' : 'مبلغ السحب يتجاوز رأس المال المتاح');
+    throw new Error(
+      withdrawalType === 'profit'
+        ? 'مبلغ السحب يتجاوز رصيد الأرباح المتاح'
+        : withdrawalType === 'capital'
+          ? 'مبلغ السحب يتجاوز رأس المال المتاح'
+          : 'مبلغ السحب يتجاوز الرصيد الإجمالي المتاح (أرباح + رأس مال)'
+    );
   }
 
-  const withdrawalNote = notes || (withdrawalType === 'profit' ? 'سحب أرباح - ' + partner.name : 'سحب رأس مال - ' + partner.name);
+  const withdrawalNote =
+    notes ||
+    (withdrawalType === 'profit'
+      ? 'سحب أرباح - ' + partner.name
+      : withdrawalType === 'capital'
+        ? 'سحب رأس مال - ' + partner.name
+        : 'سحب تلقائي - ' + partner.name);
   const shiftId = await resolveActiveShiftIdForPartner();
+  const resolvedOpId = operationId?.trim() || null;
+
   const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
     _partner_id: partnerId,
     _amount: roundedAmount,
@@ -534,48 +582,95 @@ const executePartnerWithdrawal = async (
     _currency: currency,
     _original_amount: origAmt,
     _exchange_rate: rate,
+    _operation_id: resolvedOpId,
   });
   if (error) throw new Error(error.message || 'فشل السحب من رصيد الشريك');
-  const result = (data || {}) as { success?: boolean; error?: string; message?: string };
+  const result = (data || {}) as {
+    success?: boolean;
+    already_processed?: boolean;
+    error?: string;
+    message?: string;
+    profit_deducted?: number;
+    capital_deducted?: number;
+    new_balance?: number;
+    new_capital?: number;
+    operation_id?: string | null;
+  };
   if (!result.success) throw new Error(result.error || result.message || 'رفض الخادم عملية السحب');
 
-  // تحديث الحالة المحلية بعد تأكيد الخادم فقط
-  const now = new Date().toISOString();
-  const withdrawal: Withdrawal = {
-    id: Date.now().toString(),
-    amount: roundedAmount,
-    type: withdrawalType,
-    date: now,
-    notes: withdrawalNote,
+  const alreadyProcessed = Boolean(result.already_processed);
+  const profitDeducted = Number(
+    result.profit_deducted ?? (withdrawalType === 'profit' ? roundedAmount : 0)
+  );
+  const capitalDeducted = Number(
+    result.capital_deducted ?? (withdrawalType === 'capital' ? roundedAmount : 0)
+  );
+  const newBalance = Number(
+    result.new_balance ?? Math.round((liveBalance - profitDeducted) * 100) / 100
+  );
+  const newCapital = Number(
+    result.new_capital ?? Math.round((liveCapital - capitalDeducted) * 100) / 100
+  );
+
+  // تحديث الحالة المحلية بعد تأكيد الخادم فقط (تجنب التكرار إذا كانت العملية منفذة مسبقاً)
+  if (!alreadyProcessed) {
+    const now = new Date().toISOString();
+    const newWithdrawals: Withdrawal[] = [];
+    if (profitDeducted > 0) {
+      newWithdrawals.push({
+        id: Date.now().toString(),
+        amount: profitDeducted,
+        type: 'profit',
+        date: now,
+        notes: withdrawalNote,
+      });
+    }
+    if (capitalDeducted > 0) {
+      newWithdrawals.push({
+        id: Date.now().toString() + '_c',
+        amount: capitalDeducted,
+        type: 'capital',
+        date: now,
+        notes: withdrawalNote,
+      });
+      partner.capitalHistory = [...(partner.capitalHistory || []), {
+        id: Date.now().toString() + '_cap',
+        amount: capitalDeducted,
+        type: 'withdrawal',
+        date: now,
+        notes: withdrawalNote,
+      } as CapitalTransaction];
+    }
+
+    partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
+    partner.currentBalance = newBalance;
+    partner.currentCapital = newCapital;
+    partner.withdrawalHistory = [...(partner.withdrawalHistory || []), ...newWithdrawals];
+
+    if (partnersCache) {
+      const idx = partnersCache.findIndex(p => p.id === partnerId);
+      if (idx !== -1) partnersCache[idx] = partner;
+      savePartnersLocally(partnersCache);
+    }
+    emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
+
+    try {
+      const { updateCashboxBalance } = await import('../cashbox-store');
+      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
+    } catch (e) {
+      console.warn('[executePartnerWithdrawal] local cashbox update failed:', e);
+    }
+  }
+
+  return {
+    success: true,
+    alreadyProcessed,
+    profitDeducted,
+    capitalDeducted,
+    newBalance,
+    newCapital,
+    operationId: result.operation_id ?? resolvedOpId,
   };
-  partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
-  partner.withdrawalHistory = [...(partner.withdrawalHistory || []), withdrawal];
-  if (withdrawalType === 'profit') {
-    partner.currentBalance = Math.round((partner.currentBalance - roundedAmount) * 100) / 100;
-  } else {
-    partner.currentCapital = Math.round((partner.currentCapital - roundedAmount) * 100) / 100;
-    partner.capitalHistory = [...(partner.capitalHistory || []), {
-      id: Date.now().toString() + '_cap',
-      amount: roundedAmount,
-      type: 'withdrawal',
-      date: now,
-      notes: withdrawalNote,
-    } as CapitalTransaction];
-  }
-
-  if (partnersCache) {
-    const idx = partnersCache.findIndex(p => p.id === partnerId);
-    if (idx !== -1) partnersCache[idx] = partner;
-    savePartnersLocally(partnersCache);
-  }
-  emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
-
-  try {
-    const { updateCashboxBalance } = await import('../cashbox-store');
-    updateCashboxBalance(origAmt, 'withdrawal', currency as any);
-  } catch (e) {
-    console.warn('[executePartnerWithdrawal] local cashbox update failed:', e);
-  }
 };
 
 // Withdraw profit — يرمي خطأً حقيقياً عند رفض الخادم
@@ -586,12 +681,13 @@ export const withdrawProfitCloud = async (
   allowNegative: boolean = false,
   currency: string = 'USD',
   originalAmount?: number,
-  exchangeRate?: number
+  exchangeRate?: number,
+  operationId?: string
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
   if (!allowNegative && amount > partner.currentBalance) return false;
-  await executePartnerWithdrawal(partner, partnerId, 'profit', amount, notes, currency, originalAmount, exchangeRate);
+  await executePartnerWithdrawal(partner, partnerId, 'profit', amount, notes, currency, originalAmount, exchangeRate, operationId);
   return true;
 };
 
@@ -602,13 +698,45 @@ export const withdrawCapitalCloud = async (
   notes?: string,
   currency: string = 'USD',
   originalAmount?: number,
-  exchangeRate?: number
+  exchangeRate?: number,
+  operationId?: string
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
   if (amount > partner.currentCapital) return false;
-  await executePartnerWithdrawal(partner, partnerId, 'capital', amount, notes, currency, originalAmount, exchangeRate);
+  await executePartnerWithdrawal(partner, partnerId, 'capital', amount, notes, currency, originalAmount, exchangeRate, operationId);
   return true;
+};
+
+/**
+ * ✅ سحب تلقائي ذري للشريك — يخصم من الأرباح المتاحة أولاً ثم الباقي من رأس المال
+ * في معاملة واحدة وحركة صندوق واحدة عبر partner_withdrawal_atomic مع _withdrawal_type = 'auto' و_operation_id.
+ */
+export const withdrawAutoCloud = async (
+  partnerId: string,
+  amount: number,
+  notes?: string,
+  currency: string = 'USD',
+  originalAmount?: number,
+  exchangeRate?: number,
+  operationId?: string
+): Promise<PartnerAutoWithdrawalResult> => {
+  const partner = await getPartnerByIdCloud(partnerId);
+  if (!partner || amount <= 0) {
+    throw new Error('الشريك غير موجود أو مبلغ السحب غير صالح');
+  }
+  const opId = operationId?.trim() || generateWithdrawalOperationId(partnerId);
+  return executePartnerWithdrawal(
+    partner,
+    partnerId,
+    'auto',
+    amount,
+    notes,
+    currency,
+    originalAmount,
+    exchangeRate,
+    opId
+  );
 };
 
 export const getPartnersStatsCloud = async () => {

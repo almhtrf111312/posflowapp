@@ -447,8 +447,10 @@ export const recordPaymentCloud = async (
     return getActiveShift()?.id || null;
   };
 
+  const cashShiftId = await resolveCashShiftId();
+
   const queuePayment = (): Debt | null => {
-    addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: shiftId || null }, 10);
+    addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: cashShiftId }, 10);
     // الحالة المحلية فقط؛ الحركة السحابية تُسجَّل عند المزامنة عبر الدالة الذرية
     const list = (debtsCache || loadDebtsLocally() || []).map(d => {
       if (d.id !== debtId) return d;
@@ -461,7 +463,6 @@ export const recordPaymentCloud = async (
     return list.find(d => d.id === debtId) || null;
   };
   if (isLocalDataMode()) return queuePayment();
-  const cashShiftId = await resolveCashShiftId();
   const { data, error } = await sb.rpc('record_debt_payment_atomic', {
     _debt_id: debtId,
     _amount: amt,
@@ -470,6 +471,7 @@ export const recordPaymentCloud = async (
     _currency: currency,
     _currency_amount: currencyAmount ?? null,
     _exchange_rate: exchangeRate ?? null,
+    _payment_method: method,
   });
   if (error) {
     throw new Error(error.message || 'فشل تسجيل الدفعة');

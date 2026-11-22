@@ -1319,18 +1319,21 @@ export const refundInvoicePartialCloud = async (
   const isFullyRefunded = Boolean(r.is_fully_refunded ?? r.is_full_refund ?? r.full ?? false);
   const newInvoiceTotal = Number(r.new_total ?? r.new_invoice_total ?? 0) || 0;
   const alreadyProcessed = r.already_processed === true;
+  const alreadyRefunded = r.already_refunded === true;
+  const isPartialDigital = partialInvoice?.paymentMethod === 'digital';
+  const drawerRefundUsd = Number(r.drawer_refund_usd ?? cashToRefund ?? 0) || 0;
 
   // حركة الصندوق سُجّلت ذرياً في الخادم (مرة واحدة) — هنا تحديث الحالة المحلية فقط دون كتابة سحابية مكررة
-  if (!alreadyProcessed && cashToRefund > 0) {
+  if (r.drawer_tx_recorded === true && !alreadyProcessed && !alreadyRefunded && !isPartialDigital && drawerRefundUsd > 0) {
     try {
       const { recordRefundInShift } = await import('../cashbox-store');
       recordRefundInShift(
-        cashToRefund,
+        drawerRefundUsd,
         refundedProfit,
         refundedCogs,
         invoiceNumber,
         partialCurrency,
-        partialCurrency === 'USD' ? undefined : Math.round(cashToRefund * partialRate * 100) / 100,
+        partialCurrency === 'USD' ? undefined : Math.round(drawerRefundUsd * partialRate * 100) / 100,
         false
       );
     } catch (e) {

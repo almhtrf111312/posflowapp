@@ -42,6 +42,23 @@ async function sha256b64url(text: string): Promise<string> {
     .replace(/=+$/g, "");
 }
 
+// Find an auth user by email across every page (a single page of 1000 misses later users)
+async function findAuthUserByEmail(client: any, email: string) {
+  const wanted = email.toLowerCase();
+  const PAGE_SIZE = 1000;
+  for (let page = 1; ; page++) {
+    const { data, error } = await client.auth.admin.listUsers({ page, perPage: PAGE_SIZE });
+    if (error) {
+      console.error("[TelegramAuth] listUsers error:", error);
+      return null;
+    }
+    const users = data?.users || [];
+    const found = users.find((u: any) => u.email?.toLowerCase() === wanted);
+    if (found) return found;
+    if (users.length < PAGE_SIZE) return null;
+  }
+}
+
 // Telegram message sender
 async function sendTelegramMessage(botToken: string, chatId: string | number, text: string, replyMarkup?: any) {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
@@ -521,16 +538,7 @@ serve(async (req) => {
 
       // A. If identifier is email
       if (identifier.includes("@")) {
-        const { data: usersData, error: listErr } = await serviceClient.auth.admin.listUsers({
-          page: 1,
-          perPage: 1000,
-        });
-
-        if (listErr) {
-          console.error("[TelegramAuth] listUsers error:", listErr);
-        }
-
-        const foundUser = (usersData?.users || []).find((u) => u.email?.toLowerCase() === identifier.toLowerCase());
+        const foundUser = await findAuthUserByEmail(serviceClient, identifier);
 
         if (foundUser) {
           targetUserId = foundUser.id;
@@ -651,11 +659,7 @@ serve(async (req) => {
       let telegramChatId: string | null = null;
 
       if (identifier.includes("@")) {
-        const { data: usersData } = await serviceClient.auth.admin.listUsers({
-          page: 1,
-          perPage: 1000,
-        });
-        const found = (usersData?.users || []).find((u) => u.email?.toLowerCase() === identifier.toLowerCase());
+        const found = await findAuthUserByEmail(serviceClient, identifier);
         if (found) {
           targetUserId = found.id;
           telegramChatId = (found.user_metadata?.telegram_chat_id as string) || null;

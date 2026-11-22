@@ -41,20 +41,21 @@ export function PrinterSettingsSection({
   setShowBtDialog,
   setShowUnpairDialog,
 }: PrinterSettingsSectionProps) {
-  const { t, isRTL } = useLanguage();
+  const {t, isRTL, language } = useLanguage();
+  const isEn = language === 'en';
 
   return (
           <div className="bg-muted/30 rounded-xl border border-border/50 p-4 space-y-5">
             <div>
               <h2 className="text-base font-bold text-foreground mb-1">{t('settings.printing')}</h2>
-              <p className="text-xs text-muted-foreground">تخصيص بنود وقالب الفاتورة، مفاتيح الإظهار، والعملات البديلة للطباعة والمشاركة</p>
+              <p className="text-xs text-muted-foreground">{isEn ? "Customize receipt fields, visibility toggles, and secondary currencies for printing and sharing" : "تخصيص بنود وقالب الفاتورة، مفاتيح الإظهار، والعملات البديلة للطباعة والمشاركة"}</p>
             </div>
 
             {/* قسم إدارة الطابعة ونوع الاتصال المزدوج (بلوتوث vs سلكي) */}
             <div className="space-y-4 pt-1 border-t border-border/40">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Printer className="w-4 h-4 text-primary" />
-                <span>إدارة الطابعة والاتصال المزدوج</span>
+                <span>{isEn ? "Printer Management & Dual Connection" : "إدارة الطابعة والاتصال المزدوج"}</span>
               </h3>
 
               {/* اختيار نوع الاتصال: بلوتوث حرارية أو سلكية / نظامية */}
@@ -77,7 +78,7 @@ export function PrinterSettingsSection({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm text-foreground">{t('bluetoothThermalPrinter')}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">للهواتف والأجهزة اللوحية (ESC/POS حراري معالجة نقطية)</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{isEn ? "For phones & tablets (ESC/POS thermal bitmap)" : "للهواتف والأجهزة اللوحية (ESC/POS حراري معالجة نقطية)"}</div>
                   </div>
                   {printerConfig.connectionType === 'bluetooth' && (
                     <Check className="w-4 h-4 text-primary absolute rtl:left-3 ltr:right-3 top-3.5" />
@@ -102,7 +103,7 @@ export function PrinterSettingsSection({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-sm text-foreground">{t('wiredSystemPrinter')}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">للكمبيوتر والويب عبر نافذة الطباعة الافتراضية</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{isEn ? "For PC & web via the system print dialog" : "للكمبيوتر والويب عبر نافذة الطباعة الافتراضية"}</div>
                   </div>
                   {printerConfig.connectionType === 'wired_system' && (
                     <Check className="w-4 h-4 text-primary absolute rtl:left-3 ltr:right-3 top-3.5" />
@@ -124,7 +125,7 @@ export function PrinterSettingsSection({
                           {t('noPrinterSelected') || 'ما في طابعة بلوتوث محفوظة بعد'}
                         </h4>
                         <p className="text-xs text-muted-foreground max-w-xs">
-                          اربط طابعة إيصالات حرارية عبر البلوتوث للطباعة المباشرة السريعة بعد كل عملية بيع
+                          {isEn ? "Connect a Bluetooth thermal receipt printer for instant printing after every sale" : "اربط طابعة إيصالات حرارية عبر البلوتوث للطباعة المباشرة السريعة بعد كل عملية بيع"}
                         </p>
                       </div>
                       <Button
@@ -250,7 +251,7 @@ export function PrinterSettingsSection({
               <div className="flex items-center justify-between py-2 border-b border-border/30">
                 <div>
                   <span className="text-sm font-medium block">{t('settings.autoPrint')}</span>
-                  <span className="text-xs text-muted-foreground">طباعة الإيصال تلقائياً فور تأكيد البيع</span>
+                  <span className="text-xs text-muted-foreground">{isEn ? "Automatically print receipt upon completing a sale" : "طباعة الإيصال تلقائياً فور تأكيد البيع"}</span>
                 </div>
                 <Switch
                   checked={printSettings.autoPrint}
@@ -273,9 +274,9 @@ export function PrinterSettingsSection({
                     }}
                     className="flex-1 h-9 px-3 rounded-lg bg-card border border-border/60 text-foreground text-sm"
                   >
-                    <option value="58mm">58mm (طابعة صغيرة)</option>
-                    <option value="80mm">80mm (طابعة قياسية)</option>
-                    <option value="A4">A4 (ورق قياسي)</option>
+                    <option value="58mm">{isEn ? "58mm (Compact Printer)" : "58mm (طابعة صغيرة)"}</option>
+                    <option value="80mm">{isEn ? "80mm (Standard Printer)" : "80mm (طابعة قياسية)"}</option>
+                    <option value="A4">{isEn ? "A4 (Standard Paper)" : "A4 (ورق قياسي)"}</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
@@ -294,11 +295,11 @@ export function PrinterSettingsSection({
 
             {/* تخصيص بنود الفاتورة */}
             <div className="space-y-3 pt-3 border-t border-border/40">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">تخصيص بنود وبيانات الفاتورة</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isEn ? "Receipt Fields & Details" : "تخصيص بنود وبيانات الفاتورة"}</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار اسم المتجر</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Store Name" : "إظهار اسم المتجر"}</span>
                   <Switch
                     checked={printSettings.showStoreName}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showStoreName: checked })}
@@ -306,7 +307,7 @@ export function PrinterSettingsSection({
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار الشعار (Logo)</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Logo" : "إظهار الشعار (Logo)"}</span>
                   <Switch
                     checked={printSettings.showLogo}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showLogo: checked })}
@@ -314,7 +315,7 @@ export function PrinterSettingsSection({
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار العنوان</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Address" : "إظهار العنوان"}</span>
                   <Switch
                     checked={printSettings.showAddress}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showAddress: checked })}
@@ -322,7 +323,7 @@ export function PrinterSettingsSection({
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار رقم الهاتف</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Phone Number" : "إظهار رقم الهاتف"}</span>
                   <Switch
                     checked={printSettings.showPhone}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showPhone: checked })}
@@ -330,7 +331,7 @@ export function PrinterSettingsSection({
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار البريد الإلكتروني</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Email" : "إظهار البريد الإلكتروني"}</span>
                   <Switch
                     checked={printSettings.showEmail}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showEmail: checked })}
@@ -338,7 +339,7 @@ export function PrinterSettingsSection({
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار رقم الفاتورة</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Invoice Number" : "إظهار رقم الفاتورة"}</span>
                   <Switch
                     checked={printSettings.showInvoiceNumber}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showInvoiceNumber: checked })}
@@ -346,7 +347,7 @@ export function PrinterSettingsSection({
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار التاريخ والوقت</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Date & Time" : "إظهار التاريخ والوقت"}</span>
                   <Switch
                     checked={printSettings.showDateTime}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showDateTime: checked })}
@@ -354,7 +355,7 @@ export function PrinterSettingsSection({
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-card/60 border border-border/40">
-                  <span className="text-sm font-medium">إظهار اسم الكاشير / البائع</span>
+                  <span className="text-sm font-medium">{isEn ? "Show Cashier / Seller Name" : "إظهار اسم الكاشير / البائع"}</span>
                   <Switch
                     checked={printSettings.showCashierName}
                     onCheckedChange={(checked) => setPrintSettings({ ...printSettings, showCashierName: checked })}
@@ -367,9 +368,9 @@ export function PrinterSettingsSection({
             <div className="space-y-3 pt-3 border-t border-border/40">
               <div className="flex items-center justify-between p-3 rounded-lg bg-card/70 border border-primary/20">
                 <div>
-                  <span className="text-sm font-bold block text-foreground">إظهار المجموع بالعملات البديلة</span>
+                  <span className="text-sm font-bold block text-foreground">{isEn ? "Show Total in Secondary Currencies" : "إظهار المجموع بالعملات البديلة"}</span>
                   <span className="text-xs text-muted-foreground">
-                    احتساب وعرض المعادل تلقائياً (مثل SYP و TRY) تحت إجمالي الفاتورة لأغراض الطباعة والمشاركة فقط
+                    {isEn ? "Automatically calculate and display equivalent totals (e.g. SYP, TRY) below the invoice total for printing and sharing only" : "احتساب وعرض المعادل تلقائياً (مثل SYP و TRY) تحت إجمالي الفاتورة لأغراض الطباعة والمشاركة فقط"}
                   </span>
                 </div>
                 <Switch
@@ -381,24 +382,24 @@ export function PrinterSettingsSection({
 
             {/* نصوص الفاتورة */}
             <div className="space-y-3 pt-3 border-t border-border/40">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">رسائل ونصوص الفاتورة</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{isEn ? "Receipt Messages & Footer" : "رسائل ونصوص الفاتورة"}</h3>
               
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground block">الكلمة الترحيبية (أعلى الفاتورة)</label>
+                <label className="text-sm font-medium text-foreground block">{isEn ? "Header Welcome Message" : "الكلمة الترحيبية (أعلى الفاتورة)"}</label>
                 <Input
                   value={printSettings.welcomeMessage}
                   onChange={(e) => setPrintSettings({ ...printSettings, welcomeMessage: e.target.value })}
-                  placeholder="مثال: أهلاً وسهلاً بكم في متجرنا"
+                  placeholder={isEn ? "e.g., Welcome to our store" : "مثال: أهلاً وسهلاً بكم في متجرنا"}
                   className="bg-card border border-border/60 h-9"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground block">{t('settings.receiptFooter')} (خاتمة الفاتورة)</label>
+                <label className="text-sm font-medium text-foreground block">{t('settings.receiptFooter')} {isEn ? '(Receipt Footer)' : '(خاتمة الفاتورة)'}</label>
                 <Input
                   value={printSettings.footer}
                   onChange={(e) => setPrintSettings({ ...printSettings, footer: e.target.value })}
-                  placeholder="مثال: شكراً لتسوقكم معنا! بضاعتكم أمانة لدينا"
+                  placeholder={isEn ? "e.g., Thank you for shopping with us!" : "مثال: شكراً لتسوقكم معنا! بضاعتكم أمانة لدينا"}
                   className="bg-card border border-border/60 h-9"
                 />
               </div>

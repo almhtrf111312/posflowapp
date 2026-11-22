@@ -68,8 +68,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       }
     };
 
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
     return () => {
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchend', handleTouchEnd);
@@ -183,7 +183,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={cn(
-          "min-h-screen overflow-x-hidden max-w-full pt-4",
+          "min-h-screen overflow-x-hidden max-w-full pt-4 pb-[env(safe-area-inset-bottom,0px)]",
           isMobile 
             ? "m-0" 
             : isTablet 

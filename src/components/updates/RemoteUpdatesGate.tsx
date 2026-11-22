@@ -194,7 +194,7 @@ export function RemoteUpdatesGate() {
           {banners.map(b => (
             <div
               key={b.id}
-              className={`pointer-events-auto rounded-xl border p-3.5 shadow-xl bg-card/95 backdrop-blur-md flex gap-3 items-start transition-all animate-in fade-in slide-in-from-top-2 duration-200 ${
+              className={`pointer-events-auto rounded-[20px] border p-3.5 shadow-xl bg-card flex gap-3 items-start transition-opacity animate-in fade-in slide-in-from-top-2 duration-200 ${
                 b.kind === 'warning'
                   ? 'border-destructive/60 bg-destructive/5'
                   : 'border-primary/40 bg-card'

@@ -59,11 +59,11 @@ export function ResponsiveDialog({
         <SheetContent
           side="bottom"
           className={cn(
-            "w-[calc(100%-2rem)] max-h-[85vh] max-h-[85dvh] mx-auto mb-2 rounded-2xl flex flex-col p-4 z-50 bg-card border border-border shadow-2xl",
+            "w-[calc(100%-2rem)] max-h-[85vh] max-h-[85dvh] mx-auto mb-2 rounded-[24px] flex flex-col p-4 z-50 bg-card border border-border shadow-2xl",
             className
           )}
         >
-          <SheetHeader className="text-right shrink-0 pb-2.5 border-b border-border/50">
+          <SheetHeader className="text-start shrink-0 pb-2.5 border-b border-border/50">
             <SheetTitle className="text-base font-bold text-foreground">
               {title}
             </SheetTitle>

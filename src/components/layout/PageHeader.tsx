@@ -14,7 +14,7 @@ export function PageHeader({ title, subtitle, icon, actions, className = '' }: P
     <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6 min-h-[3.6rem] shrink-0", className)}>
       <div className="flex items-center gap-3 min-w-0 ps-12 md:ps-0">
         {icon && (
-          <div className="size-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary shadow-xs">
+          <div className="size-10 rounded-[14px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary shadow-xs">
             {icon}
           </div>
         )}
@@ -30,7 +30,7 @@ export function PageHeader({ title, subtitle, icon, actions, className = '' }: P
         </div>
       </div>
       {actions && (
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full sm:w-auto [&>button]:h-9 [&>button]:px-3.5 [&_button]:text-xs sm:[&_button]:text-sm [&_button]:transition-all">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full sm:w-auto [&>button]:min-h-10 sm:[&>button]:h-9 [&>button]:px-3.5 [&_button]:text-xs sm:[&_button]:text-sm [&_button]:transition-[transform,color,background-color,border-color]">
           {actions}
         </div>
       )}

@@ -59,7 +59,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function CashShifts() {
   const { user, profile } = useAuth();
-  const { t, isRTL } = useLanguage();
+  const {t, isRTL, language } = useLanguage();
+  const isEn = language === 'en';
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [openShift, setOpenShift] = useState<Shift | null>(null);
@@ -160,7 +161,7 @@ export default function CashShifts() {
               expectedCash: Number(cs.expected_balance) || 0,
               discrepancy: cs.variance !== null && cs.variance !== undefined ? Number(cs.variance) : undefined,
               userId: cs.cashier_id || cs.user_id || '',
-              userName: cs.cashier_name || 'كاشير',
+              userName: cs.cashier_name || (isEn ? 'Cashier' : 'كاشير'),
               status: (cs.closed_at ? 'closed' : 'open') as 'open' | 'closed',
               salesTotal: 0,
               expensesTotal: 0,
@@ -306,7 +307,7 @@ export default function CashShifts() {
       operation.data.paymentMethod === 'cash' && operation.data.shiftId === openShift.id
     );
     if (hasPendingCashPurchase) {
-      toast.error('زامن المشتريات النقدية المعلّقة لهذه الوردية قبل الإقفال.');
+      toast.error(isEn ? 'Please sync pending cash purchases for this shift before closing.' : 'زامن المشتريات النقدية المعلّقة لهذه الوردية قبل الإقفال.');
       return;
     }
 
@@ -420,7 +421,7 @@ export default function CashShifts() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setShowFx(true)}>تحويل عملة</Button>
+                <Button variant="outline" size="sm" onClick={() => setShowFx(true)}>{isEn ? "Currency Exchange" : "تحويل عملة"}</Button>
                 <Badge variant="default" className="bg-green-500">
                   {t('cashShifts.active')}
                 </Badge>
@@ -463,7 +464,7 @@ export default function CashShifts() {
                 <div className="text-sm font-semibold mb-3 flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-foreground">
                     <Banknote className="w-4 h-4 text-primary" />
-                    تفصيل النقدية بالدرج حسب العملة:
+                    {isEn ? "Drawer Cash Breakdown by Currency:" : "تفصيل النقدية بالدرج حسب العملة:"}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -488,19 +489,19 @@ export default function CashShifts() {
                         </div>
                         <div className="text-xs space-y-1 text-muted-foreground pt-1">
                           <div className="flex justify-between">
-                            <span>الافتتاحي:</span>
+                            <span>{isEn ? "Opening:" : "الافتتاحي:"}</span>
                             <span className="font-medium text-foreground">{fmt(data.opening)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>المبيعات والمقبوضات:</span>
+                            <span>{isEn ? "Sales & Collections:" : "المبيعات والمقبوضات:"}</span>
                             <span className="font-medium text-green-600">+{fmt(data.sales)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>المصروفات:</span>
+                            <span>{isEn ? "Expenses:" : "المصروفات:"}</span>
                             <span className="font-medium text-red-600">-{fmt(data.expenses)}</span>
                           </div>
                           <div className="flex justify-between pt-1 border-t font-bold text-foreground text-sm">
-                            <span>المتوقع بالدرج:</span>
+                            <span>{isEn ? "Expected in Drawer:" : "المتوقع بالدرج:"}</span>
                             <span className={`${color} font-mono`}>{fmt(data.expected)}</span>
                           </div>
                         </div>
@@ -529,30 +530,30 @@ export default function CashShifts() {
       {isOwner && deferred.length > 0 && (
         <Card className="border-amber-400">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><AlertTriangle className="w-4 h-4 text-amber-600" /> فروقات بانتظار القرار ({deferred.length})</CardTitle>
-            <CardDescription>ورديات أُقفلت بفرق أكبر من حد السماح وأُجّل قرارها.</CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base"><AlertTriangle className="w-4 h-4 text-amber-600" /> {isEn ? `Pending Variances (${deferred.length})` : `فروقات بانتظار القرار (${deferred.length})`}</CardTitle>
+            <CardDescription>{isEn ? "Shifts closed with a variance above tolerance awaiting owner decision." : "ورديات أُقفلت بفرق أكبر من حد السماح وأُجّل قرارها."}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {deferred.map(d => (
               <div key={d.id} className="rounded-lg border p-3 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>{d.cashier_name || 'كاشير'} — {d.closed_at ? formatDateTime(d.closed_at) : ''}</span>
+                  <span>{d.cashier_name || (isEn ? 'Cashier' : 'كاشير')} — {d.closed_at ? formatDateTime(d.closed_at) : ''}</span>
                   <span className={cn('font-mono font-bold', (d.variance || 0) < 0 ? 'text-red-600' : 'text-blue-600')}>{(d.variance || 0) > 0 ? '+' : ''}{formatUsd(d.variance || 0)}</span>
                 </div>
                 <div className="text-[11px] text-muted-foreground font-mono space-y-0.5">
                   {(d.currency_counts || []).filter(c => c.variance !== 0).map(c => (
-                    <div key={c.code}>{c.code}: متوقع {c.expected} / معدود {c.counted} / فرق {c.variance > 0 ? '+' : ''}{c.variance}</div>
+                    <div key={c.code}>{c.code}: {isEn ? 'Expected' : 'متوقع'} {c.expected} / {isEn ? 'Counted' : 'معدود'} {c.counted} / {isEn ? 'Diff' : 'فرق'} {c.variance > 0 ? '+' : ''}{c.variance}</div>
                   ))}
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={async () => {
-                    const r = await resolveShiftVarianceCloud(d.id, 'accept', 'اعتماد من المالك');
-                    if (r.ok) { toast.success('سُجّل الفرق في الصندوق'); loadDeferred(); } else toast.error(r.error || 'تعذر التنفيذ');
-                  }}>اعتماد وتسجيل الفرق</Button>
+                    const r = await resolveShiftVarianceCloud(d.id, 'accept', isEn ? 'Approved by owner' : 'اعتماد من المالك');
+                    if (r.ok) { toast.success(isEn ? 'Variance recorded in cashbox' : 'سُجّل الفرق في الصندوق'); loadDeferred(); } else toast.error(r.error || (isEn ? 'Action failed' : 'تعذر التنفيذ'));
+                  }}>{isEn ? "Approve & Record Variance" : "اعتماد وتسجيل الفرق"}</Button>
                   <Button size="sm" variant="outline" onClick={() => {
                     setDismissNote('');
                     setDismissTarget(d.id);
-                  }}>إغلاق دون تسجيل</Button>
+                  }}>{isEn ? "Dismiss Without Recording" : "إغلاق دون تسجيل"}</Button>
                 </div>
               </div>
             ))}
@@ -584,7 +585,7 @@ export default function CashShifts() {
                     <TableHead>{t('cashShifts.expected')}</TableHead>
                     <TableHead>{t('cashShifts.actual')}</TableHead>
                     <TableHead>{t('cashShifts.discrepancy')}</TableHead>
-                    <TableHead>التعديلات</TableHead>
+                    <TableHead>{isEn ? "Adjustments" : "التعديلات"}</TableHead>
                     <TableHead>{t('common.status')}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -622,7 +623,7 @@ export default function CashShifts() {
                           <div className="space-y-1">
                             {shift.adjustments.map(adj => (
                               <Badge key={adj.id} variant={adj.type === 'expense_added' ? 'destructive' : 'secondary'} className="text-xs">
-                                {adj.type === 'expense_added' ? 'مصروف' : 'إيراد'} {formatUsd(adj.amount)}
+                                {adj.type === 'expense_added' ? (isEn ? 'Expense' : 'مصروف') : (isEn ? 'Income' : 'إيراد')} {formatUsd(adj.amount)}
                               </Badge>
                             ))}
                           </div>
@@ -657,7 +658,7 @@ export default function CashShifts() {
 
           <div className="space-y-4 py-3">
             <div className="text-xs text-muted-foreground">
-              أدخل الرصيد الافتتاحي المتوفر في درج الكاشير لكل عملة:
+              {isEn ? "Enter the opening cash available in the drawer for each currency:" : "أدخل الرصيد الافتتاحي المتوفر في درج الكاشير لكل عملة:"}
             </div>
 
             <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
@@ -673,7 +674,7 @@ export default function CashShifts() {
                         <span>{getCurrencyDisplayLabel(curr.code, curr.symbol, curr.name)}</span>
                       </Label>
                       {curr.code !== 'USD' && (
-                        <span className="text-[10px] text-muted-foreground font-mono">                        1$ = {curr.rate} {getCurrencyDisplayLabel(curr.code, curr.symbol, curr.name)}</span>
+                        <span className="text-[11px] text-muted-foreground font-mono">                        1$ = {curr.rate} {getCurrencyDisplayLabel(curr.code, curr.symbol, curr.name)}</span>
                       )}
                     </div>
                     <Input
@@ -691,14 +692,14 @@ export default function CashShifts() {
                       if (!row || row.variance === 0) return null;
                       return (
                         <div className={cn('text-[11px] font-mono font-bold', Math.abs(row.varianceUsd) > toleranceUsd ? 'text-red-600' : 'text-amber-600')}>
-                          {row.variance > 0 ? 'زيادة' : 'نقص'} {formatCurrency(Math.abs(row.variance), curr.symbol, curr.decimals, curr.code, curr.name)}
+                          {row.variance > 0 ? (isEn ? 'Surplus' : 'زيادة') : (isEn ? 'Shortage' : 'نقص')} {formatCurrency(Math.abs(row.variance), curr.symbol, curr.decimals, curr.code, curr.name)}
                           {curr.code !== 'USD' && <> (≈ ${formatNumber(Math.abs(row.varianceUsd), 2)})</>}
                         </div>
                       );
                     })()}
                     {numVal > 0 && curr.code !== 'USD' && (
                       <div className="text-[10.5px] text-muted-foreground font-mono">
-                        يعادل ${formatNumber(usdEq, 2)}
+                        {isEn ? "Equals" : "يعادل"} ${formatNumber(usdEq, 2)}
                       </div>
                     )}
                   </div>
@@ -708,7 +709,7 @@ export default function CashShifts() {
 
             {/* Total USD preview */}
             <div className="bg-primary/10 rounded-lg p-3 text-sm flex items-center justify-between border border-primary/20">
-              <span className="font-semibold text-primary">إجمالي الافتتاحي بالدولار:</span>
+              <span className="font-semibold text-primary">{isEn ? "Total Opening (USD):" : "إجمالي الافتتاحي بالدولار:"}</span>
               <span className="font-bold text-lg font-mono text-primary">
                 ${totalOpeningUSD.toFixed(2)}
               </span>
@@ -746,7 +747,7 @@ export default function CashShifts() {
           <div className="space-y-4 py-3 max-h-[70vh] overflow-y-auto pr-1">
             {/* Quick Fill Button */}
             <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-lg border">
-              <span className="text-xs text-muted-foreground">لإدخال المبالغ الفعلية المطابقة للحساب فوراً:</span>
+              <span className="text-xs text-muted-foreground">{isEn ? "Quickly fill actual amounts matching expected totals:" : "لإدخال المبالغ الفعلية المطابقة للحساب فوراً:"}</span>
               <Button
                 type="button"
                 variant="outline"
@@ -766,7 +767,7 @@ export default function CashShifts() {
                 }}
               >
                 <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                مطابقة مع المتوقع
+                {isEn ? "Match Expected" : "مطابقة مع المتوقع"}
               </Button>
             </div>
 
@@ -784,7 +785,7 @@ export default function CashShifts() {
                         <Banknote className="w-3.5 h-3.5" /> {getCurrencyDisplayLabel(curr.code, curr.symbol, curr.name)}
                       </Label>
                       <span className="text-muted-foreground text-[11px]">
-                        المتوقع: <strong className="text-foreground font-mono">{formatCurrency(exp, curr.symbol, curr.decimals, curr.code, curr.name)}</strong>
+                        {isEn ? "Expected:" : "المتوقع:"} <strong className="text-foreground font-mono">{formatCurrency(exp, curr.symbol, curr.decimals, curr.code, curr.name)}</strong>
                       </span>
                     </div>
                     <Input
@@ -799,7 +800,7 @@ export default function CashShifts() {
                     />
                     {numVal > 0 && curr.code !== 'USD' && (
                       <div className="text-[10.5px] text-muted-foreground font-mono mt-1">
-                        يعادل ${formatNumber(usdEq, 2)} — سعر الصرف 1$ = {curr.rate} {getCurrencyDisplayLabel(curr.code, curr.symbol, curr.name)}
+                        {isEn ? "Equals" : "يعادل"} ${formatNumber(usdEq, 2)} — {isEn ? "Rate 1$ =" : "سعر الصرف 1$ ="} {curr.rate} {getCurrencyDisplayLabel(curr.code, curr.symbol, curr.name)}
                       </div>
                     )}
                   </div>
@@ -812,7 +813,7 @@ export default function CashShifts() {
               <div className="space-y-2">
                 {/* Currency toggle pills for closing summary */}
                 <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/50 border">
-                  <span className="text-[11px] text-muted-foreground px-2 font-medium">عرض ملخص الإغلاق بـ:</span>
+                  <span className="text-[11px] text-muted-foreground px-2 font-medium">{isEn ? "Show closing summary in:" : "عرض ملخص الإغلاق بـ:"}</span>
                   {enabledCurrencies.map(curr => {
                     return (
                       <button
@@ -847,8 +848,8 @@ export default function CashShifts() {
                     return (
                       <>
                         <div className="flex justify-between items-center text-muted-foreground">
-                          <span>المتوقع الإجمالي:</span>
-                          <div className="text-right">
+                          <span>{isEn ? "Total Expected:" : "المتوقع الإجمالي:"}</span>
+                          <div className="text-start">
                             <span className="font-mono font-bold text-foreground text-sm">
                               {formatUsd(shiftStatus.expectedCash)}
                             </span>
@@ -860,8 +861,8 @@ export default function CashShifts() {
                           </div>
                         </div>
                         <div className="flex justify-between items-center text-muted-foreground pt-1 border-t border-border/40">
-                          <span>الفعلي المعدود:</span>
-                          <div className="text-right">
+                          <span>{isEn ? "Actual Counted:" : "الفعلي المعدود:"}</span>
+                          <div className="text-start">
                             <span className="font-mono font-bold text-foreground text-sm">
                               {formatUsd(totalClosingUSD)}
                             </span>
@@ -927,38 +928,38 @@ export default function CashShifts() {
 
             {Number((openShift as any)?.digitalTotal || 0) > 0 && (
               <div className="rounded-lg border p-3 text-xs">
-                مبيعات دفع رقمي (لا تدخل درج النقد): <b>{formatUsd(Number((openShift as any).digitalTotal))}</b>
+                {isEn ? "Digital Sales (not in cash drawer):" : "مبيعات دفع رقمي (لا تدخل درج النقد):"} <b>{formatUsd(Number((openShift as any).digitalTotal))}</b>
               </div>
             )}
 
             {supplierMoney && (supplierMoney.drawerPaid + supplierMoney.drawerRefunded + supplierMoney.externalPaid + supplierMoney.externalRefunded) > 0 && (
               <div className="rounded-lg border p-3 text-xs space-y-1">
-                <div className="font-semibold">دفعات الموردين خلال هذه الوردية</div>
-                {supplierMoney.drawerPaid > 0 && <div>مدفوع من الصندوق (الغلة): <b>{formatUsd(supplierMoney.drawerPaid)}</b> — محسوب ضمن المتوقع في الصندوق</div>}
-                {supplierMoney.drawerRefunded > 0 && <div>مسترد من موردين إلى الصندوق: <b>{formatUsd(supplierMoney.drawerRefunded)}</b></div>}
-                {supplierMoney.externalPaid > 0 && <div className="text-muted-foreground">مدفوع من مصدر خارجي: {formatUsd(supplierMoney.externalPaid)} — لا يؤثر على الصندوق</div>}
-                {supplierMoney.externalRefunded > 0 && <div className="text-muted-foreground">مسترد خارج الصندوق: {formatUsd(supplierMoney.externalRefunded)}</div>}
+                <div className="font-semibold">{isEn ? "Supplier Payments During This Shift" : "دفعات الموردين خلال هذه الوردية"}</div>
+                {supplierMoney.drawerPaid > 0 && <div>{isEn ? "Paid from drawer:" : "مدفوع من الصندوق (الغلة):"} <b>{formatUsd(supplierMoney.drawerPaid)}</b> — {isEn ? "included in expected balance" : "محسوب ضمن المتوقع في الصندوق"}</div>}
+                {supplierMoney.drawerRefunded > 0 && <div>{isEn ? "Refunded by suppliers to drawer:" : "مسترد من موردين إلى الصندوق:"} <b>{formatUsd(supplierMoney.drawerRefunded)}</b></div>}
+                {supplierMoney.externalPaid > 0 && <div className="text-muted-foreground">{isEn ? "Paid externally:" : "مدفوع من مصدر خارجي:"} {formatUsd(supplierMoney.externalPaid)} — {isEn ? "does not affect drawer" : "لا يؤثر على الصندوق"}</div>}
+                {supplierMoney.externalRefunded > 0 && <div className="text-muted-foreground">{isEn ? "Refunded externally:" : "مسترد خارج الصندوق:"} {formatUsd(supplierMoney.externalRefunded)}</div>}
               </div>
             )}
 
             {/* قرار الفرق: ضمن حد السماح أو أكبر منه */}
             {hasAnyClosingInput && !beyondTolerance && closingRows.some(r => r.variance !== 0) && (
               <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300">
-                الفرق ضمن حد السماح (حتى {formatUsd(toleranceUsd)}) — يُعتمد كفرق تقريب دون إجراء إضافي.
+                {isEn ? `Variance is within tolerance (up to ${formatUsd(toleranceUsd)}) — accepted as rounding difference.` : `الفرق ضمن حد السماح (حتى ${formatUsd(toleranceUsd)}) — يُعتمد كفرق تقريب دون إجراء إضافي.`}
               </div>
             )}
             {beyondTolerance && (
               <div className="rounded-lg border-2 border-red-300 p-3 space-y-2">
                 <div className="text-xs font-semibold text-red-700 dark:text-red-400">
-                  الفرق أكبر من حد السماح ({formatUsd(toleranceUsd)}). صافي الفرق: {netVarianceUsd > 0 ? '+' : ''}{formatUsd(netVarianceUsd)}
+                  {isEn ? `Variance exceeds tolerance (${formatUsd(toleranceUsd)}). Net diff:` : `الفرق أكبر من حد السماح (${formatUsd(toleranceUsd)}). صافي الفرق:`} {netVarianceUsd > 0 ? '+' : ''}{formatUsd(netVarianceUsd)}
                 </div>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input type="radio" name="varianceDecision" checked={varianceDecision === 'accept'} onChange={() => setVarianceDecision('accept')} className="mt-1" />
-                  <span>تسجيل الفرق الآن كفائض أو عجز في الصندوق</span>
+                  <span>{isEn ? "Record variance now as cashbox surplus/shortage" : "تسجيل الفرق الآن كفائض أو عجز في الصندوق"}</span>
                 </label>
                 <label className="flex items-start gap-2 text-sm cursor-pointer">
                   <input type="radio" name="varianceDecision" checked={varianceDecision === 'defer'} onChange={() => setVarianceDecision('defer')} className="mt-1" />
-                  <span>تأجيل القرار للمالك (لا يُسجَّل شيء الآن ويظهر في «فروقات بانتظار القرار»)</span>
+                  <span>{isEn ? "Defer decision to owner (not recorded now; appears under Pending Variances)" : "تأجيل القرار للمالك (لا يُسجَّل شيء الآن ويظهر في «فروقات بانتظار القرار»)"}</span>
                 </label>
               </div>
             )}
@@ -979,17 +980,17 @@ export default function CashShifts() {
       <Dialog open={!!dismissTarget} onOpenChange={(o) => { if (!o) setDismissTarget(null); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>إغلاق الفرق دون تسجيل</DialogTitle>
-            <DialogDescription>لن يُسجَّل أي فائض أو عجز. اكتب سبباً واضحاً للتوثيق.</DialogDescription>
+            <DialogTitle>{isEn ? "Dismiss Variance Without Recording" : "إغلاق الفرق دون تسجيل"}</DialogTitle>
+            <DialogDescription>{isEn ? "No surplus or shortage will be recorded. Enter a clear reason for audit tracking." : "لن يُسجَّل أي فائض أو عجز. اكتب سبباً واضحاً للتوثيق."}</DialogDescription>
           </DialogHeader>
-          <Input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} placeholder="السبب (إلزامي)" />
+          <Input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} placeholder={isEn ? "Reason (required)" : "السبب (إلزامي)"} />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDismissTarget(null)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setDismissTarget(null)}>{isEn ? "Cancel" : "إلغاء"}</Button>
             <Button disabled={!dismissNote.trim()} onClick={async () => {
               if (!dismissTarget) return;
               const r = await resolveShiftVarianceCloud(dismissTarget, 'dismiss', dismissNote.trim());
-              if (r.ok) { toast.success('أُغلق الفرق'); setDismissTarget(null); loadDeferred(); } else toast.error(r.error || 'تعذر التنفيذ');
-            }}>تأكيد</Button>
+              if (r.ok) { toast.success(isEn ? 'Variance closed' : 'أُغلق الفرق'); setDismissTarget(null); loadDeferred(); } else toast.error(r.error || (isEn ? 'Action failed' : 'تعذر التنفيذ'));
+            }}>{isEn ? "Confirm" : "تأكيد"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

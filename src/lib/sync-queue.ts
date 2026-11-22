@@ -432,12 +432,30 @@ export const updateOperationStatus = (
 /**
  * حذف عملية من الطابور
  */
+const removePendingRecoveryKey = (operationId: string): void => {
+  try {
+    localStorage.removeItem('posflow_sync_pending_' + operationId);
+    localStorage.removeItem('hyperpos_sync_pending_' + operationId);
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('posflow_sync_pending_') || k.startsWith('hyperpos_sync_pending_'))) {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(k) || 'null');
+          if (parsed?.id === operationId) toRemove.push(k);
+        } catch { /* ignore */ }
+      }
+    }
+    toRemove.forEach(k => localStorage.removeItem(k));
+  } catch { /* ignore */ }
+};
+
 export const removeFromQueue = (operationId: string): void => {
+  // حذف نسخة الاسترداد من localStorage أولاً قبل saveQueue حتى لا يعيد getQueueStatus/loadQueue قراءتها كعنصر معلق
+  removePendingRecoveryKey(operationId);
   const queue = loadQueue();
   const filtered = queue.filter(op => op.id !== operationId);
-  if (saveQueue(filtered)) {
-    try { localStorage.removeItem('posflow_sync_pending_' + operationId); } catch { /* keep the recovery copy */ }
-  }
+  saveQueue(filtered);
 };
 
 /** إعادة عملية واحدة لحالة الانتظار حتى تُعاد محاولتها فوراً ووضعها في بداية الطابور */
@@ -638,6 +656,13 @@ export const processQueue = async (
         
         if (success) {
           removeFromQueue(operation.id);
+          if (operation.type === 'store_settings_update') {
+            // أي نسخ قديمة مكررة من تحديث الإعدادات أصبحت متجاوزة بعد نجاح الرفع الأخير
+            const remainingSettingsOps = loadQueue().filter(
+              op => op.type === 'store_settings_update' && op.id !== operation.id
+            );
+            remainingSettingsOps.forEach(op => removeFromQueue(op.id));
+          }
           updateHistoryStatus(operation.id, 'synced');
           processed++;
           if (operation.id === targetOperationId) {

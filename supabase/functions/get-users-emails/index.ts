@@ -109,25 +109,31 @@ Deno.serve(async (req) => {
       allowedUserIds = userIds.filter((id: string) => ownedUserIds.has(id))
     }
 
-    // Fetch users from auth.users using admin API
-    const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers({
-      perPage: 1000,
-    })
-
-    if (authError) {
-      console.error('Error fetching auth users:', authError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch users' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Build email map for allowed users
+    // Fetch every page of auth users (a single page of 1000 silently drops later users)
+    const PAGE_SIZE = 1000
+    const allowedSet = new Set<string>(allowedUserIds)
     const emailMap: Record<string, string> = {}
-    for (const user of authUsers.users) {
-      if (allowedUserIds.includes(user.id) && user.email) {
-        emailMap[user.id] = user.email
+    for (let page = 1; ; page++) {
+      const { data: pageData, error: authError } = await adminClient.auth.admin.listUsers({
+        page,
+        perPage: PAGE_SIZE,
+      })
+
+      if (authError) {
+        console.error('Error fetching auth users:', authError)
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch users' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
+
+      for (const user of pageData.users) {
+        if (allowedSet.has(user.id) && user.email) {
+          emailMap[user.id] = user.email
+        }
+      }
+
+      if (pageData.users.length < PAGE_SIZE) break
     }
 
     console.log('Returning', Object.keys(emailMap).length, 'emails')

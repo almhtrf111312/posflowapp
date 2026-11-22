@@ -13,7 +13,7 @@ import { processDebtSaleBundleFromQueue } from '@/lib/cloud/debt-sale-handler';
 import { processCashSaleBundleFromQueue } from '@/lib/cloud/cash-sale-handler';
 import { processQuickPurchaseFromQueue, processPurchaseInvoiceFromQueue } from '@/lib/cloud/purchase-queue-processor';
 import { showToast } from '@/lib/toast-config';
-import { useNetworkStatus, checkRealInternetAccess, isAppOffline, isLocalDataMode } from '@/hooks/use-network-status';
+import { useNetworkStatus, checkRealInternetAccess, isAppOffline, isLocalDataMode, recheckConnectivityNow } from '@/hooks/use-network-status';
 import { ensureAccountEncryptionKey } from '@/lib/account-encryption-key';
 import { LOCAL_MODE_EVENT, CLOUD_WRITE_EVENT, isLocalOnlyMode, isCloudWriteBlocked, isSyncPendingSubscription } from '@/lib/subscription-lock';
 import { processGenericQueuedOperation } from '@/lib/cloud/sync-operation-processor';
@@ -404,8 +404,22 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     // ✅ في المزامنة الفورية بعد عملية البيع (forceDirect)، لا نحظر المعالجة بفحوصات خارجية بطيئة
     // بل نتصل مباشرة بـ Supabase لمعالجة الطابور، فإذا رد الخادم كان هذا إثباتاً قاطعاً للاتصال
     if (isLocalDataMode()) {
-      if (isAppOffline()) setHasInternetAccess(false);
-      return { success: false, processed: 0, failed: 0 };
+      // إذا كان السبب هو حالة offline قديمة مع وجود شبكة على الجهاز، نعيد الفحص فوراً بدلاً من الخروج الصامت
+      if (isAppOffline() && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
+        const reachable = await recheckConnectivityNow(5000);
+        setHasInternetAccess(reachable);
+      }
+      if (isLocalDataMode()) {
+        if (isAppOffline()) {
+          setHasInternetAccess(false);
+          if (!forceDirect) {
+            showToast.error('لا يوجد اتصال بالإنترنت', 'تعذّر الوصول إلى الخادم حالياً؛ ستتم المزامنة تلقائياً فور عودة الاتصال');
+          }
+        } else if (!forceDirect && isSyncPendingSubscription()) {
+          showToast.info('المزامنة السحابية معلّقة', 'يتطلب رفع البيانات اشتراكاً فعّالاً أو ربط رقم هاتف المالك بالحساب');
+        }
+        return { success: false, processed: 0, failed: 0 };
+      }
     }
     if (!forceDirect) {
       const hasInternet = await checkRealInternetAccess(3000);

@@ -46,6 +46,10 @@ export interface LicenseState {
   offlineLeaseReason: string | null;
   /** الترخيص مربوط بجهاز آخر (ليس إلغاءً للترخيص) */
   deviceMismatch?: boolean;
+  /** هل يملك صاحب المتجر رقم هاتف مسجلاً (مصدر الحقيقة من الخادم للكاشير والمالك) */
+  ownerHasPhone?: boolean;
+  /** هل يسمح الخادم بالكتابة السحابية للحساب الحالي */
+  hasPaidWriteAccess?: boolean;
 }
 
 interface LicenseContextType extends LicenseState {
@@ -167,6 +171,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     dataEncrypted: isDataEncrypted(),
     offlineLeaseBlocked: !getOfflineLeaseStatus().allowed,
     offlineLeaseReason: getOfflineLeaseStatus().reason,
+    ownerHasPhone: effectiveCache?.ownerHasPhone,
+    hasPaidWriteAccess: effectiveCache?.hasPaidWriteAccess,
   });
 
   // Safety failsafe: لا يبقى التحميل أكثر من 8 ثوانٍ، ولا يُمنح الدخول إلا من نسخة محفوظة صالحة فعلاً
@@ -335,6 +341,8 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         dataEncrypted: false,
         offlineLeaseBlocked: false,
         offlineLeaseReason: null,
+        ownerHasPhone: typeof data.ownerHasPhone === 'boolean' ? data.ownerHasPhone : undefined,
+        hasPaidWriteAccess: typeof data.hasPaidWriteAccess === 'boolean' ? data.hasPaidWriteAccess : undefined,
       };
 
       // Record successful server contact
@@ -453,20 +461,27 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('posflow:license-changed', handleLicenseChanged);
   }, [checkLicense]);
 
+  // اعتماد رقم هاتف المالك من الخادم (لحل حجب الكاشير الذي لا يملك هاتفاً شخصياً)
+  const effectiveHasPhone = state.ownerHasPhone !== undefined ? state.ownerHasPhone : hasPhone;
+
   // وضع التجربة المحلي: التجربة (غير المشتركة) لا ترفع بياناتها إلى السحابة
   useEffect(() => {
     if (state.isLoading) return;
-    const trialCanSync = hasPhone && state.isValid && (!state.expiresAt || new Date(state.expiresAt).getTime() > Date.now());
+    const notExpired = !state.expiresAt || new Date(state.expiresAt).getTime() > Date.now();
+    const trialCanSync = (state.hasPaidWriteAccess === true || effectiveHasPhone) && state.isValid && notExpired;
     setLocalOnlyMode(!!state.isTrial && !!state.hasLicense && state.role !== 'boss' && !trialCanSync);
-  }, [state.isLoading, state.isTrial, state.hasLicense, state.role, state.isValid, state.expiresAt, hasPhone]);
+  }, [state.isLoading, state.isTrial, state.hasLicense, state.role, state.isValid, state.expiresAt, effectiveHasPhone, state.hasPaidWriteAccess]);
 
   // حاجز الكتابة السحابية: مسموح فقط لمالك/كاشير برخصة مدفوعة فعّالة، أو للـ Boss
   useEffect(() => {
     if (state.isLoading) return;
     const notExpired = !state.expiresAt || new Date(state.expiresAt).getTime() > Date.now();
-    const paidActive = state.role === 'boss' || (state.hasLicense && (!state.isTrial || hasPhone) && state.isValid && notExpired);
+    const paidActive =
+      state.role === 'boss' ||
+      (state.hasPaidWriteAccess === true && state.isValid && notExpired) ||
+      (state.hasLicense && (!state.isTrial || effectiveHasPhone) && state.isValid && notExpired);
     setCloudWriteBlocked(!paidActive);
-  }, [state.isLoading, state.hasLicense, state.isTrial, state.isValid, state.expiresAt, state.role, hasPhone]);
+  }, [state.isLoading, state.hasLicense, state.isTrial, state.isValid, state.expiresAt, state.role, effectiveHasPhone, state.hasPaidWriteAccess]);
 
   return (
     <LicenseContext.Provider value={{ ...state, checkLicense, activateCode, startTrial }}>

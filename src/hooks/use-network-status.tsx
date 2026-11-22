@@ -48,6 +48,20 @@ export function isNetworkOnline(): boolean {
 }
 
 /**
+ * إعادة فحص فورية للاتصال الفعلي بالإنترنت وتحديث verifiedOffline فوراً.
+ * تُستدعى عند النقر اليدوي على زر المزامنة لمنع الخروج الصامت بسبب حالة offline قديمة.
+ */
+export async function recheckConnectivityNow(timeoutMs: number = 5000): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    publishVerifiedState(true);
+    return false;
+  }
+  const reachable = await checkRealInternetAccess(timeoutMs, { bypassCache: true });
+  publishVerifiedState(!reachable);
+  return reachable;
+}
+
+/**
  * Async check for the Capacitor/browser interface flag.
  * Kept for callers that need the raw interface state.
  */

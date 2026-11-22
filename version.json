@@ -1,8 +1,14 @@
 {
-  "versionCode": 648,
-  "versionName": "1.5.260",
-  "lastUpdated": "2026-11-22T21:39:44.621Z",
+  "versionCode": 649,
+  "versionName": "1.5.261",
+  "lastUpdated": "2026-11-22T21:41:48.971Z",
   "buildHistory": [
+    {
+      "versionCode": 649,
+      "versionName": "1.5.261",
+      "date": "2026-11-22",
+      "description": "Auto-bump on push (ed96771)"
+    },
     {
       "versionCode": 648,
       "versionName": "1.5.260",
@@ -116,12 +122,6 @@
       "versionName": "1.5.242",
       "date": "2026-11-22",
       "description": "Auto-bump on push (4b92c3e)"
-    },
-    {
-      "versionCode": 629,
-      "versionName": "1.5.241",
-      "date": "2026-11-22",
-      "description": "Auto-bump on push (d1e9a5c)"
     }
   ]
 }

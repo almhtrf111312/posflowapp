@@ -42,4 +42,8 @@ verify_jwt = false
 [functions.telegram-auth]
 verify_jwt = false
 
+# Called by database triggers (net.http_post) without a user JWT; it checks the shared secret itself.
+[functions.send-boss-push]
+verify_jwt = false
+
 

@@ -11,7 +11,8 @@ import { addToHistory, updateHistoryStatus } from './sync-history';
 import { isGuestDemoMode } from './demo-data';
 import { isCloudWriteBlocked } from './subscription-lock';
 import { isOperationCancelled } from './cancellation-registry';
-import { getCurrentUserId, getKnownTenantId, getOwnerIdForInsert } from './supabase-store';
+import { getCurrentUserId, getKnownTenantId, getOwnerIdForInsert, setCurrentUserId } from './supabase-store';
+import { supabase } from '@/integrations/supabase/client';
 
 // Storage key
 const SYNC_QUEUE_KEY = 'sync_queue';
@@ -136,6 +137,15 @@ const isTerminalSyncError = (message: string): boolean => {
     'بصلاحية مالك المتجر فقط',
     // دين أو فاتورة مشطوبة (المرحلة 2): الخادم يرفض أي دفعة أو استرداد عليها نهائياً
     'مشطوب',
+    // أخطاء مخطط أو قيود دائمة في PostgreSQL/PostgREST: إعادة المحاولة لن تصلحها، تُعزل فوراً دون تجميد الطابور
+    'pgrst204',
+    '42703',
+    '22p02',
+    '23502',
+    '23503',
+    'an open cash shift for this purchase is required',
+    'الوردية غير موجودة',
+    'عملية شراء قديمة',
   ].some(fragment => normalized.includes(fragment));
 };
 
@@ -190,7 +200,10 @@ export interface SyncQueueStatus {
 // ============= State =============
 
 let isProcessing = false;
+let processingStartedAt: number | null = null;
 let lastSyncTime: string | null = null;
+const PROCESSING_LOCK_STALE_MS = 60_000;
+const OPERATION_TIMEOUT_MS = 25_000;
 
 // ============= Core Functions =============
 
@@ -502,8 +515,14 @@ export const processQueue = async (
   }
 
   if (isProcessing) {
-    console.log('[SyncQueue] Already processing, skipping...');
-    return { processed: 0, failed: 0 };
+    if (processingStartedAt && Date.now() - processingStartedAt > PROCESSING_LOCK_STALE_MS) {
+      console.warn('[SyncQueue] Stale processing lock detected (>60s), resetting lock');
+      isProcessing = false;
+      processingStartedAt = null;
+    } else {
+      console.log('[SyncQueue] Already processing, skipping...');
+      return { processed: 0, failed: 0 };
+    }
   }
 
   // الحساب غير مدفوع (تجربة/منتهٍ/غير مفعّل): لا إرسال، والعمليات تبقى في الطابور كما هي
@@ -512,7 +531,16 @@ export const processQueue = async (
     return { processed: 0, failed: 0 };
   }
 
-  const sessionUserId = getCurrentUserId();
+  let sessionUserId = getCurrentUserId();
+  if (!sessionUserId) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.user?.id) {
+        sessionUserId = data.session.user.id;
+        setCurrentUserId(sessionUserId);
+      }
+    } catch { /* resolved on the next run */ }
+  }
   if (!getKnownTenantId()) {
     try { await getOwnerIdForInsert(); } catch { /* resolved on the next run */ }
   }
@@ -528,6 +556,7 @@ export const processQueue = async (
   }
   
   isProcessing = true;
+  processingStartedAt = Date.now();
   emitEvent(EVENTS.SYNC_QUEUE_UPDATED, getQueueStatus());
   
   let processed = 0;
@@ -599,7 +628,12 @@ export const processQueue = async (
       updateHistoryStatus(operation.id, 'syncing');
       
       try {
-        const success = await processor(operation);
+        const success = await Promise.race([
+          processor(operation),
+          new Promise<boolean>((_, reject) =>
+            setTimeout(() => reject(new Error('Operation timed out after 25s')), OPERATION_TIMEOUT_MS)
+          ),
+        ]);
         if (getCurrentUserId() !== sessionUserId || getKnownTenantId() !== sessionTenant) break;
         
         if (success) {
@@ -625,8 +659,12 @@ export const processQueue = async (
       } catch (error) {
         const errorMessage = extractErrorMessage(error);
         if (isNetworkSyncError(errorMessage)) {
-          deferForNetwork(operation);
-          break;
+          const isTimeoutOnly = errorMessage.toLowerCase().includes('timed out') || errorMessage.toLowerCase().includes('aborted');
+          if (!isTimeoutOnly || !syncNetworkHooks || !(await syncNetworkHooks.probe())) {
+            deferForNetwork(operation);
+            break;
+          }
+          // الإنترنت فعّال لكن العملية وحدها استغرقت مهلة طويلة: تُحسب محاولة فاشلة كي لا تجمّد الطابور للأبد
         }
         // رفض الخادم بسبب الاشتراك (trigger a_paid_write_gate): تأجيل بلا احتساب محاولة، وإيقاف الدفعة
         if (errorMessage.toLowerCase().includes('subscription_required')) {
@@ -668,6 +706,7 @@ export const processQueue = async (
     
   } finally {
     isProcessing = false;
+    processingStartedAt = null;
     emitEvent(EVENTS.SYNC_QUEUE_UPDATED, getQueueStatus());
   }
   
@@ -767,10 +806,3 @@ export const addToQueueIfNotExists = (
   
   return addToQueue(type, { ...data, uniqueKey }, maxRetries);
 };
-
-
-
-
-
-
-

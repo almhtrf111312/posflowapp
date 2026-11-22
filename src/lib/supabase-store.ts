@@ -362,24 +362,21 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'id', 'user_id', 'invoice_number', 'invoice_sequence', 'invoice_type', 'date', 'time',
     'cashier_id', 'cashier_name', 'customer_id', 'customer_name', 'customer_phone',
     'subtotal', 'discount', 'discount_percentage', 'tax_rate', 'tax_amount', 'total',
-    'profit', 'currency', 'exchange_rate', 'payment_type', 'status', 'debt_paid',
-    'debt_remaining', 'notes', 'operation_id', 'warehouse_id',
-    // ✅ الأعمدة المعتمدة والموجودة فعلياً:
-    'tax_inclusive', 'settlement_kind', 'settlement_diff_usd',
+    'profit', 'currency', 'currency_code', 'currency_symbol', 'exchange_rate', 'payment_type',
+    'payment_method', 'status', 'debt_paid', 'debt_remaining', 'notes', 'operation_id', 'warehouse_id',
+    'tax_mode', 'tax_inclusive', 'paid_at_sale', 'total_in_currency', 'settlement_kind', 'settlement_diff_usd',
     'created_at', 'updated_at'
   ],
   invoice_items: [
-    'id', 'invoice_id', 'product_id', 'product_name', 'barcode', 'category', 'quantity',
-    'unit_price', 'cost_price', 'amount_original', 'amount_usd', 'profit', 'unit',
-    'conversion_factor', 'stock_warehouse_id', 'created_at'
+    'id', 'invoice_id', 'product_id', 'product_name', 'variant_id', 'variant_name', 'quantity',
+    'unit_price', 'cost_price', 'currency', 'exchange_rate', 'amount_original', 'amount_usd',
+    'profit', 'unit', 'conversion_factor', 'stock_warehouse_id', 'warranty_until'
   ],
-  // ✅ إصلاح N-04: تمكين الحقول المعتمدة للمنتجات
   products: [
     'id', 'user_id', 'name', 'barcode', 'barcode2', 'barcode3', 'variant_label', 'category',
     'cost_price', 'sale_price', 'wholesale_price', 'quantity', 'min_stock_level', 'expiry_date',
-    'image_url', 'custom_fields', 'purchase_history', 'is_taxable', 'tax_rate', 'track_stock',
-    'is_active', 'archived', 'labor_cost', 'bulk_unit', 'small_unit', 'conversion_factor',
-    'bulk_cost_price', 'bulk_sale_price', 'track_by_unit',
+    'image_url', 'custom_fields', 'purchase_history', 'archived', 'labor_cost', 'bulk_unit',
+    'small_unit', 'conversion_factor', 'bulk_cost_price', 'bulk_sale_price', 'track_by_unit',
     'unit', 'supplier', 'location', 'notes', 'description', 'warranty_months', 'track_serials',
     'serial_number', 'batch_number', 'weight', 'size', 'color', 'fabric_type',
     'author', 'publisher', 'table_number', 'order_notes',
@@ -392,7 +389,9 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
   cash_shifts: [
     'id', 'user_id', 'cashier_id', 'cashier_name', 'opened_at', 'closed_at',
     'opening_balance', 'expected_balance', 'actual_balance', 'variance',
-    'variance_reason', 'reconciliation_status', 'notes', 'created_at', 'updated_at'
+    'variance_reason', 'reconciliation_status', 'notes', 'opening_by_currency',
+    'currency_counts', 'variance_decision', 'variance_resolved_by', 'variance_resolved_at',
+    'variance_note', 'created_at', 'updated_at'
   ],
   shift_transactions: [
     'id', 'user_id', 'shift_id', 'type', 'amount', 'reference_id', 'notes',
@@ -403,7 +402,9 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'id', 'user_id', 'invoice_number', 'supplier_name', 'supplier_company', 'invoice_date',
     'expected_items_count', 'expected_total_quantity', 'expected_grand_total',
     'actual_items_count', 'actual_total_quantity', 'actual_grand_total',
-    'status', 'notes', 'image_url', 'supplier_id', 'amount_paid', 'paid_from', 'paid_shift_id', 'payment_method', 'created_at', 'updated_at'
+    'status', 'notes', 'image_url', 'replaced_by', 'operation_id', 'edit_reason',
+    'payment_status', 'payment_method', 'supplier_id', 'amount_paid', 'paid_from',
+    'paid_shift_id', 'paid_currency', 'paid_currency_amount', 'paid_rate', 'created_at', 'updated_at'
   ],
   purchase_invoice_items: [
     'id', 'invoice_id', 'product_id', 'product_name', 'barcode', 'category',
@@ -411,17 +412,19 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
   ],
   customers: [
     'id', 'user_id', 'cashier_id', 'name', 'phone', 'email', 'address',
-    'total_debt', 'total_purchases', 'invoice_count', 'last_purchase', 'created_at', 'updated_at'
+    'total_debt', 'total_purchases', 'invoice_count', 'last_purchase', 'credit_limit',
+    'created_at', 'updated_at'
   ],
   debts: [
-    'id', 'user_id', 'cashier_id', 'customer_name', 'customer_phone', 'invoice_id',
+    'id', 'user_id', 'cashier_id', 'customer_id', 'customer_name', 'customer_phone', 'invoice_id',
     'total_debt', 'total_paid', 'remaining_debt', 'status', 'due_date', 'notes',
     'is_cash_debt', 'created_at', 'updated_at'
   ],
   expenses: [
     'id', 'user_id', 'cashier_id', 'expense_type', 'amount', 'description',
     'distributions', 'date', 'notes', 'status', 'is_reversed', 'reversed_at',
-    'reversed_by', 'reversed_reason', 'reversal_reason', 'created_at'
+    'reversed_by', 'reversed_reason', 'reversal_reason',
+    'original_currency', 'original_amount', 'exchange_rate', 'created_at'
   ],
   categories: [
     'id', 'user_id', 'name', 'created_at'
@@ -434,31 +437,31 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'id', 'user_id', 'actor_id', 'actor_name', 'actor_role', 'action_type',
     'description', 'entity_id', 'entity_name', 'entity_type', 'metadata', 'created_at'
   ],
-  // ✅ إصلاح BUG-01: تمكين كافة الحقول المحاسبية للشركاء
   partners: [
-    'id', 'user_id', 'name', 'phone', 'email', 'percentage', 'share_percentage', 'notes',
-    'capital', 'current_balance', 'total_profit_earned', 'total_withdrawn',
-    'expense_share_percentage', 'shares_expenses', 'confirmed_profit', 'pending_profit',
-    'profit_history', 'withdrawal_history', 'expense_history', 'category_shares',
-    'is_full_partner', 'joined_at', 'status', 'is_active', 'created_at', 'updated_at'
+    'id', 'user_id', 'name', 'phone', 'email', 'initial_capital', 'current_capital',
+    'share_percentage', 'expense_share_percentage', 'access_all', 'category_shares',
+    'total_profit_earned', 'total_withdrawn', 'current_balance', 'pending_profit',
+    'confirmed_profit', 'pending_profit_details', 'profit_history', 'expense_history',
+    'capital_history', 'withdrawal_history', 'joined_date', 'created_at', 'updated_at'
   ],
   warehouses: [
-    'id', 'user_id', 'name', 'location', 'type', 'is_default', 'is_active', 'notes',
-    'created_at', 'updated_at'
+    'id', 'user_id', 'name', 'type', 'assigned_cashier_id', 'address', 'phone',
+    'is_default', 'is_active', 'created_at', 'updated_at'
   ],
   warehouse_stock: [
-    'id', 'warehouse_id', 'product_id', 'quantity', 'last_updated', 'created_at'
+    'id', 'warehouse_id', 'product_id', 'quantity', 'quantity_bulk', 'last_updated'
   ],
   recurring_expenses: [
     'id', 'user_id', 'name', 'expense_type', 'custom_type', 'amount', 'description',
     'interval', 'interval_days', 'next_due_date', 'last_paid_date', 'auto_pay',
-    'currency', 'original_amount', // ✅ الأعمدة الفعلية المضافة بالهجرة
+    'auto_pay_account', 'payment_method', 'currency', 'original_amount',
     'notes', 'is_active', 'created_at', 'updated_at'
   ],
   accounting_period_closures: [
     'id', 'user_id', 'period_start', 'period_end',
     'total_revenue', 'total_cogs', 'gross_profit',
     'total_expenses', 'net_profit', 'partner_distributions',
+    'bad_debt_loss', 'closing_timezone', 'pending_profit', 'realized_profit',
     'closed_by', 'created_at'
   ]
 };

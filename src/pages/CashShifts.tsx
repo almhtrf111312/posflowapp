@@ -85,7 +85,8 @@ export default function CashShifts() {
   const { isOwner } = useUserRole();
   const closeShiftGuard = useActionGuard();
 
-  const enabledCurrencies = useMemo(() => getEnabledCurrencies(), []);
+  // Read on every render so currency/exchange-rate changes apply while the page is open
+  const enabledCurrencies = getEnabledCurrencies();
   const usdCurrency = enabledCurrencies.find(currency => currency.code === 'USD');
   const formatUsd = (amount: number) => formatCurrency(
     amount,

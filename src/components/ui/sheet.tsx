@@ -29,7 +29,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  "fixed z-50 gap-4 bg-background p-4 sm:p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:duration-300",
   {
     variants: {
       side: {
@@ -57,7 +57,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       <SheetOverlay />
       <SheetPrimitive.Content ref={ref} data-sheet-side={side} className={cn(sheetVariants({ side }), className)} {...props}>
         {children}
-        <SheetPrimitive.Close className="absolute end-4 top-[calc(var(--app-safe-top,0px)+1rem)] h-8 w-8 inline-flex items-center justify-center rounded-full bg-muted/60 text-muted-foreground opacity-80 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:bg-muted hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-10">
+        <SheetPrimitive.Close className="absolute end-4 top-[calc(var(--app-safe-top,0px)+1rem)] h-9 w-9 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-full bg-muted/60 text-muted-foreground opacity-80 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:bg-muted hover:opacity-100 active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-10">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
@@ -73,7 +73,7 @@ const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElemen
 SheetHeader.displayName = "SheetHeader";
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 sticky bottom-0 bg-background/95 backdrop-blur-none z-10 pt-2 mt-auto", className)} {...props} />
+  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sticky bottom-0 bg-background/95 backdrop-blur-none z-10 pt-2 pb-[env(safe-area-inset-bottom,0px)] mt-auto", className)} {...props} />
 );
 SheetFooter.displayName = "SheetFooter";
 

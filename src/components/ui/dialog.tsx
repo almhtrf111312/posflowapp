@@ -70,7 +70,7 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 flex flex-col w-[min(calc(100vw-1rem),42rem)] max-h-[calc(100dvh-2rem-var(--app-safe-top,0px)-env(safe-area-inset-bottom,0px))] translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background p-4 sm:p-6 shadow-lg duration-200 overflow-y-auto rounded-2xl dialog-content-layer data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+          "fixed left-[50%] top-[50%] z-50 flex flex-col w-[min(calc(100vw-1rem),42rem)] max-h-[calc(100dvh-2rem-var(--app-safe-top,0px)-env(safe-area-inset-bottom,0px))] translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background p-4 sm:p-6 shadow-lg duration-200 overflow-y-auto rounded-[24px] dialog-content-layer data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
           isScannerActive && "!hidden !invisible !opacity-0 pointer-events-none",
           className,
         )}
@@ -78,7 +78,7 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute end-3.5 top-3.5 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground opacity-80 ring-offset-background transition-opacity hover:bg-muted hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+        <DialogPrimitive.Close className="absolute end-3.5 top-3.5 z-10 inline-flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground opacity-80 ring-offset-background transition-opacity hover:bg-muted hover:opacity-100 active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>

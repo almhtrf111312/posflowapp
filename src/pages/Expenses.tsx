@@ -292,8 +292,8 @@ export default function Expenses() {
         return;
       }
 
-      // ✅ خصم المبلغ من الصندوق بعملة المصروف الأصلية والدولار
-      processExpense(amountUSD, formData.type, undefined, undefined, undefined, expenseCurrency, formData.amount);
+      // ✅ خصم المبلغ من الصندوق بعملة المصروف الأصلية وسعر صرفها، مع ربط الحركة بمعرّف المصروف نفسه
+      processExpense(amountUSD, formData.type, undefined, undefined, created.id, expenseCurrency, formData.amount, selectedCurrencyDef.rate);
 
       const [expensesData, statsData] = await Promise.all([
         loadExpensesCloud(),
@@ -305,6 +305,9 @@ export default function Expenses() {
       resetForm();
       toast.success(t('expenses.expenseAdded'));
       import('@/lib/activity-log').then(({ logActivity }) => logActivity('expense_added', `إضافة مصروف (${formData.type}): ${amountUSD}`, { id: created.id, amount: amountUSD, type: formData.type }));
+    } catch (err) {
+      // رفض الخادم (مثل فترة مغلقة) يُعرض برسالته الحقيقية بدل نجاح وهمي
+      toast.error(err instanceof Error && err.message ? err.message : (t('expenses.addError') || 'فشل في إضافة المصروف'));
     } finally {
       savingRef.current = false;
       setIsSaving(false);
@@ -344,7 +347,7 @@ export default function Expenses() {
 
       if (recurringForm.payImmediately) {
         const todayStr = toLocalDateString(new Date());
-        await addExpenseCloud({
+        const createdRecurringPayment = await addExpenseCloud({
           type: recurringForm.type,
           customType: recurringForm.customType || recurringForm.name,
           amount: amountUSD,
@@ -354,8 +357,9 @@ export default function Expenses() {
           notes: `${recurringForm.name} - دفعة سداد فوري لمصروف ثابت${currencySuffix}`,
           date: todayStr,
         });
+        if (!createdRecurringPayment) throw new Error('فشل إنشاء دفعة المصروف الثابت');
 
-        processExpense(amountUSD, recurringForm.type, undefined, undefined, undefined, curr, recurringForm.amount);
+        processExpense(amountUSD, recurringForm.type, undefined, undefined, createdRecurringPayment.id, curr, recurringForm.amount, currDef.rate);
 
         const nextDate = new Date(recurringForm.startDate || todayStr);
         nextDate.setDate(nextDate.getDate() + (recurringForm.intervalDays || 30));
@@ -480,7 +484,9 @@ export default function Expenses() {
       toast.success(`تم استرداد المصروف وإعادة ${m.fmt(reversedAmount)} للصندوق`);
       import('@/lib/activity-log').then(({ logActivity }) => logActivity('expense_refund', `استرداد وتراجع عن مصروف (${reversedType}): +${reversedAmount}`, { id: reversedId, amount: reversedAmount, type: reversedType }));
     } catch (error) {
-      toast.error(t('expenses.reverseError') || 'فشل التراجع عن المصروف');
+      // لا رسالة نجاح عند فشل الخادم: نعرض السبب الحقيقي الوارد من Supabase
+      const reason = error instanceof Error && error.message ? error.message : '';
+      toast.error(reason || t('expenses.reverseError') || 'فشل التراجع عن المصروف');
     }
   };
 

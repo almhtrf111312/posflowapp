@@ -1051,11 +1051,35 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
   const targetDebtPaid = targetInvoice ? (Number(targetInvoice.debtPaid) || 0) : 0;
   const isTargetCash = targetInvoice ? targetInvoice.paymentType === 'cash' : false;
   const isTargetDebt = targetInvoice ? targetInvoice.paymentType === 'debt' : false;
+  // الفاتورة الإلكترونية لا تمسّ الصندوق النقدي إطلاقاً
+  const isTargetDigital = targetInvoice?.paymentMethod === 'digital';
+
+  // الوردية المفتوحة الحالية: الدالة الذرية تسجل حركة الصندوق وتحدّث expected_balance داخل نفس المعاملة
+  const { getActiveShift } = await import('../cashbox-store');
+  const activeShiftId = getActiveShift()?.id || null;
+
+  // المبلغ النقدي بالدولار كما يحسبه الخادم (الكاش = إجمالي الفاتورة، الدين = المدفوع منها)
+  const serverCashUsd = isTargetDigital ? 0
+    : (isTargetDebt
+      ? Math.min(Number(targetInvoice?.total) || 0, Math.max(targetDebtPaid, Number(targetInvoice?.paidAtSale) || 0))
+      : (Number(targetInvoice?.total) || 0));
+  const refundCurrency = (targetInvoice?.currency || 'USD').toUpperCase();
+  const refundRate = Number(targetInvoice?.exchangeRate) || 1;
+  const refundCurrencyAmount = serverCashUsd > 0
+    ? Math.round(serverCashUsd * refundRate * 100) / 100
+    : null;
 
   // Stock, debt, customer totals, and invoice status are committed in one locked
   // database transaction. Only the first caller can receive success=true.
   // ⏱️ مهلة أمان قصيرة (3.5 ثوانٍ) لمنع تجمد التطبيق عند تشغيل VPN معطوب
-  const rpcPromise = supabase.rpc('refund_invoice_atomic', { _invoice_number: id, _source: source });
+  const rpcPromise = supabase.rpc('refund_invoice_atomic', {
+    _invoice_number: id,
+    _source: source,
+    _shift_id: isTargetDigital ? null : activeShiftId,
+    _currency: refundCurrency,
+    _currency_amount: refundCurrencyAmount,
+    _exchange_rate: refundRate,
+  });
   const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
     setTimeout(() => resolve({ data: null, error: { message: 'Network timeout (VPN or slow connection)' } }), 3500)
   );
@@ -1127,12 +1151,13 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
     console.warn('[refundInvoiceCloud] Error updating cache for refunded items:', err);
   }
 
-  // حساب النقدية الواجب إرجاعها (كاش كامل أو دفعة دين سابقة)
-  const cashToRefund = isTargetCash
+  // حساب النقدية الواجب إرجاعها (كاش كامل أو دفعة دين سابقة) — الإلكترونية = صفر
+  const cashToRefund = isTargetDigital ? 0 : (isTargetCash
     ? (Number(atomic.invoice_total) || Number(targetInvoice?.total) || 0)
-    : (isTargetDebt ? targetDebtPaid : 0);
+    : (isTargetDebt ? targetDebtPaid : 0));
 
-  // ✅ الخصم الفوري من الوردية النشطة وصندوق النقدية لمنع العجز الوهمي في درج الكاشير
+  // ✅ حركة الصندوق سُجّلت سحابياً وذرياً داخل refund_invoice_atomic (مع تحديث expected_balance).
+  // هنا نحدّث الحالة المحلية فقط (syncCloud=false) حتى لا تُسجَّل الحركة مرتين.
   if (cashToRefund > 0) {
     try {
       const { recordRefundInShift } = await import('../cashbox-store');
@@ -1142,10 +1167,13 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
         cashToRefund,
         refundedProfit,
         refundedCogs,
-        id
+        id,
+        refundCurrency,
+        refundCurrency === 'USD' ? undefined : Math.round(cashToRefund * refundRate * 100) / 100,
+        false
       );
     } catch (shiftErr) {
-      console.warn('[refundInvoiceCloud] Failed to record refund in shift:', shiftErr);
+      console.warn('[refundInvoiceCloud] Failed to update local shift state:', shiftErr);
     }
   }
 
@@ -1258,10 +1286,24 @@ export const refundInvoicePartialCloud = async (
 
   const opId = operationId || (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `pr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
 
+  // الوردية المفتوحة + عملة الفاتورة الأصلية وسعر صرفها: الدالة تسجل حركة الصندوق وتحدّث expected_balance ذرياً
+  const { getActiveShift } = await import('../cashbox-store');
+  const activeShiftId = getActiveShift()?.id || null;
+  const partialInvoice = (invoicesCache || loadInvoicesFromLocalCache() || []).find(i => i.id === invoiceNumber);
+  const partialCurrency = (partialInvoice?.currency || 'USD').toUpperCase();
+  const partialRate = Number(partialInvoice?.exchangeRate) || 1;
+
+  // ملاحظة: _currency_amount لا يُمرَّر هنا عمداً. مبلغ النقد الفعلي يعتمد على نسبة الخصم/الضريبة
+  // ومدفوعات الدين داخل الخادم (من صف مقفل)، وتقديره من الواجهة قد يخالفه فيُرفض مرتجع صحيح بخطأ "تعارض في تحويل العملة".
+  // الخادم يحسب المبلغ بالعملة = cash × سعر الصرف بنفسه.
   const { data, error } = await sb.rpc('refund_invoice_partial_atomic', {
     _invoice_number: invoiceNumber,
     _items: items,
     _operation_id: opId,
+    _shift_id: activeShiftId,
+    _currency: partialCurrency,
+    _currency_amount: null,
+    _exchange_rate: partialRate,
   });
   if (error) return fail(error.message || 'فشل الاسترداد الجزئي');
 
@@ -1278,13 +1320,21 @@ export const refundInvoicePartialCloud = async (
   const newInvoiceTotal = Number(r.new_total ?? r.new_invoice_total ?? 0) || 0;
   const alreadyProcessed = r.already_processed === true;
 
-  // خصم النقدية من الوردية النشطة (مرة واحدة فقط)
+  // حركة الصندوق سُجّلت ذرياً في الخادم (مرة واحدة) — هنا تحديث الحالة المحلية فقط دون كتابة سحابية مكررة
   if (!alreadyProcessed && cashToRefund > 0) {
     try {
       const { recordRefundInShift } = await import('../cashbox-store');
-      recordRefundInShift(cashToRefund, refundedProfit, refundedCogs, invoiceNumber);
+      recordRefundInShift(
+        cashToRefund,
+        refundedProfit,
+        refundedCogs,
+        invoiceNumber,
+        partialCurrency,
+        partialCurrency === 'USD' ? undefined : Math.round(cashToRefund * partialRate * 100) / 100,
+        false
+      );
     } catch (e) {
-      console.warn('[refundInvoicePartialCloud] Failed to record refund in shift:', e);
+      console.warn('[refundInvoicePartialCloud] Failed to update local shift state:', e);
     }
   }
 

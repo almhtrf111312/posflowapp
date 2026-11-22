@@ -1016,8 +1016,15 @@ export default function Invoices() {
 
     let cashToReturn = 0;
     let debtReduction = 0;
+    // الفاتورة الإلكترونية لا تُرجع شيئاً من الصندوق النقدي
+    const isDigitalInvoice = invoiceToRefund.paymentMethod === 'digital';
 
-    if (invoiceToRefund.paymentType === 'debt') {
+    if (isDigitalInvoice) {
+      debtReduction = invoiceToRefund.paymentType === 'debt'
+        ? Math.min(totalRefundAmount, Number(invoiceToRefund.debtRemaining ?? (invoiceToRefund.total - (invoiceToRefund.debtPaid ?? 0))))
+        : 0;
+      cashToReturn = 0;
+    } else if (invoiceToRefund.paymentType === 'debt') {
       const debtRemaining = Number(invoiceToRefund.debtRemaining ?? (invoiceToRefund.total - (invoiceToRefund.debtPaid ?? 0)));
       if (totalRefundAmount <= debtRemaining) {
         debtReduction = totalRefundAmount;
@@ -1463,10 +1470,22 @@ export default function Invoices() {
 
       const paymentRatio = remainingNow > 0 ? finalPaymentUSD / remainingNow : 1;
 
-      await recordPaymentWithInvoiceSyncCloud(selectedDebtForPayment.id, finalPaymentUSD, paymentOpIdRef.current);
+      // الوردية المفتوحة + العملة الأصلية وسعر الصرف: الدالة الذرية تسجل حركة الصندوق وتفصل فرق التقريب
+      const { getActiveShift } = await import('@/lib/cashbox-store');
+      const currentShiftId = getActiveShift()?.id || undefined;
+      await recordPaymentWithInvoiceSyncCloud(
+        selectedDebtForPayment.id,
+        finalPaymentUSD,
+        paymentOpIdRef.current,
+        paymentCurrency,
+        parseFloat(paymentAmountInput) || finalPaymentUSD,
+        currentRate,
+        'cash',
+        currentShiftId
+      );
       paymentOpIdRef.current = `debtpay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-      // إضافة المبلغ للصندوق وتحديث الوردية
+      // تحديث الحالة المحلية للوردية (الحركة السحابية سجلتها الدالة الذرية مرة واحدة)
       processDebtPayment(
         finalPaymentUSD,
         (selectedDebtForPayment as any).customerId,
@@ -2966,7 +2985,7 @@ export default function Invoices() {
                 </div>
                 <p className="leading-relaxed">
                   {refundMode === 'full' ? (
-                    (invoiceToRefund.debtPaid || 0) > 0 ? (
+                    (invoiceToRefund.debtPaid || 0) > 0 && invoiceToRefund.paymentMethod !== 'digital' ? (
                       language === 'en' ? (
                         <>
                           ⚠️ <strong>Cash refund to customer:</strong> The customer previously paid <strong>{formatCurrency((invoiceToRefund.debtPaid || 0) * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</strong>. This amount must be paid to the customer in cash, <strong>and will be automatically deducted from the cash drawer / current shift</strong>, canceling all remaining debt.

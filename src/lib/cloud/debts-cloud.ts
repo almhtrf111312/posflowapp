@@ -438,24 +438,18 @@ export const recordPaymentCloud = async (
   const opId = operationId || `debtpay_${debtId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const amt = round8(amount);
 
-  // حركة النقدية في الوردية تُسجَّل مرة واحدة فقط بعد قبول الدفعة أو وضعها في طابور المزامنة
-  const recordShiftCash = () => {
-    if (method !== 'cash') return;
-    import('./cashbox-cloud').then(({ syncActiveShiftTransactionCloud }) => {
-      void syncActiveShiftTransactionCloud(
-        'debt_payment',
-        amt,
-        currency,
-        currencyAmount,
-        opId,
-        'قبض دفعة دين',
-        exchangeRate
-      );
-    }).catch(() => {});
+  // حركة الصندوق سحابياً تُسجَّلها الدالة الذرية record_debt_payment_atomic داخل نفس المعاملة
+  // (وتحدّث expected_balance وتفصل فرق التقريب). الحالة المحلية للوردية تحدَّثها الواجهة عبر processDebtPayment.
+  const resolveCashShiftId = async (): Promise<string | null> => {
+    if (method !== 'cash') return null; // التحويل البنكي لا يدخل الصندوق النقدي
+    if (shiftId) return shiftId;
+    const { getActiveShift } = await import('../cashbox-store');
+    return getActiveShift()?.id || null;
   };
 
   const queuePayment = (): Debt | null => {
     addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: shiftId || null }, 10);
+    // الحالة المحلية فقط؛ الحركة السحابية تُسجَّل عند المزامنة عبر الدالة الذرية
     const list = (debtsCache || loadDebtsLocally() || []).map(d => {
       if (d.id !== debtId) return d;
       const totalPaid = round8((d.totalPaid || 0) + amt);
@@ -464,21 +458,22 @@ export const recordPaymentCloud = async (
     });
     debtsCache = list; cacheTimestamp = Date.now(); saveDebtsLocally(list);
     emitEvent(EVENTS.DEBTS_UPDATED, null);
-    recordShiftCash();
     return list.find(d => d.id === debtId) || null;
   };
   if (isLocalDataMode()) return queuePayment();
-  // لا نمرر _shift_id للخادم: حركة الوردية تُسجَّل من الواجهة مرة واحدة (كان المبلغ يُضاف للوردية مرتين أو ثلاثاً)
-  const rpcArgs: Record<string, unknown> = {
+  const cashShiftId = await resolveCashShiftId();
+  const { data, error } = await sb.rpc('record_debt_payment_atomic', {
     _debt_id: debtId,
     _amount: amt,
     _operation_id: opId,
-  };
-  const { data, error } = await sb.rpc('record_debt_payment_atomic', rpcArgs);
+    _shift_id: cashShiftId,
+    _currency: currency,
+    _currency_amount: currencyAmount ?? null,
+    _exchange_rate: exchangeRate ?? null,
+  });
   if (error) {
     throw new Error(error.message || 'فشل تسجيل الدفعة');
   }
-  recordShiftCash();
   const res = (data || {}) as Record<string, unknown>;
   invalidateDebtsCache();
   import('./partners-cloud').then(({ invalidatePartnersCache }) => {

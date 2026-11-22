@@ -184,7 +184,7 @@ export async function payRecurringExpense(id: string): Promise<boolean> {
     const dynamicUsdAmount = curr !== 'USD' ? round8(toUsd(originalAmt, curr, currDef.rate)) : round8(expense.amount);
 
     // 2. Add as regular cloud expense with currency breakdown
-    await addExpenseCloud({
+    const createdExpense = await addExpenseCloud({
       type: expense.type,
       customType: expense.customType || expense.name,
       amount: dynamicUsdAmount,
@@ -194,9 +194,10 @@ export async function payRecurringExpense(id: string): Promise<boolean> {
       notes: `${expense.name} - مصروف ثابت متكرر`,
       date: todayStr,
     });
+    if (!createdExpense) throw new Error('فشل إنشاء المصروف الثابت');
 
-    // 3. خصم المبلغ من الصندوق وتسجيله كمصروف تشغيلي بالعملة الأصلية والدولار
-    processExpense(dynamicUsdAmount, expense.type, undefined, undefined, undefined, curr, originalAmt);
+    // 3. خصم المبلغ من الصندوق وتسجيله كمصروف تشغيلي بالعملة الأصلية وسعر صرفها (مرجع الحركة = معرّف المصروف)
+    processExpense(dynamicUsdAmount, expense.type, undefined, undefined, createdExpense.id, curr, originalAmt, currDef.rate);
     
     // 3. Calculate next due date strictly into the future
     const todayDate = new Date();

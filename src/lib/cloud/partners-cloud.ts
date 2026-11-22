@@ -378,9 +378,32 @@ export const addCapitalCloud = async (
   });
 };
 
+const PARTNER_OFFLINE_MSG = 'العمليات المالية للشركاء (إيداع/سحب) تتطلب اتصالاً بالخادم ولا تُنفَّذ أوفلاين. لم يتم أي تعديل.';
+
+/** تحقق من تطابق المبلغ الأصلي مع المعادل بالدولار × سعر الصرف قبل إرسال أي طلب للخادم */
+const assertFxConsistent = (amountUsd: number, originalAmount: number, rate: number, label: string) => {
+  if (!(amountUsd > 0)) throw new Error(`المبلغ بالدولار غير صالح (${label})`);
+  if (!(rate > 0)) throw new Error(`سعر الصرف غير صالح (${label})`);
+  const expected = Math.round(amountUsd * rate * 100) / 100;
+  if (Math.abs(originalAmount - expected) > Math.max(0.05, expected * 0.01)) {
+    throw new Error(`تعارض في تحويل العملة (${label}): المبلغ الأصلي ${originalAmount} لا يطابق ${amountUsd} × ${rate} = ${expected}`);
+  }
+};
+
+const resolveActiveShiftIdForPartner = async (): Promise<string | null> => {
+  try {
+    const { getActiveShift } = await import('../cashbox-store');
+    const activeShift = getActiveShift();
+    return activeShift?.id && activeShift.id.length >= 32 ? activeShift.id : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
- * ✅ دالة محسّنة: إضافة رأس مال مع تحديث الصندوق تلقائياً
- * هذه الدالة تضيف رأس المال للشريك + ترفع رصيد الصندوق (تعمل بدون وردية)
+ * ✅ إضافة رأس مال/رصيد لشريك — التنفيذ الذري الوحيد عبر partner_deposit_atomic
+ * الخادم يسجل حركة الصندوق ويحدّث expected_balance داخل نفس المعاملة، لذا لا تُكتب حركة صندوق من الواجهة.
+ * أي رفض من الخادم يُرمى بخطأ حقيقي ولا تُعدَّل الحالة المحلية.
  */
 export const addCapitalWithCashboxCloud = async (
   partnerId: string,
@@ -392,115 +415,170 @@ export const addCapitalWithCashboxCloud = async (
   originalAmount?: number,
   exchangeRate?: number
 ): Promise<boolean> => {
+  const roundedUsd = Math.round(amountUsd * 100) / 100;
+  const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedUsd;
+  const rate = exchangeRate || (currency !== 'USD' && roundedUsd > 0 ? Math.round((origAmt / roundedUsd) * 10000) / 10000 : 1.0);
+  assertFxConsistent(roundedUsd, origAmt, rate, 'الإيداع');
+
+  if (isLocalDataMode()) throw new Error(PARTNER_OFFLINE_MSG);
+
+  const shiftId = await resolveActiveShiftIdForPartner();
+  const { data, error } = await sb.rpc('partner_deposit_atomic', {
+    _partner_id: partnerId,
+    _amount_usd: roundedUsd,
+    _deposit_target: depositTarget,
+    _notes: notes || null,
+    _shift_id: shiftId,
+    _currency: currency,
+    _original_amount: origAmt,
+    _exchange_rate: rate,
+  });
+  if (error) throw new Error(error.message || 'فشل إيداع مبلغ الشريك');
+  const result = (data || {}) as { success?: boolean; error?: string; message?: string };
+  if (!result.success) throw new Error(result.error || result.message || 'رفض الخادم عملية الإيداع');
+
+  // تحديث الحالة المحلية بعد تأكيد الخادم فقط
+  const partner = await getPartnerByIdCloud(partnerId);
+  if (depositTarget === 'capital') {
+    const { loadCapitalState, saveCapitalState } = await import('../capital-store');
+    const state = loadCapitalState();
+    state.currentCapital += roundedUsd;
+    state.totalInvestments += roundedUsd;
+    state.lastUpdated = new Date().toISOString();
+    state.transactions.unshift({
+      id: Date.now().toString(),
+      type: 'partner_investment',
+      amount: roundedUsd,
+      partnerId,
+      partnerName,
+      description: notes || `إيداع رأس مال من ${partnerName}`,
+      previousBalance: state.currentCapital - roundedUsd,
+      newBalance: state.currentCapital,
+      createdAt: new Date().toISOString(),
+      createdBy: 'system',
+    });
+    saveCapitalState(state);
+    emitEvent(EVENTS.CAPITAL_UPDATED, state);
+  }
+
+  if (partner) {
+    const capRecord: CapitalTransaction = {
+      id: Date.now().toString(),
+      amount: roundedUsd,
+      type: 'deposit',
+      date: new Date().toISOString(),
+      notes: notes || (depositTarget === 'balance' ? 'إيداع رصيد للشريك' : 'إيداع رأس مال'),
+    };
+    if (depositTarget === 'balance') {
+      partner.currentBalance = Math.round((partner.currentBalance + roundedUsd) * 100) / 100;
+    } else {
+      partner.initialCapital = Math.round((partner.initialCapital + roundedUsd) * 100) / 100;
+      partner.currentCapital = Math.round((partner.currentCapital + roundedUsd) * 100) / 100;
+    }
+    partner.capitalHistory = [...(partner.capitalHistory || []), capRecord];
+    if (partnersCache) {
+      const idx = partnersCache.findIndex(p => p.id === partnerId);
+      if (idx !== -1) partnersCache[idx] = partner;
+      savePartnersLocally(partnersCache);
+    }
+    emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
+  }
+
+  // الصندوق المحلي فقط (حركة الصندوق السحابية سجلتها الدالة الذرية)
+  const { updateCashboxBalance } = await import('../cashbox-store');
+  updateCashboxBalance(origAmt, 'deposit', currency as any);
+
+  invalidatePartnersCache();
+  return true;
+};
+
+type PartnerWithdrawalType = 'profit' | 'capital';
+
+/**
+ * سحب من رصيد الشريك (أرباح أو رأس مال) — التنفيذ الذري الوحيد عبر partner_withdrawal_atomic.
+ * يرمي خطأً حقيقياً عند الرفض، ولا يوجد أي تحديث مباشر لأعمدة الشريك المالية.
+ */
+const executePartnerWithdrawal = async (
+  partner: Partner,
+  partnerId: string,
+  withdrawalType: PartnerWithdrawalType,
+  amount: number,
+  notes: string | undefined,
+  currency: string,
+  originalAmount: number | undefined,
+  exchangeRate: number | undefined
+): Promise<void> => {
+  const roundedAmount = Math.round(amount * 100) / 100;
+  const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
+  const rate = exchangeRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
+  assertFxConsistent(roundedAmount, origAmt, rate, withdrawalType === 'profit' ? 'سحب الأرباح' : 'سحب رأس المال');
+
+  if (isLocalDataMode()) throw new Error(PARTNER_OFFLINE_MSG);
+
+  // تحقق من كفاية الرصيد على أحدث نسخة من الخادم قبل الإرسال
+  invalidatePartnersCache();
+  const live = await getPartnerByIdCloud(partnerId);
+  const available = withdrawalType === 'profit' ? (live?.currentBalance ?? partner.currentBalance) : (live?.currentCapital ?? partner.currentCapital);
+  if (roundedAmount > available + 0.001) {
+    throw new Error(withdrawalType === 'profit' ? 'مبلغ السحب يتجاوز رصيد الأرباح المتاح' : 'مبلغ السحب يتجاوز رأس المال المتاح');
+  }
+
+  const withdrawalNote = notes || (withdrawalType === 'profit' ? 'سحب أرباح - ' + partner.name : 'سحب رأس مال - ' + partner.name);
+  const shiftId = await resolveActiveShiftIdForPartner();
+  const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
+    _partner_id: partnerId,
+    _amount: roundedAmount,
+    _withdrawal_type: withdrawalType,
+    _notes: withdrawalNote,
+    _shift_id: shiftId,
+    _currency: currency,
+    _original_amount: origAmt,
+    _exchange_rate: rate,
+  });
+  if (error) throw new Error(error.message || 'فشل السحب من رصيد الشريك');
+  const result = (data || {}) as { success?: boolean; error?: string; message?: string };
+  if (!result.success) throw new Error(result.error || result.message || 'رفض الخادم عملية السحب');
+
+  // تحديث الحالة المحلية بعد تأكيد الخادم فقط
+  const now = new Date().toISOString();
+  const withdrawal: Withdrawal = {
+    id: Date.now().toString(),
+    amount: roundedAmount,
+    type: withdrawalType,
+    date: now,
+    notes: withdrawalNote,
+  };
+  partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
+  partner.withdrawalHistory = [...(partner.withdrawalHistory || []), withdrawal];
+  if (withdrawalType === 'profit') {
+    partner.currentBalance = Math.round((partner.currentBalance - roundedAmount) * 100) / 100;
+  } else {
+    partner.currentCapital = Math.round((partner.currentCapital - roundedAmount) * 100) / 100;
+    partner.capitalHistory = [...(partner.capitalHistory || []), {
+      id: Date.now().toString() + '_cap',
+      amount: roundedAmount,
+      type: 'withdrawal',
+      date: now,
+      notes: withdrawalNote,
+    } as CapitalTransaction];
+  }
+
+  if (partnersCache) {
+    const idx = partnersCache.findIndex(p => p.id === partnerId);
+    if (idx !== -1) partnersCache[idx] = partner;
+    savePartnersLocally(partnersCache);
+  }
+  emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
+
   try {
-    const roundedUsd = Math.round(amountUsd * 100) / 100;
-    const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedUsd;
-    const rate = exchangeRate || (currency !== 'USD' && roundedUsd > 0 ? Math.round((origAmt / roundedUsd) * 10000) / 10000 : 1.0);
-
-    // جلب معرف الوردية النشطة إن وجدت
-    let shiftId: string | null = null;
-    try {
-      const { getActiveShift } = await import('../cashbox-store');
-      const activeShift = getActiveShift();
-      if (activeShift?.id && activeShift.id.length >= 32) {
-        shiftId = activeShift.id;
-      }
-    } catch (_) {}
-
-    // 1. التنفيذ الذري في السحابة
-    let rpcSuccess = false;
-    if (!isLocalDataMode()) {
-      try {
-        const { data, error } = await sb.rpc('partner_deposit_atomic', {
-          _partner_id: partnerId,
-          _amount_usd: roundedUsd,
-          _deposit_target: depositTarget,
-          _notes: notes || null,
-          _shift_id: shiftId,
-          _currency: currency,
-          _original_amount: origAmt,
-          _exchange_rate: rate
-        });
-        if (!error && (data as any)?.success) {
-          rpcSuccess = true;
-        }
-      } catch (e) {
-        console.warn('[addCapitalWithCashboxCloud] RPC fallback:', e);
-      }
-    }
-
-    // 2. تحديث التخزين المحلي والصندوق بالتوافق
-    if (depositTarget === 'capital') {
-      const { loadCapitalState, saveCapitalState } = await import('../capital-store');
-      const state = loadCapitalState();
-      state.currentCapital += roundedUsd;
-      state.totalInvestments += roundedUsd;
-      state.lastUpdated = new Date().toISOString();
-      state.transactions.unshift({
-        id: Date.now().toString(),
-        type: 'partner_investment',
-        amount: roundedUsd,
-        partnerId,
-        partnerName,
-        description: notes || `إيداع رأس مال من ${partnerName}`,
-        previousBalance: state.currentCapital - roundedUsd,
-        newBalance: state.currentCapital,
-        createdAt: new Date().toISOString(),
-        createdBy: 'system',
-      });
-      saveCapitalState(state);
-      emitEvent(EVENTS.CAPITAL_UPDATED, state);
-    }
-
-    // تحديث رصيد الشريك محلياً
-    const partner = await getPartnerByIdCloud(partnerId);
-    if (partner) {
-      const capRecord: CapitalTransaction = {
-        id: Date.now().toString(),
-        amount: roundedUsd,
-        type: 'deposit',
-        date: new Date().toISOString(),
-        notes: notes || (depositTarget === 'balance' ? 'إيداع رصيد للشريك' : 'إيداع رأس مال'),
-      };
-
-      if (depositTarget === 'balance') {
-        partner.currentBalance = Math.round((partner.currentBalance + roundedUsd) * 100) / 100;
-      } else {
-        partner.initialCapital = Math.round((partner.initialCapital + roundedUsd) * 100) / 100;
-        partner.currentCapital = Math.round((partner.currentCapital + roundedUsd) * 100) / 100;
-      }
-      partner.capitalHistory = [...(partner.capitalHistory || []), capRecord];
-
-      if (partnersCache) {
-        const idx = partnersCache.findIndex(p => p.id === partnerId);
-        if (idx !== -1) partnersCache[idx] = partner;
-        savePartnersLocally(partnersCache);
-      }
-      emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
-    }
-
-    // إذا فشل الـ RPC وكان أوفلاين ولم يكن depositTarget = balance، نستدعي addCapitalCloud كاحتياط
-    if (!rpcSuccess && depositTarget === 'capital') {
-      await addCapitalCloud(partnerId, roundedUsd, notes);
-    } else if (!rpcSuccess && depositTarget === 'balance' && partner) {
-      await updatePartnerCloud(partnerId, {
-        currentBalance: partner.currentBalance,
-        capitalHistory: partner.capitalHistory,
-      });
-    }
-
     const { updateCashboxBalance } = await import('../cashbox-store');
-    updateCashboxBalance(origAmt, 'deposit', currency as any);
-
-    invalidatePartnersCache();
-    return true;
-  } catch (error) {
-    console.error('Error in addCapitalWithCashboxCloud:', error);
-    return false;
+    updateCashboxBalance(origAmt, 'withdrawal', currency as any);
+  } catch (e) {
+    console.warn('[executePartnerWithdrawal] local cashbox update failed:', e);
   }
 };
 
-// Withdraw profit
+// Withdraw profit — يرمي خطأً حقيقياً عند رفض الخادم
 export const withdrawProfitCloud = async (
   partnerId: string,
   amount: number,
@@ -512,107 +590,12 @@ export const withdrawProfitCloud = async (
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
-  
-  if (!allowNegative && amount > partner.currentBalance) {
-    return false;
-  }
-
-  const roundedAmount = Math.round(amount * 100) / 100;
-  const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
-  const rate = exchangeRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
-  const withdrawalNote = notes || ('سحب أرباح - ' + partner.name);
-
-  // 1. Resolve active shift ID if any
-  let shiftId: string | null = null;
-  try {
-    const { getActiveShift } = await import('../cashbox-store');
-    const activeShift = getActiveShift();
-    if (activeShift?.id && activeShift.id.length >= 32) {
-      shiftId = activeShift.id;
-    }
-  } catch { /* silent */ }
-
-  // 2. Attempt atomic server-side RPC execution
-  let rpcSuccess = false;
-  if (!isLocalDataMode()) {
-    try {
-      const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
-        _partner_id: partnerId,
-        _amount: roundedAmount,
-        _withdrawal_type: 'profit',
-        _notes: withdrawalNote,
-        _shift_id: shiftId,
-        _currency: currency,
-        _original_amount: origAmt,
-        _exchange_rate: rate,
-      });
-      if (!error && (data as any)?.success) {
-        rpcSuccess = true;
-      }
-    } catch (e) {
-      console.warn('[withdrawProfitCloud] RPC partner_withdrawal_atomic failed, falling back:', e);
-    }
-  }
-
-  const withdrawal: Withdrawal = {
-    id: Date.now().toString(),
-    amount: roundedAmount,
-    type: 'profit',
-    date: new Date().toISOString(),
-    notes: withdrawalNote,
-  };
-
-  // 3. Fallback or update state
-  if (rpcSuccess) {
-    partner.currentBalance = Math.round((partner.currentBalance - roundedAmount) * 100) / 100;
-    partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
-    partner.withdrawalHistory = [...(partner.withdrawalHistory || []), withdrawal];
-
-    if (partnersCache) {
-      const idx = partnersCache.findIndex(p => p.id === partnerId);
-      if (idx !== -1) partnersCache[idx] = partner;
-      savePartnersLocally(partnersCache);
-    }
-    emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
-
-    // Update cash drawer locally
-    try {
-      const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
-    } catch (e) {
-      console.warn('[withdrawProfitCloud] cashbox update failed:', e);
-    }
-
-    return true;
-  }
-
-  // Fallback for offline or RPC failure
-  const success = await updatePartnerCloud(partnerId, {
-    currentBalance: partner.currentBalance - roundedAmount,
-    totalWithdrawn: partner.totalWithdrawn + roundedAmount,
-    withdrawalHistory: [...(partner.withdrawalHistory || []), withdrawal],
-  });
-
-  if (success) {
-    try {
-      const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
-    } catch (e) {
-      console.warn('[withdrawProfitCloud] cashbox update failed:', e);
-    }
-
-    try {
-      const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
-      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, currency as any, origAmt, partnerId, withdrawalNote);
-    } catch (e) {
-      console.warn('[withdrawProfitCloud] shift tx sync failed:', e);
-    }
-  }
-
-  return success;
+  if (!allowNegative && amount > partner.currentBalance) return false;
+  await executePartnerWithdrawal(partner, partnerId, 'profit', amount, notes, currency, originalAmount, exchangeRate);
+  return true;
 };
 
-// Withdraw capital
+// Withdraw capital — يرمي خطأً حقيقياً عند رفض الخادم
 export const withdrawCapitalCloud = async (
   partnerId: string,
   amount: number,
@@ -623,110 +606,9 @@ export const withdrawCapitalCloud = async (
 ): Promise<boolean> => {
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
-
   if (amount > partner.currentCapital) return false;
-
-  const roundedAmount = Math.round(amount * 100) / 100;
-  const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
-  const rate = exchangeRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
-  const withdrawalNote = notes || ('سحب رأس مال - ' + partner.name);
-
-  // 1. Resolve active shift ID if any
-  let shiftId: string | null = null;
-  try {
-    const { getActiveShift } = await import('../cashbox-store');
-    const activeShift = getActiveShift();
-    if (activeShift?.id && activeShift.id.length >= 32) {
-      shiftId = activeShift.id;
-    }
-  } catch { /* silent */ }
-
-  // 2. Attempt atomic server-side RPC execution
-  let rpcSuccess = false;
-  if (!isLocalDataMode()) {
-    try {
-      const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
-        _partner_id: partnerId,
-        _amount: roundedAmount,
-        _withdrawal_type: 'capital',
-        _notes: withdrawalNote,
-        _shift_id: shiftId,
-        _currency: currency,
-        _original_amount: origAmt,
-        _exchange_rate: rate,
-      });
-      if (!error && (data as any)?.success) {
-        rpcSuccess = true;
-      }
-    } catch (e) {
-      console.warn('[withdrawCapitalCloud] RPC partner_withdrawal_atomic failed, falling back:', e);
-    }
-  }
-
-  const withdrawal: Withdrawal = {
-    id: Date.now().toString(),
-    amount: roundedAmount,
-    type: 'capital',
-    date: new Date().toISOString(),
-    notes: withdrawalNote,
-  };
-
-  const capitalTx: CapitalTransaction = {
-    id: Date.now().toString() + '_cap',
-    amount: roundedAmount,
-    type: 'withdrawal',
-    date: new Date().toISOString(),
-    notes: withdrawalNote,
-  };
-
-  if (rpcSuccess) {
-    partner.currentCapital = Math.round((partner.currentCapital - roundedAmount) * 100) / 100;
-    partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
-    partner.withdrawalHistory = [...(partner.withdrawalHistory || []), withdrawal];
-    partner.capitalHistory = [...(partner.capitalHistory || []), capitalTx];
-
-    if (partnersCache) {
-      const idx = partnersCache.findIndex(p => p.id === partnerId);
-      if (idx !== -1) partnersCache[idx] = partner;
-      savePartnersLocally(partnersCache);
-    }
-    emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
-
-    try {
-      const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
-    } catch (e) {
-      console.warn('[withdrawCapitalCloud] cashbox update failed:', e);
-    }
-
-    return true;
-  }
-
-  // Fallback for offline or RPC failure
-  const success = await updatePartnerCloud(partnerId, {
-    currentCapital: partner.currentCapital - roundedAmount,
-    totalWithdrawn: partner.totalWithdrawn + roundedAmount,
-    withdrawalHistory: [...(partner.withdrawalHistory || []), withdrawal],
-    capitalHistory: [...(partner.capitalHistory || []), capitalTx],
-  });
-
-  if (success) {
-    try {
-      const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
-    } catch (e) {
-      console.warn('[withdrawCapitalCloud] cashbox update failed:', e);
-    }
-
-    try {
-      const { syncActiveShiftTransactionCloud } = await import('./cashbox-cloud');
-      await syncActiveShiftTransactionCloud('withdrawal', roundedAmount, currency as any, origAmt, partnerId, withdrawalNote);
-    } catch (e) {
-      console.warn('[withdrawCapitalCloud] shift tx sync failed:', e);
-    }
-  }
-
-  return success;
+  await executePartnerWithdrawal(partner, partnerId, 'capital', amount, notes, currency, originalAmount, exchangeRate);
+  return true;
 };
 
 export const getPartnersStatsCloud = async () => {

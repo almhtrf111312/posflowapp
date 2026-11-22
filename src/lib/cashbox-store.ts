@@ -510,7 +510,8 @@ export const recordRefundInShift = (
   cogs: number = 0,
   invoiceNumber?: string,
   currency: ShiftCurrency = 'USD',
-  currencyAmount?: number
+  currencyAmount?: number,
+  syncCloud: boolean = true
 ): void => {
   if (amount <= 0) return;
   const roundedAmount = roundCurrency(amount);
@@ -540,18 +541,20 @@ export const recordRefundInShift = (
     saveShifts(shifts);
     emitEvent(EVENTS.CASH_SHIFTS_UPDATED, shifts);
 
-    // تسجيل حركة الوردية سحابياً إن أمكن
-    try {
-      import('./cloud/cashbox-cloud').then(({ addShiftTransactionCloud }) => {
-        addShiftTransactionCloud({
-          shiftId: shifts[activeIndex].id,
-          type: 'refund',
-          amount: roundedAmount,
-          referenceId: invoiceNumber,
-          notes: invoiceNumber ? `مرتجع فاتورة ${invoiceNumber}` : 'مرتجع نقدي',
+    // تسجيل حركة الوردية سحابياً — يُتخطى عندما تكون الدالة الذرية في الخادم قد سجلتها بالفعل
+    if (syncCloud) {
+      try {
+        import('./cloud/cashbox-cloud').then(({ addShiftTransactionCloud }) => {
+          addShiftTransactionCloud({
+            shiftId: shifts[activeIndex].id,
+            type: 'refund',
+            amount: roundedAmount,
+            referenceId: invoiceNumber,
+            notes: invoiceNumber ? `مرتجع فاتورة ${invoiceNumber}` : 'مرتجع نقدي',
+          }).catch(() => {});
         }).catch(() => {});
-      }).catch(() => {});
-    } catch { /* noop */ }
+      } catch { /* noop */ }
+    }
   }
 };
 

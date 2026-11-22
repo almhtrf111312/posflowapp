@@ -103,8 +103,20 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
     }
     case 'debt_payment': {
       if (!data.debtId || !data.operationId) throw new Error('Invalid debt payment');
+      // الوردية المفتوحة الحالية عند المزامنة (الدفعة النقدية تدخل الدرج الحالي). التحويل البنكي لا يدخل الصندوق.
+      let replayShiftId: string | null = null;
+      if ((data.method ?? 'cash') === 'cash') {
+        const { getActiveShift } = await import('../cashbox-store');
+        replayShiftId = getActiveShift()?.id || null;
+      }
       const { error } = await sb.rpc('record_debt_payment_atomic', {
-        _debt_id: String(data.debtId), _amount: Number(data.amount), _operation_id: String(data.operationId),
+        _debt_id: String(data.debtId),
+        _amount: Number(data.amount),
+        _operation_id: String(data.operationId),
+        _shift_id: replayShiftId,
+        _currency: data.currency ? String(data.currency) : 'USD',
+        _currency_amount: data.currencyAmount != null ? Number(data.currencyAmount) : null,
+        _exchange_rate: data.exchangeRate != null ? Number(data.exchangeRate) : null,
       });
       if (error) throw new Error(error.message);
       return true;

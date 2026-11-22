@@ -326,7 +326,8 @@ export const processExpense = (
   userName?: string,
   expenseId?: string,
   currency: string = 'USD',
-  currencyAmount?: number
+  currencyAmount?: number,
+  exchangeRate?: number
 ): TransactionResult => {
   try {
     const roundedAmount = round8(amount);
@@ -334,10 +335,11 @@ export const processExpense = (
     addExpensesToShift(roundedAmount, currency as any, currencyAmount);
 
     // Step 2: تسجيل كمصروف تشغيلي في سجل الأرباح
+    // معرّف المصروف (expense.id من add_expense_atomic) هو المرجع الوحيد لربط حركة الصندوق وعكسها لاحقاً
     const expId = expenseId || `exp_${Date.now()}`;
     addOperatingExpense(expId, roundedAmount, expenseType);
 
-    // Step 3: مزامنة حركة الوردية سحابياً
+    // Step 3: مزامنة حركة الوردية سحابياً بالعملة الأصلية وسعر صرفها (reference_id = معرّف المصروف)
     import('./cloud/cashbox-cloud').then(({ syncActiveShiftTransactionCloud }) => {
       syncActiveShiftTransactionCloud(
         'expense',
@@ -345,7 +347,8 @@ export const processExpense = (
         currency,
         currencyAmount,
         expId,
-        `مصروف تشغيلي (${expenseType})`
+        `مصروف تشغيلي (${expenseType})`,
+        exchangeRate
       );
     }).catch(() => {});
 

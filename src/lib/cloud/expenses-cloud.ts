@@ -338,30 +338,39 @@ export const addExpenseCloud = async (expenseData: {
     return saveToLocalAndQueue();
   }
 
-  // 2. Try atomic RPC first
+  // 2. Atomic RPC (the only write path). Database rejections are surfaced to the user as-is.
+  let rpcError: { message?: string; code?: string } | null = null;
   try {
-    const { error: rpcError } = await sb.rpc('add_expense_atomic', payload);
-    if (!rpcError) {
-      invalidateExpensesCache();
-      invalidatePartnersCache(); // ⬅️ إضافة تفريغ كاش الشركاء حتى يظهر الاستقطاع فورياً
-      const existing = expensesCache || loadExpensesLocally() || [];
-      const list = [localExpense, ...existing.filter(e => e.id !== localExpense.id)];
-      expensesCache = list;
-      cacheTimestamp = Date.now();
-      saveExpensesLocally(list);
-      emitEvent(EVENTS.EXPENSES_UPDATED, null);
-      emitEvent(EVENTS.PARTNERS_UPDATED, null);
-      triggerAutoBackup(`مصروف جديد: ${expenseData.type}`);
-      return localExpense;
-    }
-
-    // إذا فشل الـ RPC، نرميه مباشرة لطابور المزامنة الآمن ليعيد المحاولة ذرياً ولا ندرجه يدوياً
-    console.warn('[addExpenseCloud] RPC failed, queueing for safe retry:', rpcError);
-    return saveToLocalAndQueue();
+    const res = await sb.rpc('add_expense_atomic', payload);
+    rpcError = res.error as { message?: string; code?: string } | null;
   } catch (ex) {
-    console.warn('[addExpenseCloud] Exception during expense save, falling back to local queue:', ex);
+    // استثناء في النقل (لا اتصال مثلاً): نحفظ محلياً ونضعه في طابور المزامنة الذري
+    console.warn('[addExpenseCloud] Transport exception, queueing for safe retry:', ex);
     return saveToLocalAndQueue();
   }
+
+  if (rpcError) {
+    // رفض صريح من قاعدة البيانات (فترة مغلقة، وردية، صلاحية...) ⇒ نعرض الخطأ الحقيقي ولا نخفيه في الطابور
+    if (rpcError.code) {
+      console.warn('[addExpenseCloud] Database rejected expense:', rpcError);
+      throw new Error(rpcError.message || 'رفض الخادم حفظ المصروف');
+    }
+    // فشل في النقل فقط: طابور المزامنة الذري يعيد المحاولة لاحقاً
+    console.warn('[addExpenseCloud] Transport failed, queueing for safe retry:', rpcError);
+    return saveToLocalAndQueue();
+  }
+
+  invalidateExpensesCache();
+  invalidatePartnersCache(); // ⬅️ تفريغ كاش الشركاء حتى يظهر الاستقطاع فورياً
+  const existing = expensesCache || loadExpensesLocally() || [];
+  const list = [localExpense, ...existing.filter(e => e.id !== localExpense.id)];
+  expensesCache = list;
+  cacheTimestamp = Date.now();
+  saveExpensesLocally(list);
+  emitEvent(EVENTS.EXPENSES_UPDATED, null);
+  emitEvent(EVENTS.PARTNERS_UPDATED, null);
+  triggerAutoBackup(`مصروف جديد: ${expenseData.type}`);
+  return localExpense;
 };
 
 // Delete or reverse expense
@@ -382,58 +391,22 @@ export const deleteExpenseCloud = async (id: string, reason: string = 'تراج�
     return true;
   }
 
-  let success = false;
-
-  // 🛡️ التنفيذ الذري بالسيرفر عبر دالة delete_expense_atomic (P1-23)
-  try {
-    const { data, error } = await sb.rpc('delete_expense_atomic', {
-      _expense_id: id,
-      _reason: reason,
-    });
-    if (!error && (data as any)?.success) {
-      success = true;
-    } else if (error) {
-      console.warn('[deleteExpenseCloud] RPC failed, falling back:', error.message);
-    }
-  } catch (err) {
-    console.error('[deleteExpenseCloud] RPC exception:', err);
+  // 🛡️ التنفيذ الذري الوحيد بالخادم عبر delete_expense_atomic (يعكس حركة الصندوق والوردية وحصص الشركاء داخل معاملة واحدة)
+  // لا توجد أي كتابة مباشرة على جدول expenses: أي رفض من الخادم يُعاد للواجهة برسالته الحقيقية
+  const { data, error } = await sb.rpc('delete_expense_atomic', {
+    _expense_id: id,
+    _reason: reason,
+  });
+  if (error) {
+    console.error('[deleteExpenseCloud] delete_expense_atomic rejected:', error);
+    throw new Error(error.message || 'فشل التراجع عن المصروف على الخادم');
   }
-
-  // آلية احتياطية (Fallback) في حال عدم توفر الدالة بعد على قاعدة البيانات
-  if (!success) {
-    const expenses = await loadExpensesCloud();
-    const expense = expenses.find(e => e.id === id);
-    
-    if (expense && expense.distributions && expense.distributions.length > 0) {
-      const partners = await loadPartnersCloud();
-      for (const dist of expense.distributions) {
-        const partner = partners.find(p => p.id === dist.partnerId);
-        if (partner) {
-          await updatePartnerCloud(partner.id, {
-            currentBalance: partner.currentBalance + dist.amount,
-            expenseHistory: partner.expenseHistory.filter(e => e.expenseId !== id),
-          });
-        }
-      }
-    }
-
-    try {
-      const { error: updateErr } = await sb.from('expenses').update({
-        is_reversed: true,
-        reversed_at: new Date().toISOString(),
-        reversed_reason: reason,
-      } as any).eq('id', id);
-
-      if (!updateErr) {
-        success = true;
-      } else {
-        success = await deleteFromSupabase('expenses', id);
-      }
-    } catch {
-      success = await deleteFromSupabase('expenses', id);
-    }
+  const serverResult = (data || {}) as { success?: boolean; error?: string };
+  if (!serverResult.success) {
+    throw new Error(serverResult.error || 'رفض الخادم التراجع عن المصروف');
   }
-  
+  const success = true;
+
   if (success) {
     // ✅ إزالة المصروف من سجل الأرباح المركزي لإعادة صافي الربح لقيمته الحقيقية
     try {

@@ -1630,6 +1630,7 @@ const fa: TranslationDict = {
   'settings.resetData': 'بازنشانی داده‌ها',
   'settings.resetDataWarning': 'هشدار! این عمل قابل بازگشت نیست',
   'settings.resetAllData': 'بازنشانی تمام داده‌ها',
+  'partners.originalDepositRate': 'نرخ واریز اصلی',
   'settings.resetFinalButton': 'بله، همه چیز را حالا پاک کن',
   'settings.resetCountdownHint': '{n} ثانیه صبر کنید. قبل از حذف، یک نسخه پشتیبان روی این دستگاه ذخیره می‌شود.',
   'settings.resetReadyHint': 'ابتدا یک نسخه پشتیبان روی این دستگاه ذخیره می‌شود، سپس داده‌های ابری حذف می‌شوند.',

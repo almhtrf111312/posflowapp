@@ -1738,6 +1738,7 @@ const en: TranslationDict = {
   'settings.resetDataDescription': 'All your data will be permanently deleted from cloud and local storage',
   'settings.dataToBeDeleted': 'Data to be deleted',
   'settings.resetAllData': 'Reset All Data',
+  'partners.originalDepositRate': 'Original deposit rate',
   'settings.resetFinalButton': 'Yes, reset everything now',
   'settings.resetCountdownHint': 'Wait {n} seconds. A backup will be saved to this device before anything is deleted.',
   'settings.resetReadyHint': 'A backup is saved to this device first, then the cloud data is deleted.',

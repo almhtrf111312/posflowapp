@@ -596,6 +596,7 @@ const tr: TranslationDict = {
   'settings.resetData': 'Verileri Sıfırla',
   'settings.resetDataWarning': 'Uyarı! Bu işlem geri alınamaz',
   'settings.resetAllData': 'Tüm Verileri Sıfırla',
+  'partners.originalDepositRate': 'Orijinal yatırım kuru',
   'settings.resetFinalButton': 'Evet, şimdi her şeyi sıfırla',
   'settings.resetCountdownHint': '{n} saniye bekleyin. Silmeden önce bu cihaza bir yedek kaydedilecek.',
   'settings.resetReadyHint': 'Önce bu cihaza bir yedek kaydedilir, sonra bulut verileri silinir.',

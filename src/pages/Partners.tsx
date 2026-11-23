@@ -1569,6 +1569,15 @@ export default function Partners() {
                 )}
               </div>
 
+              {/* D-10: foreign-currency capital is valued at the original deposit rate; show it so the amount is clear */}
+              {withdrawType === 'capital' && withdrawCurrency !== 'USD' && (
+                <p className="text-xs text-muted-foreground">
+                  {t('partners.originalDepositRate')}: <span dir="ltr" className="font-mono font-semibold text-foreground tabular-nums">
+                    {formatNumber(capitalOriginalRate(selectedPartner.capitalHistory as unknown as CapitalHistoryLike[]))} {withdrawCurrency}
+                  </span> / 1 USD
+                </p>
+              )}
+
               {/* Notes */}
               <div>
                 <label className="text-sm font-medium mb-1.5 block">{t('common.notes')} ({t('common.optional')})</label>
@@ -1582,11 +1591,11 @@ export default function Partners() {
 
             </DialogBody>
           )}
-          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
-            <Button variant="outline" size="default" onClick={() => setShowWithdrawDialog(false)} disabled={isSubmitting}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" size="default" className="min-h-11 w-full sm:w-auto" onClick={() => setShowWithdrawDialog(false)} disabled={isSubmitting}>
               {t('common.cancel')}
             </Button>
-            <Button size="default" className="bg-warning hover:bg-warning/90 text-warning-foreground" onClick={handleWithdraw} disabled={isSubmitting}>
+            <Button size="default" className="min-h-11 w-full sm:w-auto bg-warning hover:bg-warning/90 text-warning-foreground" onClick={handleWithdraw} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {t('partners.confirmWithdraw')}
             </Button>

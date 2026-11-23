@@ -1901,6 +1901,7 @@ const ar = {
   'settings.resetDataDescription': 'سيتم حذف جميع بياناتك نهائياً من النظام السحابي والمحلي',
   'settings.dataToBeDeleted': 'البيانات التي سيتم حذفها',
   'settings.resetAllData': 'تصفير جميع البيانات',
+  'partners.originalDepositRate': 'سعر الإيداع الأصلي',
   'settings.resetFinalButton': 'نعم، صفّر كل شيء الآن',
   'settings.resetCountdownHint': 'انتظر {n} ثانية. قبل الحذف ستُحفظ نسخة احتياطية على جهازك.',
   'settings.resetReadyHint': 'ستُحفظ نسخة احتياطية على جهازك أولاً، ثم يبدأ الحذف من السحابة.',

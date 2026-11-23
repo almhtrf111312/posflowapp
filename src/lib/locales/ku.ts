@@ -806,6 +806,7 @@ const ku: TranslationDict = {
   'settings.resetData': 'سڕینەوەی داتا',
   'settings.resetDataWarning': 'ئاگاداری! ئەم کردارە گەڕاندنەوەی نییە',
   'settings.resetAllData': 'سڕینەوەی هەموو داتاکان',
+  'partners.originalDepositRate': 'نرخی سەرەتایی واریز',
   'settings.resetFinalButton': 'بەڵێ، ئێستا هەموو شتێک بسڕەوە',
   'settings.resetCountdownHint': '{n} چرکە چاوەڕێ بکە. پێش سڕینەوە، کۆپیەکی پاشەکەوت لەسەر ئەم ئامێرە پاشەکەوت دەکرێت.',
   'settings.resetReadyHint': 'یەکەم جار کۆپیەکی پاشەکەوت لەسەر ئەم ئامێرە پاشەکەوت دەکرێت، پاشان داتای ڕەگەز دەسڕدرێتەوە.',

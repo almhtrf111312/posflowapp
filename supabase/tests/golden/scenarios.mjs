@@ -164,6 +164,29 @@ export async function runScenarios(w, k) {
     check('CLOSE shift is closed', (await one(`select (closed_at is not null) c from public.cash_shifts where id=$1`, [sh])).c, true);
   }
 
+  // ---------- Cash-sale drawer posting (KD-06, migration 20261123072000) ----------
+  {
+    const sh = await newShift(100);
+    const o = op('sale');
+    const call = (amt = 30, id = sh) => one(`select public.post_shift_sale_atomic($1,$2,$3,'USD',$3,1) r`, [id, o, amt]);
+    await call();
+    check('SALEPOST drawer movement', await txSum(sh, 'sale'), 30);
+    check('SALEPOST expected_balance 100+30', await expected(sh), 130);
+    await call();
+    check('SALEPOST replay posts once', await txSum(sh, 'sale'), 30);
+    check('SALEPOST replay does not move expected_balance', await expected(sh), 130);
+    truthy('SALEPOST replay with another amount is rejected', await fails(call(31)));
+    await one(`select public.post_shift_sale_atomic($1,$2,12,'SYP',180000,15000)`, [sh, op('sale')]);
+    check('SALEPOST foreign sale keeps USD in the drawer', await txSum(sh, 'sale'), 42);
+    check('SALEPOST foreign sale foreign amount', Number((await one(`select currency_amount::float8 c from public.shift_transactions where shift_id=$1 and currency='SYP'`, [sh])).c), 180000);
+    truthy('SALEPOST zero amount is rejected', await fails(one(`select public.post_shift_sale_atomic($1,$2,0)`, [sh, op('sale')])));
+    const closed = await newShift(10);
+    await one(`select public.close_cash_shift_atomic($1, 10, 'golden close')`, [closed]);
+    truthy('SALEPOST closed shift is rejected', await fails(one(`select public.post_shift_sale_atomic($1,$2,5)`, [closed, op('sale')])));
+    const res = await fails(one(`select public.close_cash_shift_atomic($1, 142, 'golden close')`, [sh]));
+    check('SALEPOST shift closes with counted = opening + sales', res, 'null');
+  }
+
   // ---------- Reconciliation queries (gate R-01..R-06) on the data built above ----------
   for (const r of reconQueries()) {
     if (r.id === 'R-07') continue; // information only (KD-06)

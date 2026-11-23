@@ -28,6 +28,10 @@ export interface AtomicSaleBundle {
   customerName: string;
 
   paymentMethod?: 'cash' | 'digital';
+  /** Open cash shift the sale's drawer movement is posted to in the SAME transaction (audit F1, 2026-11-24). */
+  drawerShiftId?: string | null;
+  /** Amount in the received currency for the drawer movement (optional; the server derives it from the rate). */
+  drawerCurrencyAmount?: number | null;
 
   customerPhone?: string;
 
@@ -96,6 +100,8 @@ export interface AtomicSaleResult {
   success: boolean;
 
   alreadyProcessed: boolean;
+  /** True when the server posted the drawer movement together with the invoice (audit F1). */
+  drawerPostedOnServer?: boolean;
 
   invoiceId: string;
 
@@ -263,7 +269,9 @@ export async function processPosSaleAtomic(
 
   try {
 
-    const { data, error } = await sb.rpc('process_pos_sale_atomic', {
+    // audit F1 (2026-11-24): a cash sale with an open shift posts the invoice and its drawer movement in one transaction
+    const useDrawerRpc = paymentType === 'cash' && bundle.paymentMethod !== 'digital' && Boolean(bundle.drawerShiftId);
+    const { data, error } = await sb.rpc(useDrawerRpc ? 'process_pos_sale_with_drawer_atomic' : 'process_pos_sale_atomic', {
 
       _operation_id: operationId,
 
@@ -302,7 +310,7 @@ export async function processPosSaleAtomic(
       _exchange_rate: Number((bundle as any).exchangeRate) || 1,
 
       _tax_mode: bundle.taxMode || 'exclusive',
-
+      ...(useDrawerRpc ? { _shift_id: bundle.drawerShiftId, _currency_amount: bundle.drawerCurrencyAmount ?? null } : {}),
     });
 
 
@@ -322,6 +330,7 @@ export async function processPosSaleAtomic(
 
 
     const row = Array.isArray(data) ? data[0] : data;
+    const drawerPostedOnServer = useDrawerRpc;
 
     if (!row?.success || !row.invoice_id || !row.invoice_number) {
 
@@ -378,11 +387,27 @@ export async function processPosSaleAtomic(
 
 
 
+    // audit F2 (2026-11-24): the server is the authority for tax and total. A different total is shown and logged,
+    // never silently replaced on the device.
+    if (!row.already_processed && Math.abs((Number(row.total) || 0) - round8(bundle.total)) > 0.005) {
+      const serverTotal = Number(row.total) || 0;
+      import('@/lib/sonner-bridge').then(({ toast }) => toast.warning(
+        `تعديل من الخادم: إجمالي الفاتورة ${row.invoice_number} أصبح ${serverTotal} (كان ${round8(bundle.total)} على الجهاز). راجع الفاتورة.`,
+        { duration: 9000 },
+      )).catch(() => {});
+      import('@/lib/activity-log').then(({ logActivity }) => logActivity(
+        'sale_total_mismatch',
+        `فاتورة ${row.invoice_number}: إجمالي الجهاز ${round8(bundle.total)} والخادم ${serverTotal}`,
+        { invoiceNumber: row.invoice_number, deviceTotal: round8(bundle.total), serverTotal, taxRate: row.tax_rate ?? null },
+      )).catch(() => {});
+    }
+
     return {
 
       success: true,
 
       alreadyProcessed: Boolean(row.already_processed),
+      drawerPostedOnServer,
 
       invoiceId: row.invoice_id,
 

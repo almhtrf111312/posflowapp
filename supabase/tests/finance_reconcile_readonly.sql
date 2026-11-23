@@ -6,7 +6,7 @@
 -- A returned row is a violation of the invariant named in the header comment: report it, never "fix" data
 -- by hand and never edit the query to make it pass (docs/FINANCE_LAW.md §6).
 --
--- Columns used are the stable ones (generated types + migrations). Gates are R-01..R-06 and R-08; R-07 is information only.
+-- Columns used are the stable ones (generated types + migrations). Gates are R-01..R-06, R-08 and R-09; R-07 is information only.
 -- The golden-case harness (npm run finance:sql) runs this very file against a database built from the migrations.
 -- ============================================================================
 
@@ -91,6 +91,15 @@ cross join lateral jsonb_array_elements(coalesce(e.distributions, '[]'::jsonb)) 
 where not coalesce(e.is_reversed, false)
 group by e.id, e.user_id, e.amount
 having sum((d->>'amount')::numeric) > e.amount + 0.01;
+
+
+-- R-09 [F-25, audit F7] A credit quick purchase is linked to a supplier and has its purchase entry.
+select pi.id, pi.invoice_number, pi.supplier_id, pi.actual_grand_total
+from public.purchase_invoices pi
+where pi.payment_method = 'credit'
+  and pi.status in ('finalized', 'completed')
+  and pi.supplier_id is null
+  and pi.invoice_number like 'QP-%';
 
 
 -- R-07 [F-18] INFORMATION ONLY — NOT a gate (KD-06). cash_shifts.expected_balance is a best-effort cache during an open shift:

@@ -19,6 +19,7 @@ import { toLocalDateString } from '@/lib/date-utils';
 import { useLanguage } from '@/hooks/use-language';
 import { useActionGuard } from '@/hooks/use-action-guard';
 import { computeProfitSummary } from '@/lib/profit-engine';
+import { withProfitSnapshots } from '@/lib/cloud/profit-ledger-cloud';
 import type { ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import type { Invoice } from '@/lib/cloud/invoices-cloud';
 import type { Expense } from '@/lib/cloud/expenses-cloud';
@@ -74,13 +75,18 @@ export function PeriodClosingPanel({ invoices, expenses, profitLedger, canClose 
 
   // Preview from the device data, with the same definition the server uses when it closes.
   const preview = useMemo(() => computeProfitSummary({
-    invoices,
+    invoices: withProfitSnapshots(invoices, profitLedger),
     payments: profitLedger.payments,
     writeoffs: profitLedger.writeoffs,
-    expenses: expenses.map(exp => ({ amount: Number(exp.amount) || 0, date: String(exp.date) })),
+    expenses: expenses.map(exp => ({ amount: Number(exp.amount) || 0, date: String(exp.date), isReversed: exp.is_reversed, reversedAt: exp.reversedAt ?? null })),
     range: from && to && from <= to ? { from, to } : undefined,
     dayOf: toLocalDateString,
   }), [invoices, expenses, profitLedger, from, to]);
+
+  // F4 (audit 2026-11-24): FX difference of debt collections in the period, shown below the net result
+  const fxInPeriod = useMemo(() => (profitLedger.fxDifferences || [])
+    .filter(f => { const d = toLocalDateString(f.date); return Boolean(from && to && from <= to && d >= from && d <= to); })
+    .reduce((sum, f) => sum + f.amountUsd, 0), [profitLedger, from, to]);
 
   const rows: { label: string; value: number; tone?: string; strong?: boolean }[] = [
     { label: tr('المبيعات (بدون الضريبة)', 'Sales (excluding tax)'), value: preview.sales },
@@ -88,6 +94,8 @@ export function PeriodClosingPanel({ invoices, expenses, profitLedger, canClose 
     { label: tr('المصاريف', 'Expenses'), value: preview.expenses, tone: 'text-destructive' },
     { label: tr('خسارة الديون المعدومة', 'Bad-debt loss'), value: preview.badDebtLoss, tone: 'text-destructive' },
     { label: tr('صافي الربح', 'Net profit'), value: preview.netProfit, tone: preview.netProfit >= 0 ? 'text-success' : 'text-destructive', strong: true },
+    { label: tr('فرق صرف الديون (سطر منفصل)', 'Debt FX difference (separate line)'), value: fxInPeriod, tone: fxInPeriod >= 0 ? 'text-success' : 'text-destructive' },
+    { label: tr('صافي الربح بعد فرق الصرف', 'Net profit after FX'), value: preview.netProfit + fxInPeriod, tone: preview.netProfit + fxInPeriod >= 0 ? 'text-success' : 'text-destructive', strong: true },
     { label: tr('أرباح معلّقة (لا تدخل في الصافي)', 'Pending profit (not in net)'), value: preview.pendingProfit, tone: 'text-warning' },
   ];
 

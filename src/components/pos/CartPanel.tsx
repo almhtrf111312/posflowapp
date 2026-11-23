@@ -909,6 +909,8 @@ export function CartPanel({
       // التوزيع من الواجهة هنا كان يضيف الأرباح مرة ثانية برقم فاتورة محلي.
 
       // 2. ✅ إضافة الفاتورة لطابور المزامنة sync-queue
+      // audit F1 (2026-11-24): a cash sale carries its open shift; the server posts the invoice and the drawer movement together
+      const drawerShiftId = payMethod !== 'digital' ? (getActiveShift()?.id ?? null) : null;
       addUniqueOperation('invoice_create', {
         operationId,
         bundle: {
@@ -916,6 +918,7 @@ export function CartPanel({
           customerId: resolvedCustomerId,
           customerName: customerNameSnapshot || 'عميل نقدي',
           paymentMethod: payMethod,
+          drawerShiftId,
           items: localItems.map(i => ({ ...i, profit: round8(i.profit - i.total * discountRatio) })),
           subtotal,
           discount: effectiveDiscountAmount,
@@ -976,7 +979,9 @@ export function CartPanel({
           totalCOGS,
           (receivedCurrencyCode as any) || 'USD',
           netCashReceivedInCurrency,
-          operationId
+          operationId,
+          // audit F1: the drawer movement is posted with the invoice on the server, so no separate movement is queued
+          drawerShiftId != null,
         );
       }
       recordActivity();

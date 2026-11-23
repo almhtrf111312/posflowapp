@@ -20,6 +20,10 @@
  */
 
 export interface ProfitInvoiceInput {
+  /** Original sale profit from the profit records. Kept because a refund zeroes the stored profit (audit F5). */
+  originalProfit?: number | null;
+  /** When the invoice was refunded (from the profit record). A refund after a period end does not change that period. */
+  refundedAt?: string | null;
   /** Invoice number: the key debts and write-offs refer to. */
   id: string;
   type?: string;
@@ -56,6 +60,34 @@ export interface ProfitExpenseInput {
   amount: number;
   date: string;
   isReversed?: boolean;
+  /** When the expense was reversed. Needed so earlier periods keep it (audit U6, 2026-11-24). */
+  reversedAt?: string | null;
+}
+
+/**
+ * An invoice refunded after the period end is still a sale of that period, valued with its original profit.
+ * (audit F5, 2026-11-24). Only refunds with a known refund day and original profit are changed.
+ */
+function asOfRangeEnd(inv: ProfitInvoiceInput, range: ProfitRange | undefined, dayOf: (value: string) => string): ProfitInvoiceInput {
+  if (!range?.to) return inv;
+  if (inv.status !== 'refunded') return inv;
+  if (inv.originalProfit === null || inv.originalProfit === undefined || !inv.refundedAt) return inv;
+  if (dayOf(inv.refundedAt) <= range.to) return inv;
+  return { ...inv, status: 'completed', profit: inv.originalProfit };
+}
+
+/**
+ * An expense counts for a period ending on `rangeTo` unless it was reversed on or before that day.
+ * A reversal after the period end does not remove the expense from that period.
+ */
+export function expenseIsCounted(
+  e: { isReversed?: boolean; reversedAt?: string | null },
+  rangeTo: string | undefined,
+  dayOf: (value: string) => string,
+): boolean {
+  if (!e.isReversed) return true;
+  if (!e.reversedAt || !rangeTo) return false;
+  return dayOf(e.reversedAt) > rangeTo;
 }
 
 export interface ProfitRange {
@@ -127,6 +159,21 @@ export interface InvoiceProfitTimeline {
   writeoff: { day: string; amount: number; cancelledPending: number; loss: number } | null;
   pendingProfit: number;
   undatedCollections: number;
+  /** Inputs needed to value the pending profit as of a given day (audit F6, 2026-11-24). */
+  pendingBase: { total: number; profit: number; paidTotal: number; isWrittenOff: boolean };
+}
+
+/** Pending profit of an invoice as of `to`: payments dated after `to` have not happened yet for that period. */
+function pendingProfitAsOf(t: InvoiceProfitTimeline, to?: string): number {
+  if (!t.isCredit) return 0;
+  if (!to) return t.pendingProfit;
+  if (t.writeoff && t.writeoff.day <= to) return 0;
+  const { total, profit, paidTotal } = t.pendingBase;
+  if (total <= 0) return 0;
+  const laterCollections = t.collections.filter(c => c.day > to).reduce((sum, c) => sum + c.amount, 0);
+  const collectedByEnd = Math.max(0, paidTotal - laterCollections);
+  const unpaidAtEnd = Math.max(0, total - collectedByEnd);
+  return profit * (unpaidAtEnd / total);
 }
 
 const round8 = (value: number): number => Math.round((value + Number.EPSILON) * 1e8) / 1e8;
@@ -187,6 +234,7 @@ export function buildInvoiceProfitTimeline(
       saleDay, revenue, revenueWithTax, isCredit,
       saleDayProfit: profit,
       collections: [], writeoff: null, pendingProfit: 0, undatedCollections: 0,
+      pendingBase: { total, profit, paidTotal: 0, isWrittenOff: false },
     };
   }
 
@@ -248,6 +296,7 @@ export function buildInvoiceProfitTimeline(
     writeoff,
     pendingProfit: isWrittenOff ? 0 : share(unpaid),
     undatedCollections,
+    pendingBase: { total, profit, paidTotal, isWrittenOff },
   };
 }
 
@@ -319,7 +368,8 @@ export function computeProfitSummary(input: ProfitEngineInput): ProfitSummary {
   let undatedCollections = 0;
 
   const knownInvoiceIds = new Set<string>();
-  for (const invoice of input.invoices) {
+  for (const rawInvoice of input.invoices) {
+    const invoice = asOfRangeEnd(rawInvoice, range, dayOf);
     knownInvoiceIds.add(invoice.id);
     if (!isCountedInvoice(invoice)) continue;
     if (filter && !filter(invoice)) continue;
@@ -357,8 +407,8 @@ export function computeProfitSummary(input: ProfitEngineInput): ProfitSummary {
     }
 
     // Pending profit is a balance: every open debt sold up to the end of the range.
-    if (timeline.pendingProfit !== 0 && (!range?.to || timeline.saleDay <= range.to)) {
-      pendingProfit += timeline.pendingProfit;
+    if (!range?.to || timeline.saleDay <= range.to) {
+      pendingProfit += pendingProfitAsOf(timeline, range?.to);
     }
   }
 
@@ -379,9 +429,9 @@ export function computeProfitSummary(input: ProfitEngineInput): ProfitSummary {
 
   let expenses = 0;
   for (const e of input.expenses ?? []) {
-    if (e.isReversed) continue;
     const day = dayOf(e.date);
     if (!inRange(day, range)) continue;
+    if (!expenseIsCounted(e, range?.to, dayOf)) continue;
     const amount = num(e.amount);
     expenses += amount;
     dayRow(day).expenses += amount;

@@ -336,3 +336,114 @@ export async function runPartnerCurrency(k, newWorldFn) {
   check('D10 replay is already processed', again.already_processed, true);
   check('D10 replay did not withdraw twice', (await row()).c, 900);
 }
+
+// ---------- Confirmed law fixes from the v1.5.270 audit (migration 20261124080000) ----------
+export async function runLawFixes(k, newWorldFn) {
+  const { check, truthy } = k;
+  const sell = (w, prod, qty, opId) => w.q(
+    `select * from public.process_pos_sale_atomic($1,'cash','L','',$2,0,0,0,0,$2,0,'USD',null::uuid,$3::jsonb,0,1,null)`,
+    [opId, qty * 10, JSON.stringify([{ product_id: prod, product_name: 'Scarce', quantity: qty, unit_price: 10, amount_usd: qty * 10, amount_original: qty * 10, cost_price: 6 }])]);
+  const qtyOf = async (w, prod) => Number((await w.one(`select quantity::float8 q from public.products where id=$1`, [prod])).q);
+
+  // F-11 stock: default store setting refuses a sale beyond stock; the stock does not change.
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Scarce',10,6,1) returning id`, [OWNER])).id;
+    truthy('LAW-STOCK default refuses a sale beyond stock', (await w.fails(sell(w, prod, 3, w.op('ls1')))) !== null);
+    check('LAW-STOCK stock unchanged after refusal', await qtyOf(w, prod), 1);
+    // With the owner's allow-negative setting the sale proceeds and the shortage is flagged.
+    await w.db.exec(`insert into public.stores(user_id, name, allow_negative_stock) values ('${OWNER}','law store', true);`);
+    const r = (await sell(w, prod, 3, w.op('ls2')))[0];
+    check('LAW-STOCK allowed when the owner enables negative stock', r.stock_shortage, true);
+    check('LAW-STOCK negative stock after allowed sale', await qtyOf(w, prod), -2);
+  }
+
+  // F-11 free goods: a receipt at cost 0 never lowers the average; a positive-cost receipt stays weighted.
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Free',20,10,10) returning id`, [OWNER])).id;
+    const free = (await w.one(`select * from public.receive_stock_wac($1,10,0,'free-1')`, [prod]));
+    check('LAW-FREE average stays 10 after 10 free units', Number(free.receive_stock_wac?.cost ?? free.cost ?? free.calc_cost ?? free[Object.keys(free)[1]]), 10);
+    check('LAW-FREE quantity is 20 after the free receipt', await qtyOf(w, prod), 20);
+    const paid = (await w.one(`select * from public.receive_stock_wac($1,10,20,'paid-1')`, [prod]));
+    check('LAW-FREE a paid receipt still weights the average ((20 at 10 + 10 at 20) / 30 = 13.3333)', Number(paid[Object.keys(paid)[1]]), 13.333333, 0.0001);
+  }
+
+  // F1 (audit): the cash sale and its drawer movement are one transaction (migration 20261124080100).
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Drawer',10,6,50) returning id`, [OWNER])).id;
+    const sh = await w.newShift(100);
+    const call = (opId, shiftId) => w.q(
+      `select * from public.process_pos_sale_with_drawer_atomic($1,'cash','D','',30,0,0,0,0,30,12,'USD',null::uuid,$2::jsonb,0,1,null,$3::uuid,null)`,
+      [opId, JSON.stringify([{ product_id: prod, product_name: 'Drawer', quantity: 3, unit_price: 10, amount_usd: 30, amount_original: 30, cost_price: 6 }]), shiftId]);
+    const r1 = (await call('drawer-op-0001', sh))[0];
+    check('F1 sale succeeded', r1.success, true);
+    check('F1 one drawer movement for the sale', Number((await w.one(`select count(*)::int c from public.shift_transactions where shift_id=$1 and type='sale'`, [sh])).c), 1);
+    check('F1 expected balance = 100 + 30', await w.expected(sh), 130);
+    const r2 = (await call('drawer-op-0001', sh))[0];
+    check('F1 replay is already processed', r2.already_processed, true);
+    check('F1 replay posts no second movement', Number((await w.one(`select count(*)::int c from public.shift_transactions where shift_id=$1 and type='sale'`, [sh])).c), 1);
+    check('F1 replay leaves expected balance at 130', await w.expected(sh), 130);
+    // closed shift: the whole sale is refused and no invoice is written
+    const closed = await w.newShift(10);
+    await w.db.exec(`update public.cash_shifts set closed_at = now() where id='${closed}'`);
+    const before = Number((await w.one(`select count(*)::int c from public.invoices`)).c);
+    truthy('F1 closed shift refuses the sale', (await w.fails(call('drawer-op-0002', closed))) !== null);
+    check('F1 refused sale wrote no invoice', Number((await w.one(`select count(*)::int c from public.invoices`)).c), before);
+  }
+
+  // F8 (audit): editing a paid purchase keeps the drawer reference and shows the supplier credit (migration 20261124080200).
+  {
+    const w = await newWorldFn();
+    const sup = (await w.one(`insert into public.suppliers(user_id,name) values ($1,'Supplier F8') returning id`, [OWNER])).id;
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'F8 item',20,10,0) returning id`, [OWNER])).id;
+    const sh = await w.newShift(500);
+    const inv = (await w.one(`insert into public.purchase_invoices(id,user_id,invoice_number,supplier_name,supplier_id,status,payment_method,payment_status,amount_paid,paid_from,paid_shift_id,paid_currency,paid_currency_amount,paid_rate,invoice_date,actual_items_count,actual_total_quantity,actual_grand_total,expected_items_count,expected_total_quantity,expected_grand_total) values (gen_random_uuid(),$1,'PI-F8-1','Supplier F8',$2,'draft','cash','paid',100,'drawer',$3,'USD',100,1,'2026-11-23',1,10,100,1,10,100) returning id`, [OWNER, sup, sh])).id;
+    await w.q(`insert into public.purchase_invoice_items(invoice_id,product_id,product_name,quantity,cost_price,total_cost) values ($1,$2,'F8 item',10,10,100)`, [inv, prod]);
+    await w.q(`select public.finalize_purchase_invoice_atomic($1)`, [inv]);
+    const txBefore = Number((await w.one(`select count(*)::int c from public.shift_transactions where shift_id=$1`, [sh])).c);
+    const newId = (await w.one(`select public.edit_purchase_invoice_atomic($1, $2::jsonb, $3, 'F8 test') r`, [inv, JSON.stringify([{ product_id: prod, product_name: 'F8 item', quantity: 8, cost_price: 10 }]), w.op('f8edit')])).r;
+    const nv = await w.one(`select paid_from, paid_shift_id::text psh, supplier_credit::float8 credit, amount_paid::float8 paid from public.purchase_invoices where id=$1`, [newId]);
+    check('F8 replacement keeps paid_from = drawer', nv.paid_from, 'drawer');
+    check('F8 replacement keeps the original shift reference', nv.psh, sh);
+    check('F8 replacement shows supplier credit 20 (100 paid, 80 total)', nv.credit, 20);
+    const led = await w.one(`select coalesce(sum(amount),0)::float8 s from public.supplier_ledger_entries where supplier_id=$1`, [sup]);
+    check('F8 supplier ledger nets to -20 (credit to the store)', led.s, -20);
+    check('F8 no second drawer movement for the edit', Number((await w.one(`select count(*)::int c from public.shift_transactions where shift_id=$1`, [sh])).c), txBefore);
+  }
+
+  // F4 (audit): the period closing stores the FX difference of debt collections as its own line (migration 20261124080300).
+  {
+    const w = await newWorldFn();
+    const d = await w.newDebt({ total: 100, isCash: true });
+    await w.db.exec(`insert into public.debt_payments(debt_id,user_id,amount,settled_amount,fx_difference_usd,fx_credit_rate,payment_method,currency,exchange_rate,created_at,operation_id,currency_amount) values ('${d}','${OWNER}',37.5,50,-12.5,15000,'cash','SYP',20000,'2026-01-15T10:00:00Z','fx-close-0001',750000)`);
+    const res = (await w.one(`select public.close_accounting_period_atomic('2026-01-01','2026-01-31','UTC') r`)).r;
+    check('F4 closing stores the FX difference (-12.5)', res.fx_difference, -12.5);
+    check('F4 closing: net after FX = net + FX', Math.round((res.net_after_fx - (res.net_profit + res.fx_difference)) * 1e6) / 1e6, 0);
+    const row = await w.one(`select fx_difference::float8 f, net_after_fx::float8 n, net_profit::float8 p from public.accounting_period_closures where user_id=$1`, [OWNER]);
+    check('F4 closure row carries fx_difference', row.f, -12.5);
+    check('F4 closure row net_profit is unchanged by FX', row.p, res.net_profit);
+  }
+
+  // F7 (audit): a credit quick purchase is linked to a supplier and writes one purchase entry (migration 20261124080400).
+  {
+    const w = await newWorldFn();
+    const sup = (await w.one(`insert into public.suppliers(user_id,name) values ($1,'Supplier F7') returning id`, [OWNER])).id;
+    const payload = (extra) => JSON.stringify({ productName: 'F7 item', quantity: 10, costPrice: 10, salePrice: 20, paymentMethod: 'credit', ...extra });
+    const refused = await w.fails(w.one(`select public.process_quick_purchase_atomic('44444444-4444-4444-8444-444444444444'::uuid, $1::jsonb) r`, [payload({})]));
+    truthy('F7 credit without a supplier is refused with the supplier message', refused !== null && refused.includes('يلزم اختيار مورد'));
+    const qpId = '22222222-2222-4222-8222-' + String(Date.now()).slice(-12);
+    await w.one(`select public.process_quick_purchase_atomic($1::uuid, $2::jsonb) r`, [qpId, payload({ supplierId: sup })]);
+    const entries = await w.one(`select count(*)::int c, coalesce(sum(amount),0)::float8 s from public.supplier_ledger_entries where supplier_id=$1 and entry_type='purchase'`, [sup]);
+    check('F7 credit quick purchase writes one purchase entry', entries.c, 1);
+    check('F7 purchase entry equals the total (10 x 10 = 100)', entries.s, 100);
+    const inv = await w.one(`select supplier_id::text sid, supplier_name from public.purchase_invoices where id=$1::uuid`, [qpId]);
+    check('F7 invoice is linked to the supplier', inv.sid, sup);
+    check('F7 supplier name is the supplier (not the product)', inv.supplier_name, 'Supplier F7');
+    const cashId = '33333333-3333-4333-8333-' + String(Date.now()).slice(-12);
+    const shCash = await w.newShift(500);
+    await w.one(`select public.process_quick_purchase_atomic($1::uuid, $2::jsonb) r`, [cashId, JSON.stringify({ productName: 'F7 cash', quantity: 1, costPrice: 5, salePrice: 9, paymentMethod: 'cash', shiftId: shCash })]);
+    check('F7 cash quick purchase writes no supplier entry', Number((await w.one(`select count(*)::int c from public.supplier_ledger_entries where reference_id=$1`, [cashId])).c), 0);
+  }
+}

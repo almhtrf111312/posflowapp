@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export type ActivityType = 
   | 'login'
+  | 'sale_total_mismatch'
   | 'expense_refund'
   | 'logout'
   | 'sale'
@@ -192,6 +193,7 @@ export function clearActivityLogs() {
 export const activityTypeLabels: Record<ActivityType, { ar: string; en: string; tr: string; fr?: string }> = {
   expense_refund: { ar: 'استرداد وتراجع عن مصروف', en: 'Expense Refunded', tr: 'Gider İadesi', fr: 'Remboursement de dépense' },
   login: { ar: 'تسجيل دخول', en: 'Login', tr: 'Giriş Yapıldı', fr: 'Connexion' },
+  sale_total_mismatch: { ar: 'فرق في إجمالي البيع', en: 'Sale total mismatch', tr: 'Satış toplamı farkı', fr: 'Écart de total de vente' },
   logout: { ar: 'تسجيل خروج', en: 'Logout', tr: 'Çıkış Yapıldı', fr: 'Déconnexion' },
   sale: { ar: 'عملية بيع', en: 'Sale', tr: 'Satış İşlemi', fr: 'Vente' },
   maintenance: { ar: 'خدمة صيانة', en: 'Maintenance', tr: 'Bakım Hizmeti', fr: 'Maintenance' },

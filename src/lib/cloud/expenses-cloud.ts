@@ -42,6 +42,7 @@ export interface CloudExpense {
   distributions: ExpenseDistribution[];
   created_at: string;
   is_reversed?: boolean;
+  reversed_at?: string | null;
   original_currency?: string;
   original_amount?: number;
   exchange_rate?: number;
@@ -62,6 +63,7 @@ export interface Expense {
   cashierId?: string;
   cashierName?: string;
   is_reversed?: boolean;
+  reversedAt?: string | null;
   originalCurrency?: string;
   originalAmount?: number;
   exchangeRate?: number;
@@ -117,6 +119,7 @@ function toExpense(cloud: CloudExpense & { cashier_name?: string }): Expense {
     cashierId: cloud.cashier_id || undefined,
     cashierName: cloud.cashier_name || cashierNamesCache[cloud.cashier_id || ''] || undefined,
     is_reversed: !!cloud.is_reversed,
+    reversedAt: cloud.reversed_at ?? null,
     originalCurrency: cloud.original_currency || 'USD',
     originalAmount: cloud.original_amount !== undefined ? Number(cloud.original_amount) : undefined,
     exchangeRate: cloud.exchange_rate !== undefined ? Number(cloud.exchange_rate) : undefined,
@@ -145,11 +148,11 @@ let cacheTimestamp = 0;
 const CACHE_TTL = 30000;
 
 // Load expenses - cashiers see only their expenses, owners see all
-const fetchFresh_loadExpensesCloud = async (): Promise<Expense[]> => {
+const fetchFresh_loadExpensesCloud = async (opts: { includeReversed?: boolean } = {}): Promise<Expense[]> => {
   const userId = getCurrentUserId();
   if (!userId) return [];
 
-  if (expensesCache && Date.now() - cacheTimestamp < CACHE_TTL) {
+  if (!opts.includeReversed && expensesCache && Date.now() - cacheTimestamp < CACHE_TTL) {
     return expensesCache;
   }
 
@@ -213,7 +216,10 @@ const fetchFresh_loadExpensesCloud = async (): Promise<Expense[]> => {
     }
   }
 
-  // Exclude reversed expenses
+  // Lists exclude reversed expenses. Reports keep them (with reversed_at) so earlier periods stay correct.
+  if (opts.includeReversed) {
+    return (cloudExpenses || []).map(toExpense);
+  }
   cloudExpenses = (cloudExpenses || []).filter(e => !e.is_reversed);
 
   expensesCache = cloudExpenses.map(toExpense);
@@ -221,6 +227,11 @@ const fetchFresh_loadExpensesCloud = async (): Promise<Expense[]> => {
   saveExpensesLocally(expensesCache);
   
   return expensesCache;
+};
+
+/** Expenses for the reports and closings, including reversed ones (use expenseIsCounted to apply the period rule). */
+export const loadExpensesForReportsCloud = async (): Promise<Expense[]> => {
+  return fetchFresh_loadExpensesCloud({ includeReversed: true });
 };
 
 

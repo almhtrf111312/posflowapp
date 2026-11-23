@@ -1,6 +1,7 @@
 import { isSyncPendingSubscription, SYNC_PENDING_SUBSCRIPTION_SHORT } from '@/lib/subscription-lock';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { ListPageSkeleton } from '@/components/ui/page-skeleton';
 import {
   Search,
   Plus,
@@ -102,6 +103,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   const m = useMoney();
   const [searchParams, setSearchParams] = useSearchParams();
   const [debts, setDebts] = useState<Debt[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('active');
   const { currencyCode, currencySymbol, exchangeRate } = useCurrency();
@@ -162,8 +164,12 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   // Load debts from store
   useEffect(() => {
     const loadData = async () => {
-      const debtsData = await loadDebtsCloud();
-      setDebts(debtsData);
+      try {
+        const debtsData = await loadDebtsCloud();
+        setDebts(debtsData);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadData();
 
@@ -654,7 +660,9 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
 
       {/* Debts List */}
       <div className="space-y-2.5">
-        {filteredDebts.length === 0 ? (
+        {isLoading && debts.length === 0 ? (
+          <ListPageSkeleton rows={5} />
+        ) : filteredDebts.length === 0 ? (
           <div className="bg-card rounded-2xl border border-border p-8 text-center">
             <CreditCard className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
             <p className="text-sm text-muted-foreground">{isEn ? "No matching debts found" : "لا توجد ديون مطابقة"}</p>
@@ -1307,4 +1315,3 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
     </div>
   );
 }
-

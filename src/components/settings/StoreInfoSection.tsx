@@ -39,7 +39,7 @@ export function StoreInfoSection({
   hideMaintenanceSection,
   setHideMaintenanceSection,
 }: StoreInfoSectionProps) {
-  const { t, isRTL } = useLanguage();
+  const { t } = useLanguage();
 
   return (
     <div>
@@ -52,8 +52,8 @@ export function StoreInfoSection({
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-xs font-bold text-foreground">معالج التهيئة والإعداد السريع</p>
-            <p className="text-[11px] text-muted-foreground">تهيئة واختيار نوع المتجر والبيانات الأساسية بنقرة واحدة</p>
+            <p className="text-xs font-bold text-foreground">{t('storeSettings.setupWizardTitle')}</p>
+            <p className="text-[11px] text-muted-foreground">{t('storeSettings.setupWizardDesc')}</p>
           </div>
         </div>
         <Button
@@ -65,12 +65,12 @@ export function StoreInfoSection({
             window.dispatchEvent(new CustomEvent('posflow:open-setup-wizard'));
           }}
         >
-          تشغيل المعالج
+          {t('storeSettings.launchWizard')}
         </Button>
       </div>
 
       <div className="space-y-2">
-        {/* اسم المتجر */}
+        {/* Store Name */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.storeName')}</label>
           <div className="relative flex-1">
@@ -83,7 +83,7 @@ export function StoreInfoSection({
           </div>
         </div>
 
-        {/* نوع المتجر */}
+        {/* Store Type */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.storeType')}</label>
           <select
@@ -116,7 +116,7 @@ export function StoreInfoSection({
           </select>
         </div>
 
-        {/* الهاتف */}
+        {/* Phone */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('common.phone')}</label>
           <div className="relative flex-1">
@@ -133,7 +133,7 @@ export function StoreInfoSection({
           </div>
         </div>
 
-        {/* الإيميل */}
+        {/* Email */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('common.email')}</label>
           <div className="relative flex-1">
@@ -146,7 +146,7 @@ export function StoreInfoSection({
           </div>
         </div>
 
-        {/* العنوان */}
+        {/* Address */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.address')}</label>
           <div className="relative flex-1">
@@ -203,7 +203,7 @@ export function StoreInfoSection({
         </div>
       </div>
 
-      {/* POS Options - قسم الصيانة */}
+      {/* POS Options - Maintenance Section */}
       {(storeSettings.type === 'phones' || storeSettings.type === 'repair') && (
         <div className="flex items-center justify-between py-2 border-t border-border mt-3">
           <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export function StoreInfoSection({
       <div className="pt-2 border-t border-border space-y-3 mt-3">
         <div className="flex items-center gap-2">
           <Smartphone className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-base font-semibold text-foreground">{isRTL ? 'سلوك قارئ الباركود' : 'Barcode Scanner Behavior'}</h3>
+          <h3 className="text-base font-semibold text-foreground">{t('storeSettings.barcodeScannerBehavior')}</h3>
         </div>
         <Tabs value={barcodeScanMode} onValueChange={(value) => {
           const mode = value === 'add' ? 'add' : 'search';
@@ -236,22 +236,22 @@ export function StoreInfoSection({
         }}>
           <TabsList className="grid h-auto w-full grid-cols-2">
             <TabsTrigger value="search" className="min-h-10 whitespace-normal text-xs">
-              {isRTL ? 'عرض المنتج' : 'Show product'}
+              {t('storeSettings.barcodeShowProduct')}
             </TabsTrigger>
             <TabsTrigger value="add" className="min-h-10 whitespace-normal text-xs">
-              {isRTL ? 'إضافة للسلة مباشرة' : 'Add directly to cart'}
+              {t('storeSettings.barcodeAddDirectly')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
         <p className="text-xs text-muted-foreground">
-          {isRTL ? 'في نمط الإضافة المباشرة، لن تظهر نافذة تفاصيل المنتج وستتم إضافته للسلة فوراً.' : 'In direct add mode, product details dialog is bypassed.'}
+          {t('storeSettings.barcodeDirectAddDesc')}
         </p>
       </div>
 
-      {/* نص يوضح الطباعة للفاتورة */}
+      {/* Invoice & report header note */}
       <div className="pt-3 border-t border-border mt-3">
         <p className="text-xs text-muted-foreground text-start">
-          {isRTL ? 'تظهر هذه المعلومات على رأس الفاتورة والتقارير' : 'This info appears on invoices and reports'}
+          {t('storeSettings.infoAppearsOnInvoices')}
         </p>
       </div>
     </div>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { useUserRole } from '@/hooks/use-user-role';
+import { useLanguage } from '@/hooks/use-language';
 import { supabase } from '@/integrations/supabase/client';
 import { getOwnerIdForInsert } from '@/lib/supabase-store';
 
 const KEY = 'posflow_surplus_as_profit';
 
-/** يقرأ الإعداد من store_settings (مصدر الحقيقة) ويحدّث الكاش المحلي؛ يعمل دون إنترنت بالكاش */
+/** Reads setting from store_settings (source of truth) and updates local cache; works offline via cache */
 export async function syncSurplusSetting(): Promise<boolean | null> {
   try {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return null;
@@ -27,9 +28,10 @@ export async function syncSurplusSetting(): Promise<boolean | null> {
   }
 }
 
-/** الزيادة في المقبوض عند الدفع النقدي: تُعتمد ربحاً إضافياً (افتراضي) أو تُهمل */
+/** Cash overpayment surplus: recorded as extra profit (default) or ignored */
 export function SurplusProfitField() {
   const { isOwner } = useUserRole();
+  const { t } = useLanguage();
   const [on, setOn] = useState(() => {
     try {
       return localStorage.getItem(KEY) !== 'false';
@@ -77,9 +79,9 @@ export function SurplusProfitField() {
   return (
     <div className="pt-3 border-t border-border flex items-start justify-between gap-3">
       <div>
-        <div className="text-sm font-semibold">اعتماد الزيادة في المقبوض كربح إضافي</div>
+        <div className="text-sm font-semibold">{t('storeSettings.surplusAsProfitTitle')}</div>
         <p className="text-xs text-muted-foreground">
-          عند أخذ مبلغ أكبر من الفاتورة نقداً: مفعّل = تُرفع الأسعار وتُسجَّل الزيادة ربحاً. معطّل = لا تُضاف للربح.
+          {t('storeSettings.surplusAsProfitDesc')}
         </p>
       </div>
       <Switch checked={on} onCheckedChange={change} />

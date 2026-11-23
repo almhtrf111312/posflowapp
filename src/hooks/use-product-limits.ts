@@ -39,7 +39,7 @@ export function useProductLimits() {
       try {
         const { count, error } = await supabase
           .from('products')
-          .select('*', { count: 'exact', head: true });
+          .select('id', { count: 'exact', head: true });
 
         if (error) throw error;
         currentCount = count || 0;

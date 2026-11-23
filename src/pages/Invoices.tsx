@@ -1845,7 +1845,7 @@ export default function Invoices() {
         </head>
         <body>
           <div class="header">
-            ${storeLogo ? `<img src="${escapeHtml(storeLogo)}" alt="شعار" class="logo" onerror="this.style.display='none'" />` : ''}
+            ${storeLogo ? `<img src="${escapeHtml(storeLogo)}" alt="شعار" loading="lazy" decoding="async" class="logo" onerror="this.style.display='none'" />` : ''}
             <div class="store-name">${escapeHtml(storeName)}</div>
             ${storeAddress ? `<div class="store-info">${escapeHtml(storeAddress)}</div>` : ''}
             ${storePhone ? `<div class="store-info">${escapeHtml(storePhone)}</div>` : ''}
@@ -3801,4 +3801,3 @@ export default function Invoices() {
     </div>
   );
 }
-

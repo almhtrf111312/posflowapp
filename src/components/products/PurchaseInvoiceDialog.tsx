@@ -905,7 +905,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                   <Label className="text-sm font-bold block">{t('purchases.receiptPhoto')}</Label>
                   {invoiceImagePreview ? (
                     <div className="relative">
-                      <img src={invoiceImagePreview} alt="Invoice" className="w-full h-48 object-contain bg-muted/30 rounded-xl border" />
+                      <img src={invoiceImagePreview} alt="Invoice" loading="lazy" decoding="async" className="w-full h-48 object-contain bg-muted/30 rounded-xl border" />
                       {invoiceImgStatus === 'syncing' && (
                         <div className="absolute top-2 left-2 bg-black/60 rounded-full p-1.5">
                           <Loader2 className="w-4 h-4 text-white animate-spin" />

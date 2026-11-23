@@ -1,13 +1,43 @@
 import { supabase } from '@/integrations/supabase/client';
 
+let cachedWebPSupport: boolean | null = null;
+
 /**
- * ضغط الصورة تلقائياً
+ * فحص دعم المتصفح/WebView لترميز صور WebP عبر Canvas مع تخزين النتيجة مؤقتاً
+ */
+export function supportsWebPEncoding(): boolean {
+  if (cachedWebPSupport !== null) return cachedWebPSupport;
+  try {
+    if (typeof document === 'undefined') {
+      cachedWebPSupport = false;
+      return false;
+    }
+    const testCanvas = document.createElement('canvas');
+    testCanvas.width = 1;
+    testCanvas.height = 1;
+    cachedWebPSupport = testCanvas.toDataURL('image/webp').startsWith('data:image/webp');
+  } catch {
+    cachedWebPSupport = false;
+  }
+  return cachedWebPSupport;
+}
+
+/**
+ * إرجاع صيغة الضغط المفضلة: image/webp عند الدعم، وإلا الرجوع التلقائي إلى image/jpeg
+ */
+export function getPreferredImageMimeType(): 'image/webp' | 'image/jpeg' {
+  return supportsWebPEncoding() ? 'image/webp' : 'image/jpeg';
+}
+
+/**
+ * ضغط الصورة تلقائياً مع تفضيل صيغة WebP (جودة 0.82) والرجوع التلقائي إلى JPEG عند عدم الدعم
  */
 export async function compressImage(
   base64Image: string,
   maxSizeKB: number = 30,
   maxWidth: number = 400,
-  maxHeight: number = 400
+  maxHeight: number = 400,
+  initialQuality: number = 0.82
 ): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -46,15 +76,23 @@ export async function compressImage(
         return (data.length * 0.75) / 1024;
       };
 
-      let quality = 0.8;
-      let compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      let mimeType: 'image/webp' | 'image/jpeg' = getPreferredImageMimeType();
+      let quality = initialQuality;
+      let compressedBase64 = canvas.toDataURL(mimeType, quality);
 
-      while (getImageSizeKB(compressedBase64) > maxSizeKB && quality > 0.1) {
-        quality -= 0.05;
-        compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      // تحقق أمان إضافي: في حال أعاد المتصفح صيغة غير WebP نرجع فوراً إلى JPEG
+      if (mimeType === 'image/webp' && !compressedBase64.startsWith('data:image/webp')) {
+        mimeType = 'image/jpeg';
+        compressedBase64 = canvas.toDataURL(mimeType, quality);
       }
 
-      console.log(`[Image Compression] ${getImageSizeKB(base64Image).toFixed(1)}KB → ${getImageSizeKB(compressedBase64).toFixed(1)}KB (q=${(quality * 100).toFixed(0)}%)`);
+      while (getImageSizeKB(compressedBase64) > maxSizeKB && quality > 0.1) {
+        quality = Math.max(0.1, Number((quality - 0.05).toFixed(2)));
+        compressedBase64 = canvas.toDataURL(mimeType, quality);
+        if (quality <= 0.1) break;
+      }
+
+      console.log(`[Image Compression] (${mimeType}) ${getImageSizeKB(base64Image).toFixed(1)}KB → ${getImageSizeKB(compressedBase64).toFixed(1)}KB (q=${(quality * 100).toFixed(0)}%)`);
       resolve(compressedBase64);
     };
 
@@ -109,6 +147,11 @@ export async function uploadProductImage(base64Image: string): Promise<string | 
     console.log('[Image Upload] Compressing image...');
     const compressedImage = await compressImage(base64Image, 30, 400, 400);
 
+    // تحديد الصيغة الفعلية بعد الضغط (WebP عند الدعم وإلا JPEG)
+    const isWebP = compressedImage.startsWith('data:image/webp');
+    const mimeType = isWebP ? 'image/webp' : 'image/jpeg';
+    const fileExt = isWebP ? 'webp' : 'jpg';
+
     // الخطوة 2: تحويل base64 → Blob بطريقة آمنة تعمل على Android APK
     let blob: Blob;
     try {
@@ -120,13 +163,13 @@ export async function uploadProductImage(base64Image: string): Promise<string | 
     } catch {
       // Fallback آمن يعمل دائماً في Capacitor Android
       console.warn('[Image Upload] fetch() failed on data URL — using atob() fallback (Android safe)');
-      blob = base64ToBlob(compressedImage, 'image/jpeg');
+      blob = base64ToBlob(compressedImage, mimeType);
     }
 
-    console.log(`[Image Upload] Blob size: ${(blob.size / 1024).toFixed(1)}KB`);
+    console.log(`[Image Upload] Blob size: ${(blob.size / 1024).toFixed(1)}KB (${mimeType})`);
 
     // الخطوة 3: رفع للسحابة — الحفظ داخل مجلد المستخدم لتتوافق مع سياسة الوصول
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
     let userFolder = 'products';
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -139,7 +182,7 @@ export async function uploadProductImage(base64Image: string): Promise<string | 
     const { error } = await supabase.storage
       .from('product-images')
       .upload(filePath, blob, {
-        contentType: 'image/jpeg',
+        contentType: mimeType,
         cacheControl: '3600',
         upsert: false,
       });

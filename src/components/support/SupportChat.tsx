@@ -104,9 +104,11 @@ export function ChatMessages({
       .from('support_messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
+      .limit(200)
       .then(({ data }) => {
-        setMessages((data as SupportMessage[]) || []);
+        const latestChronological = ((data as SupportMessage[]) || []).slice().reverse();
+        setMessages(latestChronological);
         setLoading(false);
       });
   }, [conversationId]);

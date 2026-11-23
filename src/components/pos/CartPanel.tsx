@@ -1733,7 +1733,7 @@ export function CartPanel({
         </head>
         <body>
           <div class="header">
-            ${storeLogo ? `<img src="${esc(storeLogo)}" alt="${t('pos.logo') || 'شعار'}" class="logo" />` : ''}
+            ${storeLogo ? `<img src="${esc(storeLogo)}" alt="${t('pos.logo') || 'شعار'}" loading="lazy" decoding="async" class="logo" />` : ''}
             <div class="store-name">${esc(storeName)}</div>
             ${storeAddress ? `<div class="store-info">${esc(storeAddress)}</div>` : ''}
             ${storePhone ? `<div class="store-info">${esc(storePhone)}</div>` : ''}

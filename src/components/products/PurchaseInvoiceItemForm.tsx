@@ -734,7 +734,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
         <div className="flex gap-2">
           {imagePreview && (
             <div className="relative">
-              <img src={imagePreview} alt="Product" className="w-12 h-12 rounded-lg object-cover border" />
+              <img src={imagePreview} alt="Product" loading="lazy" decoding="async" className="w-12 h-12 rounded-lg object-cover border" />
               {imgStatus === 'syncing' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg">
                   <Loader2 className="w-3 h-3 text-white animate-spin" />

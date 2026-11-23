@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { DashboardSkeleton } from '@/components/ui/page-skeleton';
 import { formatNumber, formatCurrency } from '@/lib/utils';
 import {
   DollarSign,
@@ -427,6 +428,10 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
     );
   }
 
+  if (isLoading && !hasData && !loadError) {
+    return <DashboardSkeleton embedded={embedded} />;
+  }
+
   return (
     <div className={cn("space-y-3 md:space-y-4", !embedded && "p-4 md:p-6")}>
       {/* Header */}
@@ -642,4 +647,3 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
     </div>
   );
 }
-

@@ -693,6 +693,8 @@ export function PurchaseInvoiceViewDialog({
               <img
                 src={previewImage}
                 alt={isEn ? "Purchase invoice preview" : "معاينة فاتورة المشتريات"}
+                loading="lazy"
+                decoding="async"
                 className="w-full max-h-[80vh] object-contain rounded-lg"
               />
             </DialogContent>

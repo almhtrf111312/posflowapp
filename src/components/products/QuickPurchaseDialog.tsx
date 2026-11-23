@@ -784,7 +784,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
               </Label>
               {imagePreview ? (
                 <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border group bg-black/5">
-                  <img src={imagePreview} alt="Receipt Preview" className="w-full h-full object-contain" />
+                  <img src={imagePreview} alt="Receipt Preview" loading="lazy" decoding="async" className="w-full h-full object-contain" />
                   {imgStatus === 'syncing' && (
                     <div className="absolute top-2 left-2 bg-black/70 rounded-full px-2 py-1 flex items-center gap-1.5 text-[11px] text-white">
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -892,4 +892,3 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
     </>
   );
 }
-

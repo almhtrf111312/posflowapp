@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useLanguage } from '@/hooks/use-language';
+import { ListPageSkeleton } from '@/components/ui/page-skeleton';
 import {
   loadShifts,
   getActiveShift,
@@ -73,6 +74,7 @@ export default function CashShifts() {
   const [shiftStatus, setShiftStatus] = useState({ cashSales: 0, cashExpenses: 0, expectedCash: 0 });
 
   // Dialog states
+  const [isLoadingCloud, setIsLoadingCloud] = useState(true);
   const [showStartDialog, setShowStartDialog] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [activeShiftCurrency, setActiveShiftCurrency] = useState<string>('USD');
@@ -174,7 +176,9 @@ export default function CashShifts() {
           return [...prev, ...newFromCloud].sort((a, b) => b.openedAt.localeCompare(a.openedAt));
         });
       }
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => {
+      setIsLoadingCloud(false);
+    });
   };
 
   useEffect(() => {
@@ -568,7 +572,9 @@ export default function CashShifts() {
           <CardDescription>{t('cashShifts.last10Shifts')}</CardDescription>
         </CardHeader>
         <CardContent>
-          {recentShifts.length === 0 ? (
+          {isLoadingCloud && recentShifts.length === 0 ? (
+            <ListPageSkeleton rows={4} />
+          ) : recentShifts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {t('cashShifts.noShifts')}
             </div>

@@ -2027,6 +2027,8 @@ export default function Products() {
                           <img
                             src={imagePreviewBase64}
                             alt="Preview"
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -2173,6 +2175,8 @@ export default function Products() {
               <img
                 src={previewImageUrl}
                 alt="معاينة"
+                loading="lazy"
+                decoding="async"
                 className="max-w-full max-h-[80vh] object-contain rounded-lg"
               />
             )}
@@ -3378,6 +3382,8 @@ export default function Products() {
               <img
                 src={previewImageUrl}
                 alt={t('products.productImage')}
+                loading="lazy"
+                decoding="async"
                 className="max-w-full max-h-[80vh] object-contain rounded-lg"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -3409,6 +3415,7 @@ export default function Products() {
     </div>
   );
 }
+
 
 
 

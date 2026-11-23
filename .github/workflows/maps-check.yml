@@ -1,0 +1,30 @@
+name: Maps check
+
+# Fails when any MAP.md is stale, a source file has no one-line role in
+# scripts/map-descriptions.json, or a description points to a deleted file.
+# Independent of the APK/release pipeline: it never signs or publishes anything.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  maps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      - name: Install dependencies (no scripts)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify module maps
+        run: npm run maps:check

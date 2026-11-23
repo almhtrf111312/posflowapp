@@ -16,6 +16,8 @@
     "e2e": "node scripts/e2e/flowpos-e2e.mjs",
     "e2e:stress": "node scripts/e2e/flowpos-stress.mjs",
     "lint": "eslint .",
+    "maps": "node scripts/gen-maps.mjs",
+    "maps:check": "node scripts/gen-maps.mjs --check",
     "preview": "vite preview",
     "version:bump": "node scripts/bump-version.js",
     "version:bump:minor": "node scripts/bump-version.js --minor",

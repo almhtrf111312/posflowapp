@@ -66,9 +66,9 @@
 - **إصدار Windows (Electron):**
   - بناء النسخة المثبّتة والمحمولة عبر `npm run build:electron` و`npm run electron:build:portable` (وفق `ELECTRON_BUILD.md`).
   - اختبار التخزين عبر `IndexedDB`، الطباعة الحرارية/A4، اختصارات لوحة المفاتيح، وتحديث التطبيق.
-- **بروتوكول النشر الآمن (`PROJECT_RULES.md` #3 و#6):**
-  - جميع التعديلات تُدفع وتُختبر أولاً على فرع `event-or-artifact`.
-  - الدمج في `main` يتم حصراً بعد موافقة المالك الصريحة ونجاح `npm run build` (Exit code `0`) واختبارات E2E.
+- **بروتوكول النشر الآمن (`AGENTS.md`):**
+  - لا commit ولا push إلا بطلب صريح من المالك.
+  - الدفع أو الدمج في `main` يتم حصراً بطلب المالك الصريح ونجاح `npm run build` (Exit code `0`) واختبارات E2E.
 
 ---
 

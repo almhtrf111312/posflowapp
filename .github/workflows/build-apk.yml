@@ -2,7 +2,7 @@ name: Build PosFlow APK
 
 on:
   push:
-    branches: [ main, event-or-artifact ]
+    branches: [ main ]
     tags: ['v*']
     paths-ignore:
       - '**.md'

@@ -1,7 +1,7 @@
 # قواعد الأداء الهندسية الملزمة — PosFlow App
 
 > **وثيقة ملزمة (Mandatory Engineering Standard):** تُطبّق هذه القواعد الخمس على كل ميزة جديدة، تعديل شاشة، أو استعلام قاعدة بيانات في **PosFlow App** (Android Capacitor + Windows Electron).  
-> **التوافق المرجعي:** متطابقة بالكامل مع `PROJECT_RULES.md` و`SYSTEM_ARCHITECTURE.md` ومستهدفات `docs/baseline.md` (إقلاع بارد على Android `< 1.5s`، وتمرير ثابت عند `60 FPS`).
+> **التوافق المرجعي:** متطابقة بالكامل مع `AGENTS.md` و`SYSTEM_ARCHITECTURE.md` ومستهدفات `docs/baseline.md` (إقلاع بارد على Android `< 1.5s`، وتمرير ثابت عند `60 FPS`).
 
 ---
 
@@ -14,7 +14,7 @@
   CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invoices_user_status_created
     ON public.invoices (user_id, status, created_at DESC);
   ```
-- **قيد أمني إلزامي (`PROJECT_RULES.md` #5):** يُمنع إنشاء أو تشغيل أي SQL أو Migration أو RPC على الإنتاج (`bwlqfxfvchjvehnbvwaz`) دون عرض التغيير وأخذ موافقة المالك الصريحة مسبقاً.
+- **قيد أمني إلزامي (`AGENTS.md`):** يُمنع إنشاء أو تشغيل أي SQL أو Migration أو RPC على الإنتاج (`bwlqfxfvchjvehnbvwaz`) دون عرض التغيير وأخذ موافقة المالك الصريحة مسبقاً.
 
 ### 1.2 حظر استعلامات `N+1`
 - **ممنوع** تنفيذ استعلام Supabase أو SQLite داخل حلقات (`for`, `forEach`, `map` مع `Promise.all` غير مجمّع) لجلب تفاصيل كل صف على حدة (مثل جلب بنود كل فاتورة أو دفعات كل دين منفردة).
@@ -38,7 +38,7 @@
 | **قوائم الواجهة والتقارير** | `invoices`, `debts`, `expenses`, `audit_logs`, `stock_counts`, `stock_damages`, `customer_credit_ledger` | **Pagination إلزامي** عبر `.range(from, to)` أو Cursor (`lt('created_at', cursor)`) مع فرز مفهرس. يُمنع جلب كامل السجل التاريخي دفعة واحدة. | `50–100` صفاً لشاشات العرض؛ وحتى `200–500` صفاً لدفعات التقارير المجمّعة (كما في `profit-ledger-cloud.ts` و`invoices-cloud.ts`). |
 | **جداول مزامنة Offline-First** | `products`, `categories`, `customers`, `partners`, `store_settings` | يجوز سحب الكتالوج الكامل لضمان استمرارية البيع دون إنترنت، **بشرط** التجزئة عبر `.range(from, from + CHUNK_SIZE - 1)` (كما في `products-cloud.ts`)، وتحديد الأعمدة الضرورية فقط، والمزامنة التفاضلية (`updated_at > lastSync`) متى توفّرت. | `CHUNK_SIZE = 500–1000` لكل دفعة مع تخزين فوري في SQLite/IndexedDB وعدم حجز الخيط الرئيسي. |
 
-> **خط أحمر (`PROJECT_RULES.md` #2):** يُمنع لمس أو تعديل ملفات المستودعات المجمدة (`src/pages/Warehouses.tsx`، `src/pages/StockTransfer.tsx`، `src/lib/cloud/warehouses-cloud.ts`).
+> **خط أحمر (`AGENTS.md`):** يُمنع لمس أو تعديل ملفات المستودعات المجمدة (`src/pages/Warehouses.tsx`، `src/pages/StockTransfer.tsx`، `src/lib/cloud/warehouses-cloud.ts`).
 
 ---
 

@@ -7,7 +7,7 @@
 -- 3. boss_ban_user / boss_unban_user: حظر/رفع حظر جهاز حساب المالك
 -- 4. boss_update_license: زيادة/إنقاص أيام، وتعديل حد المنتجات والكاشيرات
 --
--- طُبّق على الإنتاج عبر محرر SQL في Lovable Cloud (2026-11-14) وتم التحقق منه.
+-- طُبّق على الإنتاج عبر محرر SQL (2026-11-14) وتم التحقق منه.
 -- التراجع (Rollback):
 --   DROP FUNCTION IF EXISTS public.boss_update_license(uuid, integer, integer, integer, text);
 --   DROP FUNCTION IF EXISTS public.boss_unban_user(uuid);

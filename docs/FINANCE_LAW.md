@@ -110,6 +110,9 @@ R-03 movement belongs to its owner's shift, not posted after close (F-19/F-20) �
 | 2026-11-23 | `20261123070000` refund fix (KD-07) | owner, pasted in the Supabase SQL editor | md5 of `prosrc` equals the repo file after removing `\r` |
 | 2026-11-23 | `20261123071000` FX debt crediting (KD-01) | same | same; R-06 returns 0 (no FX payments exist yet) |
 | 2026-11-23 | `20261123072000` `post_shift_sale_atomic` (KD-06) | same | same; the function is unused until the app is switched |
+| 2026-11-23 | `20261123073000` owner store reset fix (KD-08) | owner, pasted in the SQL editor | function present; the owner ran the reset path afterwards |
+| 2026-11-23 | `20261123074000` partner expense rule (D-09) | owner, pasted in the SQL editor | `add_expense_atomic` carries the D-09 rule; `validate_partner_shares` carries the whole-percent and pool checks |
+| 2026-11-23 | `20261123075000` partner withdrawals in any currency (D-10) | owner, pasted in the SQL editor | `partner_withdrawal_atomic` carries the D-10 rule (checked by md5 and marker in the live definition) |
 
 Verify a function against the repo with `md5(replace(prosrc, E'\r', ''))` (a paste from Windows adds CRLF, which changes the plain md5 but not behaviour); signature, `SECURITY DEFINER` and `search_path` also matched. First live reconciliation after applying (R-01..R-06): 0 violations, but R-03/R-04/R-05b/R-06 checked 0 rows (no shifts yet) — repeat after the first real shift (open shift → cash sale → refund / debt payment).
 These were not applied through the Supabase migration history table, so `supabase migration list` will not show them; the repository is the reference.

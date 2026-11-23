@@ -66,6 +66,8 @@ export function VariantPickerDialog({
                   <img
                     src={product.image}
                     alt={product.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover rounded-lg"
                   />
                 ) : (

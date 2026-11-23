@@ -327,12 +327,14 @@ export const processExpense = (
   expenseId?: string,
   currency: string = 'USD',
   currencyAmount?: number,
-  exchangeRate?: number
+  exchangeRate?: number,
+  syncCloud = true,
+  affectDrawer = true
 ): TransactionResult => {
   try {
     const roundedAmount = round8(amount);
     // Step 1: خصم المبلغ من الصندوق بالعملة المحددة لمنع العجز الوهمي للعملات الأجنبية
-    addExpensesToShift(roundedAmount, currency as any, currencyAmount);
+    if (affectDrawer) addExpensesToShift(roundedAmount, currency, currencyAmount);
 
     // Step 2: تسجيل كمصروف تشغيلي في سجل الأرباح
     // معرّف المصروف (expense.id من add_expense_atomic) هو المرجع الوحيد لربط حركة الصندوق وعكسها لاحقاً
@@ -340,7 +342,7 @@ export const processExpense = (
     addOperatingExpense(expId, roundedAmount, expenseType);
 
     // Step 3: مزامنة حركة الوردية سحابياً بالعملة الأصلية وسعر صرفها (reference_id = معرّف المصروف)
-    import('./cloud/cashbox-cloud').then(({ syncActiveShiftTransactionCloud }) => {
+    if (affectDrawer && syncCloud) import('./cloud/cashbox-cloud').then(({ syncActiveShiftTransactionCloud }) => {
       syncActiveShiftTransactionCloud(
         'expense',
         roundedAmount,
@@ -380,7 +382,8 @@ export const reverseExpenseTransaction = (
   expenseIdOrTx: string | { id?: string; reference_id?: string; amount?: number; expense_type?: string; type?: string; currency?: any },
   amount?: number,
   expenseType: string = 'other',
-  currency: 'USD' | 'TRY' | 'SYP' = 'USD'
+  currency: string = 'USD',
+  currencyAmount?: number
 ): TransactionResult => {
   try {
     const isObj = typeof expenseIdOrTx === 'object' && expenseIdOrTx !== null;
@@ -388,10 +391,10 @@ export const reverseExpenseTransaction = (
     const targetId = tx ? (tx.reference_id || tx.id || '') : (typeof expenseIdOrTx === 'string' ? expenseIdOrTx : '');
     const targetAmount = tx ? Number(amount ?? tx.amount ?? 0) : Number(amount || 0);
     const targetType = tx ? (expenseType !== 'other' ? expenseType : (tx.expense_type || tx.type || 'other')) : expenseType;
-    const targetCurrency = (tx?.currency || currency || 'USD') as 'USD' | 'TRY' | 'SYP';
+    const targetCurrency = tx?.currency || currency || 'USD';
 
     // 1. إعادة المبلغ للوردية الحالية / الصندوق بالعملة الفعلية المحددة (وليس نصاً وصفياً)
-    refundExpenseFromShift(roundCurrency(targetAmount), targetCurrency || 'USD');
+    refundExpenseFromShift(roundCurrency(targetAmount), targetCurrency, currencyAmount);
 
     // 2. حذف المصروف التشغيلي حتى يتم تصفيره من تقارير المصروفات التشغيلية ولا يظهر في حسابات الأرباح
     if (targetId) {
@@ -424,9 +427,10 @@ export const restoreExpenseCash = (
   amount: number,
   expenseType: string = 'other',
   expenseId: string = '',
-  currency: 'USD' | 'TRY' | 'SYP' = 'USD'
+  currency: string = 'USD',
+  currencyAmount?: number
 ): TransactionResult => {
-  return reverseExpenseTransaction(expenseId, amount, expenseType, currency);
+  return reverseExpenseTransaction(expenseId, amount, expenseType, currency, currencyAmount);
 };
 
 /**

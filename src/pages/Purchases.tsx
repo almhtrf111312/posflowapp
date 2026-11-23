@@ -54,7 +54,11 @@ export default function Purchases() {
     };
   }, [loadData]);
 
-  const totalPurchases = invoices.reduce((sum, inv) => sum + (inv.actual_grand_total || inv.expected_grand_total || 0), 0);
+  const totalPurchases = invoices.reduce((sum, invoice) => {
+    const isPosted = ['finalized', 'completed'].includes(invoice.status);
+    if (!isPosted || invoice.payment_status === 'cancelled' || invoice.replaced_by) return sum;
+    return sum + (invoice.actual_grand_total ?? invoice.expected_grand_total ?? 0);
+  }, 0);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">

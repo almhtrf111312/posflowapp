@@ -110,8 +110,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         if (typeof data.shiftId === 'string' && data.shiftId.trim().length > 0) {
           replayShiftId = data.shiftId.trim();
         } else {
-          const { getActiveShift } = await import('../cashbox-store');
-          replayShiftId = getActiveShift()?.id || null;
+          throw new Error('دفعة نقدية مؤجلة بلا وردية أصلية. يلزم مطابقتها قبل ترحيلها.');
         }
       }
       const { error } = await sb.rpc('record_debt_payment_atomic', {

@@ -125,6 +125,7 @@ import { useActionGuard } from '@/hooks/use-action-guard';
 import { addToQueueIfNotExists } from '@/lib/sync-queue';
 import { useCloudSyncContext } from '@/providers/CloudSyncProvider';
 import { getCurrentUserRole } from '@/lib/supabase-store';
+import { getActiveShift } from '@/lib/cashbox-store';
 import { PurchaseInvoicesListTab } from '@/components/purchases/PurchaseInvoicesListTab';
 import { InvoiceProfitDialog } from '@/components/invoices/InvoiceProfitDialog';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -1053,6 +1054,7 @@ export default function Invoices() {
     saveRefundMeta(invoice.id, 'full');
     // Snapshot invoice-specific data BEFORE running so notifications reflect this exact invoice
     const invoiceLabel = invoice.id;
+    const refundShiftId = getActiveShift()?.id ?? null;
     const refundFin = getInvoiceFinancials(invoice, true);
     const invoiceTotal = refundFin.displayTotal;
     const invoiceCurrencySymbol = refundFin.symbol;
@@ -1097,6 +1099,14 @@ export default function Invoices() {
 
     // 🛡️ دالة مساعدة لتطبيق الاسترداد المحلي وإعادة المخزون فوراً
     const applyLocalRefundFallback = async (isNetworkIssue: boolean) => {
+      if (invoice.paymentType === 'debt' && (invoice.debtPaid || 0) > 0) {
+        toast.error('اتصل بالخادم للتحقق من إيصالات القبض قبل رد دفعات الدين', { id: toastId });
+        return;
+      }
+      if (!refundShiftId && invoice.paymentType !== 'debt' && invoice.paymentMethod !== 'digital' && invoice.total > 0) {
+        toast.error('الاسترداد النقدي يتطلب وردية أصلية', { id: toastId });
+        return;
+      }
       markInvoiceRefundedLocally(invoiceLabel);
       setInvoices(prev => prev.map(inv =>
         inv.id === invoiceLabel ? { ...inv, status: 'refunded' as const } : inv
@@ -1124,7 +1134,7 @@ export default function Invoices() {
 
       // إضافة عملية الاسترداد للطابور لضمان مطابقتها بالسحابة لاحقاً
       const { addToQueueIfNotExists } = await import('@/lib/sync-queue');
-      addToQueueIfNotExists('invoice_refund', { invoiceNumber: invoiceLabel }, `invoice-refund:${invoiceLabel}`);
+      addToQueueIfNotExists('invoice_refund', { invoiceNumber: invoiceLabel, shiftId: refundShiftId }, `invoice-refund:${invoiceLabel}`);
 
       toast.info(`تم استرداد ${invoiceLabel} محلياً بنجاح`, {
         id: toastId,
@@ -1144,7 +1154,7 @@ export default function Invoices() {
     // ✅ مسار الأونلاين (مع حماية ضد تعليق أو فشل VPN)
     toast.loading(`جاري استرداد ${invoiceLabel}...`, { id: toastId });
     try {
-      const result = await refundInvoiceCloud(invoiceLabel, 'online');
+      const result = await refundInvoiceCloud(invoiceLabel, 'online', refundShiftId);
       
       if (typeof result === 'object' && result.alreadyRefunded) {
         markInvoiceRefundedLocally(invoiceLabel);
@@ -1187,7 +1197,12 @@ export default function Invoices() {
         inv.id === invoiceLabel ? { ...inv, status: 'refunded' as const } : inv
       ));
       invalidateInvoicesCache();
-      toast.success(`تم استرداد الفاتورة ${invoiceLabel} بنجاح`, { id: toastId });
+      const allocations = typeof result === 'object' ? result.settlementAllocations || [] : [];
+      const payout = allocations.filter(line => line.currencyAmount > 0).map(line => {
+        const amount = formatCurrency(line.currencyAmount, line.currency === 'USD' ? '$' : line.currency, 4, line.currency);
+        return line.method === 'cash' ? `رد نقدي: ${amount}` : `رد عبر وسيلة الدفع الأصلية: ${amount}`;
+      }).join('، ');
+      toast.success(`تم تسجيل استرداد الفاتورة ${invoiceLabel}`, { id: toastId, description: payout || undefined });
     } catch (err: any) {
       console.warn('[Refund] Network exception during cloud refund, applying local fallback:', err);
       await applyLocalRefundFallback(true);
@@ -1199,6 +1214,7 @@ export default function Invoices() {
     const invoice = invoiceToRefund;
     saveRefundMeta(invoice.id, 'partial');
     const invoiceLabel = invoice.id;
+    const refundShiftId = getActiveShift()?.id ?? null;
     const toastId = `refund-${invoiceLabel}`;
 
     const itemsToRefund: PartialRefundItem[] = [];
@@ -1230,13 +1246,21 @@ export default function Invoices() {
     const operationId = crypto.randomUUID();
 
     if (!isOnline) {
+      if (invoice.paymentType === 'debt' && partialRefundStats.cashToReturn > 0) {
+        toast.error('اتصل بالخادم للتحقق من إيصالات القبض قبل رد دفعات الدين', { id: toastId });
+        return;
+      }
+      if (!refundShiftId && invoice.paymentType !== 'debt' && invoice.paymentMethod !== 'digital' && partialRefundStats.cashToReturn > 0) {
+        toast.error('الاسترداد النقدي يتطلب وردية أصلية', { id: toastId });
+        return;
+      }
       const refundedTotal = partialRefundStats.totalRefundAmount;
       const remainingTotal = Math.max(0, (invoice.total || 0) - refundedTotal);
       const isFull = remainingTotal <= 0;
 
       addToQueueIfNotExists(
         'invoice_refund_partial',
-        { invoiceNumber: invoiceLabel, itemsToRefund, operationId },
+        { invoiceNumber: invoiceLabel, itemsToRefund, operationId, shiftId: refundShiftId },
         `invoice-refund-partial:${operationId}`
       );
 
@@ -1260,7 +1284,7 @@ export default function Invoices() {
 
     toast.loading(`جاري الاسترداد الجزئي للفاتورة ${invoiceLabel}...`, { id: toastId });
     try {
-      const result = await refundInvoicePartialCloud(invoiceLabel, itemsToRefund, operationId);
+      const result = await refundInvoicePartialCloud(invoiceLabel, itemsToRefund, operationId, refundShiftId);
       if (!result.success) {
         toast.error(`فشل الاسترداد الجزئي: ${result.error}`, { id: toastId, duration: 5000 });
         return;
@@ -1285,8 +1309,10 @@ export default function Invoices() {
       const lines: string[] = [
         `💵 قيمة المرتجع: ${formatCurrency(result.refundedAmount, invoice.currency)}`
       ];
-      if (result.cashToRefund > 0) {
-        lines.push(`💰 يُرجع نقداً للعميل ومن الوردية: ${formatCurrency(result.cashToRefund, invoice.currency)}`);
+      for (const line of result.settlementAllocations || []) {
+        if (line.currencyAmount <= 0) continue;
+        const amount = formatCurrency(line.currencyAmount, line.currency === 'USD' ? '$' : line.currency, 4, line.currency);
+        lines.push(line.method === 'cash' ? `رد نقدي: ${amount}` : `رد عبر وسيلة الدفع الأصلية: ${amount}`);
       }
       if (result.debtReduced > 0) {
         lines.push(`📉 تخفيض الدين: ${formatCurrency(result.debtReduced, invoice.currency)}`);
@@ -3775,3 +3801,4 @@ export default function Invoices() {
     </div>
   );
 }
+

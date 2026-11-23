@@ -950,6 +950,41 @@ export const deleteInvoiceCloud = async (id: string): Promise<boolean> => {
   return success;
 };
 
+export interface RefundAllocation {
+  method: 'cash' | 'transfer';
+  currency: string;
+  currencyAmount: number;
+  tenderUsd: number;
+}
+
+const mapRefundAllocations = (value: unknown): RefundAllocation[] => {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap(row => {
+    if (!row || (row.method !== 'cash' && row.method !== 'transfer') || typeof row.currency !== 'string') return [];
+    return [{
+      method: row.method as RefundAllocation['method'],
+      currency: row.currency,
+      currencyAmount: Number(row.currency_amount) || 0,
+      tenderUsd: Number(row.tender_usd) || 0,
+    }];
+  });
+};
+
+const applyRefundDrawerCache = async (
+  shiftId: string | null, invoiceNumber: string, allocations: RefundAllocation[],
+  profit = 0, cogs = 0,
+): Promise<void> => {
+  if (!shiftId) return;
+  const { getActiveShift, recordRefundInShift } = await import('../cashbox-store');
+  if (getActiveShift()?.id !== shiftId) return;
+
+  const cash = allocations.filter(row => row.method === 'cash' && row.tenderUsd > 0);
+  cash.forEach((row, index) => recordRefundInShift(
+    row.tenderUsd, index === 0 ? profit : 0, index === 0 ? cogs : 0,
+    invoiceNumber, row.currency, row.currencyAmount, false,
+  ));
+};
+
 export interface RefundResult {
   success: boolean;
   alreadyRefunded?: boolean;
@@ -964,6 +999,7 @@ export interface RefundResult {
   invoiceCurrency: string | null;
   debtPaidAmount?: number;
   cashToRefund?: number;
+  settlementAllocations?: RefundAllocation[];
 }
 
 const failedRefund = (error: string): RefundResult => ({
@@ -988,7 +1024,9 @@ const refundInFlight = new Set<string>();
 
 // Refund invoice - marks as refunded, restores stock, settles debts, reverses customer stats
 // ✅ حالة الاسترداد مثبتة افتراضياً على 'good' (سليم) بحيث تعود الكميات دائماً للمخزون بشكل مباشر
-export const refundInvoiceCloud = async (id: string, source: 'online' | 'offline-sync' = 'online'): Promise<RefundResult | boolean> => {
+export const refundInvoiceCloud = async (
+  id: string, source: 'online' | 'offline-sync' = 'online', shiftId?: string | null,
+): Promise<RefundResult | boolean> => {
   // ✅ Client-side mutex - reject duplicate concurrent calls immediately
   if (refundInFlight.has(id)) {
     console.warn('[refundInvoiceCloud] Refund already in-flight for:', id);
@@ -996,13 +1034,15 @@ export const refundInvoiceCloud = async (id: string, source: 'online' | 'offline
   }
   refundInFlight.add(id);
   try {
-    return await refundInvoiceCloudImpl(id, source);
+    return await refundInvoiceCloudImpl(id, source, shiftId);
   } finally {
     refundInFlight.delete(id);
   }
 };
 
-const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sync'): Promise<RefundResult | boolean> => {
+const refundInvoiceCloudImpl = async (
+  id: string, source: 'online' | 'offline-sync', shiftId?: string | null,
+): Promise<RefundResult | boolean> => {
   if (isGuestDemoMode()) {
     const invoices = loadInvoicesFromLocalCache() || invoicesCache || [];
     const targetInvoice = invoices.find(inv => inv.id === id);
@@ -1045,46 +1085,14 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
   }
   if (!userId) return failedRefund('تعذّر تحديد المستخدم الحالي');
 
-  // جلب الفاتورة الحالية لمعرفة طريقة السداد والدفعات السابقة
-  const existingInvoices = await loadInvoicesCloud();
-  const targetInvoice = existingInvoices.find(inv => inv.id === id);
-  const targetDebtPaid = targetInvoice ? (Number(targetInvoice.debtPaid) || 0) : 0;
-  const isTargetCash = targetInvoice ? targetInvoice.paymentType === 'cash' : false;
-  const isTargetDebt = targetInvoice ? targetInvoice.paymentType === 'debt' : false;
-  // الفاتورة الإلكترونية لا تمسّ الصندوق النقدي إطلاقاً
-  const isTargetDigital = targetInvoice?.paymentMethod === 'digital';
-
-  // الوردية المفتوحة الحالية: الدالة الذرية تسجل حركة الصندوق وتحدّث expected_balance داخل نفس المعاملة
+  const targetInvoice = (invoicesCache || loadInvoicesFromLocalCache() || []).find(inv => inv.id === id);
   const { getActiveShift } = await import('../cashbox-store');
-  const activeShiftId = getActiveShift()?.id || null;
-
-  // المبلغ النقدي بالدولار كما يحسبه الخادم (الكاش = إجمالي الفاتورة، الدين = المدفوع منها)
-  const serverCashUsd = isTargetDigital ? 0
-    : (isTargetDebt
-      ? Math.min(Number(targetInvoice?.total) || 0, Math.max(targetDebtPaid, Number(targetInvoice?.paidAtSale) || 0))
-      : (Number(targetInvoice?.total) || 0));
-  const refundCurrency = (targetInvoice?.currency || 'USD').toUpperCase();
-  const refundRate = Number(targetInvoice?.exchangeRate) || 1;
-  const refundCurrencyAmount = serverCashUsd > 0
-    ? Math.round(serverCashUsd * refundRate * 100) / 100
-    : null;
-
-  // Stock, debt, customer totals, and invoice status are committed in one locked
-  // database transaction. Only the first caller can receive success=true.
-  // ⏱️ مهلة أمان قصيرة (3.5 ثوانٍ) لمنع تجمد التطبيق عند تشغيل VPN معطوب
-  const rpcPromise = supabase.rpc('refund_invoice_atomic', {
+  const activeShiftId = shiftId === undefined && source === 'online' ? getActiveShift()?.id ?? null : shiftId ?? null;
+  const { data, error } = await sb.rpc('refund_invoice_atomic', {
     _invoice_number: id,
     _source: source,
-    _shift_id: isTargetDigital ? null : activeShiftId,
-    _currency: refundCurrency,
-    _currency_amount: refundCurrencyAmount,
-    _exchange_rate: refundRate,
+    _shift_id: activeShiftId,
   });
-  const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
-    setTimeout(() => resolve({ data: null, error: { message: 'Network timeout (VPN or slow connection)' } }), 3500)
-  );
-
-  const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
   if (error) {
     console.error('[refundInvoiceCloud] Atomic refund failed:', error);
     return failedRefund(error.message || 'فشل تنفيذ الاسترداد على الخادم');
@@ -1117,85 +1125,18 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
     return failedRefund('تعذّر إتمام الاسترداد — لم يتم العثور على الفاتورة أو رفض الخادم العملية');
   }
 
-  // تحديث فوري لكميات المنتجات في الكاش المحلي (ذاكرة و IndexedDB ومستودع) بعد التحقق من نجاح الاسترداد
-  try {
-    const { data: invItems } = await sb
-      .from('invoice_items')
-      .select('product_id, quantity, unit, conversion_factor')
-      .eq('invoice_id', atomic.invoice_id || id);
-    if (invItems && invItems.length > 0) {
-      const validItems = invItems.filter(it => it.product_id).map(it => {
-        const qty = Number(it.quantity) || 0;
-        const conv = Number(it.conversion_factor) || 1;
-        const isBulk = it.unit === 'bulk';
-        const finalQty = isBulk ? qty * conv : qty;
-        return {
-          productId: it.product_id,
-          quantity: finalQty,
-          deltaQuantity: finalQty
-        };
-      });
-
-      const { updateProductsQuantitiesInCache } = await import('./products-cloud');
-      updateProductsQuantitiesInCache(validItems);
-
-      // ✅ إعادة الكميات للمستودع المحدد في الفاتورة
-      if (targetInvoice?.warehouseId) {
-        try {
-          const { adjustWarehouseStockLocalCache } = await import('./warehouses-cloud');
-          adjustWarehouseStockLocalCache(targetInvoice.warehouseId, validItems, 'restore');
-        } catch { /* ignore */ }
-      }
+  const { data: settlement, error: settlementError } = await sb.rpc('get_sales_full_refund_settlement', {
+    _invoice_number: id,
+  });
+  if (settlementError) console.warn('[refundInvoiceCloud] Could not load committed allocations:', settlementError.message);
+  const details = (settlement || {}) as Record<string, unknown>;
+  const settlementAllocations = mapRefundAllocations(details.allocations);
+  if (details.drawer_recorded === true) {
+    try {
+      await applyRefundDrawerCache(activeShiftId, id, settlementAllocations, targetInvoice?.profit, targetInvoice?.partsCost);
+    } catch (cacheError) {
+      console.warn('[refundInvoiceCloud] Failed to update local drawer:', cacheError);
     }
-  } catch (err) {
-    console.warn('[refundInvoiceCloud] Error updating cache for refunded items:', err);
-  }
-
-  // حساب النقدية الواجب إرجاعها (كاش كامل أو دفعة دين سابقة) — الإلكترونية = صفر
-  const cashToRefund = isTargetDigital ? 0 : (isTargetCash
-    ? (Number(atomic.invoice_total) || Number(targetInvoice?.total) || 0)
-    : (isTargetDebt ? targetDebtPaid : 0));
-
-  // ✅ حركة الصندوق سُجّلت سحابياً وذرياً داخل refund_invoice_atomic (مع تحديث expected_balance).
-  // هنا نحدّث الحالة المحلية فقط (syncCloud=false) حتى لا تُسجَّل الحركة مرتين.
-  if (cashToRefund > 0) {
-    try {
-      const { recordRefundInShift } = await import('../cashbox-store');
-      const refundedProfit = Number(atomic.refunded_profit ?? atomic.profit_reduced ?? targetInvoice?.profit ?? 0) || 0;
-      const refundedCogs = Number(atomic.refunded_cogs ?? atomic.cogs_reduced ?? targetInvoice?.partsCost ?? 0) || 0;
-      recordRefundInShift(
-        cashToRefund,
-        refundedProfit,
-        refundedCogs,
-        id,
-        refundCurrency,
-        refundCurrency === 'USD' ? undefined : Math.round(cashToRefund * refundRate * 100) / 100,
-        false
-      );
-    } catch (shiftErr) {
-      console.warn('[refundInvoiceCloud] Failed to update local shift state:', shiftErr);
-    }
-  }
-
-  // Secondary accounting cleanup is idempotent and only runs for the caller that
-  // won the atomic refund transaction. It cannot restore stock again.
-  // 🛡️ ملاحظة أمنية ومحاسبية (EGM Remediation P0-4):
-  // تم إيقاف استدعاء revertProfitDistributionCloud من الواجهة لأن دالة السيرفر
-  // refund_invoice_atomic تقوم بعكس أرباح الشركاء ذرياً بنسبة 100% داخل المعاملة.
-  // استدعاؤه هنا كان يسبب خصماً مزدوجاً لرصيد الشريك.
-  try {
-    // Reverse central profit_records
-    try {
-      const { reverseProfitCloud } = await import('./profits-cloud');
-      await reverseProfitCloud(id);
-    } catch { /* noop */ }
-    // Also revert local for backwards compatibility
-    try {
-      const { revertProfitDistribution } = await import('../partners-store');
-      revertProfitDistribution(id);
-    } catch { /* local may not exist */ }
-  } catch (err) {
-    console.error('[refundInvoiceCloud] Error in secondary cleanup:', err);
   }
 
   invalidateInvoicesCache();
@@ -1206,17 +1147,6 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
   invalidateDebtsCache();
   const { invalidateCustomersCache } = await import('./customers-cloud');
   invalidateCustomersCache();
-
-  // ✅ إعادة احتساب إحصائيات العميل بعد الاسترداد
-  const resolvedCustomerId = targetInvoice?.customerId;
-  if (resolvedCustomerId) {
-    try {
-      const { updateCustomerStatsCloud } = await import('./customers-cloud');
-      await updateCustomerStatsCloud(resolvedCustomerId);
-    } catch (e) {
-      console.warn('[refundInvoiceCloud] Failed to update customer stats:', e);
-    }
-  }
 
   emitEvent(EVENTS.INVOICES_UPDATED, null);
   emitEvent(EVENTS.DEBTS_UPDATED, null);
@@ -1233,8 +1163,9 @@ const refundInvoiceCloudImpl = async (id: string, source: 'online' | 'offline-sy
     customerName: atomic.customer_name,
     invoiceTotal: Number(atomic.invoice_total) || 0,
     invoiceCurrency: atomic.invoice_currency,
-    debtPaidAmount: targetDebtPaid,
-    cashToRefund: cashToRefund,
+    debtPaidAmount: settlementAllocations.reduce((sum, item) => sum + item.tenderUsd, 0),
+    cashToRefund: Number(details.cash) || 0,
+    settlementAllocations,
   };
 };
 
@@ -1259,6 +1190,7 @@ export interface PartialRefundResult {
   restoredUnitsCount: number;
   isFullyRefunded: boolean;
   newInvoiceTotal: number;
+  settlementAllocations?: RefundAllocation[];
 }
 
 /**
@@ -1269,7 +1201,8 @@ export interface PartialRefundResult {
 export const refundInvoicePartialCloud = async (
   invoiceNumber: string,
   itemsToRefund: PartialRefundItem[],
-  operationId?: string
+  operationId?: string,
+  shiftId?: string | null,
 ): Promise<PartialRefundResult> => {
   const fail = (error: string): PartialRefundResult => ({ success: false, error, refundedAmount: 0, cashToRefund: 0, debtReduced: 0, restoredItemsCount: 0, restoredUnitsCount: 0, isFullyRefunded: false, newInvoiceTotal: 0 });
 
@@ -1286,32 +1219,23 @@ export const refundInvoicePartialCloud = async (
 
   const opId = operationId || (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `pr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
 
-  // الوردية المفتوحة + عملة الفاتورة الأصلية وسعر صرفها: الدالة تسجل حركة الصندوق وتحدّث expected_balance ذرياً
   const { getActiveShift } = await import('../cashbox-store');
-  const activeShiftId = getActiveShift()?.id || null;
-  const partialInvoice = (invoicesCache || loadInvoicesFromLocalCache() || []).find(i => i.id === invoiceNumber);
-  const partialCurrency = (partialInvoice?.currency || 'USD').toUpperCase();
-  const partialRate = Number(partialInvoice?.exchangeRate) || 1;
-
-  // ملاحظة: _currency_amount لا يُمرَّر هنا عمداً. مبلغ النقد الفعلي يعتمد على نسبة الخصم/الضريبة
-  // ومدفوعات الدين داخل الخادم (من صف مقفل)، وتقديره من الواجهة قد يخالفه فيُرفض مرتجع صحيح بخطأ "تعارض في تحويل العملة".
-  // الخادم يحسب المبلغ بالعملة = cash × سعر الصرف بنفسه.
+  const activeShiftId = shiftId === undefined ? getActiveShift()?.id ?? null : shiftId;
   const { data, error } = await sb.rpc('refund_invoice_partial_atomic', {
     _invoice_number: invoiceNumber,
     _items: items,
     _operation_id: opId,
     _shift_id: activeShiftId,
-    _currency: partialCurrency,
-    _currency_amount: null,
-    _exchange_rate: partialRate,
   });
   if (error) return fail(error.message || 'فشل الاسترداد الجزئي');
 
   const r = (data || {}) as Record<string, unknown>;
+  if (r.success !== true) return fail(r.already_refunded ? 'الفاتورة مستردة سابقاً' : 'تعذّر إتمام الاسترداد الجزئي');
+  const settlementAllocations = mapRefundAllocations(r.settlement_allocations);
   // ✅ التوافق المزدوج للمفاتيح (Backward/Forward Compatibility) بين مختلف إصدارات الدالة في قاعدة البيانات
   const refundedAmount = Number(r.refunded_amount ?? r.refund_amount ?? 0) || 0;
   const debtReduced = Number(r.debt_reduced ?? r.debt_reduction ?? 0) || 0;
-  const cashToRefund = Number(r.cash_to_refund ?? r.cash_refunded ?? (refundedAmount > debtReduced ? refundedAmount - debtReduced : 0)) || 0;
+  const cashToRefund = Number(r.cash_to_refund ?? 0) || 0;
   const refundedProfit = Number(r.refunded_profit ?? r.profit_reduced ?? 0) || 0;
   const refundedCogs = Number(r.refunded_cogs ?? r.cogs_reduced ?? 0) || 0;
   const restoredUnitsCount = Number(r.restored_units ?? r.restored_units_count ?? 0) || 0;
@@ -1319,25 +1243,11 @@ export const refundInvoicePartialCloud = async (
   const isFullyRefunded = Boolean(r.is_fully_refunded ?? r.is_full_refund ?? r.full ?? false);
   const newInvoiceTotal = Number(r.new_total ?? r.new_invoice_total ?? 0) || 0;
   const alreadyProcessed = r.already_processed === true;
-  const alreadyRefunded = r.already_refunded === true;
-  const isPartialDigital = partialInvoice?.paymentMethod === 'digital';
-  const drawerRefundUsd = Number(r.drawer_refund_usd ?? cashToRefund ?? 0) || 0;
-
-  // حركة الصندوق سُجّلت ذرياً في الخادم (مرة واحدة) — هنا تحديث الحالة المحلية فقط دون كتابة سحابية مكررة
-  if (r.drawer_tx_recorded === true && !alreadyProcessed && !alreadyRefunded && !isPartialDigital && drawerRefundUsd > 0) {
+  if (r.drawer_tx_recorded === true && !alreadyProcessed) {
     try {
-      const { recordRefundInShift } = await import('../cashbox-store');
-      recordRefundInShift(
-        drawerRefundUsd,
-        refundedProfit,
-        refundedCogs,
-        invoiceNumber,
-        partialCurrency,
-        partialCurrency === 'USD' ? undefined : Math.round(drawerRefundUsd * partialRate * 100) / 100,
-        false
-      );
-    } catch (e) {
-      console.warn('[refundInvoicePartialCloud] Failed to update local shift state:', e);
+      await applyRefundDrawerCache(activeShiftId, invoiceNumber, settlementAllocations, refundedProfit, refundedCogs);
+    } catch (cacheError) {
+      console.warn('[refundInvoicePartialCloud] Failed to update local drawer:', cacheError);
     }
   }
 
@@ -1349,55 +1259,6 @@ export const refundInvoicePartialCloud = async (
   invalidateDebtsCache();
   const { invalidateCustomersCache } = await import('./customers-cloud');
   invalidateCustomersCache();
-
-  // تحديث كميات المنتجات فوراً في الكاش المحلي (ذاكرة و IndexedDB)
-  const itemsWithProduct = itemsToRefund.filter(it => it.productId);
-  if (itemsWithProduct.length > 0) {
-    try {
-      const { updateProductsQuantitiesInCache } = await import('./products-cloud');
-      updateProductsQuantitiesInCache(
-        itemsWithProduct.map(it => ({
-          productId: it.productId!,
-          deltaQuantity: Number(it.quantityToRefund ?? it.quantity) || 0
-        }))
-      );
-
-      // ✅ إعادة الكميات للمستودع المحدد
-      const warehouseId = itemsToRefund.find(it => it.warehouseId)?.warehouseId;
-      if (warehouseId) {
-        try {
-          const { adjustWarehouseStockLocalCache } = await import('./warehouses-cloud');
-          adjustWarehouseStockLocalCache(
-            warehouseId,
-            itemsWithProduct.map(it => ({
-              productId: it.productId!,
-              quantity: Number(it.quantityToRefund ?? it.quantity) || 0
-            })),
-            'restore'
-          );
-        } catch { /* ignore */ }
-      }
-    } catch { /* silent */ }
-  }
-
-  // ✅ إعادة احتساب إحصائيات العميل بعد الاسترداد الجزئي
-  try {
-    const loadedInv = (invoicesCache || loadInvoicesFromLocalCache() || []).find(i => i.id === invoiceNumber);
-    if (loadedInv?.customerId) {
-      const { updateCustomerStatsCloud } = await import('./customers-cloud');
-      await updateCustomerStatsCloud(loadedInv.customerId);
-    }
-  } catch { /* silent */ }
-
-  // 🛡️ ملاحظة أمنية ومحاسبية (EGM Remediation P0-4):
-  // تم إيقاف استدعاء revertProfitDistributionCloud هنا لأن السيرفر يعكس أرباح الفاتورة المستردة ذرياً
-  // وتكرار الاستدعاء يؤدي للعكس المزدوج.
-  if (isFullyRefunded) {
-    try {
-      const { reverseProfitCloud } = await import('./profits-cloud');
-      await reverseProfitCloud(invoiceNumber);
-    } catch { /* silent */ }
-  }
 
   emitEvent(EVENTS.INVOICES_UPDATED, null);
   emitEvent(EVENTS.PRODUCTS_UPDATED, null);
@@ -1413,6 +1274,7 @@ export const refundInvoicePartialCloud = async (
     restoredUnitsCount,
     isFullyRefunded,
     newInvoiceTotal,
+    settlementAllocations,
   };
 };
 
@@ -1568,4 +1430,5 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
     return invoices;
   }
 }
+
 

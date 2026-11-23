@@ -391,64 +391,64 @@ export const addExpenseCloud = async (expenseData: {
   return localExpense;
 };
 
-// Delete or reverse expense
-export const deleteExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم', shiftId?: string | null): Promise<boolean> => {
+interface ExpenseReversal {
+  queued: boolean;
+  alreadyReversed: boolean;
+  cashRefunded: boolean;
+  shiftId?: string;
+  cashAmount?: number;
+  cashCurrency?: string;
+  cashCurrencyAmount?: number;
+}
+
+export const reverseExpenseWithResultCloud = async (
+  id: string,
+  reason: string,
+  shiftId?: string | null,
+): Promise<ExpenseReversal> => {
+  let result: ExpenseReversal;
   if (isLocalDataMode()) {
-    addToQueue('expense_reverse', {
-      id,
-      reason,
-      shiftId: shiftId ?? null,
-      reversed_at: new Date().toISOString(),
+    addToQueue('expense_reverse', { id, reason, shiftId: shiftId ?? null });
+    result = { queued: true, alreadyReversed: false, cashRefunded: false };
+  } else {
+    const { data, error } = await sb.rpc('delete_expense_atomic', {
+      _expense_id: id,
+      _reason: reason,
+      _shift_id: shiftId ?? null,
     });
-    try { removeOperatingExpense(id); } catch { /* noop */ }
-    invalidateExpensesCache();
-    const existing = expensesCache || loadExpensesLocally() || [];
-    const list = existing.filter(e => e.id !== id);
-    expensesCache = list;
-    saveExpensesLocally(list);
-    emitEvent(EVENTS.EXPENSES_UPDATED, null);
-    return true;
+    if (error || !data?.success) {
+      throw new Error(error?.message || data?.error || 'رفض الخادم التراجع عن المصروف');
+    }
+    result = {
+      queued: false,
+      alreadyReversed: data.already_reversed === true,
+      cashRefunded: data.cash_refunded === true,
+      shiftId: data.shift_id || undefined,
+      cashAmount: data.cash_amount == null ? undefined : Number(data.cash_amount),
+      cashCurrency: data.cash_currency || undefined,
+      cashCurrencyAmount: data.cash_currency_amount == null ? undefined : Number(data.cash_currency_amount),
+    };
   }
 
-  // 🛡️ التنفيذ الذري الوحيد بالخادم عبر delete_expense_atomic (يعكس حركة الصندوق والوردية وحصص الشركاء داخل معاملة واحدة)
-  // لا توجد أي كتابة مباشرة على جدول expenses: أي رفض من الخادم يُعاد للواجهة برسالته الحقيقية
-  const { data, error } = await sb.rpc('delete_expense_atomic', {
-    _expense_id: id,
-    _reason: reason,
-    _shift_id: shiftId ?? null,
-  });
-  if (error) {
-    console.error('[deleteExpenseCloud] delete_expense_atomic rejected:', error);
-    throw new Error(error.message || 'فشل التراجع عن المصروف على الخادم');
-  }
-  const serverResult = (data || {}) as { success?: boolean; error?: string };
-  if (!serverResult.success) {
-    throw new Error(serverResult.error || 'رفض الخادم التراجع عن المصروف');
-  }
-  const success = true;
-
-  if (success) {
-    // ✅ إزالة المصروف من سجل الأرباح المركزي لإعادة صافي الربح لقيمته الحقيقية
-    try {
-      removeOperatingExpense(id);
-    } catch { /* noop */ }
-
-    invalidateExpensesCache();
-    invalidatePartnersCache();
-    const existing = expensesCache || loadExpensesLocally() || [];
-    const list = existing.filter(e => e.id !== id);
-    expensesCache = list;
-    saveExpensesLocally(list);
-    emitEvent(EVENTS.EXPENSES_UPDATED, null);
-    emitEvent(EVENTS.PARTNERS_UPDATED, null);
-  }
-  
-  return success;
+  try { removeOperatingExpense(id); } catch { /* noop */ }
+  invalidateExpensesCache();
+  invalidatePartnersCache();
+  const existing = expensesCache || loadExpensesLocally() || [];
+  const list = existing.filter(e => e.id !== id);
+  expensesCache = list;
+  saveExpensesLocally(list);
+  emitEvent(EVENTS.EXPENSES_UPDATED, null);
+  emitEvent(EVENTS.PARTNERS_UPDATED, null);
+  return result;
 };
 
-export const reverseExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم', shiftId?: string | null): Promise<boolean> => {
-  return deleteExpenseCloud(id, reason, shiftId);
+// Existing callers consume a boolean, while the expense screen uses the posting receipt.
+export const deleteExpenseCloud = async (id: string, reason: string = 'تراجع بواسطة المستخدم', shiftId?: string | null): Promise<boolean> => {
+  await reverseExpenseWithResultCloud(id, reason, shiftId);
+  return true;
 };
+
+export const reverseExpenseCloud = deleteExpenseCloud;
 
 // Get expense stats
 export const getExpenseStatsCloud = async () => {

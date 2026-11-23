@@ -448,6 +448,7 @@ export const recordPaymentCloud = async (
   };
 
   const cashShiftId = await resolveCashShiftId();
+  if (method === 'cash' && !cashShiftId) throw new Error('قبض دفعة نقدية يتطلب وردية أصلية مفتوحة');
 
   const queuePayment = (): Debt | null => {
     addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: cashShiftId }, 10);
@@ -810,3 +811,4 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
 
   return round8(total);
 };
+

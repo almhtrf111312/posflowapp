@@ -2726,10 +2726,15 @@ export type Database = {
         Args: {
           _amount: number
           _date?: string
-          _description?: string
+          _description?: string | null
+          _exchange_rate?: number
           _expense_type: string
-          _notes?: string
+          _notes?: string | null
           _operation_id: string
+          _original_amount?: number | null
+          _original_currency?: string
+          _paid_from?: string | null
+          _shift_id?: string | null
         }
         Returns: Json
       }
@@ -2848,7 +2853,11 @@ export type Database = {
         Returns: Json
       }
       delete_expense_atomic: {
-        Args: { _expense_id: string; _reason?: string }
+        Args: {
+          _expense_id: string
+          _reason?: string
+          _shift_id?: string | null
+        }
         Returns: Json
       }
       delete_owner_cascade: { Args: { _owner_id: string }; Returns: boolean }
@@ -2982,10 +2991,11 @@ export type Database = {
           _amount: number
           _currency?: string
           _exchange_rate?: number
-          _notes?: string
-          _original_amount?: number
+          _notes?: string | null
+          _operation_id?: string | null
+          _original_amount?: number | null
           _partner_id: string
-          _shift_id?: string
+          _shift_id?: string | null
           _withdrawal_type: string
         }
         Returns: Json
@@ -3045,14 +3055,30 @@ export type Database = {
       record_debt_payment_atomic: {
         Args: {
           _amount: number
+          _currency?: string | null
+          _currency_amount?: number | null
           _debt_id: string
+          _exchange_rate?: number | null
           _operation_id: string
-          _shift_id?: string
+          _payment_method?: string
+          _shift_id?: string | null
         }
         Returns: Json
       }
+      get_sales_full_refund_settlement: {
+        Args: { _invoice_number: string }
+        Returns: Json
+      }
       refund_invoice_atomic: {
-        Args: { _invoice_number: string; _source?: string }
+        Args: {
+          _currency?: string | null
+          _currency_amount?: number | null
+          _exchange_rate?: number | null
+          _invoice_number: string
+          _settlement_mode?: string
+          _shift_id?: string | null
+          _source?: string
+        }
         Returns: {
           already_refunded: boolean
           customer_name: string
@@ -3067,7 +3093,16 @@ export type Database = {
         }[]
       }
       refund_invoice_partial_atomic: {
-        Args: { _invoice_number: string; _items: Json; _operation_id: string }
+        Args: {
+          _currency?: string | null
+          _currency_amount?: number | null
+          _exchange_rate?: number | null
+          _invoice_number: string
+          _items: Json
+          _operation_id: string
+          _settlement_mode?: string
+          _shift_id?: string | null
+        }
         Returns: Json
       }
       request_device_reset_secure:

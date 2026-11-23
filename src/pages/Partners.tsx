@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { getActiveShift } from '@/lib/cashbox-store';
 import {
   Search,
   Plus,
@@ -33,8 +34,7 @@ import {
   addPartnerCloud,
   updatePartnerCloud,
   deletePartnerCloud,
-  withdrawProfitCloud,
-  withdrawCapitalCloud,
+  withdrawPartnerFundsWithReceiptCloud,
   addCapitalWithCashboxCloud,
   invalidatePartnersCache,
   Partner,
@@ -159,6 +159,15 @@ export default function Partners() {
   const [withdrawType, setWithdrawType] = useState<'profit' | 'capital' | 'auto'>('auto');
   const [withdrawNotes, setWithdrawNotes] = useState('');
   const [withdrawCurrency, setWithdrawCurrency] = useState<string>('USD');
+  const withdrawing = useRef(false);
+  const pendingWithdrawals = useRef(new Map<string, {
+    operationId: string;
+    shiftId: string | null;
+    rate: number;
+    amount: number;
+    originalAmount: number;
+  }>());
+
   const [capitalAmount, setCapitalAmount] = useState(0);
   const [capitalNotes, setCapitalNotes] = useState('');
   const [depositTarget, setDepositTarget] = useState<'capital' | 'balance'>('capital');
@@ -360,152 +369,73 @@ export default function Partners() {
   };
 
   const handleWithdraw = async () => {
-    if (isSubmitting) return;
-    if (!selectedPartner || withdrawAmount <= 0) {
+    if (isSubmitting || withdrawing.current) return;
+    if (!selectedPartner || !Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
       toast.error(t('partners.enterValidAmount'));
       return;
     }
 
-    const profitAvailableUsd = selectedPartner.currentBalance || 0;
-    const capitalAvailableUsd = selectedPartner.currentCapital || 0;
-    const totalAvailableUsd = profitAvailableUsd + capitalAvailableUsd;
-
-    // تحويل المبلغ المدخل من العملة المختارة إلى الدولار للمقارنة المحاسبية
-    const withdrawUsdAmount = Math.round(toUsd(withdrawAmount, withdrawCurrency) * 100) / 100;
-
-    if (withdrawType === 'profit' && withdrawUsdAmount > profitAvailableUsd + 0.001) {
-      toast.error(t('partners.amountExceedsProfit'));
-      return;
-    }
-    if (withdrawType === 'capital' && withdrawUsdAmount > capitalAvailableUsd + 0.001) {
-      toast.error(t('partners.amountExceedsCapital'));
-      return;
-    }
-    if (withdrawType === 'auto' && withdrawUsdAmount > totalAvailableUsd + 0.001) {
-      toast.error(t('partners.amountExceedsTotal'));
-      return;
-    }
-
-    // ✅ تحقق مسبق من العملة والأرصدة الحية قبل إرسال أي طلب للخادم
-    const fxRate = withdrawCurrency === 'USD' ? 1 : getCurrencyDef(withdrawCurrency).rate;
-    if (withdrawCurrency !== 'USD' && !(fxRate > 0)) {
-      toast.error(`سعر صرف غير صالح للعملة ${withdrawCurrency}`);
-      return;
-    }
-    const profitPortionUsd = withdrawType === 'capital'
-      ? 0
-      : Math.min(withdrawUsdAmount, profitAvailableUsd);
-    const capitalPortionUsd = withdrawType === 'profit'
-      ? 0
-      : (withdrawType === 'capital'
-        ? withdrawUsdAmount
-        : Math.max(0, Math.round((withdrawUsdAmount - profitPortionUsd) * 100) / 100));
-    const toOriginal = (usd: number) => (withdrawCurrency === 'USD' ? usd : Math.round(fromUsd(usd, withdrawCurrency) * 100) / 100);
-
-    invalidatePartnersCache();
-    const livePartner = (await loadPartnersCloud()).find(p => p.id === selectedPartner.id);
-    if (!livePartner) {
-      toast.error(t('partners.withdrawError'));
-      return;
-    }
-    if (profitPortionUsd > (livePartner.currentBalance || 0) + 0.001) {
-      toast.error(t('partners.amountExceedsProfit'));
-      return;
-    }
-    if (capitalPortionUsd > (livePartner.currentCapital || 0) + 0.001) {
-      toast.error(t('partners.amountExceedsCapital'));
-      return;
-    }
-
-    const executed: string[] = [];
-    const describe = (usd: number, label: string) => {
-      let text = `${label} ${formatCurrency(usd)}`;
-      if (withdrawCurrency !== 'USD') text += ` (${formatNumber(toOriginal(usd))} ${withdrawCurrency})`;
-      return text;
-    };
-    const errorText = (err: unknown) => (err instanceof Error && err.message ? err.message : t('partners.withdrawError'));
-
-    // الجزء الأول: الأرباح (إن وُجد)
-    if (profitPortionUsd > 0) {
-      try {
-        const okProfit = await withdrawProfitCloud(
-          selectedPartner.id,
-          profitPortionUsd,
-          withdrawNotes,
-          false,
-          withdrawCurrency,
-          toOriginal(profitPortionUsd),
-          fxRate
-        );
-        if (!okProfit) throw new Error(t('partners.withdrawError'));
-        executed.push(describe(profitPortionUsd, t('partners.withdrawnFromProfit')));
-      } catch (err) {
-        // لم يُنفَّذ شيء: لا يُكمل الجزء الثاني
-        await refreshPartners();
-        toast.error(errorText(err));
+    const requestKey = JSON.stringify([selectedPartner.id, withdrawType, withdrawAmount, withdrawCurrency, withdrawNotes.trim()]);
+    let request = pendingWithdrawals.current.get(requestKey);
+    if (!request) {
+      const rate = withdrawCurrency === 'USD' ? 1 : getCurrencyDef(withdrawCurrency).rate;
+      const amount = Math.round(toUsd(withdrawAmount, withdrawCurrency, rate) * 100) / 100;
+      if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(amount) || amount <= 0) {
+        toast.error(t('partners.enterValidAmount'));
         return;
       }
+      request = {
+        operationId: crypto.randomUUID(),
+        shiftId: getActiveShift()?.id ?? null,
+        rate,
+        amount,
+        originalAmount: Math.round(withdrawAmount * 100) / 100,
+      };
+      pendingWithdrawals.current.set(requestKey, request);
     }
+    const submittedRequest = request;
 
-    // الجزء الثاني: رأس المال (في السحب التلقائي عند تجاوز الأرباح)
-    if (capitalPortionUsd > 0) {
-      try {
-        const okCapital = await withdrawCapitalCloud(
-          selectedPartner.id,
-          capitalPortionUsd,
-          withdrawNotes,
-          withdrawCurrency,
-          toOriginal(capitalPortionUsd),
-          fxRate
-        );
-        if (!okCapital) throw new Error(t('partners.withdrawError'));
-        executed.push(describe(capitalPortionUsd, t('partners.withdrawnFromCapital')));
-      } catch (err) {
-        // نُعيد تحميل الأرصدة من الخادم فوراً ونوضح ما نُفّذ وما فشل
-        await refreshPartners();
-        const failedText = `فشل سحب ${formatCurrency(capitalPortionUsd)} من رأس المال: ${errorText(err)}`;
-        if (executed.length > 0) {
-          toast.error(`تم تنفيذ: ${executed.join(' + ')} — ${failedText}. تم تحديث الأرصدة من الخادم.`, { duration: 9000 });
-          // الجزء المنفّذ أصبح حقيقياً: نغلق النافذة لمنع إعادة السحب مرتين
-          setShowWithdrawDialog(false);
-          setSelectedPartner(null);
-          setWithdrawAmount(0);
-          setWithdrawType('auto');
-          setWithdrawNotes('');
-          setWithdrawCurrency('USD');
-        } else {
-          toast.error(failedText);
-        }
-        return;
+    withdrawing.current = true;
+    setIsSubmitting(true);
+    try {
+      const result = await withdrawPartnerFundsWithReceiptCloud(
+        selectedPartner.id, withdrawType, submittedRequest.amount, withdrawNotes.trim(), withdrawCurrency,
+        submittedRequest.originalAmount, submittedRequest.rate, submittedRequest.operationId, submittedRequest.shiftId,
+      );
+      pendingWithdrawals.current.delete(requestKey);
+      const entries = [
+        { amount: result.profitDeducted, action: 'partner_withdrawal' as const, label: t('partners.withdrawnFromProfit') },
+        { amount: result.capitalDeducted, action: 'capital_withdrawn' as const, label: t('partners.fromCapital') },
+      ].filter(entry => entry.amount > 0);
+      const executed = entries.map(entry => {
+        const original = withdrawCurrency === 'USD' ? '' : ` (≈ ${formatNumber(entry.amount * submittedRequest.rate)} ${withdrawCurrency})`;
+        return `${entry.label} ${formatCurrency(entry.amount)}${original}`;
+      });
+      if (!result.alreadyProcessed) {
+        import('@/lib/activity-log').then(({ logActivity }) => {
+          for (const entry of entries) {
+            logActivity(entry.action, `${entry.label} (${selectedPartner.name}): ${entry.amount}`, {
+              partnerId: selectedPartner.id, partnerName: selectedPartner.name, amount: entry.amount,
+              currency: withdrawCurrency, withdrawType, notes: withdrawNotes || undefined,
+            });
+          }
+        }).catch(() => {});
       }
+      setShowWithdrawDialog(false);
+      setSelectedPartner(null);
+      setWithdrawAmount(0);
+      setWithdrawType('auto');
+      setWithdrawNotes('');
+      setWithdrawCurrency('USD');
+      invalidatePartnersCache();
+      void refreshPartners();
+      toast.success(executed.join(' + ') || t('partners.withdraw'));
+    } catch (error) {
+      toast.error(error instanceof Error && error.message ? error.message : t('partners.withdrawError'));
+    } finally {
+      withdrawing.current = false;
+      setIsSubmitting(false);
     }
-
-    if (executed.length > 0) {
-      const partnerSnapshot = selectedPartner;
-      import('@/lib/activity-log').then(({ logActivity }) => {
-        if (profitPortionUsd > 0) {
-          logActivity('partner_withdrawal', `سحب أرباح للشريك (${partnerSnapshot.name}): ${profitPortionUsd}`, {
-            partnerId: partnerSnapshot.id, partnerName: partnerSnapshot.name, amount: profitPortionUsd,
-            currency: withdrawCurrency, withdrawType, notes: withdrawNotes || undefined,
-          });
-        }
-        if (capitalPortionUsd > 0) {
-          logActivity('capital_withdrawn', `سحب رأس مال للشريك (${partnerSnapshot.name}): ${capitalPortionUsd}`, {
-            partnerId: partnerSnapshot.id, partnerName: partnerSnapshot.name, amount: capitalPortionUsd,
-            currency: withdrawCurrency, withdrawType, notes: withdrawNotes || undefined,
-          });
-        }
-      }).catch(() => {});
-    }
-
-    await refreshPartners();
-    setShowWithdrawDialog(false);
-    setSelectedPartner(null);
-    setWithdrawAmount(0);
-    setWithdrawType('auto');
-    setWithdrawNotes('');
-    setWithdrawCurrency('USD');
-    toast.success(executed.join(' + '));
   };
 
   const handleAddCapital = async () => {

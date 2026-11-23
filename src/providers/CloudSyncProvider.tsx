@@ -5,6 +5,7 @@ import { hasRealConfiguredStore, markSetupComplete } from '@/lib/setup-flag';
 import { useAuth } from '@/hooks/use-auth';
 import { setCurrentUserId, fetchStoreSettings, saveStoreSettings, saveStoreSettingsDirect } from '@/lib/supabase-store';
 import { refundInvoiceCloud, refundInvoicePartialCloud, loadCachedInvoicesSync } from '@/lib/cloud/invoices-cloud';
+import type { PartialRefundItem } from '@/lib/cloud/invoices-cloud';
 import { EVENTS, emitEvent, emitAppRefresh } from '@/lib/events';
 import { useRealtimeSync } from '@/hooks/use-realtime-sync';
 import { executePendingCloudClear } from '@/lib/clear-demo-data';
@@ -482,14 +483,16 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
           return await processPurchaseInvoiceFromQueue((operation.data as unknown) as Parameters<typeof processPurchaseInvoiceFromQueue>[0], operation.id);
         }
         if (operation.type === 'invoice_refund') {
-          const invoiceNumber = (operation.data as { invoiceNumber: string }).invoiceNumber;
-          const res = await refundInvoiceCloud(invoiceNumber, 'offline-sync');
-          // An already-refunded invoice is an idempotent success; a real failure retries.
-          return res === true || (typeof res === 'object' && (res.success || res.alreadyRefunded === true));
+          const { invoiceNumber, shiftId } = operation.data as { invoiceNumber: string; shiftId?: string | null };
+          const res = await refundInvoiceCloud(invoiceNumber, 'offline-sync', shiftId ?? null);
+          if (res === true || (typeof res === 'object' && (res.success || res.alreadyRefunded === true))) return true;
+          throw new Error(typeof res === 'object' ? res.error : 'فشل الاسترداد على الخادم');
         }
         if (operation.type === 'invoice_refund_partial') {
-          const { invoiceNumber, itemsToRefund, operationId } = operation.data as { invoiceNumber: string; itemsToRefund: any[]; operationId?: string };
-          const res = await refundInvoicePartialCloud(invoiceNumber, itemsToRefund, operationId || `legacy-${operation.id}`);
+          const { invoiceNumber, itemsToRefund, operationId, shiftId } = operation.data as {
+            invoiceNumber: string; itemsToRefund: PartialRefundItem[]; operationId?: string; shiftId?: string | null;
+          };
+          const res = await refundInvoicePartialCloud(invoiceNumber, itemsToRefund, operationId || `legacy-${operation.id}`, shiftId ?? null);
           if (!res.success) throw new Error(res.error || 'فشل الاسترداد الجزئي');
           return true;
         }
@@ -578,3 +581,4 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     </CloudSyncContext.Provider>
   );
 }
+

@@ -526,7 +526,8 @@ const executePartnerWithdrawal = async (
   currency: string,
   originalAmount: number | undefined,
   exchangeRate: number | undefined,
-  operationId?: string
+  operationId?: string,
+  originalShift?: { id: string | null },
 ): Promise<PartnerAutoWithdrawalResult> => {
   const roundedAmount = Math.round(amount * 100) / 100;
   const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
@@ -553,7 +554,7 @@ const executePartnerWithdrawal = async (
         ? liveCapital
         : Math.max(0, liveBalance) + Math.max(0, liveCapital);
 
-  if (roundedAmount > available + 0.001) {
+  if (!originalShift && roundedAmount > available + 0.001) {
     throw new Error(
       withdrawalType === 'profit'
         ? 'مبلغ السحب يتجاوز رصيد الأرباح المتاح'
@@ -564,13 +565,13 @@ const executePartnerWithdrawal = async (
   }
 
   const withdrawalNote =
-    notes ||
+    (originalShift ? notes?.trim() || 'سحب شريك' : notes) ||
     (withdrawalType === 'profit'
       ? 'سحب أرباح - ' + partner.name
       : withdrawalType === 'capital'
         ? 'سحب رأس مال - ' + partner.name
         : 'سحب تلقائي - ' + partner.name);
-  const shiftId = await resolveActiveShiftIdForPartner();
+  const shiftId = originalShift ? originalShift.id : await resolveActiveShiftIdForPartner();
   const resolvedOpId = operationId?.trim() || null;
 
   const { data, error } = await sb.rpc('partner_withdrawal_atomic', {
@@ -655,8 +656,8 @@ const executePartnerWithdrawal = async (
     emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
 
     try {
-      const { updateCashboxBalance } = await import('../cashbox-store');
-      updateCashboxBalance(origAmt, 'withdrawal', currency as any);
+      const { getActiveShift, updateCashboxBalance } = await import('../cashbox-store');
+      if (shiftId && getActiveShift()?.id === shiftId) updateCashboxBalance(origAmt, 'withdrawal', currency);
     } catch (e) {
       console.warn('[executePartnerWithdrawal] local cashbox update failed:', e);
     }
@@ -736,6 +737,27 @@ export const withdrawAutoCloud = async (
     originalAmount,
     exchangeRate,
     opId
+  );
+};
+
+export const withdrawPartnerFundsWithReceiptCloud = async (
+  partnerId: string,
+  withdrawalType: PartnerWithdrawalType,
+  amount: number,
+  notes: string,
+  currency: string,
+  originalAmount: number,
+  exchangeRate: number,
+  operationId: string,
+  shiftId: string | null,
+): Promise<PartnerAutoWithdrawalResult> => {
+  const partner = await getPartnerByIdCloud(partnerId);
+  if (!partner || amount <= 0) {
+    throw new Error('الشريك غير موجود أو مبلغ السحب غير صالح');
+  }
+  return executePartnerWithdrawal(
+    partner, partnerId, withdrawalType, amount, notes, currency, originalAmount, exchangeRate,
+    operationId, { id: shiftId },
   );
 };
 

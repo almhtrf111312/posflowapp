@@ -1,3 +1,4 @@
+import { getActiveShift } from '@/lib/cashbox-store';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -64,7 +65,7 @@ import {
   loadExpensesCloud,
   addExpenseCloud,
   deleteExpenseCloud,
-  reverseExpenseCloud,
+  reverseExpenseWithResultCloud,
   getExpenseStatsCloud,
   expenseTypes,
   Expense,
@@ -276,7 +277,10 @@ export default function Expenses() {
         : '';
       const finalNotes = formData.notes ? `${formData.notes}${noteSuffix}` : (noteSuffix.trim() || undefined);
 
+      const expenseShiftId = getActiveShift()?.id;
       const created = await addExpenseCloud({
+        shiftId: expenseShiftId,
+        paidFrom: expenseShiftId ? 'drawer' : undefined,
         type: formData.type,
         customType: formData.customType,
         amount: amountUSD,
@@ -293,7 +297,8 @@ export default function Expenses() {
       }
 
       // ✅ خصم المبلغ من الصندوق بعملة المصروف الأصلية وسعر صرفها، مع ربط الحركة بمعرّف المصروف نفسه
-      processExpense(amountUSD, formData.type, undefined, undefined, created.id, expenseCurrency, formData.amount, selectedCurrencyDef.rate);
+      processExpense(amountUSD, formData.type, undefined, undefined, created.id, expenseCurrency, formData.amount,
+        selectedCurrencyDef.rate, false, Boolean(expenseShiftId && getActiveShift()?.id === expenseShiftId));
 
       const [expensesData, statsData] = await Promise.all([
         loadExpensesCloud(),
@@ -347,7 +352,10 @@ export default function Expenses() {
 
       if (recurringForm.payImmediately) {
         const todayStr = toLocalDateString(new Date());
+        const expenseShiftId = getActiveShift()?.id;
         const createdRecurringPayment = await addExpenseCloud({
+          shiftId: expenseShiftId,
+          paidFrom: expenseShiftId ? 'drawer' : undefined,
           type: recurringForm.type,
           customType: recurringForm.customType || recurringForm.name,
           amount: amountUSD,
@@ -359,7 +367,8 @@ export default function Expenses() {
         });
         if (!createdRecurringPayment) throw new Error('فشل إنشاء دفعة المصروف الثابت');
 
-        processExpense(amountUSD, recurringForm.type, undefined, undefined, createdRecurringPayment.id, curr, recurringForm.amount, currDef.rate);
+        processExpense(amountUSD, recurringForm.type, undefined, undefined, createdRecurringPayment.id, curr,
+          recurringForm.amount, currDef.rate, false, Boolean(expenseShiftId && getActiveShift()?.id === expenseShiftId));
 
         const nextDate = new Date(recurringForm.startDate || todayStr);
         nextDate.setDate(nextDate.getDate() + (recurringForm.intervalDays || 30));
@@ -465,11 +474,12 @@ export default function Expenses() {
     const reversedId = expense.id;
 
     try {
-      // 1. استدعاء السحابة لتعليم المصروف كمسترد مع السبب
-      await reverseExpenseCloud(reversedId, 'تراجع بواسطة المستخدم');
-
-      // 2. إعادة المبلغ المخصوم إلى رصيد الصندوق فوراً وحذف المصروف التشغيلي من الأرباح
-      restoreExpenseCash(reversedAmount, reversedType, reversedId, ((expense as any).currency as any) || 'USD');
+      const originalShiftId = getActiveShift()?.id ?? null;
+      const result = await reverseExpenseWithResultCloud(reversedId, 'تراجع بواسطة المستخدم', originalShiftId);
+      if (result.cashRefunded && result.shiftId && getActiveShift()?.id === result.shiftId
+          && result.cashAmount !== undefined && result.cashCurrency) {
+        restoreExpenseCash(result.cashAmount, reversedType, reversedId, result.cashCurrency, result.cashCurrencyAmount);
+      }
 
       // 3. تحديث البيانات محلياً
       const [expensesData, statsData] = await Promise.all([
@@ -481,8 +491,18 @@ export default function Expenses() {
       setShowDeleteDialog(false);
       setSelectedExpense(null);
 
-      toast.success(`تم استرداد المصروف وإعادة ${m.fmt(reversedAmount)} للصندوق`);
-      import('@/lib/activity-log').then(({ logActivity }) => logActivity('expense_refund', `استرداد وتراجع عن مصروف (${reversedType}): +${reversedAmount}`, { id: reversedId, amount: reversedAmount, type: reversedType }));
+      if (result.queued) {
+        toast.success('تمت جدولة عكس المصروف للمزامنة');
+      } else if (result.alreadyReversed) {
+        toast.success('المصروف معكوس مسبقاً');
+      } else {
+        toast.success(result.cashRefunded && result.cashAmount !== undefined
+          ? `تم استرداد المصروف وإعادة ${m.fmt(result.cashAmount)} للصندوق`
+          : 'تم عكس المصروف');
+        import('@/lib/activity-log').then(({ logActivity }) => logActivity('expense_refund',
+          `عكس مصروف (${reversedType}): ${reversedAmount}`,
+          { id: reversedId, amount: reversedAmount, type: reversedType })).catch(() => {});
+      }
     } catch (error) {
       // لا رسالة نجاح عند فشل الخادم: نعرض السبب الحقيقي الوارد من Supabase
       const reason = error instanceof Error && error.message ? error.message : '';

@@ -1,4 +1,5 @@
 import { showSmartToast, hideSmartToast, hideSmartToastById } from '@/hooks/use-smart-toast';
+import { getCurrentLanguage } from '@/lib/i18n';
 
 /**
  * Unified toast notification utility linked to POS Flow App notifications system
@@ -8,6 +9,36 @@ import { showSmartToast, hideSmartToast, hideSmartToastById } from '@/hooks/use-
  * ✅ Guarantees full display of title and description with zero blank states
  * ✅ Throttles rapid identical messages to prevent visual spam
  */
+
+export interface ToastDurationPreset {
+  id: 'short' | 'medium' | 'long';
+  seconds: number;
+  ms: number;
+  label: string;
+  labelEn: string;
+}
+
+export const TOAST_DURATION_PRESETS: ToastDurationPreset[] = [
+  { id: 'short', seconds: 0.5, ms: 500, label: 'خاطف', labelEn: 'Short / Fast' },
+  { id: 'medium', seconds: 1.5, ms: 1500, label: 'متوسط', labelEn: 'Medium' },
+  { id: 'long', seconds: 3.0, ms: 3000, label: 'أطول', labelEn: 'Long' },
+];
+
+export function getLocalizedToastDurationLabel(
+  presetOrValue: ToastDurationPreset | 'short' | 'medium' | 'long' | number,
+  lang?: string
+): string {
+  const isEn = (lang ?? getCurrentLanguage()) === 'en';
+  if (typeof presetOrValue === 'object') {
+    return isEn ? presetOrValue.labelEn : presetOrValue.label;
+  }
+  const preset =
+    typeof presetOrValue === 'number'
+      ? TOAST_DURATION_PRESETS.find((p) => p.seconds === presetOrValue || p.ms === presetOrValue)
+      : TOAST_DURATION_PRESETS.find((p) => p.id === presetOrValue);
+  if (!preset) return String(presetOrValue);
+  return isEn ? preset.labelEn : preset.label;
+}
 
 // Throttle map to prevent repeated notifications
 const lastToastTime: Map<string, number> = new Map();
@@ -138,7 +169,10 @@ function formatHelperDescription(options?: ToastOptions): string | undefined {
   if (options.description) return options.description;
   const parts: string[] = [];
   if (options.itemName) parts.push(options.itemName);
-  if (options.itemCount && options.itemCount > 1) parts.push(`${options.itemCount} قطع`);
+  if (options.itemCount && options.itemCount > 1) {
+    const unitLabel = getCurrentLanguage() === 'en' ? 'items' : 'قطع';
+    parts.push(`${options.itemCount} ${unitLabel}`);
+  }
   if (options.price) parts.push(`${options.price}`);
   return parts.length > 0 ? parts.join(' • ') : undefined;
 }
@@ -160,7 +194,10 @@ export const showToast = {
       optionsOrDesc.isInvoice === true ||
       !!optionsOrDesc.invoiceNumber ||
       optionsOrDesc.operation === 'فاتورة مكتملة' ||
-      (typeof optionsOrDesc.operation === 'string' && optionsOrDesc.operation.includes('فاتورة'))
+      (typeof optionsOrDesc.operation === 'string' && (
+        optionsOrDesc.operation.includes('فاتورة') ||
+        optionsOrDesc.operation.toLowerCase().includes('invoice')
+      ))
     );
 
     showSmartToast({

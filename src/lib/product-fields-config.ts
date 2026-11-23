@@ -173,62 +173,113 @@ export const getEffectiveFieldsConfig = (): ProductFieldsConfig => {
   return getDefaultFieldsByStoreType('general');
 };
 
-// Field labels in Arabic
-export const FIELD_LABELS: Record<keyof ProductFieldsConfig, { name: string; description: string }> = {
+export interface ProductFieldLabelMeta {
+  name: string;
+  labelEn: string;
+  description: string;
+  descriptionEn: string;
+}
+
+// Field labels in Arabic & English
+export const FIELD_LABELS: Record<keyof ProductFieldsConfig, ProductFieldLabelMeta> = {
   expiryDate: {
     name: 'تاريخ الصلاحية',
+    labelEn: 'Expiry Date',
     description: 'للمنتجات الغذائية والأدوية',
+    descriptionEn: 'For food products and medications',
   },
   batchNumber: {
     name: 'رقم التشغيلة',
+    labelEn: 'Batch Number',
     description: 'رقم الدفعة أو التشغيلة للأدوية',
+    descriptionEn: 'Lot or batch number for medications',
   },
   serialNumber: {
     name: 'الرقم التسلسلي',
+    labelEn: 'Serial Number',
     description: 'الرقم التسلسلي (S/N) للجهاز أو ISBN للكتب',
+    descriptionEn: 'Device serial number (S/N) or book ISBN',
   },
   imei: {
     name: 'رقم IMEI',
+    labelEn: 'IMEI Number',
     description: 'الرقم الدولي للهاتف (15 خانة)، منفصل عن الرقم التسلسلي',
+    descriptionEn: '15-digit international mobile equipment identity, separate from serial number',
   },
   warranty: {
     name: 'الضمان',
+    labelEn: 'Warranty',
     description: 'مدة ضمان المنتج',
+    descriptionEn: 'Product warranty period',
   },
   wholesalePrice: {
     name: 'سعر الجملة',
+    labelEn: 'Wholesale Price',
     description: 'سعر خاص للبيع بالجملة',
+    descriptionEn: 'Special pricing for wholesale sales',
   },
   sizeColor: {
     name: 'المقاس واللون',
+    labelEn: 'Size & Color',
     description: 'للملابس والأزياء',
+    descriptionEn: 'For clothing and apparel',
   },
   minStockLevel: {
     name: 'الحد الأدنى للمخزون',
+    labelEn: 'Minimum Stock Level',
     description: 'تنبيه عند انخفاض الكمية',
+    descriptionEn: 'Alert when stock quantity drops below threshold',
   },
   weight: {
     name: 'الوزن',
+    labelEn: 'Weight',
     description: 'وزن المنتج بالكيلو أو الجرام',
+    descriptionEn: 'Product weight in kilograms or grams',
   },
   fabricType: {
     name: 'نوع القماش',
+    labelEn: 'Fabric Type',
     description: 'نوع قماش الملابس',
+    descriptionEn: 'Apparel fabric material type',
   },
   tableNumber: {
     name: 'رقم الطاولة',
+    labelEn: 'Table Number',
     description: 'رقم الطاولة في المطعم',
+    descriptionEn: 'Restaurant table number',
   },
   orderNotes: {
     name: 'ملاحظات الطلب',
+    labelEn: 'Order Notes',
     description: 'ملاحظات خاصة بالطلب',
+    descriptionEn: 'Special notes for the order',
   },
   author: {
     name: 'اسم المؤلف',
+    labelEn: 'Author Name',
     description: 'مؤلف الكتاب',
+    descriptionEn: 'Book author',
   },
   publisher: {
     name: 'دار النشر',
+    labelEn: 'Publisher',
     description: 'دار نشر الكتاب',
+    descriptionEn: 'Book publishing house',
   },
 };
+
+/**
+ * Returns localized label for a product field ('en' vs 'ar')
+ */
+export function getLocalizedFieldLabel(field: keyof ProductFieldsConfig, lang: string = 'ar'): string {
+  const meta = FIELD_LABELS[field];
+  return lang === 'en' ? meta.labelEn : meta.name;
+}
+
+/**
+ * Returns localized description for a product field ('en' vs 'ar')
+ */
+export function getLocalizedFieldDescription(field: keyof ProductFieldsConfig, lang: string = 'ar'): string {
+  const meta = FIELD_LABELS[field];
+  return lang === 'en' ? meta.descriptionEn : meta.description;
+}

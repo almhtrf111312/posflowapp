@@ -68,6 +68,7 @@ export type OperationType =
   | 'category_update'
   | 'category_delete'
   | 'expense_reverse'
+  | 'partner_withdrawal' // Offline partner withdrawal (idempotent via operationId)
   | 'maintenance_upsert'
   | 'maintenance_delete';
 

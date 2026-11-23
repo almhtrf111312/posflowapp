@@ -91,6 +91,8 @@ export function ChatMessages({
   conversationId: string;
   currentUserId: string;
 }) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -268,6 +270,8 @@ export function InputBar({
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
 }) {
+  const { language } = useLanguage();
+  const isEn = language === 'en';
   const [text, setText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [compressing, setCompressing] = useState(false);

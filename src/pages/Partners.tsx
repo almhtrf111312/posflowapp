@@ -429,7 +429,11 @@ export default function Partners() {
       setWithdrawCurrency('USD');
       invalidatePartnersCache();
       void refreshPartners();
-      toast.success(executed.join(' + ') || t('partners.withdraw'));
+      if (result.queued) {
+        toast.info(`${executed.join(' + ') || t('partners.withdraw')} — سيُرفع تلقائياً عند عودة الاتصال`, { duration: 6000 });
+      } else {
+        toast.success(executed.join(' + ') || t('partners.withdraw'));
+      }
     } catch (error) {
       toast.error(error instanceof Error && error.message ? error.message : t('partners.withdrawError'));
     } finally {

@@ -9,6 +9,7 @@ import {
   isCashierUser
 } from '../supabase-store';
 import { emitEvent, EVENTS } from '../events';
+import { addToQueueIfNotExists } from '../sync-queue';
 import { supabase } from '@/integrations/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 type LooseSupabase = SupabaseClient<any, 'public', any>;
@@ -378,7 +379,7 @@ export const addCapitalCloud = async (
   });
 };
 
-const PARTNER_OFFLINE_MSG = 'العمليات المالية للشركاء (إيداع/سحب) تتطلب اتصالاً بالخادم ولا تُنفَّذ أوفلاين. لم يتم أي تعديل.';
+const PARTNER_OFFLINE_MSG = 'إيداع مبالغ الشركاء يتطلب اتصالاً بالخادم ولا يُنفَّذ أوفلاين (السحب يُحفظ في الطابور). لم يتم أي تعديل.';
 
 /** تحقق من تطابق المبلغ الأصلي مع المعادل بالدولار × سعر الصرف قبل إرسال أي طلب للخادم */
 const assertFxConsistent = (amountUsd: number, originalAmount: number, rate: number, label: string) => {
@@ -502,6 +503,8 @@ export interface PartnerAutoWithdrawalResult {
   newBalance: number;
   newCapital: number;
   operationId: string | null;
+  /** true when saved offline and waiting in the sync queue (applied locally, not yet on the server) */
+  queued?: boolean;
 }
 
 const generateWithdrawalOperationId = (partnerId: string): string => {
@@ -511,6 +514,153 @@ const generateWithdrawalOperationId = (partnerId: string): string => {
     }
   } catch { /* fallback below */ }
   return `pw_${partnerId.slice(0, 8)}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const applyWithdrawalLocally = async (a: {
+  partner: Partner;
+  partnerId: string;
+  roundedAmount: number;
+  profitDeducted: number;
+  capitalDeducted: number;
+  newBalance: number;
+  newCapital: number;
+  withdrawalNote: string;
+  shiftId: string | null;
+  origAmt: number;
+  currency: string;
+}): Promise<void> => {
+  const { partner, partnerId, roundedAmount, profitDeducted, capitalDeducted, newBalance, newCapital, withdrawalNote, shiftId, origAmt, currency } = a;
+  const now = new Date().toISOString();
+  const newWithdrawals: Withdrawal[] = [];
+  if (profitDeducted > 0) {
+    newWithdrawals.push({
+      id: Date.now().toString(),
+      amount: profitDeducted,
+      type: 'profit',
+      date: now,
+      notes: withdrawalNote,
+    });
+  }
+  if (capitalDeducted > 0) {
+    newWithdrawals.push({
+      id: Date.now().toString() + '_c',
+      amount: capitalDeducted,
+      type: 'capital',
+      date: now,
+      notes: withdrawalNote,
+    });
+    partner.capitalHistory = [...(partner.capitalHistory || []), {
+      id: Date.now().toString() + '_cap',
+      amount: capitalDeducted,
+      type: 'withdrawal',
+      date: now,
+      notes: withdrawalNote,
+    } as CapitalTransaction];
+  }
+
+  partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
+  partner.currentBalance = newBalance;
+  partner.currentCapital = newCapital;
+  partner.withdrawalHistory = [...(partner.withdrawalHistory || []), ...newWithdrawals];
+
+  if (partnersCache) {
+    const idx = partnersCache.findIndex(p => p.id === partnerId);
+    if (idx !== -1) partnersCache[idx] = partner;
+    savePartnersLocally(partnersCache);
+  }
+  emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
+
+  try {
+    const { getActiveShift, updateCashboxBalance } = await import('../cashbox-store');
+    if (shiftId && getActiveShift()?.id === shiftId) updateCashboxBalance(origAmt, 'withdrawal', currency);
+  } catch (e) {
+    console.warn('[executePartnerWithdrawal] local cashbox update failed:', e);
+  }
+
+};
+
+const withdrawalNoteFor = (
+  partner: Partner,
+  withdrawalType: PartnerWithdrawalType | 'auto',
+  notes: string | undefined,
+  hasOriginalShift: boolean,
+): string =>
+  (hasOriginalShift ? notes?.trim() || 'سحب شريك' : notes) ||
+  (withdrawalType === 'profit'
+    ? 'سحب أرباح - ' + partner.name
+    : withdrawalType === 'capital'
+      ? 'سحب رأس مال - ' + partner.name
+      : 'سحب تلقائي - ' + partner.name);
+
+/**
+ * بلا اتصال: يُتحقق من الرصيد المحلي، تُطبَّق النتيجة محلياً فوراً، وتُوضع العملية في طابور المزامنة
+ * بمعرّف عملية ثابت (partner_withdrawal_atomic يمنع التكرار عبر _operation_id عند إعادة التشغيل).
+ */
+const queueOfflinePartnerWithdrawal = async (a: {
+  partner: Partner;
+  partnerId: string;
+  withdrawalType: PartnerWithdrawalType | 'auto';
+  roundedAmount: number;
+  origAmt: number;
+  rate: number;
+  currency: string;
+  notes: string | undefined;
+  operationId: string | undefined;
+  originalShift: { id: string | null } | undefined;
+}): Promise<PartnerAutoWithdrawalResult> => {
+  const { partner, partnerId, withdrawalType, roundedAmount, origAmt, rate, currency, notes, operationId, originalShift } = a;
+  const balance = Math.max(0, partner.currentBalance || 0);
+  const capital = Math.max(0, partner.currentCapital || 0);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+
+  const profitDeducted = withdrawalType === 'profit' ? roundedAmount
+    : withdrawalType === 'capital' ? 0
+    : Math.min(roundedAmount, balance);
+  const capitalDeducted = withdrawalType === 'capital' ? roundedAmount
+    : withdrawalType === 'profit' ? 0
+    : r2(roundedAmount - profitDeducted);
+  if (profitDeducted > balance + 0.001) throw new Error('مبلغ السحب يتجاوز رصيد الأرباح المتاح');
+  if (capitalDeducted > capital + 0.001) {
+    throw new Error(withdrawalType === 'auto'
+      ? 'مبلغ السحب يتجاوز الرصيد الإجمالي المتاح (أرباح + رأس مال)'
+      : 'مبلغ السحب يتجاوز رأس المال المتاح');
+  }
+
+  const opId = operationId?.trim() || generateWithdrawalOperationId(partnerId);
+  const shiftId = originalShift ? originalShift.id : await resolveActiveShiftIdForPartner();
+  const withdrawalNote = withdrawalNoteFor(partner, withdrawalType, notes, Boolean(originalShift));
+  const newBalance = r2(partner.currentBalance - profitDeducted);
+  const newCapital = r2(partner.currentCapital - capitalDeducted);
+
+  const queued = addToQueueIfNotExists('partner_withdrawal', {
+    operationId: opId,
+    partnerId,
+    amount: roundedAmount,
+    withdrawalType,
+    notes: withdrawalNote,
+    shiftId,
+    currency,
+    originalAmount: origAmt,
+    exchangeRate: rate,
+  }, opId, 10);
+
+  // نفس العملية موجودة في الطابور مسبقاً (إعادة ضغط): لا نكرر الأثر المحلي
+  if (queued) {
+    await applyWithdrawalLocally({
+      partner, partnerId, roundedAmount, profitDeducted, capitalDeducted,
+      newBalance, newCapital, withdrawalNote, shiftId, origAmt, currency,
+    });
+  }
+  return {
+    success: true,
+    alreadyProcessed: !queued,
+    profitDeducted,
+    capitalDeducted,
+    newBalance,
+    newCapital,
+    operationId: opId,
+    queued: true,
+  };
 };
 
 /**
@@ -540,7 +690,11 @@ const executePartnerWithdrawal = async (
         : 'السحب التلقائي';
   assertFxConsistent(roundedAmount, origAmt, rate, label);
 
-  if (isLocalDataMode()) throw new Error(PARTNER_OFFLINE_MSG);
+  if (isLocalDataMode()) {
+    return queueOfflinePartnerWithdrawal({
+      partner, partnerId, withdrawalType, roundedAmount, origAmt, rate, currency, notes, operationId, originalShift,
+    });
+  }
 
   // تحقق من كفاية الرصيد على أحدث نسخة من الخادم قبل الإرسال
   invalidatePartnersCache();
@@ -564,13 +718,7 @@ const executePartnerWithdrawal = async (
     );
   }
 
-  const withdrawalNote =
-    (originalShift ? notes?.trim() || 'سحب شريك' : notes) ||
-    (withdrawalType === 'profit'
-      ? 'سحب أرباح - ' + partner.name
-      : withdrawalType === 'capital'
-        ? 'سحب رأس مال - ' + partner.name
-        : 'سحب تلقائي - ' + partner.name);
+  const withdrawalNote = withdrawalNoteFor(partner, withdrawalType, notes, Boolean(originalShift));
   const shiftId = originalShift ? originalShift.id : await resolveActiveShiftIdForPartner();
   const resolvedOpId = operationId?.trim() || null;
 
@@ -615,52 +763,10 @@ const executePartnerWithdrawal = async (
 
   // تحديث الحالة المحلية بعد تأكيد الخادم فقط (تجنب التكرار إذا كانت العملية منفذة مسبقاً)
   if (!alreadyProcessed) {
-    const now = new Date().toISOString();
-    const newWithdrawals: Withdrawal[] = [];
-    if (profitDeducted > 0) {
-      newWithdrawals.push({
-        id: Date.now().toString(),
-        amount: profitDeducted,
-        type: 'profit',
-        date: now,
-        notes: withdrawalNote,
-      });
-    }
-    if (capitalDeducted > 0) {
-      newWithdrawals.push({
-        id: Date.now().toString() + '_c',
-        amount: capitalDeducted,
-        type: 'capital',
-        date: now,
-        notes: withdrawalNote,
-      });
-      partner.capitalHistory = [...(partner.capitalHistory || []), {
-        id: Date.now().toString() + '_cap',
-        amount: capitalDeducted,
-        type: 'withdrawal',
-        date: now,
-        notes: withdrawalNote,
-      } as CapitalTransaction];
-    }
-
-    partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
-    partner.currentBalance = newBalance;
-    partner.currentCapital = newCapital;
-    partner.withdrawalHistory = [...(partner.withdrawalHistory || []), ...newWithdrawals];
-
-    if (partnersCache) {
-      const idx = partnersCache.findIndex(p => p.id === partnerId);
-      if (idx !== -1) partnersCache[idx] = partner;
-      savePartnersLocally(partnersCache);
-    }
-    emitEvent(EVENTS.PARTNERS_UPDATED, partnersCache);
-
-    try {
-      const { getActiveShift, updateCashboxBalance } = await import('../cashbox-store');
-      if (shiftId && getActiveShift()?.id === shiftId) updateCashboxBalance(origAmt, 'withdrawal', currency);
-    } catch (e) {
-      console.warn('[executePartnerWithdrawal] local cashbox update failed:', e);
-    }
+    await applyWithdrawalLocally({
+      partner, partnerId, roundedAmount, profitDeducted, capitalDeducted,
+      newBalance, newCapital, withdrawalNote, shiftId, origAmt, currency,
+    });
   }
 
   return {

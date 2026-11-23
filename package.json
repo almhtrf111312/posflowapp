@@ -16,6 +16,10 @@
     "e2e": "node scripts/e2e/flowpos-e2e.mjs",
     "e2e:stress": "node scripts/e2e/flowpos-stress.mjs",
     "lint": "eslint .",
+    "maps": "node scripts/gen-maps.mjs",
+    "maps:check": "node scripts/gen-maps.mjs --check",
+    "finance:check": "node scripts/finance-check.mjs",
+    "finance:sql": "node scripts/finance-sql-check.mjs",
     "preview": "vite preview",
     "version:bump": "node scripts/bump-version.js",
     "version:bump:minor": "node scripts/bump-version.js --minor",
@@ -97,6 +101,7 @@
   "devDependencies": {
     "@capacitor/android": "^8.0.2",
     "@capacitor/cli": "^8.0.2",
+    "@electric-sql/pglite": "^0.5.17",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/bun": "^1.4.4",
@@ -115,6 +120,7 @@
     "postcss": "^8.5.6",
     "postgres": "^3.4.9",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^7.3.1"

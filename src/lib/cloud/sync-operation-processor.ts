@@ -82,9 +82,24 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       return true;
     }
     case 'expense': {
-      const cleanData = filterTablePayload('expenses', data);
-      const ownerId = await getOwnerIdForInsert();
-      return assertSuccess(sb.from('expenses').insert({ ...cleanData, user_id: ownerId }));
+      // نوع قديم: لا إدخال مباشر على جدول expenses. يمرّ عبر الدالة الذرية (قفل الفترة، حصص الشركاء، منع التكرار).
+      const amount = Number(data.amount);
+      if (!(amount > 0)) throw new Error('Invalid legacy expense operation');
+      const { error } = await sb.rpc('add_expense_atomic', {
+        _operation_id: String(data.id || data.operationId || operation.id),
+        _expense_type: String(data.expense_type || data.type || 'other'),
+        _amount: amount,
+        _description: (data.description as string | undefined) ?? null,
+        ...(data.date ? { _date: String(data.date) } : {}),
+        _notes: (data.notes as string | undefined) ?? null,
+        ...(data.original_currency ? {
+          _original_currency: String(data.original_currency),
+          _original_amount: data.original_amount != null ? Number(data.original_amount) : null,
+          _exchange_rate: data.exchange_rate != null ? Number(data.exchange_rate) : null,
+        } : {}),
+      });
+      if (error) throw new Error(error.message);
+      return true;
     }
     case 'debt': {
       const cleanData = filterTablePayload('debts', data);
@@ -124,6 +139,26 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         _payment_method: paymentMethod,
       });
       if (error) throw new Error(error.message);
+      return true;
+    }
+    case 'partner_withdrawal': {
+      if (!data.partnerId || !data.operationId) throw new Error('Invalid partner withdrawal');
+      // _operation_id يمنع تكرار السحب إن أُعيدت المحاولة (الخادم يرد already_processed)
+      const { data: wRes, error } = await sb.rpc('partner_withdrawal_atomic', {
+        _partner_id: String(data.partnerId),
+        _amount: Number(data.amount),
+        _withdrawal_type: String(data.withdrawalType),
+        _notes: (data.notes as string | undefined) ?? null,
+        _shift_id: typeof data.shiftId === 'string' && data.shiftId.trim().length > 0 ? data.shiftId.trim() : null,
+        _currency: data.currency ? String(data.currency) : 'USD',
+        _original_amount: data.originalAmount != null ? Number(data.originalAmount) : null,
+        _exchange_rate: data.exchangeRate != null ? Number(data.exchangeRate) : null,
+        _operation_id: String(data.operationId),
+      });
+      if (error) throw new Error(error.message);
+      const wr = (wRes || {}) as { success?: boolean; error?: string; message?: string };
+      if (!wr.success) throw new Error(wr.error || wr.message || 'رفض الخادم عملية السحب');
+      invalidatePartnersCache();
       return true;
     }
     case 'debt_writeoff': {

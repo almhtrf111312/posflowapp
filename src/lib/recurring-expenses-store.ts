@@ -1,6 +1,7 @@
 import { emitEvent, EVENTS } from './events';
 import { addExpenseCloud, ExpenseType } from './cloud/expenses-cloud';
 import { processExpense } from './unified-transactions';
+import { getActiveShift } from './cashbox-store';
 import { toLocalDateString } from './date-utils';
 import { getCurrencyDef, toUsd, round8 } from './money-engine';
 import {
@@ -184,7 +185,11 @@ export async function payRecurringExpense(id: string): Promise<boolean> {
     const dynamicUsdAmount = curr !== 'USD' ? round8(toUsd(originalAmt, curr, currDef.rate)) : round8(expense.amount);
 
     // 2. Add as regular cloud expense with currency breakdown
+    // الصندوق: الخادم يسجل حركة المصروف ويحدّث الرصيد المتوقع ذرياً داخل add_expense_atomic عند تمرير الوردية
+    const expenseShiftId = getActiveShift()?.id;
     const createdExpense = await addExpenseCloud({
+      shiftId: expenseShiftId,
+      paidFrom: expenseShiftId ? 'drawer' : undefined,
       type: expense.type,
       customType: expense.customType || expense.name,
       amount: dynamicUsdAmount,
@@ -197,7 +202,8 @@ export async function payRecurringExpense(id: string): Promise<boolean> {
     if (!createdExpense) throw new Error('فشل إنشاء المصروف الثابت');
 
     // 3. خصم المبلغ من الصندوق وتسجيله كمصروف تشغيلي بالعملة الأصلية وسعر صرفها (مرجع الحركة = معرّف المصروف)
-    processExpense(dynamicUsdAmount, expense.type, undefined, undefined, createdExpense.id, curr, originalAmt, currDef.rate);
+    processExpense(dynamicUsdAmount, expense.type, undefined, undefined, createdExpense.id, curr, originalAmt, currDef.rate,
+      false, Boolean(expenseShiftId && getActiveShift()?.id === expenseShiftId));
     
     // 3. Calculate next due date strictly into the future
     const todayDate = new Date();

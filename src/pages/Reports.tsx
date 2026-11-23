@@ -947,7 +947,13 @@ function ReportsContent() {
     const totalExpenses = expenseReportData.totalExpenses || 0;
     const badDebtLoss = reportData.summary.badDebtLoss || 0;
     const pendingProfit = reportData.summary.pendingProfit || 0;
-    const netProfit = round8(grossProfit - totalExpenses - badDebtLoss);
+    // F-27 / D-06: FX difference of foreign-currency debt payments — its own line, added at the bottom of the net result
+    const fxDifference = round8(
+      (profitLedger.fxDifferences || [])
+        .filter(f => isDateInRange(toLocalDateString(f.date), dateRange.from, dateRange.to))
+        .reduce((sum, f) => sum + f.amountUsd, 0)
+    );
+    const netProfit = round8(grossProfit - totalExpenses - badDebtLoss + fxDifference);
     const netProfitMargin = reportData.summary.totalSales > 0
       ? ((netProfit / reportData.summary.totalSales) * 100).toFixed(1)
       : '0.0';
@@ -1029,8 +1035,16 @@ function ReportsContent() {
             label: isEn ? 'Actual Net Profit' : 'صافي الربح الفعلي (Net Profit)',
             color: netProfit >= 0 ? 'text-emerald-600' : 'text-destructive',
             bg: netProfit >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10',
-            subtext: isRTL ? `هامش الصافي: ${netProfitMargin}% (بعد المصاريف والديون المعدومة)` : `Net margin: ${netProfitMargin}% (after expenses and bad debts)`,
+            subtext: isRTL ? `هامش الصافي: ${netProfitMargin}% (بعد المصاريف والديون المعدومة${fxDifference !== 0 ? ' وفرق الصرف' : ''})` : `Net margin: ${netProfitMargin}% (after expenses and bad debts${fxDifference !== 0 ? ' and FX difference' : ''})`,
           },
+          ...(fxDifference !== 0 ? [{
+            icon: Coins,
+            value: formatReportAmount(fxDifference),
+            label: isEn ? 'FX difference on debt collection' : 'فرق الصرف على تحصيل الديون',
+            color: fxDifference >= 0 ? 'text-emerald-600' : 'text-destructive',
+            bg: fxDifference >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10',
+            subtext: isEn ? 'Included in net profit; not sales profit and not shared with partners' : 'مُضمَّن في صافي الربح؛ ليس ربح مبيعات ولا يُوزَّع على الشركاء',
+          }] : []),
           {
             icon: Banknote,
             value: formatReportAmount(reportData.summary.totalSales),
@@ -1544,6 +1558,7 @@ function ReportsContent() {
   }, [
     activeReport,
     reportData,
+    profitLedger,
     profitMargin,
     salesTrend,
     getFilteredProductsForReport,

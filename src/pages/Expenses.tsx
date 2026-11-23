@@ -88,6 +88,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { processExpense, reverseExpenseTransaction, restoreExpenseCash } from '@/lib/unified-transactions';
 import { toLocalDateString } from '@/lib/date-utils';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { ListPageSkeleton } from '@/components/ui/page-skeleton';
 import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
 
 export default function Expenses() {
@@ -110,6 +111,7 @@ export default function Expenses() {
   };
   const [searchParams, setSearchParams] = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>(() => loadRecurringExpenses());
   const [dueExpenses, setDueExpenses] = useState<RecurringExpense[]>(() => getDueExpenses());
   const [searchQuery, setSearchQuery] = useState('');
@@ -167,15 +169,19 @@ export default function Expenses() {
   // Load expenses and recurring expenses from cloud
   useEffect(() => {
     const loadData = async () => {
-      const [expensesData, statsData, recurringData] = await Promise.all([
-        loadExpensesCloud(),
-        getExpenseStatsCloud(),
-        loadRecurringExpensesCloud(),
-      ]);
-      setExpenses(expensesData);
-      setStats(statsData);
-      setRecurringExpenses(recurringData);
-      setDueExpenses(getDueExpenses());
+      try {
+        const [expensesData, statsData, recurringData] = await Promise.all([
+          loadExpensesCloud(),
+          getExpenseStatsCloud(),
+          loadRecurringExpensesCloud(),
+        ]);
+        setExpenses(expensesData);
+        setStats(statsData);
+        setRecurringExpenses(recurringData);
+        setDueExpenses(getDueExpenses());
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadData();
 
@@ -728,7 +734,9 @@ export default function Expenses() {
 
       {/* Expenses List */}
       <div className="space-y-2 md:space-y-2.5">
-        {filteredExpenses.length === 0 ? (
+        {isLoading && expenses.length === 0 ? (
+          <ListPageSkeleton rows={5} />
+        ) : filteredExpenses.length === 0 ? (
           <div className="bg-card rounded-2xl border border-border p-8 text-center">
             <Receipt className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-40" />
             <p className="text-xs md:text-sm font-semibold text-muted-foreground">{t('expenses.noExpenses')}</p>

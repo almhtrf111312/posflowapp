@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { capitalMaxInForeign, capitalOriginalRate, capitalUsdFromForeign, type CapitalHistoryLike } from '@/lib/partner-fx';
 import { getActiveShift } from '@/lib/cashbox-store';
 import {
   Search,
@@ -377,6 +378,12 @@ export default function Partners() {
     }
   };
 
+  // D-10: the capital shown in the withdrawal currency (foreign currencies use the original deposit rate)
+  const capitalInWithdrawCurrency = (partner: NonNullable<typeof selectedPartner>): number =>
+    withdrawCurrency === 'USD'
+      ? (partner.currentCapital || 0)
+      : capitalMaxInForeign(partner.currentCapital || 0, capitalOriginalRate(partner.capitalHistory as unknown as CapitalHistoryLike[]));
+
   const handleWithdraw = async () => {
     if (isSubmitting || withdrawing.current) return;
     if (!selectedPartner || !Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
@@ -384,11 +391,23 @@ export default function Partners() {
       return;
     }
 
+    if (withdrawType === 'auto' && withdrawCurrency !== 'USD') {
+      toast.error('السحب التلقائي بالدولار فقط. اسحب الربح ورأس المال بعمليتين منفصلتين بعملة أجنبية.');
+      return;
+    }
+
     const requestKey = JSON.stringify([selectedPartner.id, withdrawType, withdrawAmount, withdrawCurrency, withdrawNotes.trim()]);
     let request = pendingWithdrawals.current.get(requestKey);
     if (!request) {
-      const rate = withdrawCurrency === 'USD' ? 1 : getCurrencyDef(withdrawCurrency).rate;
-      const amount = Math.round(toUsd(withdrawAmount, withdrawCurrency, rate) * 100) / 100;
+      // D-10: capital in a foreign currency is valued at the ORIGINAL deposit rate; profit at today's rate
+      const isForeignCapital = withdrawType === 'capital' && withdrawCurrency !== 'USD';
+      const capitalRate = isForeignCapital
+        ? capitalOriginalRate(selectedPartner.capitalHistory as unknown as CapitalHistoryLike[])
+        : 0;
+      const rate = withdrawCurrency === 'USD' ? 1 : isForeignCapital ? capitalRate : getCurrencyDef(withdrawCurrency).rate;
+      const amount = Math.round((isForeignCapital
+        ? capitalUsdFromForeign(withdrawAmount, capitalRate)
+        : toUsd(withdrawAmount, withdrawCurrency, rate)) * 100) / 100;
       if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(amount) || amount <= 0) {
         toast.error(t('partners.enterValidAmount'));
         return;
@@ -1451,7 +1470,7 @@ export default function Partners() {
                   <p className="text-xl font-bold text-info">$${formatNumber(selectedPartner.currentCapital || 0)}</p>
                   {withdrawCurrency !== 'USD' && (
                     <p className="text-xs font-semibold text-info/80 mt-0.5">
-                      ≈ {formatNumber(fromUsd(selectedPartner.currentCapital || 0, withdrawCurrency))} {withdrawCurrency}
+                      ≈ {formatNumber(capitalInWithdrawCurrency(selectedPartner))} {withdrawCurrency}
                     </p>
                   )}
                 </div>
@@ -1528,7 +1547,7 @@ export default function Partners() {
                     size="sm"
                     className="flex-1 text-xs"
                     onClick={() => {
-                      const maxCapital = fromUsd(selectedPartner.currentCapital || 0, withdrawCurrency);
+                      const maxCapital = capitalInWithdrawCurrency(selectedPartner);
                       setWithdrawAmount(roundForCurrency(maxCapital, withdrawCurrency));
                     }}
                   >

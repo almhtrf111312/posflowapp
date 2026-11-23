@@ -379,5 +379,7 @@
   "supabase/functions/validate-activation-code/": "Validates an activation code.",
   "scripts/finance-sql-check.mjs": "Finance SQL gate (part of G1; npm run finance:sql): builds in-memory Postgres from migrations, runs golden scenarios + reconciliation queries",
   "src/lib/debt-fx.ts": "Debt FX policy (F-27): credit foreign-currency debt payments at the invoice rate, FX difference, max payable",
-  "src/lib/__tests__/debt-fx.test.ts": "Production test for debt-fx (finance gate)"
+  "src/lib/__tests__/debt-fx.test.ts": "Production test for debt-fx (finance gate)",
+  "src/lib/partner-fx.ts": "Partner currency rules (D-10): capital at the original deposit rate, profit at today rate",
+  "src/lib/__tests__/partner-fx.test.ts": "Production test for partner-fx (finance gate)"
 }

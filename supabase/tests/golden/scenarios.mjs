@@ -294,3 +294,45 @@ export async function runExpenseShares(k, newWorldFn) {
     truthy('EXPSHARE-V fractional profit share is refused', (await w.fails(w.one(`insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares) values ($1,'bad4',0.5,0,true,0,0,0,'[]'::jsonb)`, [OWNER]))) !== null);
   }
 }
+
+// ---------- Partner withdrawals in any currency (D-10, migration 20261123075000) ----------
+export async function runPartnerCurrency(k, newWorldFn) {
+  const { check, truthy } = k;
+  const w = await newWorldFn();
+  const { one, op, fails } = w;
+  const P = await one(`insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares)
+    values ($1,'شريك عملات',0,0,true,0,0,0,'[]') returning id`, [OWNER]);
+  // Deposit A: 1000 USD at 15000 (15,000,000 SYP). Deposit B: 500 USD at 12000 (6,000,000 SYP).
+  await one(`select public.partner_deposit_atomic($1,1000,'capital',null,null,'SYP',15000000,15000)`, [P.id]);
+  await one(`select public.partner_deposit_atomic($1,500,'capital',null,null,'SYP',6000000,12000)`, [P.id]);
+  await w.db.exec(`update public.partners set current_balance = 100 where id='${P.id}'`); // profit earned: 100 USD
+  const row = () => one(`select current_balance::float8 b, current_capital::float8 c from public.partners where id=$1`, [P.id]);
+  check('D10 capital after two deposits = 1500 USD', (await row()).c, 1500);
+
+  // W1: capital 7,000,000 SYP. Weighted original rate = 21,000,000 / 1500 = 14000, so 500 USD.
+  // The app sends a WRONG USD amount (600). The server must ignore it and value 7,000,000 SYP at 14000 = 500 USD.
+  const w1 = (await one(`select public.partner_withdrawal_atomic($1,600,'capital','n',null,'SYP',7000000,14000,$2) r`, [P.id, op('wd1')])).r;
+  check('D10 capital SYP withdrawal deducts 500 USD at the weighted original rate', w1.capital_deducted, 500);
+  check('D10 capital left = 1000', (await row()).c, 1000);
+  const cap = await one(`select (capital_history->-1->>'exchangeRate')::float8 r from public.partners where id=$1`, [P.id]);
+  check('D10 capital withdrawal records the original rate', cap.r, 14000);
+
+  // W2: profit 1,200,000 SYP at TODAY's rate 12000 = 100 USD, all of the profit.
+  const w2 = (await one(`select public.partner_withdrawal_atomic($1,100,'profit','n',null,'SYP',1200000,12000,$2) r`, [P.id, 'wd-profit-golden-0001'])).r;
+  check('D10 profit SYP withdrawal deducts 100 USD at today rate', w2.profit_deducted, 100);
+  check('D10 profit balance now 0', (await row()).b, 0);
+
+  // Refusals
+  truthy('D10 profit above balance is refused', (await fails(one(`select public.partner_withdrawal_atomic($1,1,'profit','n',null,'USD',1,1,$2)`, [P.id, op('wd3')]))) !== null);
+  truthy('D10 capital above capital is refused (15,000,000 SYP = 1071.43 USD > 1000)', (await fails(one(`select public.partner_withdrawal_atomic($1,1071.43,'capital','n',null,'SYP',15000000,15000,$2)`, [P.id, op('wd4')]))) !== null);
+  truthy('D10 automatic split in a foreign currency is refused', (await fails(one(`select public.partner_withdrawal_atomic($1,10,'auto','n',null,'SYP',120000,12000,$2)`, [P.id, op('wd5')]))) !== null);
+
+  // USD capital withdrawal still works (no FX).
+  await one(`select public.partner_withdrawal_atomic($1,100,'capital','n',null,'USD',100,1,$2)`, [P.id, op('wd6')]);
+  check('D10 USD capital withdrawal 100 leaves 900', (await row()).c, 900);
+
+  // Replay of the profit withdrawal is idempotent.
+  const again = (await one(`select public.partner_withdrawal_atomic($1,100,'profit','n',null,'SYP',1200000,12000,'wd-profit-golden-0001') r`, [P.id])).r;
+  check('D10 replay is already processed', again.already_processed, true);
+  check('D10 replay did not withdraw twice', (await row()).c, 900);
+}

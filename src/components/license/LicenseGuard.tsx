@@ -130,15 +130,15 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   const [isStartingTrial, setIsStartingTrial] = useState(false);
   const [showActivation, setShowActivation] = useState(false);
   const [showTrialNotice, setShowTrialNotice] = useState(false);
-  
+
   const [hasTimedOut, setHasTimedOut] = useState(false);
-  
-  // Fast-path: نسخة ترخيص محفوظة صالحة فعلاً (غير منتهية وغير ملغاة وتخص هذا المستخدم) — وجود الملف وحده لا يكفي
+
+  // Fast-path: valid cached license (not expired, not revoked, belongs to this user)
   const hasCachedLicense = typeof window !== 'undefined' && cachedLicenseGrantsAccess(readLicenseCacheRaw(), user?.id);
   const hasActiveSession = Boolean(user && (hasLicense || hasCachedLicense));
   const isFullyLoading = (authLoading || isLoading || isCheckingDevice) && !hasActiveSession && !hasTimedOut;
 
-  // Failsafe timer: لا يبقى المستخدم على شاشة التحميل أكثر من 8 ثوانٍ
+  // Failsafe timer: never keep user on loading screen more than 8 seconds
   useEffect(() => {
     if (isFullyLoading) {
       const timer = setTimeout(() => {
@@ -150,10 +150,10 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
 
   useEffect(() => {
     if (isRevoked) {
-      toast.error('تم تعطيل هذا الحساب أو إلغاء ترخيصه، يرجى التواصل مع الإدارة');
+      toast.error(t('license.accountRevoked' as any));
       signOut();
     }
-  }, [isRevoked, signOut]);
+  }, [isRevoked, signOut, t]);
 
   useEffect(() => {
     if (isValid && hasLicense && expiresAt && remainingDays !== null) {
@@ -177,12 +177,12 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   if (!user) return <>{children}</>;
   if (dataEncrypted) return <DataEncryptedScreen />;
 
-  // 🎫 حظر تذكرة الأوفلاين: انتهاء الصلاحية أو عبث بالساعة أو بلوغ حد الفواتير دون اتصال
+  // Offline lease blocked: expired, clock tampered, or offline invoice limit reached
   if (offlineLeaseBlocked && isAppOffline()) {
     const reasonMessages: Record<string, string> = {
-      tampered: 'تم رصد تلاعب بساعة الجهاز. تم إيقاف العمل دون اتصال حمايةً لبياناتك.',
-      expired: 'انتهت صلاحية تذكرة العمل دون اتصال.',
-      limit_reached: 'تم بلوغ الحد الأقصى للفواتير دون اتصال.',
+      tampered: t('license.offlineTampered' as any),
+      expired: t('license.offlineExpired' as any),
+      limit_reached: t('license.offlineLimitReached' as any),
     };
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4" dir={direction}>
@@ -191,15 +191,15 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
             <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <WifiOff className="w-8 h-8 text-destructive" />
             </div>
-            <CardTitle className="text-xl">الاتصال بالإنترنت مطلوب</CardTitle>
+            <CardTitle className="text-xl">{t('license.internetRequired' as any)}</CardTitle>
             <CardDescription>
-              {reasonMessages[offlineLeaseReason || ''] || 'تعذر التحقق من صلاحية العمل دون اتصال.'}
-              {' '}يرجى الاتصال بالإنترنت مرة واحدة لمزامنة بياناتك وتجديد التذكرة.
+              {reasonMessages[offlineLeaseReason || ''] || t('license.offlineVerifyFailed' as any)}
+              {' '}{t('license.offlineReconnectHint' as any)}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button variant="default" className="w-full" onClick={() => checkLicense()}>
-              إعادة المحاولة بعد الاتصال
+              {t('license.retryAfterConnect' as any)}
             </Button>
             <ContactLinksSection />
             <Button variant="ghost" className="w-full text-muted-foreground" onClick={async () => { await supabase.auth.signOut(); }}>
@@ -210,12 +210,12 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
       </div>
     );
   }
-  
+
   // Transient device check protection:
   // If user has a valid active session, do not mount DeviceBlockedScreen while isCheckingDevice is running.
   // Only mount if verified against both IDs, check has concluded (!isCheckingDevice), and device is confirmed blocked.
   if (isDeviceBlocked && !isCheckingDevice) return <DeviceBlockedScreen />;
-  // الترخيص مربوط بجهاز آخر: شاشة الجهاز المحظور بدلاً من اعتبار الحساب ملغى وتسجيل الخروج
+  // License bound to another device: show DeviceBlockedScreen instead of signing out
   if (deviceMismatch) return <DeviceBlockedScreen />;
 
   if ((isValid && hasLicense) || (user && hasCachedLicense)) return <>{children}</>;
@@ -258,9 +258,8 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
             setIsStartingTrial(true);
             const res = await startTrial();
             setIsStartingTrial(false);
-            // كان الفشل صامتاً فتعود الشاشة نفسها دون تفسير
             if (!res.success) {
-              toast.error(res.error || 'تعذّر بدء الفترة التجريبية');
+              toast.error(res.error || t('license.trialStartFailed' as any));
             } else if (res.message) {
               toast.info(res.message);
             }

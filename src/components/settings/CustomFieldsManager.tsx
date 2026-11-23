@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
+import type { TranslationKey } from '@/lib/i18n';
 import {
   CustomField,
   CustomFieldType,
@@ -39,15 +40,14 @@ interface CustomFieldsManagerProps {
   onFieldsChange?: () => void;
 }
 
-const fieldTypeLabels: Record<CustomFieldType, { ar: string; en: string }> = {
-  text: { ar: 'نص', en: 'Text' },
-  number: { ar: 'رقم', en: 'Number' },
-  select: { ar: 'قائمة اختيار', en: 'Dropdown' },
+const fieldTypeTranslationKeys: Record<CustomFieldType, string> = {
+  text: 'customFields.type.text',
+  number: 'customFields.type.number',
+  select: 'customFields.type.select',
 };
 
 export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps) {
-  const { language } = useLanguage();
-  const isEn = language === 'en';
+  const { t } = useLanguage();
   const [fields, setFields] = useState<CustomField[]>(() => loadCustomFields());
 
   useEffect(() => {
@@ -62,7 +62,7 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedField, setSelectedField] = useState<CustomField | null>(null);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     type: 'text' as CustomFieldType,
@@ -89,7 +89,7 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
 
   const handleAddField = () => {
     if (!formData.name.trim()) {
-      toast.error(isEn ? 'Please enter a field name' : 'يرجى إدخال اسم الحقل');
+      toast.error(t('customFields.toast.nameRequired' as TranslationKey));
       return;
     }
 
@@ -112,12 +112,12 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
     setShowAddDialog(false);
     resetForm();
     onFieldsChange?.();
-    toast.success(isEn ? 'Field added successfully' : 'تم إضافة الحقل بنجاح');
+    toast.success(t('customFields.toast.added' as TranslationKey));
   };
 
   const handleEditField = () => {
     if (!selectedField || !formData.name.trim()) {
-      toast.error(isEn ? 'Please enter a field name' : 'يرجى إدخال اسم الحقل');
+      toast.error(t('customFields.toast.nameRequired' as TranslationKey));
       return;
     }
 
@@ -141,18 +141,18 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
     setSelectedField(null);
     resetForm();
     onFieldsChange?.();
-    toast.success(isEn ? 'Field updated successfully' : 'تم تعديل الحقل بنجاح');
+    toast.success(t('customFields.toast.updated' as TranslationKey));
   };
 
   const handleDeleteField = () => {
     if (!selectedField) return;
-    
+
     deleteCustomField(selectedField.id);
     setFields(loadCustomFields());
     setShowDeleteDialog(false);
     setSelectedField(null);
     onFieldsChange?.();
-    toast.success(isEn ? 'Field deleted successfully' : 'تم حذف الحقل بنجاح');
+    toast.success(t('customFields.toast.deleted' as TranslationKey));
   };
 
   const handleToggleEnabled = (field: CustomField) => {
@@ -185,28 +185,28 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="font-medium text-foreground">{isEn ? "Custom Fields" : "الحقول المخصصة"}</h4>
+          <h4 className="font-medium text-foreground">{t('customFields.title' as TranslationKey)}</h4>
           <p className="text-sm text-muted-foreground">
-            {isEn ? "Add extra fields tailored to your products" : "أضف حقولاً إضافية خاصة بمنتجاتك"}
+            {t('customFields.subtitle' as TranslationKey)}
           </p>
         </div>
         <Button size="sm" onClick={() => setShowAddDialog(true)}>
           <Plus className="w-4 h-4" />
-          {isEn ? "Add Field" : "إضافة حقل"}
+          {t('customFields.addField' as TranslationKey)}
         </Button>
       </div>
 
       {fields.length === 0 ? (
         <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
           <p className="text-muted-foreground text-sm">
-            {isEn ? "You haven't added any custom fields yet" : "لم تقم بإضافة أي حقول مخصصة بعد"}
+            {t('customFields.empty' as TranslationKey)}
           </p>
-          <Button 
-            variant="link" 
+          <Button
+            variant="link"
             className="mt-2"
             onClick={() => setShowAddDialog(true)}
           >
-            {isEn ? "Add First Field" : "أضف أول حقل"}
+            {t('customFields.addFirstField' as TranslationKey)}
           </Button>
         </div>
       ) : (
@@ -222,17 +222,17 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
                   <div className="font-medium text-foreground flex items-center gap-2">
                     {field.name}
                     <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                      {fieldTypeLabels[field.type][isEn ? "en" : "ar"]}
+                      {t(fieldTypeTranslationKeys[field.type] as TranslationKey)}
                     </span>
                     {field.required && (
                       <span className="text-xs px-2 py-0.5 rounded bg-destructive/10 text-destructive">
-                        {isEn ? "Required" : "مطلوب"}
+                        {t('customFields.requiredBadge' as TranslationKey)}
                       </span>
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground flex gap-2 mt-0.5">
-                    {field.showInTable && <span>{isEn ? "• Table" : "• الجدول"}</span>}
-                    {field.showInDetails && <span>{isEn ? "• Details" : "• التفاصيل"}</span>}
+                    {field.showInTable && <span>{t('customFields.badge.table' as TranslationKey)}</span>}
+                    {field.showInDetails && <span>{t('customFields.badge.details' as TranslationKey)}</span>}
                   </div>
                 </div>
               </div>
@@ -240,7 +240,7 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
                 <button
                   onClick={() => handleToggleEnabled(field)}
                   className="p-2 rounded-lg hover:bg-muted transition-colors"
-                  title={field.enabled ? (isEn ? 'Disable' : 'تعطيل') : (isEn ? 'Enable' : 'تفعيل')}
+                  title={field.enabled ? t('customFields.disable' as TranslationKey) : t('customFields.enable' as TranslationKey)}
                 >
                   {field.enabled ? (
                     <ToggleRight className="w-5 h-5 text-success" />
@@ -270,64 +270,64 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{isEn ? "Add New Field" : "إضافة حقل جديد"}</DialogTitle>
-            <DialogDescription>{isEn ? "Create a custom field for your products" : "أنشئ حقلاً مخصصاً لمنتجاتك"}</DialogDescription>
+            <DialogTitle>{t('customFields.addDialog.title' as TranslationKey)}</DialogTitle>
+            <DialogDescription>{t('customFields.addDialog.description' as TranslationKey)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{isEn ? "Field Name *" : "اسم الحقل *"}</label>
+              <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.nameLabel' as TranslationKey)}</label>
               <Input
-                placeholder={isEn ? "e.g., Brand" : "مثال: الماركة"}
+                placeholder={t('customFields.form.namePlaceholder' as TranslationKey)}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{isEn ? "Field Type" : "نوع الحقل"}</label>
+              <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.typeLabel' as TranslationKey)}</label>
               <select
                 className="w-full h-10 px-3 rounded-md bg-muted border-0 text-foreground"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as CustomFieldType })}
               >
-                <option value="text">{isEn ? "Text" : "نص"}</option>
-                <option value="number">{isEn ? "Number" : "رقم"}</option>
-                <option value="select">{isEn ? "Dropdown" : "قائمة اختيار"}</option>
+                <option value="text">{t('customFields.type.text' as TranslationKey)}</option>
+                <option value="number">{t('customFields.type.number' as TranslationKey)}</option>
+                <option value="select">{t('customFields.type.select' as TranslationKey)}</option>
               </select>
             </div>
             {formData.type === 'select' && (
               <div>
-                <label className="text-sm font-medium mb-1.5 block">{isEn ? "Options (comma-separated)" : "الخيارات (مفصولة بفاصلة)"}</label>
+                <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.optionsLabel' as TranslationKey)}</label>
                 <Input
-                  placeholder={isEn ? "e.g., Red, Blue, Green" : "مثال: أحمر, أزرق, أخضر"}
+                  placeholder={t('customFields.form.optionsPlaceholder' as TranslationKey)}
                   value={formData.options}
                   onChange={(e) => setFormData({ ...formData, options: e.target.value })}
                 />
               </div>
             )}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{isEn ? "Placeholder Text (optional)" : "نص توضيحي (اختياري)"}</label>
+              <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.placeholderLabel' as TranslationKey)}</label>
               <Input
-                placeholder={isEn ? "e.g., Enter brand name" : "مثال: أدخل اسم الماركة"}
+                placeholder={t('customFields.form.placeholderExample' as TranslationKey)}
                 value={formData.placeholder}
                 onChange={(e) => setFormData({ ...formData, placeholder: e.target.value })}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">{isEn ? "Required field" : "حقل مطلوب"}</span>
+              <span className="text-sm">{t('customFields.form.required' as TranslationKey)}</span>
               <Switch
                 checked={formData.required}
                 onCheckedChange={(checked) => setFormData({ ...formData, required: checked })}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">{isEn ? "Show in products table" : "إظهار في جدول المنتجات"}</span>
+              <span className="text-sm">{t('customFields.form.showInTable' as TranslationKey)}</span>
               <Switch
                 checked={formData.showInTable}
                 onCheckedChange={(checked) => setFormData({ ...formData, showInTable: checked })}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">{isEn ? "Show in product details" : "إظهار في تفاصيل المنتج"}</span>
+              <span className="text-sm">{t('customFields.form.showInDetails' as TranslationKey)}</span>
               <Switch
                 checked={formData.showInDetails}
                 onCheckedChange={(checked) => setFormData({ ...formData, showInDetails: checked })}
@@ -336,10 +336,10 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>
-              {isEn ? "Cancel" : "إلغاء"}
+              {t('customFields.actions.cancel' as TranslationKey)}
             </Button>
             <Button onClick={handleAddField}>
-              {isEn ? "Add" : "إضافة"}
+              {t('customFields.actions.add' as TranslationKey)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -349,64 +349,64 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{isEn ? "Edit Field" : "تعديل الحقل"}</DialogTitle>
-            <DialogDescription>{isEn ? "Update custom field settings" : "عدّل إعدادات الحقل المخصص"}</DialogDescription>
+            <DialogTitle>{t('customFields.editDialog.title' as TranslationKey)}</DialogTitle>
+            <DialogDescription>{t('customFields.editDialog.description' as TranslationKey)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{isEn ? "Field Name *" : "اسم الحقل *"}</label>
+              <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.nameLabel' as TranslationKey)}</label>
               <Input
-                placeholder={isEn ? "e.g., Brand" : "مثال: الماركة"}
+                placeholder={t('customFields.form.namePlaceholder' as TranslationKey)}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{isEn ? "Field Type" : "نوع الحقل"}</label>
+              <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.typeLabel' as TranslationKey)}</label>
               <select
                 className="w-full h-10 px-3 rounded-md bg-muted border-0 text-foreground"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as CustomFieldType })}
               >
-                <option value="text">{isEn ? "Text" : "نص"}</option>
-                <option value="number">{isEn ? "Number" : "رقم"}</option>
-                <option value="select">{isEn ? "Dropdown" : "قائمة اختيار"}</option>
+                <option value="text">{t('customFields.type.text' as TranslationKey)}</option>
+                <option value="number">{t('customFields.type.number' as TranslationKey)}</option>
+                <option value="select">{t('customFields.type.select' as TranslationKey)}</option>
               </select>
             </div>
             {formData.type === 'select' && (
               <div>
-                <label className="text-sm font-medium mb-1.5 block">{isEn ? "Options (comma-separated)" : "الخيارات (مفصولة بفاصلة)"}</label>
+                <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.optionsLabel' as TranslationKey)}</label>
                 <Input
-                  placeholder={isEn ? "e.g., Red, Blue, Green" : "مثال: أحمر, أزرق, أخضر"}
+                  placeholder={t('customFields.form.optionsPlaceholder' as TranslationKey)}
                   value={formData.options}
                   onChange={(e) => setFormData({ ...formData, options: e.target.value })}
                 />
               </div>
             )}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">{isEn ? "Placeholder Text (optional)" : "نص توضيحي (اختياري)"}</label>
+              <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.placeholderLabel' as TranslationKey)}</label>
               <Input
-                placeholder={isEn ? "e.g., Enter brand name" : "مثال: أدخل اسم الماركة"}
+                placeholder={t('customFields.form.placeholderExample' as TranslationKey)}
                 value={formData.placeholder}
                 onChange={(e) => setFormData({ ...formData, placeholder: e.target.value })}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">{isEn ? "Required field" : "حقل مطلوب"}</span>
+              <span className="text-sm">{t('customFields.form.required' as TranslationKey)}</span>
               <Switch
                 checked={formData.required}
                 onCheckedChange={(checked) => setFormData({ ...formData, required: checked })}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">{isEn ? "Show in products table" : "إظهار في جدول المنتجات"}</span>
+              <span className="text-sm">{t('customFields.form.showInTable' as TranslationKey)}</span>
               <Switch
                 checked={formData.showInTable}
                 onCheckedChange={(checked) => setFormData({ ...formData, showInTable: checked })}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm">{isEn ? "Show in product details" : "إظهار في تفاصيل المنتج"}</span>
+              <span className="text-sm">{t('customFields.form.showInDetails' as TranslationKey)}</span>
               <Switch
                 checked={formData.showInDetails}
                 onCheckedChange={(checked) => setFormData({ ...formData, showInDetails: checked })}
@@ -415,10 +415,10 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowEditDialog(false); setSelectedField(null); resetForm(); }}>
-              {isEn ? "Cancel" : "إلغاء"}
+              {t('customFields.actions.cancel' as TranslationKey)}
             </Button>
             <Button onClick={handleEditField}>
-              {isEn ? "Save Changes" : "حفظ التغييرات"}
+              {t('customFields.actions.saveChanges' as TranslationKey)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -428,15 +428,15 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{isEn ? "Delete Field" : "حذف الحقل"}</AlertDialogTitle>
+            <AlertDialogTitle>{t('customFields.deleteDialog.title' as TranslationKey)}</AlertDialogTitle>
             <AlertDialogDescription>
-              {isEn ? `Are you sure you want to delete the field "${selectedField?.name}"? This field will be removed from all products.` : `هل أنت متأكد من حذف حقل "${selectedField?.name}"؟ سيتم حذف هذا الحقل من جميع المنتجات.`}
+              {t('customFields.deleteDialog.description' as TranslationKey).replace('{name}', selectedField?.name || '')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{isEn ? "Cancel" : "إلغاء"}</AlertDialogCancel>
+            <AlertDialogCancel>{t('customFields.actions.cancel' as TranslationKey)}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteField} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {isEn ? "Delete" : "حذف"}
+              {t('customFields.actions.delete' as TranslationKey)}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

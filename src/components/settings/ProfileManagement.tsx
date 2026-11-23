@@ -86,7 +86,7 @@ export function ProfileManagement() {
     }
 
     if (isGuestDemoMode()) {
-      toast.success(t('profile.nameUpdated') || 'تم حفظ الاسم محلياً');
+      toast.success(t('profile.nameUpdated'));
       setIsEditingName(false);
       return;
     }
@@ -113,7 +113,7 @@ export function ProfileManagement() {
 
   const handleSaveEmail = async () => {
     if (isGuestDemoMode()) {
-      toast.info('تعديل الحساب والبريد يتطلب حساباً رسمياً وغير متاح في النسخة التجريبية');
+      toast.info(t('profile.demoEmailNotAvailable'));
       setIsEditingEmail(false);
       return;
     }
@@ -175,7 +175,7 @@ export function ProfileManagement() {
 
   const handleUpdatePhone = async () => {
     if (isGuestDemoMode()) {
-      toast.info('تعديل الحساب يتطلب حساباً رسمياً وغير متاح في النسخة التجريبية');
+      toast.info(t('profile.demoAccountNotAvailable'));
       setIsEditingPhone(false);
       return;
     }
@@ -191,7 +191,7 @@ export function ProfileManagement() {
         });
 
         if (!checkError && checkResult && !checkResult.available) {
-          toast.error(checkResult.error || 'رقم الهاتف مسجل بالفعل لحساب آخر');
+          toast.error(checkResult.error || t('profile.phoneAlreadyRegistered'));
           return;
         }
       } catch (err) {
@@ -208,19 +208,19 @@ export function ProfileManagement() {
 
       if (error) {
         if (error.message?.includes('unique') || (error as any).code === '23505') {
-          toast.error('رقم الهاتف مسجل بالفعل لحساب آخر ولا يمكن استخدامه');
+          toast.error(t('profile.phoneInUseCannotUse'));
         } else {
-          toast.error('حدث خطأ أثناء حفظ رقم الهاتف: ' + error.message);
+          toast.error(`${t('profile.phoneSaveError')}: ${error.message}`);
         }
         return;
       }
 
       await refreshProfile();
-      toast.success('تم تحديث رقم الهاتف بنجاح');
+      toast.success(t('profile.phoneUpdated'));
       setIsEditingPhone(false);
     } catch (error: any) {
       console.error('Error updating phone:', error);
-      toast.error('حدث خطأ أثناء حفظ رقم الهاتف');
+      toast.error(t('profile.phoneSaveError'));
     } finally {
       setIsSavingPhone(false);
     }
@@ -228,19 +228,19 @@ export function ProfileManagement() {
 
   const handleSavePin = async () => {
     if (isGuestDemoMode()) {
-      toast.info('هذا الحساب تجريبي محلي بدون رمز PIN');
+      toast.info(t('profile.demoNoPin'));
       setShowPinDialog(false);
       return;
     }
 
     const cleanPin = newPin.trim();
     if (cleanPin.length < 4 || cleanPin.length > 8) {
-      toast.error('رمز الـ PIN يجب أن يتكون من 4 إلى 8 أرقام');
+      toast.error(t('profile.pinLengthError'));
       return;
     }
 
     if (cleanPin !== confirmPin.trim()) {
-      toast.error('تأكيد رمز الـ PIN غير متطابق');
+      toast.error(t('profile.pinMismatch'));
       return;
     }
 
@@ -249,19 +249,19 @@ export function ProfileManagement() {
       const pinRes = await setUserPinSecurely(user?.id || '', cleanPin);
 
       if (!pinRes.success) {
-        toast.error('فشل في تعيين رمز الـ PIN: ' + (pinRes.error || 'غير مصرح'));
+        toast.error(`${t('profile.pinSetFailed')}: ${pinRes.error || t('profile.unauthorized')}`);
         return;
       }
 
       await updatePin(cleanPin);
       await refreshProfile();
-      toast.success('تم تعيين وتشفير رمز الدخول السريع (PIN) بنجاح');
+      toast.success(t('profile.pinSetSuccess'));
       setShowPinDialog(false);
       setNewPin('');
       setConfirmPin('');
     } catch (err: any) {
       console.error('Error setting PIN:', err);
-      toast.error('حدث خطأ أثناء تعيين الـ PIN');
+      toast.error(t('profile.pinSetError'));
     } finally {
       setIsSavingPin(false);
     }
@@ -269,7 +269,7 @@ export function ProfileManagement() {
 
   const handleChangePassword = async () => {
     if (isGuestDemoMode()) {
-      toast.info('هذا الحساب تجريبي محلي بدون كلمة مرور سحابية');
+      toast.info(t('profile.demoNoPassword'));
       setShowPasswordDialog(false);
       return;
     }
@@ -425,7 +425,7 @@ export function ProfileManagement() {
                     className="shrink-0 h-8 px-2.5 text-xs ms-1"
                     onClick={() => {
                       if (isGuestDemoMode()) {
-                        toast.info('تعديل الحساب والبريد يتطلب حساباً رسمياً وغير متاح في النسخة التجريبية');
+                        toast.info(t('profile.demoEmailNotAvailable'));
                         return;
                       }
                       setNewEmail(user?.email || '');
@@ -444,7 +444,7 @@ export function ProfileManagement() {
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-xs sm:text-sm font-medium">
               <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span>رقم الهاتف المعتمد</span>
+              <span>{t('profile.verifiedPhone')}</span>
             </Label>
             {isEditingPhone ? (
               <div className="flex gap-2">
@@ -465,7 +465,7 @@ export function ProfileManagement() {
             ) : (
               <div className="flex items-center justify-between gap-3 p-3 bg-muted/60 rounded-xl min-w-0 border border-border/40 overflow-hidden">
                 <span dir="ltr" className="truncate flex-1 font-mono text-xs sm:text-sm text-foreground">
-                  {profile?.phone || 'غير محدد'}
+                  {profile?.phone || t('profile.notSet')}
                 </span>
                 <Button
                   size="sm"
@@ -473,7 +473,7 @@ export function ProfileManagement() {
                   className="shrink-0 h-8 px-2.5 text-xs ms-1"
                   onClick={() => {
                     if (isGuestDemoMode()) {
-                      toast.info('تعديل الحساب يتطلب حساباً رسمياً وغير متاح في النسخة التجريبية');
+                      toast.info(t('profile.demoAccountNotAvailable'));
                       return;
                     }
                     setNewPhone(profile?.phone || '');
@@ -503,7 +503,7 @@ export function ProfileManagement() {
                 className="shrink-0 h-8 px-2.5 text-xs"
                 onClick={() => {
                   if (isGuestDemoMode()) {
-                    toast.info('هذا الحساب تجريبي محلي بدون كلمة مرور سحابية');
+                    toast.info(t('profile.demoNoPassword'));
                     return;
                   }
                   setShowPasswordDialog(true);
@@ -520,11 +520,11 @@ export function ProfileManagement() {
           <div className="space-y-2">
             <Label className="flex items-center gap-2 text-xs sm:text-sm font-medium">
               <KeyRound className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span>رمز الدخول السريع (PIN)</span>
+              <span>{t('profile.quickAccessPin')}</span>
             </Label>
             <div className="flex items-center justify-between gap-3 p-3 bg-muted/60 rounded-xl min-w-0 border border-border/40">
               <span className="text-muted-foreground tracking-widest text-sm flex-1 font-mono">
-                {profile?.pin_hash ? '••••' : 'لم يتم تعيين رمز PIN'}
+                {profile?.pin_hash ? '••••' : t('profile.pinNotSet')}
               </span>
               <Button
                 size="sm"
@@ -532,14 +532,14 @@ export function ProfileManagement() {
                 className="shrink-0 h-8 px-2.5 text-xs"
                 onClick={() => {
                   if (isGuestDemoMode()) {
-                    toast.info('هذا الحساب تجريبي محلي بدون رمز PIN');
+                    toast.info(t('profile.demoNoPin'));
                     return;
                   }
                   setShowPinDialog(true);
                 }}
               >
                 <KeyRound className="w-3.5 h-3.5" />
-                {profile?.pin_hash ? 'تغيير الـ PIN' : 'تعيين PIN'}
+                {profile?.pin_hash ? t('profile.changePin') : t('profile.setPin')}
               </Button>
             </div>
           </div>
@@ -552,10 +552,10 @@ export function ProfileManagement() {
               <div className="flex flex-col gap-0.5">
                 <Label className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-foreground cursor-pointer">
                   <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-                  <span>قفل أمان التطبيق (PIN Lock)</span>
+                  <span>{t('profile.appLockTitle')}</span>
                 </Label>
                 <span className="text-[11px] text-muted-foreground">
-                  مطالبة بإدخال رمز PIN عند إقلاع التطبيق أو استئنافه من الخلفية لحماية سلة البيع
+                  {t('profile.appLockDesc')}
                 </span>
               </div>
               <Switch
@@ -564,15 +564,15 @@ export function ProfileManagement() {
                   if (checked) {
                     const hasPin = !!localStorage.getItem(`posflow_app_lock_${user?.id}_hash`);
                     if (!hasPin) {
-                      toast.info('يرجى تعيين رمز PIN جديد لتفعيل قفل الأمان');
+                      toast.info(t('profile.pinRequiredForLock'));
                       setShowPinDialog(true);
                       return;
                     }
                     await setLockConfig({ enabled: true, timeoutSeconds: lockTimeout });
-                    toast.success('تم تفعيل قفل أمان التطبيق');
+                    toast.success(t('profile.appLockEnabled'));
                   } else {
                     await setLockConfig({ enabled: false, timeoutSeconds: lockTimeout });
-                    toast.success('تم تعطيل قفل أمان التطبيق وحذف الرمز المخزن');
+                    toast.success(t('profile.appLockDisabled'));
                   }
                 }}
               />
@@ -581,7 +581,7 @@ export function ProfileManagement() {
             {isLockEnabled && (
               <>
                 <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
-                  <span className="text-muted-foreground font-medium">مهلة القفل التلقائي عند الخروج للخلفية</span>
+                  <span className="text-muted-foreground font-medium">{t('profile.autoLockTimeout')}</span>
                   <select
                     value={lockTimeout}
                     onChange={(e) => {
@@ -590,14 +590,14 @@ export function ProfileManagement() {
                     }}
                     className="bg-background border border-border/60 rounded-lg px-2.5 py-1 text-xs text-foreground font-medium outline-none cursor-pointer"
                   >
-                    <option value={0}>فوري عند الخروج</option>
-                    <option value={60}>بعد دقيقة واحدة</option>
-                    <option value={300}>بعد 5 دقائق</option>
+                    <option value={0}>{t('profile.lockImmediate')}</option>
+                    <option value={60}>{t('profile.lockAfter1Min')}</option>
+                    <option value={300}>{t('profile.lockAfter5Min')}</option>
                   </select>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
-                  <span className="text-muted-foreground font-medium">رمز الدخول السريع الحالي</span>
+                  <span className="text-muted-foreground font-medium">{t('profile.currentQuickPin')}</span>
                   <Button
                     type="button"
                     variant="outline"
@@ -609,7 +609,7 @@ export function ProfileManagement() {
                     }}
                     className="h-7 text-xs px-2.5 rounded-lg"
                   >
-                    تغيير رمز الـ PIN
+                    {t('profile.changePinBtn')}
                   </Button>
                 </div>
               </>
@@ -619,7 +619,7 @@ export function ProfileManagement() {
               <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-muted/40 rounded-xl border border-border/30 text-xs">
                 <div className="flex items-center gap-2">
                   <Fingerprint className="w-4 h-4 text-primary" />
-                  <span className="text-foreground font-medium">الفتح بالبصمة / المقاييس الحيوية (Biometric Unlock)</span>
+                  <span className="text-foreground font-medium">{t('profile.biometricUnlock')}</span>
                 </div>
                 <Switch
                   checked={isBiometricEnabled}
@@ -628,11 +628,11 @@ export function ProfileManagement() {
                     if (success) {
                       toast.success(
                         checked
-                          ? 'تم تفعيل الفتح بالبصمة بنجاح'
-                          : 'تم تعطيل الفتح بالبصمة'
+                          ? t('profile.biometricEnabled')
+                          : t('profile.biometricDisabled')
                       );
                     } else {
-                      toast.error('فشل تفعيل البصمة أو تم إلغاؤها');
+                      toast.error(t('profile.biometricFailed'));
                     }
                   }}
                 />
@@ -703,14 +703,14 @@ export function ProfileManagement() {
       <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>تعيين رمز الدخول السريع (PIN)</DialogTitle>
+            <DialogTitle>{t('profile.setQuickPinTitle')}</DialogTitle>
             <DialogDescription>
-              أدخل رمز PIN من 4 إلى 8 أرقام لتسهيل وتسريع التبديل والبيع للكاشير بأمان مشفر.
+              {t('profile.setQuickPinDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>رمز الـ PIN الجديد (4 - 8 أرقام)</Label>
+              <Label>{t('profile.newPinLabel')}</Label>
               <div className="relative">
                 <Input
                   type={showPin ? 'text' : 'password'}
@@ -732,7 +732,7 @@ export function ProfileManagement() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>تأكيد رمز الـ PIN</Label>
+              <Label>{t('profile.confirmPinLabel')}</Label>
               <Input
                 type="password"
                 inputMode="numeric"
@@ -747,16 +747,16 @@ export function ProfileManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowPinDialog(false); setNewPin(''); setConfirmPin(''); }}>
-              إلغاء
+              {t('password.cancel')}
             </Button>
             <Button onClick={handleSavePin} disabled={isSavingPin || !newPin || newPin.length < 4}>
               {isSavingPin ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin me-2" />
-                  جاري الحفظ...
+                  {t('password.saving')}
                 </>
               ) : (
-                'حفظ وتشفير الـ PIN'
+                t('profile.saveEncryptPin')
               )}
             </Button>
           </DialogFooter>

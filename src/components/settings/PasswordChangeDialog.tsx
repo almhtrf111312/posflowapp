@@ -67,8 +67,8 @@ export function PasswordChangeDialog({
     // التحقق من كلمة المرور الحالية فقط في حال كانت مطلوبة (للمستخدم العادي لنفسه)
     if (requireCurrentPassword && !form.currentPassword) {
       toast({
-        title: 'خطأ',
-        description: 'يرجى إدخال كلمة المرور الحالية',
+        title: t('password.error'),
+        description: t('password.currentRequired'),
         variant: 'destructive',
       });
       return;
@@ -76,8 +76,8 @@ export function PasswordChangeDialog({
 
     if (!form.newPassword) {
       toast({
-        title: 'خطأ',
-        description: 'يرجى إدخال كلمة المرور الجديدة',
+        title: t('password.error'),
+        description: t('password.newRequired'),
         variant: 'destructive',
       });
       return;
@@ -85,8 +85,8 @@ export function PasswordChangeDialog({
 
     if (form.newPassword.length < 6) {
       toast({
-        title: 'خطأ',
-        description: 'يجب أن لا تقل كلمة المرور عن 6 أحرف أو أرقام',
+        title: t('password.error'),
+        description: t('password.minLength'),
         variant: 'destructive',
       });
       return;
@@ -94,8 +94,8 @@ export function PasswordChangeDialog({
 
     if (form.newPassword !== form.confirmPassword) {
       toast({
-        title: 'خطأ',
-        description: 'كلمتا المرور غير متطابقتين',
+        title: t('password.error'),
+        description: t('password.mismatch'),
         variant: 'destructive',
       });
       return;
@@ -106,7 +106,7 @@ export function PasswordChangeDialog({
       if (requireCurrentPassword) {
         // تغيير كلمة المرور الشخصية للمستخدم العادي بعد التحقق من كلمة المرور الحالية
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.email) throw new Error('تعذر العثور على بيانات المستخدم');
+        if (!user?.email) throw new Error(t('password.userNotFound'));
 
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: user.email,
@@ -115,8 +115,8 @@ export function PasswordChangeDialog({
 
         if (signInError) {
           toast({
-            title: 'خطأ',
-            description: 'كلمة المرور الحالية غير صحيحة',
+            title: t('password.error'),
+            description: t('password.currentWrong'),
             variant: 'destructive',
           });
           setIsLoading(false);
@@ -127,8 +127,8 @@ export function PasswordChangeDialog({
         if (error) throw error;
 
         toast({
-          title: 'تم بنجاح',
-          description: 'تم تحديث كلمة المرور بنجاح',
+          title: t('password.successTitle'),
+          description: t('password.changeSuccess'),
         });
       } else if (!isTargetingOtherUser && (!userId || userId === currentUser?.id)) {
         // المستخدم Boss/Admin يغير كلمة مروره الشخصية مباشرة دون الحاجة للقديمة
@@ -136,16 +136,16 @@ export function PasswordChangeDialog({
         if (error) throw error;
 
         toast({
-          title: 'تم بنجاح',
-          description: 'تم تحديث كلمة المرور بنجاح',
+          title: t('password.successTitle'),
+          description: t('password.changeSuccess'),
         });
       } else {
         // تعيين كلمة المرور لكاشير / مستخدم آخر بواسطة Boss/Admin عبر admin-change-password
         const targetId = userId;
         if (!targetId) {
           toast({
-            title: 'خطأ',
-            description: 'لم يتم تحديد المستخدم المستهدف',
+            title: t('password.error'),
+            description: t('password.targetUserRequired'),
             variant: 'destructive',
           });
           setIsLoading(false);
@@ -155,8 +155,8 @@ export function PasswordChangeDialog({
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.access_token) {
           toast({
-            title: 'خطأ في المصادقة',
-            description: 'انتهت الجلسة، يرجى تسجيل الدخول مجدداً للمتابعة',
+            title: t('password.authErrorTitle'),
+            description: t('password.sessionExpired'),
             variant: 'destructive',
           });
           setIsLoading(false);
@@ -174,11 +174,11 @@ export function PasswordChangeDialog({
         });
 
         if (response.error) {
-          let errorMsg = response.error.message || 'فشل في تغيير كلمة المرور';
+          let errorMsg = response.error.message || t('password.changeFailed');
           if (errorMsg.includes('Forbidden') || errorMsg.includes('Admin access required')) {
-            errorMsg = 'غير مصرح لك بتغيير كلمة مرور هذا المستخدم';
+            errorMsg = t('password.forbidden');
           } else if (errorMsg.includes('at least 6 characters')) {
-            errorMsg = 'كلمة المرور يجب أن تتكون من 6 أحرف على الأقل';
+            errorMsg = t('password.minLength');
           }
           throw new Error(errorMsg);
         }
@@ -186,20 +186,20 @@ export function PasswordChangeDialog({
         if (response.data?.error) {
           let errorMsg = response.data.error;
           if (errorMsg.includes('Forbidden')) {
-            errorMsg = 'غير مصرح لك بتغيير كلمة مرور هذا المستخدم';
+            errorMsg = t('password.forbidden');
           } else if (errorMsg.includes('at least 6 characters')) {
-            errorMsg = 'كلمة المرور يجب أن تتكون من 6 أحرف على الأقل';
+            errorMsg = t('password.minLength');
           } else if (errorMsg.includes('Use the regular password change')) {
-            errorMsg = 'يرجى تغيير كلمة مرور حسابك الشخصي من قسم الملف الشخصي';
+            errorMsg = t('password.useProfileChange');
           }
           throw new Error(errorMsg);
         }
 
         toast({
-          title: 'تم بنجاح',
+          title: t('password.successTitle'),
           description: userName 
-            ? `تم تعيين وتحديث كلمة المرور للمستخدم "${userName}" بنجاح`
-            : 'تم تعيين كلمة المرور الجديدة بنجاح',
+            ? t('password.userUpdatedSuccess').replace('{name}', userName)
+            : t('password.newSetSuccess'),
         });
       }
 
@@ -207,8 +207,8 @@ export function PasswordChangeDialog({
     } catch (error: any) {
       console.error('Password change error:', error);
       toast({
-        title: 'خطأ',
-        description: error.message || 'فشل في تغيير كلمة المرور، يرجى المحاولة لاحقاً',
+        title: t('password.error'),
+        description: error.message || t('password.changeFailedLater'),
         variant: 'destructive',
       });
     } finally {
@@ -221,8 +221,8 @@ export function PasswordChangeDialog({
       <Key className="w-5 h-5 text-primary" />
       <span>
         {requireCurrentPassword
-          ? (t('password.change') || 'تغيير كلمة المرور')
-          : (userName ? `تعيين كلمة مرور لـ ${userName}` : (t('password.changeUser') || 'تعيين كلمة مرور جديدة'))}
+          ? t('password.change')
+          : (userName ? t('password.setForUser').replace('{name}', userName) : t('password.changeUser'))}
       </span>
     </div>
   );
@@ -230,16 +230,16 @@ export function PasswordChangeDialog({
   const dialogFooter = (
     <div className="flex flex-col sm:flex-row gap-2 w-full justify-end">
       <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto min-h-11" disabled={isLoading}>
-        {t('password.cancel') || 'إلغاء'}
+        {t('password.cancel')}
       </Button>
       <Button onClick={handleSubmit} className="w-full sm:w-auto min-h-11" disabled={isLoading}>
         {isLoading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin ms-2" />
-            {t('password.saving') || 'جاري الحفظ...'}
+            {t('password.saving')}
           </>
         ) : (
-          (t('password.changeBtn') || 'حفظ كلمة المرور')
+          t('password.changeBtn')
         )}
       </Button>
     </div>
@@ -258,8 +258,8 @@ export function PasswordChangeDialog({
           <Key className="w-4 h-4 shrink-0" />
           <span>
             {userName 
-              ? `تعيين كلمة مرور جديدة مباشرة للمستخدم: ${userName}`
-              : 'أدخل كلمة المرور الجديدة مباشرة دون الحاجة لكلمة المرور القديمة'}
+              ? t('password.directSetForUser').replace('{name}', userName)
+              : t('password.directSetSelf')}
           </span>
         </div>
       )}
@@ -268,7 +268,7 @@ export function PasswordChangeDialog({
         {requireCurrentPassword && (
           <div className="space-y-2">
             <label className="text-sm font-medium">
-              {t('password.currentPassword') || 'كلمة المرور الحالية'}
+              {t('password.currentPassword')}
             </label>
             <div className="relative">
               <Input
@@ -292,7 +292,7 @@ export function PasswordChangeDialog({
 
         <div className="space-y-2">
           <label className="text-sm font-medium">
-            {t('password.newPassword') || 'كلمة المرور الجديدة'}
+            {t('password.newPassword')}
           </label>
           <div className="relative">
             <Input
@@ -315,7 +315,7 @@ export function PasswordChangeDialog({
 
         <div className="space-y-2">
           <label className="text-sm font-medium">
-            {t('password.confirmPassword') || 'تأكيد كلمة المرور الجديدة'}
+            {t('password.confirmPassword')}
           </label>
           <div className="relative">
             <Input

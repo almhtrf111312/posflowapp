@@ -62,7 +62,7 @@ import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVe
 import { TelegramLinkCard } from '@/components/auth/TelegramLinkCard';
 import { getDefaultCategories } from '@/lib/store-type-config';
 import { saveCategories, loadCategories, Category } from '@/lib/categories-store';
-import { detectCurrencyCodeFromMeta, PREDEFINED_CURRENCIES } from '@/lib/currencies';
+import { detectCurrencyCodeFromMeta, PREDEFINED_CURRENCIES, getLocalizedCurrencyName } from '@/lib/currencies';
 import { toEnglishCurrencySymbol } from '@/lib/currency-symbols';
 import { openShift, loadShifts, getActiveShift } from '@/lib/cashbox-store';
 
@@ -91,7 +91,7 @@ const getInitialStoredSettings = (): Record<string, any> | null => {
   return null;
 };
 
-const getInitialCurrencies = () => {
+const getInitialCurrencies = (language?: string) => {
   const settings = getInitialStoredSettings();
   const enabledMap = (settings?.enabledCurrencies || {}) as Record<string, boolean>;
   const namesMap = (settings?.currencyNames || {}) as Record<string, string>;
@@ -119,7 +119,7 @@ const getInitialCurrencies = () => {
   const c1Enabled = enabledMap[c1SourceCode] === true
     || settings?.primaryCurrency === c1SourceCode
     || settings?.primaryCurrency === c1Code;
-  const c1Name = namesMap[c1SourceCode] || namesMap[c1Code] || c1Predefined?.name || (c1Code === 'TRY' ? 'ليرة تركية' : c1Code);
+  const c1Name = namesMap[c1SourceCode] || namesMap[c1Code] || getLocalizedCurrencyName(c1Predefined || c1Code, language) || c1Code;
   const c1Symbol = toEnglishCurrencySymbol(symbolsMap[c1SourceCode] || symbolsMap[c1Code] || c1Predefined?.symbol || (c1Code === 'TRY' ? '₺' : c1Code), c1Code);
   const c1Rate = Number(ratesMap[c1SourceCode] || ratesMap[c1Code]) || c1Predefined?.suggestedRate || (c1Code === 'TRY' ? 34 : 1);
 
@@ -134,7 +134,7 @@ const getInitialCurrencies = () => {
   const c2Enabled = enabledMap[c2SourceCode] === true
     || settings?.primaryCurrency === c2SourceCode
     || settings?.primaryCurrency === c2Code;
-  const c2Name = namesMap[c2SourceCode] || namesMap[c2Code] || c2Predefined?.name || (c2Code === 'SYP' ? 'ليرة سورية' : c2Code);
+  const c2Name = namesMap[c2SourceCode] || namesMap[c2Code] || getLocalizedCurrencyName(c2Predefined || c2Code, language) || c2Code;
   const c2Symbol = toEnglishCurrencySymbol(symbolsMap[c2SourceCode] || symbolsMap[c2Code] || c2Predefined?.symbol || (c2Code === 'SYP' ? 'SYP' : c2Code), c2Code);
   const c2Rate = Number(ratesMap[c2SourceCode] || ratesMap[c2Code]) || c2Predefined?.suggestedRate || (c2Code === 'SYP' ? 14500 : 1);
 
@@ -211,7 +211,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   const [phoneTelegramOpen, setPhoneTelegramOpen] = useState(false);
 
   // Optional currencies and pricing
-  const [initialCurrencies] = useState(getInitialCurrencies);
+  const [initialCurrencies] = useState(() => getInitialCurrencies(language));
   const [primaryCurrency, setPrimaryCurrency] = useState(initialCurrencies.primaryCurrency);
 
   // Secondary Currency 1
@@ -307,7 +307,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     const found = PREDEFINED_CURRENCIES.find(c => c.code === code);
     if (found) {
       setSec1Code(found.code);
-      setSec1Name(found.name);
+      setSec1Name(getLocalizedCurrencyName(found, language));
       setSec1Symbol(found.symbol);
       if (found.suggestedRate) setSec1Rate(found.suggestedRate);
     }
@@ -318,7 +318,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     const found = PREDEFINED_CURRENCIES.find(c => c.code === code);
     if (found) {
       setSec2Code(found.code);
-      setSec2Name(found.name);
+      setSec2Name(getLocalizedCurrencyName(found, language));
       setSec2Symbol(found.symbol);
       if (found.suggestedRate) setSec2Rate(found.suggestedRate);
     }
@@ -1035,7 +1035,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                 </label>
                 <div className="grid grid-cols-3 gap-2.5">
                   {[
-                    { code: 'USD', symbol: '$', title: isEn ? 'US Dollar' : 'دولار أمريكي', badge: isEn ? 'Base Currency' : 'مرجع النظام', active: true },
+                    { code: 'USD', symbol: '$', title: getLocalizedCurrencyName('USD', language), badge: isEn ? 'Base Currency' : 'مرجع النظام', active: true },
                     { code: sec1Code, symbol: sec1Symbol, title: sec1Name, badge: isEn ? '2nd Currency' : 'العملة الثانية', active: sec1Enabled || primaryCurrency === sec1Code },
                     { code: sec2Code, symbol: sec2Symbol, title: sec2Name, badge: isEn ? '3rd Currency' : 'العملة الثالثة', active: sec2Enabled || primaryCurrency === sec2Code },
                   ].map((curr) => {
@@ -1135,7 +1135,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                             <SelectItem key={curr.code} value={curr.code} className="text-xs">
                               <span className="flex items-center gap-2">
                                 <span className="font-bold font-mono">{curr.code}</span>
-                                <span>{curr.name}</span>
+                                <span>{getLocalizedCurrencyName(curr, language)}</span>
                                 <span className="text-muted-foreground">({curr.symbol})</span>
                               </span>
                             </SelectItem>
@@ -1218,7 +1218,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                             <SelectItem key={curr.code} value={curr.code} className="text-xs">
                               <span className="flex items-center gap-2">
                                 <span className="font-bold font-mono">{curr.code}</span>
-                                <span>{curr.name}</span>
+                                <span>{getLocalizedCurrencyName(curr, language)}</span>
                                 <span className="text-muted-foreground">({curr.symbol})</span>
                               </span>
                             </SelectItem>
@@ -1617,8 +1617,8 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                         style={{ fontFamily: f.cssFamily }}
                       >
                         <div className="truncate">
-                          <span className="text-xs font-bold text-foreground block">{f.nameAr}</span>
-                          <span className="text-[10px] text-muted-foreground block opacity-80">{f.name}</span>
+                          <span className="text-xs font-bold text-foreground block">{isEn ? f.name : f.nameAr}</span>
+                          <span className="text-[10px] text-muted-foreground block opacity-80">{isEn ? f.nameAr : f.name}</span>
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                       </button>
@@ -1654,7 +1654,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
                         )}
                       >
                         <span className="text-xs font-bold block">{scale.percentage}%</span>
-                        <span className="text-[9px] block opacity-80 truncate">{scale.labelAr.split(' ')[0]}</span>
+                        <span className="text-[9px] block opacity-80 truncate">{(isEn ? scale.labelEn : scale.labelAr).split(' ')[0]}</span>
                       </button>
                     );
                   })}
@@ -1868,4 +1868,3 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     </div>
   );
 }
-

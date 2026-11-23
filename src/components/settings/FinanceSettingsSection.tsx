@@ -8,7 +8,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { ShiftToleranceField } from './ShiftToleranceField';
 import { SurplusProfitField } from './SurplusProfitField';
 import { useLanguage } from '@/hooks/use-language';
-import { PREDEFINED_CURRENCIES, CURRENCY_CATEGORIES } from '@/lib/currencies';
+import { PREDEFINED_CURRENCIES, CURRENCY_CATEGORIES, getLocalizedCurrencyName } from '@/lib/currencies';
 import type { CurrencyDisplayMode } from '@/lib/store-settings-sync';
 
 export interface FinanceSettingsSectionProps {
@@ -86,37 +86,41 @@ export function FinanceSettingsSection({
     return parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : normalized;
   },
 }: FinanceSettingsSectionProps) {
-  const { t, isRTL } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEn = language === 'en';
 
   return (
     <div className="space-y-4">
-                {/* قسم العملة وأسعار الصرف */}
+                {/* Currencies & Exchange Rates Section */}
                 <div className="space-y-4 rounded-xl border border-border/80 bg-card/60 p-4 md:p-6 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/40 pb-3">
                     <div>
                       <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                         <Coins className="w-5 h-5 text-primary" />
-                        {t('settings.exchangeRates')} والعملة الافتراضية
+                        {t('storeSettings.exchangeRatesAndDefaultCurrency')}
                       </h3>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        اختر العملة الرئيسية التي ستظهر بها أسعار البيع والشراء وسلة الكاشير افتراضياً
+                        {t('storeSettings.primaryCurrencyDesc')}
                       </p>
                     </div>
                     <Badge variant="outline" className="w-fit text-xs px-2.5 py-1 font-semibold border-primary/30 text-primary bg-primary/10">
-                      العملة النشطة حالياً: {primaryCurrency}
+                      {t('storeSettings.activeCurrencyLabel')} {primaryCurrency}
                     </Badge>
                   </div>
 
-                  {/* بطاقات العملات الثلاث باختيار راديو ومفاتيح التفعيل */}
+                  {/* Three Currency Cards with Radio Selection & Enable Switches */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2">
                     
-                    {/* 1. الدولار الأمريكي USD */}
+                    {/* 1. US Dollar USD */}
                     <div
                       onClick={() => {
                         if (enabledCurrencies.USD !== false) {
                           setPrimaryCurrency('USD');
                         } else {
-                          toast({ title: 'العملة معطلة', description: 'يجب تفعيل عرض الدولار الأمريكي أولاً لاختياره كعملة افتراضية' });
+                          toast({
+                            title: t('storeSettings.currencyDisabledTitle'),
+                            description: t('storeSettings.enableUsdFirstDesc'),
+                          });
                         }
                       }}
                       className={cn(
@@ -136,7 +140,7 @@ export function FinanceSettingsSection({
                             $
                           </div>
                           <div>
-                            <h4 className="font-bold text-sm text-foreground">الدولار الأمريكي</h4>
+                            <h4 className="font-bold text-sm text-foreground">{getLocalizedCurrencyName('USD', language)}</h4>
                             <span className="text-[11px] text-muted-foreground font-mono">USD</span>
                           </div>
                         </div>
@@ -151,10 +155,10 @@ export function FinanceSettingsSection({
                       <div className="mt-4 pt-3 border-t border-border/40 space-y-2">
                         <div className="flex items-center justify-between">
                           <Badge variant="secondary" className="text-[10px] font-medium bg-muted/60 text-muted-foreground">
-                            مرجع محاسبي (1.00 $)
+                            {t('storeSettings.accountingReferenceUsd')}
                           </Badge>
                           <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-xs font-medium text-foreground">عرض في الواجهة:</span>
+                            <span className="text-xs font-medium text-foreground">{t('storeSettings.showInInterface')}</span>
                             <Switch
                               checked={enabledCurrencies.USD !== false}
                               onCheckedChange={(val) => toggleCurrency('USD', val)}
@@ -162,19 +166,22 @@ export function FinanceSettingsSection({
                           </div>
                         </div>
                         <p className="text-[10px] text-muted-foreground/80 leading-relaxed">
-                          يبقى الدولار المرجع المحاسبي في قاعدة البيانات حتى عند إخفائه من نقاط البيع والفواتير.
+                          {t('storeSettings.usdRemainsBaseDesc')}
                         </p>
                         {renderCurrencyDisplayOptions('USD')}
                       </div>
                     </div>
 
-                    {/* 2. العملة الإضافية 1 (Slot 1) */}
+                    {/* 2. Additional Currency 1 (Slot 1) */}
                     <div
                       onClick={() => {
                         if (enabledCurrencies[slot1Code]) {
                           setPrimaryCurrency(slot1Code);
                         } else {
-                          toast({ title: isRTL ? 'العملة معطلة' : 'Currency Disabled', description: isRTL ? 'يجب تفعيل هذه العملة أولاً لاختيارها كعملة افتراضية' : 'Must enable this currency first' });
+                          toast({
+                            title: t('storeSettings.currencyDisabledTitle'),
+                            description: t('storeSettings.enableCurrencyFirstDesc'),
+                          });
                         }
                       }}
                       className={cn(
@@ -197,7 +204,7 @@ export function FinanceSettingsSection({
 
                           <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                             <label className="text-[10px] font-bold text-muted-foreground block mb-1">
-                              {isRTL ? 'قائمة العملات الجاهزة (27 عملة):' : 'Predefined currencies (27):'}
+                              {t('storeSettings.predefinedCurrenciesLabel')}
                             </label>
                             <select
                               value={PREDEFINED_CURRENCIES.find(c => c.code === slot1Code)?.code || ''}
@@ -205,14 +212,12 @@ export function FinanceSettingsSection({
                                 const selected = PREDEFINED_CURRENCIES.find(c => c.code === e.target.value);
                                 if (selected) {
                                   const nextCode = selected.code;
-                                  const oldCode = slot1Code; // حفظ الكود القديم
                                   setSlot1Code(nextCode);
                                   setCurrencySymbols(prev => ({ ...prev, [nextCode]: selected.symbol }));
-                                  setCurrencyNames(prev => ({ ...prev, [nextCode]: isRTL ? selected.name : selected.nameEn }));
+                                  setCurrencyNames(prev => ({ ...prev, [nextCode]: getLocalizedCurrencyName(selected, language) }));
                                   if (selected.suggestedRate) {
                                     setExchangeRates(prev => ({ ...prev, [nextCode]: String(selected.suggestedRate) }));
                                   }
-                                  // تنظيف الكود القديم وتفعيل الكود الجديد فقط
                                   setEnabledCurrencies(prev => ({
                                     USD: prev.USD !== false,
                                     [nextCode]: true,
@@ -225,12 +230,12 @@ export function FinanceSettingsSection({
                               }}
                               className="w-full h-8 px-2 rounded-lg bg-background border border-border/80 text-foreground text-xs font-semibold focus:ring-1 focus:ring-primary focus:outline-hidden"
                             >
-                              <option value="" disabled>{isRTL ? 'اختر عملة لتعبئة البيانات تلقائياً...' : 'Choose predefined...'}</option>
+                              <option value="" disabled>{t('storeSettings.choosePredefinedPlaceholder')}</option>
                               {CURRENCY_CATEGORIES.map(category => (
-                                <optgroup key={category.id} label={isRTL ? category.label : category.labelEn}>
+                                <optgroup key={category.id} label={isEn ? category.labelEn : category.label}>
                                   {PREDEFINED_CURRENCIES.filter(c => c.category === category.id).map(c => (
                                     <option key={c.code} value={c.code}>
-                                      {c.code} - {isRTL ? c.name : c.nameEn} ({c.symbol})
+                                      {c.code} - {getLocalizedCurrencyName(c, language)} ({c.symbol})
                                     </option>
                                   ))}
                                 </optgroup>
@@ -250,24 +255,24 @@ export function FinanceSettingsSection({
                         <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border/40" onClick={(e) => e.stopPropagation()}>
                           <div>
                             <span className="text-[10px] text-muted-foreground font-semibold block mb-1">
-                              {isRTL ? 'اسم العملة:' : 'Name:'}
+                              {t('storeSettings.currencyNameLabel')}
                             </span>
                             <Input
                               value={currencyNames[slot1Code] || ''}
                               onChange={(e) => setCurrencyNames({ ...currencyNames, [slot1Code]: e.target.value })}
                               className="h-7 text-xs font-bold px-2 bg-background/80"
-                              placeholder={isRTL ? "مثال: ريال قطري" : "e.g. Qatari Riyal"}
+                              placeholder={t('storeSettings.currencyNamePlaceholderSlot1')}
                             />
                           </div>
                           <div>
                             <span className="text-[10px] text-muted-foreground font-semibold block mb-1">
-                              {isRTL ? 'رمز العملة:' : 'Symbol:'}
+                              {t('storeSettings.currencySymbolLabel')}
                             </span>
                             <Input
                               value={currencySymbols[slot1Code] || ''}
                               onChange={(e) => setCurrencySymbols({ ...currencySymbols, [slot1Code]: e.target.value })}
                               className="h-7 text-xs font-bold px-2 bg-background/80 font-mono"
-                              placeholder={isRTL ? "مثال: QAR أو TRY" : "e.g. QAR or TRY"}
+                              placeholder={t('storeSettings.currencySymbolPlaceholderSlot1')}
                             />
                           </div>
                         </div>
@@ -276,7 +281,7 @@ export function FinanceSettingsSection({
                       {/* Exchange Rate & Toggle Switch */}
                       <div className="mt-3 pt-3 border-t border-border/40 space-y-2.5">
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">{isRTL ? 'سعر الصرف ($1 =):' : 'Exchange Rate ($1 =):'}</span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">{t('storeSettings.exchangeRateAgainstUsdLabel')}</span>
                           <Input
                             type="text"
                             inputMode="decimal"
@@ -288,7 +293,7 @@ export function FinanceSettingsSection({
                         </div>
                         {renderCurrencyDisplayOptions(slot1Code)}
                         <div className="flex items-center justify-between pt-1 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-xs font-medium text-foreground">{isRTL ? 'تفعيل العملة:' : 'Enable Currency:'}</span>
+                          <span className="text-xs font-medium text-foreground">{t('storeSettings.enableCurrencyLabel')}</span>
                           <Switch
                             checked={enabledCurrencies[slot1Code] === true}
                             onCheckedChange={(val) => toggleCurrency(slot1Code, val)}
@@ -297,13 +302,16 @@ export function FinanceSettingsSection({
                       </div>
                     </div>
 
-                    {/* 3. العملة الإضافية 2 (Slot 2) */}
+                    {/* 3. Additional Currency 2 (Slot 2) */}
                     <div
                       onClick={() => {
                         if (enabledCurrencies[slot2Code]) {
                           setPrimaryCurrency(slot2Code);
                         } else {
-                          toast({ title: isRTL ? 'العملة معطلة' : 'Currency Disabled', description: isRTL ? 'يجب تفعيل هذه العملة أولاً لاختيارها كعملة افتراضية' : 'Must enable this currency first' });
+                          toast({
+                            title: t('storeSettings.currencyDisabledTitle'),
+                            description: t('storeSettings.enableCurrencyFirstDesc'),
+                          });
                         }
                       }}
                       className={cn(
@@ -326,7 +334,7 @@ export function FinanceSettingsSection({
 
                           <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                             <label className="text-[10px] font-bold text-muted-foreground block mb-1">
-                              {isRTL ? 'قائمة العملات الجاهزة (27 عملة):' : 'Predefined currencies (27):'}
+                              {t('storeSettings.predefinedCurrenciesLabel')}
                             </label>
                             <select
                               value={PREDEFINED_CURRENCIES.find(c => c.code === slot2Code)?.code || ''}
@@ -334,14 +342,12 @@ export function FinanceSettingsSection({
                                 const selected = PREDEFINED_CURRENCIES.find(c => c.code === e.target.value);
                                 if (selected) {
                                   const nextCode = selected.code;
-                                  const oldCode = slot2Code; // حفظ الكود القديم
                                   setSlot2Code(nextCode);
                                   setCurrencySymbols(prev => ({ ...prev, [nextCode]: selected.symbol }));
-                                  setCurrencyNames(prev => ({ ...prev, [nextCode]: isRTL ? selected.name : selected.nameEn }));
+                                  setCurrencyNames(prev => ({ ...prev, [nextCode]: getLocalizedCurrencyName(selected, language) }));
                                   if (selected.suggestedRate) {
                                     setExchangeRates(prev => ({ ...prev, [nextCode]: String(selected.suggestedRate) }));
                                   }
-                                  // تنظيف الكود القديم وتفعيل الكود الجديد فقط
                                   setEnabledCurrencies(prev => ({
                                     USD: prev.USD !== false,
                                     ...(slot1Code && slot1Code !== nextCode && slot1Code !== 'USD' ? { [slot1Code]: prev[slot1Code] === true } : {}),
@@ -354,12 +360,12 @@ export function FinanceSettingsSection({
                               }}
                               className="w-full h-8 px-2 rounded-lg bg-background border border-border/80 text-foreground text-xs font-semibold focus:ring-1 focus:ring-primary focus:outline-hidden"
                             >
-                              <option value="" disabled>{isRTL ? 'اختر عملة لتعبئة البيانات تلقائياً...' : 'Choose predefined...'}</option>
+                              <option value="" disabled>{t('storeSettings.choosePredefinedPlaceholder')}</option>
                               {CURRENCY_CATEGORIES.map(category => (
-                                <optgroup key={category.id} label={isRTL ? category.label : category.labelEn}>
+                                <optgroup key={category.id} label={isEn ? category.labelEn : category.label}>
                                   {PREDEFINED_CURRENCIES.filter(c => c.category === category.id).map(c => (
                                     <option key={c.code} value={c.code}>
-                                      {c.code} - {isRTL ? c.name : c.nameEn} ({c.symbol})
+                                      {c.code} - {getLocalizedCurrencyName(c, language)} ({c.symbol})
                                     </option>
                                   ))}
                                 </optgroup>
@@ -379,24 +385,24 @@ export function FinanceSettingsSection({
                         <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border/40" onClick={(e) => e.stopPropagation()}>
                           <div>
                             <span className="text-[10px] text-muted-foreground font-semibold block mb-1">
-                              {isRTL ? 'اسم العملة:' : 'Name:'}
+                              {t('storeSettings.currencyNameLabel')}
                             </span>
                             <Input
                               value={currencyNames[slot2Code] || ''}
                               onChange={(e) => setCurrencyNames({ ...currencyNames, [slot2Code]: e.target.value })}
                               className="h-7 text-xs font-bold px-2 bg-background/80"
-                              placeholder={isRTL ? "مثال: جنيه مصري" : "e.g. Egyptian Pound"}
+                              placeholder={t('storeSettings.currencyNamePlaceholderSlot2')}
                             />
                           </div>
                           <div>
                             <span className="text-[10px] text-muted-foreground font-semibold block mb-1">
-                              {isRTL ? 'رمز العملة:' : 'Symbol:'}
+                              {t('storeSettings.currencySymbolLabel')}
                             </span>
                             <Input
                               value={currencySymbols[slot2Code] || ''}
                               onChange={(e) => setCurrencySymbols({ ...currencySymbols, [slot2Code]: e.target.value })}
                               className="h-7 text-xs font-bold px-2 bg-background/80 font-mono"
-                              placeholder={isRTL ? "مثال: EGP أو IQD" : "e.g. EGP or IQD"}
+                              placeholder={t('storeSettings.currencySymbolPlaceholderSlot2')}
                             />
                           </div>
                         </div>
@@ -405,7 +411,7 @@ export function FinanceSettingsSection({
                       {/* Exchange Rate & Toggle Switch */}
                       <div className="mt-3 pt-3 border-t border-border/40 space-y-2.5">
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">{isRTL ? 'سعر الصرف ($1 =):' : 'Exchange Rate ($1 =):'}</span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">{t('storeSettings.exchangeRateAgainstUsdLabel')}</span>
                           <Input
                             type="text"
                             inputMode="decimal"
@@ -417,7 +423,7 @@ export function FinanceSettingsSection({
                         </div>
                         {renderCurrencyDisplayOptions(slot2Code)}
                         <div className="flex items-center justify-between pt-1 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-xs font-medium text-foreground">{isRTL ? 'تفعيل العملة:' : 'Enable Currency:'}</span>
+                          <span className="text-xs font-medium text-foreground">{t('storeSettings.enableCurrencyLabel')}</span>
                           <Switch
                             checked={enabledCurrencies[slot2Code] === true}
                             onCheckedChange={(val) => toggleCurrency(slot2Code, val)}
@@ -431,11 +437,11 @@ export function FinanceSettingsSection({
 
                 {/* Tax Settings */}
                 <div className="pt-2 border-t border-border space-y-3">
-                  <h3 className="text-base font-semibold text-foreground">{t('settings.tax') || 'الضريبة'}</h3>
+                  <h3 className="text-base font-semibold text-foreground">{t('settings.tax')}</h3>
                   <div className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-2">
                       <Percent className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{t('settings.enableTax') || 'تفعيل الضريبة'}</span>
+                      <span className="text-sm font-medium">{t('settings.enableTax')}</span>
                     </div>
                     <Switch
                       checked={taxEnabled}
@@ -446,7 +452,7 @@ export function FinanceSettingsSection({
                   </div>
                   {taxEnabled && (
                     <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.taxRate') || 'نسبة الضريبة'}</label>
+                      <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.taxRate')}</label>
                       <div className="relative flex-1">
                         <Percent className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
@@ -468,11 +474,11 @@ export function FinanceSettingsSection({
 
                 {/* Discount Control Settings */}
                 <div className="pt-2 border-t border-border space-y-3">
-                  <h3 className="text-base font-semibold text-foreground">{t('settings.discountControl') || 'التحكم بالخصومات'}</h3>
+                  <h3 className="text-base font-semibold text-foreground">{t('settings.discountControl')}</h3>
                   <div className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-2">
                       <Percent className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{t('settings.enablePercentDiscount') || 'خصم النسبة المئوية'}</span>
+                      <span className="text-sm font-medium">{t('settings.enablePercentDiscount')}</span>
                     </div>
                     <Switch
                       checked={discountPercentEnabled}
@@ -484,7 +490,7 @@ export function FinanceSettingsSection({
                   <div className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{t('settings.enableFixedDiscount') || 'خصم المبلغ الثابت'}</span>
+                      <span className="text-sm font-medium">{t('settings.enableFixedDiscount')}</span>
                     </div>
                     <Switch
                       checked={discountFixedEnabled}
@@ -502,12 +508,12 @@ export function FinanceSettingsSection({
                       <Wallet className="w-4 h-4 text-primary" />
                       <div>
                         <span className="text-sm font-medium block">
-                          {isRTL ? 'تتبع رأس المال والسيولة' : 'Track Capital & Liquidity'}
+                          {t('storeSettings.trackCapitalTitle')}
                         </span>
                         <span className="text-xs text-muted-foreground block">
-                          {isRTL 
-                            ? (trackCapital ? 'وضع تتبع رأس المال التأسيسي وحركة السيولة النقدية' : 'وضع بدون رأس مال (تدفق نقدي بسيط)') 
-                            : (trackCapital ? 'Track initial capital and liquid cash movement' : 'Simple cash flow mode')}
+                          {trackCapital
+                            ? t('storeSettings.trackCapitalEnabledDesc')
+                            : t('storeSettings.trackCapitalDisabledDesc')}
                         </span>
                       </div>
                     </div>
@@ -521,7 +527,7 @@ export function FinanceSettingsSection({
                   {trackCapital && (
                     <div className="space-y-1 bg-muted/40 p-3 rounded-xl border border-border/60">
                       <label className="text-sm font-medium text-foreground block">
-                        {isRTL ? 'رأس المال التأسيسي للمحل ($)' : 'Initial Store Capital ($)'}
+                        {t('storeSettings.initialCapitalLabel')}
                       </label>
                       <div className="relative">
                         <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -539,9 +545,7 @@ export function FinanceSettingsSection({
                         />
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {isRTL 
-                          ? 'يُضاف هذا المبلغ تلقائياً إلى رؤوس أموال الشركاء إن وجدوا لاحتساب إجمالي رأس المال والسيولة المتاحة.'
-                          : 'This amount is combined with partners capital (if any) to calculate total capital and available liquidity.'}
+                        {t('storeSettings.initialCapitalDesc')}
                       </p>
                     </div>
                   )}
@@ -550,10 +554,10 @@ export function FinanceSettingsSection({
                 <ShiftToleranceField />
                 <SurplusProfitField />
 
-                {/* نص توضيحي للعملات والضرائب */}
+                {/* Currencies & Taxes Note */}
                 <div className="pt-3 border-t border-border">
                   <p className="text-xs text-muted-foreground text-start">
-                    {isRTL ? 'تُطبق أسعار الصرف ونسب الضريبة والخصومات فوراً في الكاشير' : 'Rates and discounts apply immediately to POS'}
+                    {t('storeSettings.financeAppliesImmediatelyNote')}
                   </p>
                 </div>
 

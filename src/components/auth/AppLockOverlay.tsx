@@ -30,7 +30,7 @@ export function AppLockOverlay() {
     lockoutRemainingSeconds,
   } = useAppLock();
   const { user, signOut } = useAuth();
-  const { isRTL } = useLanguage();
+  const { t, isRTL } = useLanguage();
 
   const [enteredPin, setEnteredPin] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
@@ -89,19 +89,19 @@ export function AppLockOverlay() {
           setErrorMessage(null);
         } else {
           setIsShaking(true);
-          setErrorMessage(isRTL ? 'كلمة المرور خاطئة' : 'Incorrect PIN');
+          setErrorMessage(t('appLock.incorrectPin'));
           setEnteredPin('');
           setTimeout(() => setIsShaking(false), 500);
         }
       } catch (err) {
         console.error('[AppLockOverlay] Verification error:', err);
-        setErrorMessage(isRTL ? 'حدث خطأ أثناء التحقق' : 'Verification error');
+        setErrorMessage(t('appLock.verificationError'));
         setEnteredPin('');
       } finally {
         setIsVerifying(false);
       }
     },
-    [isLockedOut, isVerifying, unlockApp, isRTL]
+    [isLockedOut, isVerifying, unlockApp, t]
   );
 
   // إدخال الأرقام مع فحص اكتمال الرمز التلقائي (Auto-Submit on Completion)
@@ -218,17 +218,13 @@ export function AppLockOverlay() {
         </div>
 
         <h1 id="app-lock-title" className="text-xl font-bold tracking-tight text-foreground">
-          {isRTL ? 'تطبيق نقطة البيع مقفل' : 'POS Terminal Locked'}
+          {t('appLock.title')}
         </h1>
 
         <p className="text-xs text-muted-foreground mt-1 max-w-[260px]">
           {isLockedOut
-            ? isRTL
-              ? `تم حظر المحاولات مؤقتاً! يرجى الانتظار (${lockoutRemainingSeconds} ثانية)`
-              : `Locked out temporarily! Wait (${lockoutRemainingSeconds}s)`
-            : isRTL
-            ? 'أدخل رمز PIN أو استخدم البصمة لفتح القفل'
-            : 'Enter PIN or scan fingerprint to unlock'}
+            ? t('appLock.lockedOut').replace('{seconds}', String(lockoutRemainingSeconds))
+            : t('appLock.enterPinPrompt')}
         </p>
 
         {/* نقاط عرض الرمز المدخل مع حركة الاهتزاز الفورية */}
@@ -259,12 +255,12 @@ export function AppLockOverlay() {
           {isVerifying ? (
             <p className="text-primary font-medium text-xs flex items-center gap-1.5 animate-pulse">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>{isRTL ? 'جاري التحقق...' : 'Verifying...'}</span>
+              <span>{t('appLock.verifying')}</span>
             </p>
           ) : isBiometricPrompting ? (
             <p className="text-primary font-medium text-xs flex items-center gap-1.5 animate-pulse">
               <Fingerprint className="w-3.5 h-3.5 animate-bounce" />
-              <span>{isRTL ? 'يرجى لمس مستشعر البصمة...' : 'Scan fingerprint...'}</span>
+              <span>{t('appLock.scanFingerprint')}</span>
             </p>
           ) : errorMessage ? (
             <p className="text-destructive font-bold text-xs flex items-center gap-1.5 animate-in fade-in duration-150">
@@ -299,7 +295,7 @@ export function AppLockOverlay() {
               disabled={isLockedOut || isVerifying || isBiometricPrompting}
               onClick={() => void handleBiometricAuth()}
               className="h-14 rounded-2xl border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 active:scale-95 transition-all shadow-sm flex flex-col items-center justify-center"
-              title={isRTL ? 'الفتح بالبصمة' : 'Fingerprint'}
+              title={t('appLock.fingerprintTitle')}
             >
               <Fingerprint className="w-6 h-6 stroke-[2.2]" />
             </Button>
@@ -310,7 +306,7 @@ export function AppLockOverlay() {
               disabled={isLockedOut || isVerifying || enteredPin.length === 0}
               onClick={handleClear}
               className="h-14 rounded-2xl text-xs font-medium text-muted-foreground hover:bg-muted/80 active:scale-95 transition-all"
-              title={isRTL ? 'مسح الكل' : 'Clear All'}
+              title={t('appLock.clearAll')}
             >
               <RotateCcw className="w-5 h-5" />
             </Button>
@@ -334,7 +330,7 @@ export function AppLockOverlay() {
             disabled={isLockedOut || isVerifying || enteredPin.length === 0}
             onClick={handleBackspace}
             className="h-14 rounded-2xl text-muted-foreground hover:bg-muted/80 active:scale-95 transition-all"
-            title={isRTL ? 'مسح' : 'Backspace'}
+            title={t('appLock.backspace')}
           >
             <Delete className="w-5 h-5" />
           </Button>
@@ -351,7 +347,7 @@ export function AppLockOverlay() {
             className="mt-3 text-xs font-semibold text-primary hover:text-primary hover:bg-primary/10 rounded-xl flex items-center gap-1.5 transition-all"
           >
             <Fingerprint className="w-4 h-4" />
-            <span>{isRTL ? 'الفتح بمستشعر البصمة' : 'Unlock with Fingerprint'}</span>
+            <span>{t('appLock.unlockWithFingerprint')}</span>
           </Button>
         )}
       </div>
@@ -366,7 +362,7 @@ export function AppLockOverlay() {
           className="text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg flex items-center gap-1.5"
         >
           <LogOut className="w-3.5 h-3.5" />
-          <span>{isRTL ? 'نسيت الرمز؟ تسجيل الخروج والتبديل' : 'Forgot PIN? Sign Out & Switch'}</span>
+          <span>{t('appLock.forgotPinSignOut')}</span>
         </Button>
       </div>
 
@@ -378,18 +374,14 @@ export function AppLockOverlay() {
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <span>
                 {exitConfirmStep === 1
-                  ? (isRTL ? 'تأكيد تسجيل الخروج (خطوة 1 من 2)' : 'Confirm Sign Out (Step 1 of 2)')
-                  : (isRTL ? 'تحذير نهائي وتأكيد جازم' : 'Final Warning')}
+                  ? t('appLock.confirmSignOutStep1Title')
+                  : t('appLock.confirmSignOutStep2Title')}
               </span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {exitConfirmStep === 1 
-                ? (isRTL
-                    ? 'هل نسيت الرمز وتريد تسجيل الخروج؟ ستحتاج إلى البريد الإلكتروني وكلمة المرور الرئيسية لإعادة الدخول.'
-                    : 'Forgot PIN? You will need your master password to sign back in.')
-                : (isRTL
-                    ? 'سيتم مسح الرمز المنسي ونقلك لتسجيل الدخول بكلمة المرور الماستر، ثم مطالبتك بتعيين رمز جديد.'
-                    : 'The forgotten PIN will be cleared and you will set a new one after master login.')}
+              {exitConfirmStep === 1
+                ? t('appLock.confirmSignOutStep1Desc')
+                : t('appLock.confirmSignOutStep2Desc')}
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <Button
@@ -399,7 +391,7 @@ export function AppLockOverlay() {
                 onClick={() => setExitConfirmStep(0)}
                 className="rounded-xl text-xs"
               >
-                {isRTL ? 'إلغاء' : 'Cancel'}
+                {t('appLock.cancel')}
               </Button>
               <Button
                 type="button"
@@ -418,7 +410,7 @@ export function AppLockOverlay() {
                   }
                 }}
               >
-                {exitConfirmStep === 1 ? (isRTL ? 'متابعة' : 'Next') : (isRTL ? 'تأكيد الخروج الآن' : 'Sign Out Now')}
+                {exitConfirmStep === 1 ? t('appLock.next') : t('appLock.signOutNow')}
               </Button>
             </div>
           </div>

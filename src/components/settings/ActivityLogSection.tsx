@@ -19,8 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 type FilterCategory = 'all' | 'sales' | 'invoices' | 'invoiceEdits' | 'debts' | 'shifts' | 'expenses' | 'partners' | 'pricing' | 'auth';
 
 export function ActivityLogSection() {
-  const { isRTL, language } = useLanguage();
-  const isAr = language === 'ar';
+  const { t, isRTL, language } = useLanguage();
 
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('all');
@@ -152,16 +151,16 @@ export function ActivityLogSection() {
     auth: (l) => ['login', 'logout', 'password_changed', 'user_added', 'user_deleted'].includes(l.type),
   };
 
-  const CATEGORY_PILLS: { id: Exclude<FilterCategory, 'all'>; ar: string; en: string; tr: string; dot: string; on: string }[] = [
-    { id: 'sales', ar: 'البيع والمرتجعات', en: 'Sales & Refunds', tr: 'Satış ve İadeler', dot: 'bg-emerald-500', on: 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200' },
-    { id: 'invoices', ar: 'الفواتير', en: 'Invoices', tr: 'Faturalar', dot: 'bg-sky-500', on: 'bg-sky-100 text-sky-900 border border-sky-300 dark:bg-sky-950/60 dark:text-sky-200' },
-    { id: 'invoiceEdits', ar: 'تعديل الفواتير', en: 'Invoice Edits', tr: 'Fatura Düzenleme', dot: 'bg-orange-500', on: 'bg-orange-100 text-orange-900 border border-orange-300 dark:bg-orange-950/60 dark:text-orange-200' },
-    { id: 'debts', ar: 'الديون والتحصيل', en: 'Debts & Collections', tr: 'Borç ve Tahsilat', dot: 'bg-blue-500', on: 'bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-200' },
-    { id: 'shifts', ar: 'الورديات (فتح وإغلاق)', en: 'Shifts (open/close)', tr: 'Vardiyalar', dot: 'bg-teal-500', on: 'bg-teal-100 text-teal-900 border border-teal-300 dark:bg-teal-950/60 dark:text-teal-200' },
-    { id: 'expenses', ar: 'المصاريف', en: 'Expenses', tr: 'Giderler', dot: 'bg-rose-500', on: 'bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-200' },
-    { id: 'partners', ar: 'الشركاء ورأس المال', en: 'Partners & Capital', tr: 'Ortaklar ve Sermaye', dot: 'bg-indigo-500', on: 'bg-indigo-100 text-indigo-900 border border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-200' },
-    { id: 'pricing', ar: 'تعديل الأسعار', en: 'Price Adjustments', tr: 'Fiyat Güncellemeleri', dot: 'bg-amber-500', on: 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200' },
-    { id: 'auth', ar: 'الدخول والأمان', en: 'Auth & Security', tr: 'Giriş ve Güvenlik', dot: 'bg-purple-500', on: 'bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950/60 dark:text-purple-200' },
+  const CATEGORY_PILLS: { id: Exclude<FilterCategory, 'all'>; labelKey: string; dot: string; on: string }[] = [
+    { id: 'sales', labelKey: 'activity.cat.sales', dot: 'bg-emerald-500', on: 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200' },
+    { id: 'invoices', labelKey: 'activity.cat.invoices', dot: 'bg-sky-500', on: 'bg-sky-100 text-sky-900 border border-sky-300 dark:bg-sky-950/60 dark:text-sky-200' },
+    { id: 'invoiceEdits', labelKey: 'activity.cat.invoiceEdits', dot: 'bg-orange-500', on: 'bg-orange-100 text-orange-900 border border-orange-300 dark:bg-orange-950/60 dark:text-orange-200' },
+    { id: 'debts', labelKey: 'activity.cat.debts', dot: 'bg-blue-500', on: 'bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950/60 dark:text-blue-200' },
+    { id: 'shifts', labelKey: 'activity.cat.shifts', dot: 'bg-teal-500', on: 'bg-teal-100 text-teal-900 border border-teal-300 dark:bg-teal-950/60 dark:text-teal-200' },
+    { id: 'expenses', labelKey: 'activity.cat.expenses', dot: 'bg-rose-500', on: 'bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-200' },
+    { id: 'partners', labelKey: 'activity.cat.partners', dot: 'bg-indigo-500', on: 'bg-indigo-100 text-indigo-900 border border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-200' },
+    { id: 'pricing', labelKey: 'activity.cat.pricing', dot: 'bg-amber-500', on: 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-200' },
+    { id: 'auth', labelKey: 'activity.cat.auth', dot: 'bg-purple-500', on: 'bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950/60 dark:text-purple-200' },
   ];
 
   // تصفية السجلات
@@ -194,25 +193,12 @@ export function ActivityLogSection() {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (isAr) {
-      if (minutes < 1) return 'الآن';
-      if (minutes < 60) return `منذ ${minutes} دقيقة`;
-      if (hours < 24) return `منذ ${hours} ساعات`;
-      if (days < 7) return `منذ ${days} أيام`;
-      return new Date(timestamp).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
-    } else if (language === 'tr') {
-      if (minutes < 1) return 'Az önce';
-      if (minutes < 60) return `${minutes} dk önce`;
-      if (hours < 24) return `${hours} sa önce`;
-      if (days < 7) return `${days} gün önce`;
-      return new Date(timestamp).toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' });
-    } else {
-      if (minutes < 1) return 'Just now';
-      if (minutes < 60) return `${minutes}m ago`;
-      if (hours < 24) return `${hours}h ago`;
-      if (days < 7) return `${days}d ago`;
-      return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
+    if (minutes < 1) return t('activity.time.justNow' as any);
+    if (minutes < 60) return t('activity.time.minutesAgo' as any).replace('{n}', String(minutes));
+    if (hours < 24) return t('activity.time.hoursAgo' as any).replace('{n}', String(hours));
+    if (days < 7) return t('activity.time.daysAgo' as any).replace('{n}', String(days));
+    const locale = language === 'ar' ? 'ar-EG' : language === 'tr' ? 'tr-TR' : 'en-US';
+    return new Date(timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   };
 
   return (
@@ -226,10 +212,10 @@ export function ActivityLogSection() {
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-bold text-foreground">
-                {isAr ? 'سجل العمليات والنشاطات' : language === 'tr' ? 'Etkinlik ve İşlem Günlüğü' : 'Audit Activity Log'}
+                {t('activity.headerTitle' as any)}
               </h2>
               <p className="text-xs text-muted-foreground">
-                {isAr ? 'تدقيق كامل لحركات البيع وتعديل الأسعار والديون والمصاريف' : 'Live audit log of sales, pricing, debts and partner transactions'}
+                {t('activity.headerSubtitle' as any)}
               </p>
             </div>
           </div>
@@ -243,7 +229,7 @@ export function ActivityLogSection() {
                 className="gap-1.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{isAr ? 'مسح السجل' : 'Clear Log'}</span>
+                <span>{t('activity.clearLog' as any)}</span>
               </Button>
             )}
           </div>
@@ -255,7 +241,7 @@ export function ActivityLogSection() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isAr ? 'بحث في الفواتير، المنتجات، المبالغ، أو أسماء الكاشيرات...' : 'Search logs by invoice, product, amounts or cashier...'}
+            placeholder={t('activity.searchPlaceholder' as any)}
             className={cn("text-xs h-9 bg-muted/40 border-border", isRTL ? "pr-9" : "pl-9")}
           />
         </div>
@@ -272,7 +258,7 @@ export function ActivityLogSection() {
                 : "bg-muted hover:bg-muted/80 text-muted-foreground"
             )}
           >
-            <span>{isAr ? 'الكل' : 'All'}</span>
+            <span>{t('activity.filterAll' as any)}</span>
             <span className="text-[10px] opacity-70 bg-black/10 dark:bg-card/20 px-1.5 py-0.2 rounded-full">{logs.length}</span>
           </button>
 
@@ -288,7 +274,7 @@ export function ActivityLogSection() {
               )}
             >
               <span className={cn("w-1.5 h-1.5 rounded-full", c.dot)} />
-              <span>{isAr ? c.ar : language === 'tr' ? c.tr : c.en}</span>
+              <span>{t(c.labelKey as any)}</span>
             </button>
           ))}
 
@@ -301,10 +287,10 @@ export function ActivityLogSection() {
                 ? "bg-primary/10 text-primary border-primary font-bold"
                 : "bg-card border-border text-foreground"
             )}
-            title={isAr ? 'تصفية مخصصة' : 'Custom Filter'}
+            title={t('activity.customFilter' as any)}
           >
             <Filter className="w-3.5 h-3.5" />
-            <span>{specificFilter ? getActivityTypeLabel(specificFilter, language) : (isAr ? 'تصفية مخصصة' : language === 'tr' ? 'Özel Filtre' : 'Custom')}</span>
+            <span>{specificFilter ? getActivityTypeLabel(specificFilter, language) : t('activity.customFilterShort' as any)}</span>
           </button>
         </div>
       </header>
@@ -315,10 +301,10 @@ export function ActivityLogSection() {
           <div className="p-8 text-center bg-card rounded-2xl border border-border">
             <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
             <p className="text-xs font-bold text-muted-foreground ">
-              {isAr ? 'لا توجد عمليات تطابق هذا الفلتر' : 'No activity logs matching this filter'}
+              {t('activity.emptyTitle' as any)}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {isAr ? 'جرّب تغيير التصنيف أو كلمات البحث' : 'Try changing category or search query'}
+              {t('activity.emptyHint' as any)}
             </p>
           </div>
         ) : (
@@ -326,7 +312,6 @@ export function ActivityLogSection() {
             <ActivityCard
               key={log.id}
               log={log}
-              isAr={isAr}
               isRTL={isRTL}
               language={language}
               timeText={formatRelativeTime(log.timestamp)}
@@ -345,20 +330,18 @@ export function ActivityLogSection() {
           </div>
           <DialogHeader className="text-center pt-1">
             <DialogTitle className="text-base font-bold text-foreground">
-              {isAr ? 'تأكيد مسح سجل النشاطات' : 'Clear Activity Log?'}
+              {t('activity.clearConfirmTitle' as any)}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
-              {isAr
-                ? 'هل أنت متأكد من مسح جميع السجلات المحلية والتدقيقات الحالية؟ لا يمكن التراجع عن هذا الإجراء.'
-                : 'Are you sure you want to clear all local activity logs? This action cannot be undone.'}
+              {t('activity.clearConfirmDesc' as any)}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="grid grid-cols-2 gap-2 mt-4 sm:space-x-0">
             <Button variant="outline" size="sm" onClick={() => setClearDialogOpen(false)} className="w-full text-xs">
-              {isAr ? 'إلغاء' : 'Cancel'}
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" size="sm" onClick={handleClearLogs} className="w-full text-xs">
-              {isAr ? 'نعم، مسح السجل' : 'Yes, Clear'}
+              {t('activity.clearConfirmBtn' as any)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -369,10 +352,10 @@ export function ActivityLogSection() {
         <DialogContent className="max-w-md rounded-2xl max-h-[85vh] overflow-y-auto" dir={isRTL ? 'rtl' : 'ltr'}>
           <DialogHeader>
             <DialogTitle className="text-sm font-bold">
-              {isAr ? 'اختر نوع العملية للتصفية الدقيقة' : 'Select Exact Activity Type'}
+              {t('activity.selectTypeTitle' as any)}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              {isAr ? 'عرض الحركات المرتبطة بنوع محدد فقط' : 'Filter feed by a single exact operation type'}
+              {t('activity.selectTypeDesc' as any)}
             </DialogDescription>
           </DialogHeader>
 
@@ -384,7 +367,7 @@ export function ActivityLogSection() {
                 specificFilter === null ? "border-primary bg-primary/10 text-primary font-bold" : "border-border hover:bg-muted/40 dark:hover:bg-muted/40"
               )}
             >
-              {isAr ? 'عرض الكل (إلغاء الفلتر)' : 'All Types (Reset)'}
+              {t('activity.allTypesReset' as any)}
             </button>
             {Object.keys(activityTypeLabels).map((key) => {
               const type = key as ActivityType;
@@ -414,7 +397,6 @@ export function ActivityLogSection() {
 // ==========================================
 interface ActivityCardProps {
   log: ActivityLog;
-  isAr: boolean;
   isRTL: boolean;
   language?: string;
   timeText: string;
@@ -422,10 +404,9 @@ interface ActivityCardProps {
   onToggle: () => void;
 }
 
-function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isExpanded, onToggle }: ActivityCardProps) {
-  // حماية مزدوجة: أخذ اللغة من الـ Props مع fallback من useLanguage
-  const { language: hookLanguage } = useLanguage();
-  const language = propLanguage || hookLanguage || (isAr ? 'ar' : 'en');
+function ActivityCard({ log, isRTL, language: propLanguage, timeText, isExpanded, onToggle }: ActivityCardProps) {
+  const { t, language: hookLanguage } = useLanguage();
+  const language = propLanguage || hookLanguage || 'ar';
 
   const details = (log.details as Record<string, unknown>) || {};
   const changes = (details.changes as Record<string, unknown>) || {};
@@ -455,44 +436,44 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
   if (isPricing) {
     iconEmoji = '🏷️';
     iconClass = 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800/60 dark:text-amber-300';
-    badgeLabel = isAr ? 'تعديل تسعيرة منتج' : 'Price Adjustment';
+    badgeLabel = t('activity.badge.priceAdjustment' as any);
     badgeClass = 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800/60';
   } else if (isDebt) {
     iconEmoji = '📝';
     iconClass = 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-950/40 dark:border-purple-800/60 dark:text-purple-300';
-    badgeLabel = isAr ? 'إنشاء دين / فاتورة آجل' : 'Credit Sale';
+    badgeLabel = t('activity.badge.creditSale' as any);
     badgeClass = 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/50 dark:text-purple-200 dark:border-purple-800/60';
     const amountVal = Number(details.total || details.debtRemaining || details.amount || 0);
     leftAmount = formatMoney(amountVal);
-    leftStatus = isAr ? 'ذمة معلقة' : 'Pending Debt';
+    leftStatus = t('activity.status.pendingDebt' as any);
     leftClass = 'text-rose-600 dark:text-rose-400';
   } else if (isCash) {
     iconEmoji = '🛒';
     iconClass = 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800/60 dark:text-emerald-300';
-    badgeLabel = isAr ? 'عملية بيع نقدي' : 'Cash Sale';
+    badgeLabel = t('activity.badge.cashSale' as any);
     badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-800/60';
     const amountVal = Number(details.total || details.amount || 0);
     leftAmount = formatMoney(amountVal);
-    leftStatus = isAr ? 'مسدد نقداً ✓' : 'Paid in Cash ✓';
+    leftStatus = t('activity.status.paidCash' as any);
     leftClass = 'text-emerald-700 dark:text-emerald-400';
   } else if (isDebtPay) {
     iconEmoji = '💳';
     iconClass = 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800/60 dark:text-blue-300';
-    badgeLabel = isAr ? 'تسديد دين' : 'Debt Payment';
+    badgeLabel = t('activity.badge.debtPayment' as any);
     badgeClass = 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-800/60';
     const amountVal = Number(details.amount || details.total || 0);
     leftAmount = formatMoney(amountVal);
-    leftStatus = isAr ? 'تم القبض ✓' : 'Collected ✓';
+    leftStatus = t('activity.status.collected' as any);
     leftClass = 'text-blue-700 dark:text-blue-400';
   } else if (isRefund) {
     iconEmoji = '↩️';
     iconClass = 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800/60 dark:text-rose-300';
-    badgeLabel = isAr ? (log.type === 'partial_refund' ? 'استرداد جزئي' : 'استرداد فاتورة') : 'Refund';
+    badgeLabel = log.type === 'partial_refund' ? t('activity.badge.partialRefund' as any) : t('activity.badge.invoiceRefund' as any);
     badgeClass = 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-800/60';
     const refundVal = Number(details.refund_amount || details.refundAmount || details.amount || details.total || 0);
     if (refundVal > 0) {
       leftAmount = formatMoney(refundVal);
-      leftStatus = isAr ? 'مسترد من الصندوق' : language === 'tr' ? 'Kasadan İade' : 'Refunded';
+      leftStatus = t('activity.status.refundedFromBox' as any);
       leftClass = 'text-rose-600 dark:text-rose-400';
     }
   } else if (isPartner) {
@@ -504,9 +485,9 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
     if (amountVal > 0) {
       leftAmount = `${amountVal.toFixed(2)}`;
       const isDeposit = log.type === 'partner_investment' || log.type === 'capital_added';
-      leftStatus = isDeposit 
-        ? (isAr ? 'إيداع رصيد/رأس مال' : language === 'tr' ? 'Giriş' : 'Deposit')
-        : (isAr ? 'سحب رصيد/أرباح' : language === 'tr' ? 'Çekim' : 'Withdrawal');
+      leftStatus = isDeposit
+        ? t('activity.status.partnerDeposit' as any)
+        : t('activity.status.partnerWithdrawal' as any);
       leftClass = isDeposit ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-600 dark:text-amber-400';
     }
   }
@@ -558,7 +539,7 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
           ) : (
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground  bg-muted/40 dark:bg-muted px-2 py-0.5 rounded-md border border-border">
               <User className="w-3 h-3 text-muted-foreground" />
-              <span>{isAr ? `المستخدم: ${log.userName}` : log.userName}</span>
+              <span>{t('activity.userPrefix' as any).replace('{name}', log.userName || '')}</span>
             </span>
           )}
         </div>
@@ -570,7 +551,7 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
         onClick={onToggle}
         className="w-full flex items-center justify-between text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 pt-1.5 border-t border-border dark:border-border/50 transition cursor-pointer"
       >
-        <span>{isExpanded ? (isAr ? 'إخفاء التفاصيل' : 'Hide details') : (isAr ? 'عرض التفاصيل' : 'Show details')}</span>
+        <span>{isExpanded ? t('activity.hideDetails' as any) : t('activity.showDetails' as any)}</span>
         <ChevronDown className={cn("w-3.5 h-3.5 transform transition-transform duration-200", isExpanded && "rotate-180")} />
       </button>
 
@@ -578,19 +559,19 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
       {isExpanded && (
         <div className="space-y-2 text-xs overflow-hidden pt-1 animate-in fade-in-50 duration-200">
           {isPricing ? (
-            <PriceComparisonTable changes={changes} isAr={isAr} />
+            <PriceComparisonTable changes={changes} />
           ) : isDebt ? (
-            <DebtDetailsGrid details={details} userName={log.userName} isAr={isAr} />
+            <DebtDetailsGrid details={details} userName={log.userName} />
           ) : isCash ? (
-            <CashDetailsBox details={details} isAr={isAr} />
+            <CashDetailsBox details={details} />
           ) : isDebtPay ? (
-            <DebtPaymentDetailsBox details={details} isAr={isAr} />
+            <DebtPaymentDetailsBox details={details} />
           ) : isRefund ? (
-            <RefundDetailsBox details={details} isAr={isAr} />
+            <RefundDetailsBox details={details} />
           ) : isPartner ? (
-            <PartnerFinancialDetailsBox details={details} isAr={isAr} language={language} />
+            <PartnerFinancialDetailsBox details={details} />
           ) : (
-            <GenericDetailsBox details={details} isAr={isAr} />
+            <GenericDetailsBox details={details} />
           )}
         </div>
       )}
@@ -601,7 +582,8 @@ function ActivityCard({ log, isAr, isRTL, language: propLanguage, timeText, isEx
 // ==========================================
 // 📊 1. Price Comparison Table
 // ==========================================
-function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unknown>; isAr: boolean }) {
+function PriceComparisonTable({ changes }: { changes: Record<string, unknown> }) {
+  const { t } = useLanguage();
   const saleChange = (changes.salePrice || changes.price) as any;
   const costChange = changes.costPrice as any;
 
@@ -623,23 +605,23 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between bg-muted/40 dark:bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border text-[11px]">
-        <span className="text-muted-foreground font-medium">{isAr ? 'مصدر التعديل:' : 'Source:'}</span>
+        <span className="text-muted-foreground font-medium">{t('activity.price.source' as any)}</span>
         <span className="font-bold text-foreground dark:text-foreground">
-          {isAr ? 'تعديل يدوي مباشر من بطاقة الصنف' : 'Direct manual edit from product card'}
+          {t('activity.price.manualEdit' as any)}
         </span>
       </div>
 
       <div className="rounded-xl border border-border overflow-hidden">
         <div className="bg-muted dark:bg-muted px-3 py-1.5 grid grid-cols-3 text-[11px] font-bold text-muted-foreground text-center">
-          <div className="text-start">{isAr ? 'نوع السعر' : 'Price Type'}</div>
-          <div>{isAr ? 'السابق (القديم)' : 'Old (Previous)'}</div>
-          <div>{isAr ? 'المعتمد (الجديد)' : 'New (Confirmed)'}</div>
+          <div className="text-start">{t('activity.price.type' as any)}</div>
+          <div>{t('activity.price.old' as any)}</div>
+          <div>{t('activity.price.new' as any)}</div>
         </div>
 
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-card">
           <div className="text-start font-medium text-foreground flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground shrink-0" />
-            <span>{isAr ? 'رأس المال (الشراء)' : 'Cost Price'}</span>
+            <span>{t('activity.price.cost' as any)}</span>
           </div>
           <div className="font-mono text-muted-foreground line-through numeric-tabular">
             {oldCost !== null ? formatMoney(oldCost) : '—'}
@@ -657,7 +639,7 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-blue-50/30 dark:bg-blue-950/20">
           <div className="text-start font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-            <span>{isAr ? 'سعر البيع (المعتمد)' : 'Sale Price'}</span>
+            <span>{t('activity.price.sale' as any)}</span>
           </div>
           <div className="font-mono text-muted-foreground line-through numeric-tabular">
             {oldSale !== null ? formatMoney(oldSale) : '—'}
@@ -675,7 +657,7 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-emerald-50/30 dark:bg-emerald-950/20">
           <div className="text-start font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
-            <span>{isAr ? 'هامش الربح المتوقع' : 'Expected Margin'}</span>
+            <span>{t('activity.price.margin' as any)}</span>
           </div>
           <div className="font-mono text-muted-foreground numeric-tabular">
             {oldCost !== null && oldSale !== null ? `${formatMoney(oldProfit)} (${oldMargin.toFixed(0)}%)` : '—'}
@@ -692,7 +674,8 @@ function PriceComparisonTable({ changes, isAr }: { changes: Record<string, unkno
 // ==========================================
 // 📝 2. Debt Sale Grid
 // ==========================================
-function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, unknown>; userName?: string; isAr: boolean }) {
+function DebtDetailsGrid({ details, userName }: { details: Record<string, unknown>; userName?: string }) {
+  const { t } = useLanguage();
   const total = Number(details.total || details.amount || 0);
   const itemsCount = Number(details.itemsCount || 1);
   const downPayment = Number(details.downPayment || 0);
@@ -702,35 +685,35 @@ function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, 
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
         <div className="p-2 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border">
-          <span className="text-[10px] text-muted-foreground block">{isAr ? 'إجمالي الفاتورة:' : 'Invoice Total:'}</span>
+          <span className="text-[10px] text-muted-foreground block">{t('activity.debt.invoiceTotal' as any)}</span>
           <span className="font-bold text-foreground font-mono numeric-tabular text-xs">${total.toFixed(2)}</span>
         </div>
 
         <div className="p-2 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border">
-          <span className="text-[10px] text-muted-foreground block">{isAr ? 'عدد المنتجات المباعة:' : 'Sold Items Count:'}</span>
+          <span className="text-[10px] text-muted-foreground block">{t('activity.debt.soldItemsCount' as any)}</span>
           <span className="font-bold text-foreground font-mono numeric-tabular text-xs">
-            {isAr ? `${itemsCount} صنف (قطعة)` : `${itemsCount} item(s)`}
+            {t('activity.debt.itemsCountUnit' as any).replace('{count}', String(itemsCount))}
           </span>
         </div>
 
         <div className="p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60">
           <span className="text-[10px] text-emerald-700 dark:text-emerald-400 block font-medium">
-            {isAr ? 'الدفعة المستلمة نقداً:' : 'Cash Received:'}
+            {t('activity.debt.cashReceived' as any)}
           </span>
           <span className="font-bold text-emerald-800 dark:text-emerald-300 font-mono numeric-tabular text-xs">${downPayment.toFixed(2)}</span>
         </div>
 
         <div className="p-2 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-800/60">
           <span className="text-[10px] text-rose-700 dark:text-rose-400 block font-medium">
-            {isAr ? 'المتبقي كدين على العميل:' : 'Remaining Customer Debt:'}
+            {t('activity.debt.remainingDebt' as any)}
           </span>
           <span className="font-bold text-rose-800 dark:text-rose-300 font-mono numeric-tabular text-xs">${debtRemaining.toFixed(2)}</span>
         </div>
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1 pt-1 border-t border-border dark:border-border/50">
-        <span>{isAr ? 'طريقة السداد: ' : 'Payment Method: '}<strong className="text-foreground dark:text-foreground">{isAr ? 'حساب آجل (دين)' : 'Credit (Debt)'}</strong></span>
-        {userName && <span>{isAr ? 'الكاشير: ' : 'Cashier: '}<strong className="text-foreground dark:text-foreground">{userName}</strong></span>}
+        <span>{t('activity.debt.paymentMethod' as any)} <strong className="text-foreground dark:text-foreground">{t('activity.debt.creditMethod' as any)}</strong></span>
+        {userName && <span>{t('activity.debt.cashier' as any)} <strong className="text-foreground dark:text-foreground">{userName}</strong></span>}
       </div>
     </div>
   );
@@ -739,27 +722,28 @@ function DebtDetailsGrid({ details, userName, isAr }: { details: Record<string, 
 // ==========================================
 // 🛒 3. Cash Sale Details Box
 // ==========================================
-function CashDetailsBox({ details, isAr }: { details: Record<string, unknown>; isAr: boolean }) {
+function CashDetailsBox({ details }: { details: Record<string, unknown> }) {
+  const { t } = useLanguage();
   const total = Number(details.total || details.amount || 0);
   const invoiceNumber = (details.invoiceNumber || details.invoiceId || '') as string;
-  const customerName = (details.customerName || (isAr ? 'عميل نقدي مباشر' : 'Direct Cash Customer')) as string;
+  const customerName = (details.customerName || t('activity.cash.directCustomer' as any)) as string;
 
   return (
     <div className="p-2.5 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border space-y-1.5 text-xs">
       {invoiceNumber && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{isAr ? 'رقم الفاتورة:' : 'Invoice No:'}</span>
+          <span className="text-muted-foreground">{t('activity.cash.invoiceNo' as any)}</span>
           <span className="font-mono font-bold text-foreground dark:text-foreground">#{invoiceNumber}</span>
         </div>
       )}
       <div className="flex justify-between">
-        <span className="text-muted-foreground">{isAr ? 'العميل:' : 'Customer:'}</span>
+        <span className="text-muted-foreground">{t('activity.cash.customer' as any)}</span>
         <span className="font-bold text-foreground dark:text-foreground">{customerName}</span>
       </div>
       <div className="flex justify-between border-t border-border dark:border-border/50 pt-1">
-        <span className="text-muted-foreground">{isAr ? 'حالة الصندوق:' : 'Drawer Status:'}</span>
+        <span className="text-muted-foreground">{t('activity.cash.drawerStatus' as any)}</span>
         <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-          + ${total.toFixed(2)} {isAr ? 'تم إيداعها في الدرج' : 'deposited in drawer'}
+          + ${total.toFixed(2)} {t('activity.cash.depositedInDrawer' as any)}
         </span>
       </div>
     </div>
@@ -769,25 +753,26 @@ function CashDetailsBox({ details, isAr }: { details: Record<string, unknown>; i
 // ==========================================
 // 💳 4. Debt Payment Details Box
 // ==========================================
-function DebtPaymentDetailsBox({ details, isAr }: { details: Record<string, unknown>; isAr: boolean }) {
+function DebtPaymentDetailsBox({ details }: { details: Record<string, unknown> }) {
+  const { t } = useLanguage();
   const amount = Number(details.amount || details.total || 0);
-  const customerName = (details.customerName as string) || (isAr ? 'أحمد' : 'Customer');
+  const customerName = (details.customerName as string) || t('activity.debtPay.customerFallback' as any);
   const remaining = Number(details.remainingAfter || details.debtRemaining || 0);
 
   return (
     <div className="p-2.5 rounded-xl bg-blue-50/40 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 space-y-1 text-xs">
       <div className="flex justify-between">
-        <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'العميل المسدد:' : 'Paying Customer:'}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.payingCustomer' as any)}</span>
         <span className="font-bold text-foreground">{customerName}</span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'المبلغ المسدد:' : 'Paid Amount:'}</span>
-        <span className="font-mono font-bold text-blue-800 dark:text-blue-300">${amount.toFixed(2)} {isAr ? 'نقداً' : 'Cash'}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.paidAmount' as any)}</span>
+        <span className="font-mono font-bold text-blue-800 dark:text-blue-300">${amount.toFixed(2)} {t('activity.debtPay.cash' as any)}</span>
       </div>
       <div className="flex justify-between border-t border-blue-200/60 dark:border-blue-800/40 pt-1">
-        <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'الرصيد المتبقي على العميل:' : 'Remaining Balance:'}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.remainingBalance' as any)}</span>
         <span className={cn("font-mono font-bold", remaining <= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
-          ${remaining.toFixed(2)} {remaining <= 0 ? (isAr ? '(تمت التصفية)' : '(Cleared)') : ''}
+          ${remaining.toFixed(2)} {remaining <= 0 ? t('activity.debtPay.cleared' as any) : ''}
         </span>
       </div>
     </div>
@@ -797,7 +782,8 @@ function DebtPaymentDetailsBox({ details, isAr }: { details: Record<string, unkn
 // ==========================================
 // ↩️ 5. Invoice Refund Box
 // ==========================================
-function RefundDetailsBox({ details, isAr }: { details: Record<string, unknown>; isAr: boolean }) {
+function RefundDetailsBox({ details }: { details: Record<string, unknown> }) {
+  const { t } = useLanguage();
   const invoiceNumber = String(details.invoice_number || details.invoiceNumber || details.invoiceId || '');
   const refundAmount = Number(details.refund_amount || details.refundAmount || details.amount || 0);
   const invoiceTotal = Number(details.invoice_total || details.invoiceTotal || details.total || 0);
@@ -808,40 +794,40 @@ function RefundDetailsBox({ details, isAr }: { details: Record<string, unknown>;
     <div className="p-2.5 rounded-xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/60 space-y-1.5 text-xs">
       {invoiceNumber && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{isAr ? 'رقم الفاتورة المستردة:' : 'Refunded Invoice:'}</span>
+          <span className="text-muted-foreground">{t('activity.refund.invoiceNo' as any)}</span>
           <span className="font-mono font-bold text-foreground">#{invoiceNumber}</span>
         </div>
       )}
       {refundAmount > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground dark:text-muted-foreground">{isAr ? 'المبلغ المسترد للزبون:' : 'Refunded Amount:'}</span>
+          <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.refund.amount' as any)}</span>
           <span className="font-mono font-bold text-rose-700 dark:text-rose-400">${refundAmount.toFixed(2)}</span>
         </div>
       )}
       {invoiceTotal > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{isAr ? 'إجمالي الفاتورة الأصلية:' : 'Original Total:'}</span>
+          <span className="text-muted-foreground">{t('activity.refund.originalTotal' as any)}</span>
           <span className="font-mono font-semibold text-foreground dark:text-foreground">${invoiceTotal.toFixed(2)}</span>
         </div>
       )}
       {restoredUnits > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{isAr ? 'القطع المرجعة للمخزون:' : 'Restored Stock Units:'}</span>
+          <span className="text-muted-foreground">{t('activity.refund.restoredUnits' as any)}</span>
           <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
-            {isAr ? `${restoredUnits} قطعة` : `${restoredUnits} unit(s)`}
+            {t('activity.refund.unitsCount' as any).replace('{count}', String(restoredUnits))}
           </span>
         </div>
       )}
       {deletedDebt > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{isAr ? 'تخفيض الدين المسترد:' : 'Debt Deducted:'}</span>
+          <span className="text-muted-foreground">{t('activity.refund.debtDeducted' as any)}</span>
           <span className="font-mono font-bold text-blue-700 dark:text-blue-400">${deletedDebt.toFixed(2)}</span>
         </div>
       )}
       <div className="border-t border-rose-200/60 dark:border-rose-900/40 pt-1 text-[11px] text-muted-foreground flex items-center justify-between">
-        <span>{isAr ? 'حالة الحركة:' : 'Status:'}</span>
+        <span>{t('activity.refund.status' as any)}</span>
         <span className="font-semibold text-rose-700 dark:text-rose-400">
-          {isAr ? 'تم استرجاع البضاعة وتعديل قيود الصندوق' : 'Goods returned and balance adjusted'}
+          {t('activity.refund.statusDesc' as any)}
         </span>
       </div>
     </div>
@@ -851,8 +837,9 @@ function RefundDetailsBox({ details, isAr }: { details: Record<string, unknown>;
 // ==========================================
 // 💼 6. Partner Financial Details Box
 // ==========================================
-function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Record<string, unknown>; isAr: boolean; language: string }) {
-  const partnerName = String(details.partnerName || (isAr ? 'شريك' : language === 'tr' ? 'Ortak' : 'Partner'));
+function PartnerFinancialDetailsBox({ details }: { details: Record<string, unknown> }) {
+  const { t } = useLanguage();
+  const partnerName = String(details.partnerName || t('activity.partner.fallback' as any));
   const amountUsd = Number(details.amount || 0);
   const origAmount = Number(details.originalAmount || amountUsd);
   const currency = String(details.currency || 'USD');
@@ -861,18 +848,18 @@ function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Reco
   return (
     <div className="p-2.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 space-y-1.5 text-xs">
       <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">{isAr ? 'اسم الشريك المعني:' : language === 'tr' ? 'İlgili Ortak:' : 'Partner:'}</span>
+        <span className="text-muted-foreground">{t('activity.partner.name' as any)}</span>
         <span className="font-bold text-foreground">{partnerName}</span>
       </div>
 
       <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">{isAr ? 'المبلغ بالدولار (الأساس):' : language === 'tr' ? 'Dolar Tutarı (Baz):' : 'Amount (USD):'}</span>
+        <span className="text-muted-foreground">{t('activity.partner.amountUsd' as any)}</span>
         <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">${amountUsd.toFixed(2)}</span>
       </div>
 
       {currency !== 'USD' && (
         <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">{isAr ? 'المعادل بالعملة المحصلة:' : language === 'tr' ? 'Tahsil Edilen Para Birimi:' : 'Local Currency:'}</span>
+          <span className="text-muted-foreground">{t('activity.partner.localCurrency' as any)}</span>
           <span className="font-mono font-semibold text-muted-foreground ">
             {origAmount.toLocaleString()} {currency}
           </span>
@@ -881,7 +868,7 @@ function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Reco
 
       {notes && (
         <div className="pt-1 border-t border-indigo-200/50 dark:border-indigo-800/40 text-[11px]">
-          <span className="text-muted-foreground block mb-0.5">{isAr ? 'البيان / الملاحظة:' : language === 'tr' ? 'Açıklama / Not:' : 'Notes:'}</span>
+          <span className="text-muted-foreground block mb-0.5">{t('activity.partner.notes' as any)}</span>
           <p className="text-muted-foreground  italic bg-card/60 dark:bg-black/20 p-1.5 rounded-md">
             "{notes}"
           </p>
@@ -894,7 +881,7 @@ function PartnerFinancialDetailsBox({ details, isAr, language }: { details: Reco
 // ==========================================
 // 📦 7. Generic Details Box
 // ==========================================
-function GenericDetailsBox({ details, isAr }: { details: Record<string, unknown>; isAr: boolean }) {
+function GenericDetailsBox({ details }: { details: Record<string, unknown> }) {
   const HIDDEN_KEYS = new Set([
     'id', 'userId', 'user_id', 'timestamp', 'created_at', 'updated_at', 
     'device_id', 'deviceId', 'session_id', 'token'

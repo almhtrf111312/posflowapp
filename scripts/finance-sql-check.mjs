@@ -9,13 +9,15 @@
  * read-only reconciliation queries. It never touches a real database. Exit 1 on any FAIL.
  */
 import { newWorld, kit } from '../supabase/tests/golden/world.mjs';
-import { runScenarios } from '../supabase/tests/golden/scenarios.mjs';
+import { runScenarios, runExpenseShares, runPartnerCurrency } from '../supabase/tests/golden/scenarios.mjs';
 
 const t0 = Date.now();
 const w = await newWorld();
 const k = kit();
 try {
   await runScenarios(w, k);
+  await runExpenseShares(k, () => newWorld());
+  await runPartnerCurrency(k, () => newWorld());
 } catch (e) {
   console.error('SCENARIO CRASH:', String(e.message).slice(0, 300), '|', String(e.where || '').slice(0, 200));
   process.exit(1);

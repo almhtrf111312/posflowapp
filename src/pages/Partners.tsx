@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { capitalMaxInForeign, capitalOriginalRate, capitalUsdFromForeign, type CapitalHistoryLike } from '@/lib/partner-fx';
 import { getActiveShift } from '@/lib/cashbox-store';
 import {
   Search,
@@ -31,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 // ✅ استخدام الدوال السحابية بدلاً من المحلية
 import {
   loadPartnersCloud,
+  refreshPartnersFromCloud,
   addPartnerCloud,
   updatePartnerCloud,
   deletePartnerCloud,
@@ -79,6 +81,9 @@ interface CategoryShare {
   enabled: boolean;
 }
 
+// KD-08 / D-09: partner percentages are whole numbers only (the owner's share is the remainder, never a fraction)
+const wholePercent = (raw: string): number => Math.min(100, Math.max(0, Math.trunc(Number(raw) || 0)));
+
 export default function Partners() {
   const { t } = useLanguage();
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -103,7 +108,8 @@ export default function Partners() {
   const loadPartnersData = async () => {
     setIsLoading(true);
     try {
-      const cloudPartners = await loadPartnersCloud();
+      // Fresh copy from the cloud first; the local copy is only a fallback (it can be stale)
+      const cloudPartners = await refreshPartnersFromCloud().catch(() => loadPartnersCloud());
       setPartners(cloudPartners);
     } catch (error) {
       console.error('Error loading partners:', error);
@@ -372,6 +378,12 @@ export default function Partners() {
     }
   };
 
+  // D-10: the capital shown in the withdrawal currency (foreign currencies use the original deposit rate)
+  const capitalInWithdrawCurrency = (partner: NonNullable<typeof selectedPartner>): number =>
+    withdrawCurrency === 'USD'
+      ? (partner.currentCapital || 0)
+      : capitalMaxInForeign(partner.currentCapital || 0, capitalOriginalRate(partner.capitalHistory as unknown as CapitalHistoryLike[]));
+
   const handleWithdraw = async () => {
     if (isSubmitting || withdrawing.current) return;
     if (!selectedPartner || !Number.isFinite(withdrawAmount) || withdrawAmount <= 0) {
@@ -379,11 +391,23 @@ export default function Partners() {
       return;
     }
 
+    if (withdrawType === 'auto' && withdrawCurrency !== 'USD') {
+      toast.error('السحب التلقائي بالدولار فقط. اسحب الربح ورأس المال بعمليتين منفصلتين بعملة أجنبية.');
+      return;
+    }
+
     const requestKey = JSON.stringify([selectedPartner.id, withdrawType, withdrawAmount, withdrawCurrency, withdrawNotes.trim()]);
     let request = pendingWithdrawals.current.get(requestKey);
     if (!request) {
-      const rate = withdrawCurrency === 'USD' ? 1 : getCurrencyDef(withdrawCurrency).rate;
-      const amount = Math.round(toUsd(withdrawAmount, withdrawCurrency, rate) * 100) / 100;
+      // D-10: capital in a foreign currency is valued at the ORIGINAL deposit rate; profit at today's rate
+      const isForeignCapital = withdrawType === 'capital' && withdrawCurrency !== 'USD';
+      const capitalRate = isForeignCapital
+        ? capitalOriginalRate(selectedPartner.capitalHistory as unknown as CapitalHistoryLike[])
+        : 0;
+      const rate = withdrawCurrency === 'USD' ? 1 : isForeignCapital ? capitalRate : getCurrencyDef(withdrawCurrency).rate;
+      const amount = Math.round((isForeignCapital
+        ? capitalUsdFromForeign(withdrawAmount, capitalRate)
+        : toUsd(withdrawAmount, withdrawCurrency, rate)) * 100) / 100;
       if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(amount) || amount <= 0) {
         toast.error(t('partners.enterValidAmount'));
         return;
@@ -892,7 +916,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.categoryShares[0]?.percentage || ''}
-                    onChange={(e) => handleUniformPercentageChange(Number(e.target.value))}
+                    onChange={(e) => handleUniformPercentageChange(wholePercent(e.target.value))}
                   />
                 </div>
               ) : (
@@ -915,7 +939,7 @@ export default function Partners() {
                           max="100"
                           disabled={!share?.enabled}
                           value={share?.percentage || ''}
-                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', Number(e.target.value))}
+                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', wholePercent(e.target.value))}
                         />
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
@@ -947,7 +971,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.expenseSharePercentage || ''}
-                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: wholePercent(e.target.value) })}
                   />
                 </div>
               )}
@@ -1024,7 +1048,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.categoryShares[0]?.percentage || ''}
-                    onChange={(e) => handleUniformPercentageChange(Number(e.target.value))}
+                    onChange={(e) => handleUniformPercentageChange(wholePercent(e.target.value))}
                   />
                 </div>
               ) : (
@@ -1047,7 +1071,7 @@ export default function Partners() {
                           max="100"
                           disabled={!share?.enabled}
                           value={share?.percentage || ''}
-                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', Number(e.target.value))}
+                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', wholePercent(e.target.value))}
                         />
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
@@ -1079,7 +1103,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.expenseSharePercentage || ''}
-                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: wholePercent(e.target.value) })}
                   />
                 </div>
               )}
@@ -1446,7 +1470,7 @@ export default function Partners() {
                   <p className="text-xl font-bold text-info">$${formatNumber(selectedPartner.currentCapital || 0)}</p>
                   {withdrawCurrency !== 'USD' && (
                     <p className="text-xs font-semibold text-info/80 mt-0.5">
-                      ≈ {formatNumber(fromUsd(selectedPartner.currentCapital || 0, withdrawCurrency))} {withdrawCurrency}
+                      ≈ {formatNumber(capitalInWithdrawCurrency(selectedPartner))} {withdrawCurrency}
                     </p>
                   )}
                 </div>
@@ -1523,7 +1547,7 @@ export default function Partners() {
                     size="sm"
                     className="flex-1 text-xs"
                     onClick={() => {
-                      const maxCapital = fromUsd(selectedPartner.currentCapital || 0, withdrawCurrency);
+                      const maxCapital = capitalInWithdrawCurrency(selectedPartner);
                       setWithdrawAmount(roundForCurrency(maxCapital, withdrawCurrency));
                     }}
                   >
@@ -1545,6 +1569,15 @@ export default function Partners() {
                 )}
               </div>
 
+              {/* D-10: foreign-currency capital is valued at the original deposit rate; show it so the amount is clear */}
+              {withdrawType === 'capital' && withdrawCurrency !== 'USD' && (
+                <p className="text-xs text-muted-foreground">
+                  {t('partners.originalDepositRate')}: <span dir="ltr" className="font-mono font-semibold text-foreground tabular-nums">
+                    {formatNumber(capitalOriginalRate(selectedPartner.capitalHistory as unknown as CapitalHistoryLike[]))} {withdrawCurrency}
+                  </span> / 1 USD
+                </p>
+              )}
+
               {/* Notes */}
               <div>
                 <label className="text-sm font-medium mb-1.5 block">{t('common.notes')} ({t('common.optional')})</label>
@@ -1558,11 +1591,11 @@ export default function Partners() {
 
             </DialogBody>
           )}
-          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
-            <Button variant="outline" size="default" onClick={() => setShowWithdrawDialog(false)} disabled={isSubmitting}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" size="default" className="min-h-11 w-full sm:w-auto" onClick={() => setShowWithdrawDialog(false)} disabled={isSubmitting}>
               {t('common.cancel')}
             </Button>
-            <Button size="default" className="bg-warning hover:bg-warning/90 text-warning-foreground" onClick={handleWithdraw} disabled={isSubmitting}>
+            <Button size="default" className="min-h-11 w-full sm:w-auto bg-warning hover:bg-warning/90 text-warning-foreground" onClick={handleWithdraw} disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {t('partners.confirmWithdraw')}
             </Button>

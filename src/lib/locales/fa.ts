@@ -1630,6 +1630,13 @@ const fa: TranslationDict = {
   'settings.resetData': 'بازنشانی داده‌ها',
   'settings.resetDataWarning': 'هشدار! این عمل قابل بازگشت نیست',
   'settings.resetAllData': 'بازنشانی تمام داده‌ها',
+  'partners.originalDepositRate': 'نرخ واریز اصلی',
+  'settings.resetFinalButton': 'بله، همه چیز را حالا پاک کن',
+  'settings.resetCountdownHint': '{n} ثانیه صبر کنید. قبل از حذف، یک نسخه پشتیبان روی این دستگاه ذخیره می‌شود.',
+  'settings.resetReadyHint': 'ابتدا یک نسخه پشتیبان روی این دستگاه ذخیره می‌شود، سپس داده‌های ابری حذف می‌شوند.',
+  'settings.resetNeedsOnline': 'پاک‌سازی به اتصال اینترنت نیاز دارد، زیرا ابتدا ابر پاک می‌شود.',
+  'settings.resetBackupFailed': 'نسخه پشتیبان روی دستگاه ذخیره نشد. چیزی حذف نشد.',
+  'settings.resetBackupSavedNote': 'قبل از پاک‌سازی یک نسخه پشتیبان روی این دستگاه ذخیره شد.',
 
   // License Notifications
   'notifications.licenseStatus': 'وضعیت مجوز',

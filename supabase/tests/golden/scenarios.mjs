@@ -210,4 +210,129 @@ export async function runScenarios(w, k) {
     check('NEG R-05b catches an expense movement without an expense', (await q(reconQueries().find((r) => r.id === 'R-05b').sql)).length, 1);
     await w.db.exec('rollback');
   }
+
+  // ---------- Owner store reset (KD-08, migration 20261123073000) ----------
+  {
+    const OTHER = 'bbbbbbbb-0000-4000-8000-000000000002';
+    await w.db.exec(`insert into auth.users(id,email) values ('${OTHER}','other@test.local') on conflict do nothing;`);
+    const prod = await one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Keep me',12,7,25) returning id`, [OWNER]);
+    const productsBefore = (await one(`select count(*)::int c from public.products where user_id=$1`, [OWNER])).c;
+    const sh = await newShift(100);
+    const inv = await newInvoice({ number: 'INV-RESET-1', total: 30 });
+    const d = await newDebt({ total: 50, invoice: inv.invoice_number });
+    await one(`select public.record_debt_payment_atomic($1,10,$2,$3,'USD',10,1,'cash')`, [d, op('rst'), sh]);
+    await one(`select public.add_expense_atomic($1,'rent',20,'rent','2026-11-23',null,$2,'drawer','USD',20,1)`, ['22222222-2222-4222-8222-' + String(Date.now()).slice(-12), sh]);
+    await q(`insert into public.invoices(user_id, invoice_number, total, subtotal, payment_type, payment_method, status, currency, exchange_rate, invoice_type) values ($1,'INV-OTHER-1',9,9,'cash','cash','paid','USD',1,'sale')`, [OTHER]);
+
+    // A cashier linked to this owner (user_roles.owner_id) must be refused and must delete nothing.
+    const CASHIER = 'cccccccc-0000-4000-8000-000000000003';
+    await w.db.exec(`insert into auth.users(id,email) values ('${CASHIER}','cashier@test.local') on conflict do nothing;
+      update public.user_roles set role='cashier', owner_id='${OWNER}' where user_id='${CASHIER}';
+      select set_config('request.jwt.claim.sub','${CASHIER}',false);`);
+    const before = (await one(`select count(*)::int c from public.invoices where user_id=$1`, [OWNER])).c;
+    check('RESET cashier is refused', (await fails(one(`select public.reset_user_store_data() r`))) !== null, true);
+    check('RESET refusal deleted nothing', (await one(`select count(*)::int c from public.invoices where user_id=$1`, [OWNER])).c, before);
+    await w.db.exec(`select set_config('request.jwt.claim.sub','${OWNER}',false);`);
+    const res = await one(`select public.reset_user_store_data() r`);
+    check('RESET returns success', res.r.success, true);
+    check('RESET products kept (count unchanged)', (await one(`select count(*)::int c from public.products where user_id=$1`, [OWNER])).c, productsBefore);
+    check('RESET product price kept', Number((await one(`select sale_price::float8 p from public.products where id=$1`, [prod.id])).p), 12);
+    check('RESET product stock zeroed', Number((await one(`select quantity::float8 q from public.products where id=$1`, [prod.id])).q), 0);
+    for (const t of ['invoices', 'debts', 'expenses', 'partners', 'cash_shifts']) {
+      check(`RESET owner ${t} deleted`, (await one(`select count(*)::int c from public.${t} where user_id=$1`, [OWNER])).c, 0);
+    }
+    check('RESET other store invoice untouched', (await one(`select count(*)::int c from public.invoices where user_id=$1`, [OTHER])).c, 1);
+    check('RESET activity logged', (await one(`select count(*)::int c from public.activity_log where user_id=$1 and action_type='store_reset'`, [OWNER])).c >= 1, true);
+  }
+}
+
+// ---------- Partner expense rule (D-09, migration 20261123074000) — fresh stores, exact numbers from the owner ----------
+export async function runExpenseShares(k, newWorldFn) {
+  const { check, truthy } = k;
+  const partner = (w, name, expense, all, cs = '[]') => w.one(
+    `insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares)
+     values ($1,$2,0,$3,$4,0,0,0,$5::jsonb) returning id`, [OWNER, name, expense, all, cs]);
+  const bal = async (w, id) => Number((await w.one(`select current_balance::float8 b from public.partners where id=$1`, [id])).b);
+  const expense = (w, amt) => w.one(`select public.add_expense_atomic($1,'ops',$2,'expense','2026-11-23',null,null,'bank','USD',$2,1) r`, [w.op('exp'), amt]);
+
+  // A) Owner's example: expense 100, category partner 5%, general partner 50%. Owner keeps the rest (47.5).
+  {
+    const w = await newWorldFn();
+    const cat = await partner(w, 'شريك صنف', 5, false, '[{"categoryName":"X","enabled":true,"percentage":50}]');
+    const gen = await partner(w, 'شريك عام', 50, true);
+    const r = (await expense(w, 100)).r;
+    check('EXPSHARE-A category pays 5 off the top', await bal(w, cat.id), -5);
+    check('EXPSHARE-A general pays 50% of the remaining 95 = 47.5', await bal(w, gen.id), -47.5);
+    const paid = r.distributions.reduce((s, d) => s + Number(d.amount), 0);
+    check('EXPSHARE-A owner keeps the rest (100 - 52.5 = 47.5)', Math.round((100 - paid) * 100) / 100, 47.5);
+    truthy('EXPSHARE-A category share is taken from the total, not the remainder', r.distributions.find(d => d.pool === 'category').amount === 5);
+    await w.one(`select public.delete_expense_atomic($1,'undo',null) r`, [r.id]);
+    check('EXPSHARE-A reversal restores category balance', await bal(w, cat.id), 0);
+    check('EXPSHARE-A reversal restores general balance', await bal(w, gen.id), 0);
+  }
+
+  // B) Four partners: two category partners (5% expense each), two general partners (33% each), owner 34%.
+  //     Expense 100: category pays 5 + 5 = 10 off the top; remaining 90 -> general 29.70 each; owner 30.60.
+  {
+    const w = await newWorldFn();
+    const c1 = await partner(w, 'صنف 1', 5, false, '[{"categoryName":"A","enabled":true,"percentage":50}]');
+    const c2 = await partner(w, 'صنف 2', 5, false, '[{"categoryName":"B","enabled":true,"percentage":50}]');
+    const g1 = await partner(w, 'عام 1', 33, true);
+    const g2 = await partner(w, 'عام 2', 33, true);
+    const r = (await expense(w, 100)).r;
+    check('EXPSHARE-B category 1 pays 5', await bal(w, c1.id), -5);
+    check('EXPSHARE-B category 2 pays 5', await bal(w, c2.id), -5);
+    check('EXPSHARE-B general 1 pays 33% of 90 = 29.70', await bal(w, g1.id), -29.7);
+    check('EXPSHARE-B general 2 pays 33% of 90 = 29.70', await bal(w, g2.id), -29.7);
+    const paid = r.distributions.reduce((s, d) => s + Number(d.amount), 0);
+    check('EXPSHARE-B owner keeps 34% of 90 = 30.60 (total 100)', Math.round((100 - paid) * 100) / 100, 30.6);
+
+    // Validation: whole numbers only, pools capped at 100.
+    truthy('EXPSHARE-V fractional expense share is refused', (await w.fails(partner(w, 'bad1', 33.3, true))) !== null);
+    truthy('EXPSHARE-V general pool above 100 is refused (33+33+40)', (await w.fails(partner(w, 'bad2', 40, true))) !== null);
+    truthy('EXPSHARE-V category pool above 100 is refused (5+5+96)', (await w.fails(partner(w, 'bad3', 96, false, '[{"categoryName":"C","enabled":true,"percentage":50}]'))) !== null);
+    truthy('EXPSHARE-V fractional profit share is refused', (await w.fails(w.one(`insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares) values ($1,'bad4',0.5,0,true,0,0,0,'[]'::jsonb)`, [OWNER]))) !== null);
+  }
+}
+
+// ---------- Partner withdrawals in any currency (D-10, migration 20261123075000) ----------
+export async function runPartnerCurrency(k, newWorldFn) {
+  const { check, truthy } = k;
+  const w = await newWorldFn();
+  const { one, op, fails } = w;
+  const P = await one(`insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares)
+    values ($1,'شريك عملات',0,0,true,0,0,0,'[]') returning id`, [OWNER]);
+  // Deposit A: 1000 USD at 15000 (15,000,000 SYP). Deposit B: 500 USD at 12000 (6,000,000 SYP).
+  await one(`select public.partner_deposit_atomic($1,1000,'capital',null,null,'SYP',15000000,15000)`, [P.id]);
+  await one(`select public.partner_deposit_atomic($1,500,'capital',null,null,'SYP',6000000,12000)`, [P.id]);
+  await w.db.exec(`update public.partners set current_balance = 100 where id='${P.id}'`); // profit earned: 100 USD
+  const row = () => one(`select current_balance::float8 b, current_capital::float8 c from public.partners where id=$1`, [P.id]);
+  check('D10 capital after two deposits = 1500 USD', (await row()).c, 1500);
+
+  // W1: capital 7,000,000 SYP. Weighted original rate = 21,000,000 / 1500 = 14000, so 500 USD.
+  // The app sends a WRONG USD amount (600). The server must ignore it and value 7,000,000 SYP at 14000 = 500 USD.
+  const w1 = (await one(`select public.partner_withdrawal_atomic($1,600,'capital','n',null,'SYP',7000000,14000,$2) r`, [P.id, op('wd1')])).r;
+  check('D10 capital SYP withdrawal deducts 500 USD at the weighted original rate', w1.capital_deducted, 500);
+  check('D10 capital left = 1000', (await row()).c, 1000);
+  const cap = await one(`select (capital_history->-1->>'exchangeRate')::float8 r from public.partners where id=$1`, [P.id]);
+  check('D10 capital withdrawal records the original rate', cap.r, 14000);
+
+  // W2: profit 1,200,000 SYP at TODAY's rate 12000 = 100 USD, all of the profit.
+  const w2 = (await one(`select public.partner_withdrawal_atomic($1,100,'profit','n',null,'SYP',1200000,12000,$2) r`, [P.id, 'wd-profit-golden-0001'])).r;
+  check('D10 profit SYP withdrawal deducts 100 USD at today rate', w2.profit_deducted, 100);
+  check('D10 profit balance now 0', (await row()).b, 0);
+
+  // Refusals
+  truthy('D10 profit above balance is refused', (await fails(one(`select public.partner_withdrawal_atomic($1,1,'profit','n',null,'USD',1,1,$2)`, [P.id, op('wd3')]))) !== null);
+  truthy('D10 capital above capital is refused (15,000,000 SYP = 1071.43 USD > 1000)', (await fails(one(`select public.partner_withdrawal_atomic($1,1071.43,'capital','n',null,'SYP',15000000,15000,$2)`, [P.id, op('wd4')]))) !== null);
+  truthy('D10 automatic split in a foreign currency is refused', (await fails(one(`select public.partner_withdrawal_atomic($1,10,'auto','n',null,'SYP',120000,12000,$2)`, [P.id, op('wd5')]))) !== null);
+
+  // USD capital withdrawal still works (no FX).
+  await one(`select public.partner_withdrawal_atomic($1,100,'capital','n',null,'USD',100,1,$2)`, [P.id, op('wd6')]);
+  check('D10 USD capital withdrawal 100 leaves 900', (await row()).c, 900);
+
+  // Replay of the profit withdrawal is idempotent.
+  const again = (await one(`select public.partner_withdrawal_atomic($1,100,'profit','n',null,'SYP',1200000,12000,'wd-profit-golden-0001') r`, [P.id])).r;
+  check('D10 replay is already processed', again.already_processed, true);
+  check('D10 replay did not withdraw twice', (await row()).c, 900);
 }

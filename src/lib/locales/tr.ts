@@ -596,6 +596,13 @@ const tr: TranslationDict = {
   'settings.resetData': 'Verileri Sıfırla',
   'settings.resetDataWarning': 'Uyarı! Bu işlem geri alınamaz',
   'settings.resetAllData': 'Tüm Verileri Sıfırla',
+  'partners.originalDepositRate': 'Orijinal yatırım kuru',
+  'settings.resetFinalButton': 'Evet, şimdi her şeyi sıfırla',
+  'settings.resetCountdownHint': '{n} saniye bekleyin. Silmeden önce bu cihaza bir yedek kaydedilecek.',
+  'settings.resetReadyHint': 'Önce bu cihaza bir yedek kaydedilir, sonra bulut verileri silinir.',
+  'settings.resetNeedsOnline': 'Sıfırlama internet bağlantısı gerektirir, çünkü önce bulut temizlenir.',
+  'settings.resetBackupFailed': 'Yedek bu cihaza kaydedilemedi. Hiçbir şey silinmedi.',
+  'settings.resetBackupSavedNote': 'Sıfırlamadan önce bu cihaza bir yedek kaydedildi.',
 
   // License Notifications
   'notifications.licenseStatus': 'Lisans Durumu',

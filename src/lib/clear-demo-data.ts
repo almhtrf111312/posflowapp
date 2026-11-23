@@ -3,7 +3,6 @@ import { isLocalDataMode } from '@/hooks/use-network-status';
 // This module handles complete data reset locally and on the cloud via RPC reset_user_store_data
 
 import { supabase } from '@/integrations/supabase/client';
-import { deleteAllUserData } from './supabase-store';
 import { clearProductsIDB } from './indexeddb-cache';
 
 export const STORAGE_KEYS_TO_CLEAR = [
@@ -94,6 +93,8 @@ export const clearLocalStorageData = (): void => {
       if (key.startsWith('sb-')) continue;
       // Do not touch preserved settings
       if (PRESERVED_KEYS.has(key)) continue;
+      // KD-08: the offline queue holds operations not yet sent to the cloud; wiping it loses those sales
+      if (key.startsWith('posflow_sync_pending_')) continue;
 
       if (key.startsWith('posflow_')) {
         keysToRemove.push(key);
@@ -164,41 +165,30 @@ export const clearAllUserData = () => {
  * 2. مسح جميع مفاتيح localStorage ومخازن IndexedDB التابعة للبيانات فوراً بعد نجاح الاستدعاء
  */
 export const clearAllDataCompletely = async (): Promise<boolean> => {
-  const PENDING_CLOUD_CLEAR_KEY = 'posflow_pending_cloud_clear';
-  const isOnline = typeof navigator !== 'undefined' ? !isLocalDataMode() : true;
+  // KD-08: the cloud purge must succeed FIRST. The local copy is cleared only after the server confirmed success.
+  // Offline reset is refused: otherwise the device would be emptied while the cloud still holds the data.
+  if (isLocalDataMode()) return false;
 
   try {
-    if (isOnline) {
-      // 1. استدعاء دالة السحابة الموحدة reset_user_store_data
-      const { error: rpcError } = await (supabase.rpc as any)('reset_user_store_data');
-      if (rpcError) {
-        console.warn('[ClearData] reset_user_store_data RPC error, falling back to deleteAllUserData:', rpcError);
-        const fallbackSuccess = await deleteAllUserData();
-        if (!fallbackSuccess) {
-          throw new Error(rpcError.message || 'Failed to execute reset_user_store_data');
-        }
-      }
-      console.log('[ClearData] Cloud store data reset successfully');
-    } else {
-      localStorage.setItem(PENDING_CLOUD_CLEAR_KEY, 'true');
-      console.log('[ClearData] Offline - cloud clear scheduled for later');
+    const { data, error } = await (supabase.rpc as any)('reset_user_store_data');
+    if (error) throw new Error(error.message || 'reset_user_store_data failed');
+    if (!data || data.success !== true) {
+      throw new Error((data && data.error) || 'reset_user_store_data returned no success');
     }
+    console.log('[ClearData] Cloud store data reset successfully', data.deleted);
 
-    // 2. مسح جميع مفاتيح localStorage ومخازن IndexedDB التابعة للبيانات فوراً بعد نجاح الاستدعاء
     clearLocalStorageData();
     await clearIndexedDBData();
 
-    // 3. مسح كاش الذاكرة
     try {
       const { invalidateAllCaches } = await import('./cloud');
       await invalidateAllCaches();
     } catch {
       // ignore
     }
-
     return true;
   } catch (error) {
-    console.error('[ClearData] Failed to clear data:', error);
+    console.error('[ClearData] Failed to clear data (nothing local was removed):', error);
     return false;
   }
 };
@@ -209,13 +199,12 @@ export const clearAllDataCompletely = async (): Promise<boolean> => {
 export const executePendingCloudClear = async (): Promise<void> => {
   const PENDING_CLOUD_CLEAR_KEY = 'posflow_pending_cloud_clear';
   const isPending = localStorage.getItem(PENDING_CLOUD_CLEAR_KEY);
-  
   if (!isPending) return;
-  
   try {
-    const { error } = await (supabase.rpc as any)('reset_user_store_data');
-    if (error) {
-      await deleteAllUserData();
+    const { data, error } = await (supabase.rpc as any)('reset_user_store_data');
+    if (error || !data || data.success !== true) {
+      console.warn('[ClearData] pending cloud clear not confirmed, keeping it for the next attempt:', error || data);
+      return;
     }
     localStorage.removeItem(PENDING_CLOUD_CLEAR_KEY);
     console.log('[ClearData] Pending cloud clear executed successfully');

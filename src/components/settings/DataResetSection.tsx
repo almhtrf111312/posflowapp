@@ -1,5 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,9 @@ import { toast } from '@/lib/sonner-bridge';
 import { t } from '@/lib/i18n';
 import { useLanguage } from '@/hooks/use-language';
 
+// KD-08: the owner waits this long after entering the password before the final button is enabled
+const RESET_COUNTDOWN_SECONDS = 10;
+
 export default function DataResetSection() {
   const { language } = useLanguage();
   const { user } = useAuth();
@@ -29,22 +32,30 @@ export default function DataResetSection() {
   const [password, setPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState<'password' | 'countdown'>('password');
+  const [countdown, setCountdown] = useState(RESET_COUNTDOWN_SECONDS);
+
+  useEffect(() => {
+    if (step !== 'countdown' || countdown <= 0) return;
+    const id = window.setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [step, countdown]);
 
   const dataToBeDeleted = [
-    t('common.products', language),
     t('common.invoices', language),
     t('common.customers', language),
     t('common.debts', language),
     t('common.expenses', language),
     t('common.partners', language),
     t('common.services', language),
-    t('common.categories', language),
   ];
 
   const handleResetClick = () => {
     setShowConfirmDialog(true);
     setPassword('');
     setError('');
+    setStep('password');
+    setCountdown(RESET_COUNTDOWN_SECONDS);
   };
 
   const handleConfirmReset = async () => {
@@ -69,26 +80,57 @@ export default function DataResetSection() {
         return;
       }
 
-      // Password verified, proceed with data reset
-      // This now clears local immediately and schedules cloud clear if offline
-      const success = await clearAllDataCompletely();
+      // Password verified: start the countdown. The wipe runs only from the final button, after the backup.
+      setStep('countdown');
+      setCountdown(RESET_COUNTDOWN_SECONDS);
+    } catch (err) {
+      console.error('Reset error:', err);
+      setError(t('settings.resetDataFailed', language));
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
-      if (success) {
-        setShowConfirmDialog(false);
-        toast.success(t('settings.resetDataSuccess', language) || 'تمت إعادة ضبط وحذف كافة البيانات بنجاح', {
-          icon: <CheckCircle className="h-5 w-5 text-green-500" />,
-          description: !isLocalDataMode() 
-            ? 'تم حذف جميع البيانات من السحابة والذاكرة المحلية بنجاح' 
-            : 'تم مسح البيانات محلياً وسيتم مسح السحابة عند عودة الإنترنت',
-        });
-        
-        // إعادة التوجيه إلى الصفحة الرئيسية بدلاً من مجرد reload
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1200);
-      } else {
-        setError(t('settings.resetDataFailed', language) || 'فشل في إعادة ضبط البيانات');
+  const handleExecuteReset = async () => {
+    if (isLocalDataMode()) {
+      setError(t('settings.resetNeedsOnline', language));
+      return;
+    }
+
+    setIsVerifying(true);
+    setError('');
+
+    try {
+      // 1. Save a backup on this device right before the wipe. If it cannot be saved, nothing is deleted.
+      const { buildFullBackup, backupFileName } = await import('@/lib/full-backup');
+      const { downloadFile } = await import('@/lib/file-download');
+      const backup = await buildFullBackup();
+      const saved = await downloadFile({
+        filename: backupFileName(),
+        content: JSON.stringify(backup),
+        mimeType: 'application/json',
+      });
+      if (!saved.success) {
+        setError(t('settings.resetBackupFailed', language));
+        return;
       }
+
+      // 2. Cloud first (server confirms), then this device
+      const success = await clearAllDataCompletely();
+      if (!success) {
+        setError(t('settings.resetDataFailed', language));
+        return;
+      }
+
+      setShowConfirmDialog(false);
+      toast.success(t('settings.resetDataSuccess', language) || 'تمت إعادة ضبط وحذف كافة البيانات بنجاح', {
+        icon: <CheckCircle className="h-5 w-5 text-green-500" />,
+        description: t('settings.resetBackupSavedNote', language),
+      });
+
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1200);
     } catch (err) {
       console.error('Reset error:', err);
       setError(t('settings.resetDataFailed', language));
@@ -152,28 +194,37 @@ export default function DataResetSection() {
           </AlertDialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">
-                {t('settings.enterPasswordToConfirm', language)}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                disabled={isVerifying}
-              />
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
-            </div>
+            {step === 'password' ? (
+              <div className="space-y-2">
+                <Label htmlFor="password">
+                  {t('settings.enterPasswordToConfirm', language)}
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  disabled={isVerifying}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {countdown > 0
+                  ? t('settings.resetCountdownHint', language).replace('{n}', String(countdown))
+                  : t('settings.resetReadyHint', language)}
+              </p>
+            )}
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
           </div>
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isVerifying}>
               {t('common.cancel', language)}
             </AlertDialogCancel>
+            {step === 'password' ? (
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -194,6 +245,28 @@ export default function DataResetSection() {
                 </>
               )}
             </AlertDialogAction>
+            ) : (
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleExecuteReset();
+              }}
+              disabled={countdown > 0 || isVerifying}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('settings.verifying', language)}
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  {t('settings.resetFinalButton', language)}
+                </>
+              )}
+            </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

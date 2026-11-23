@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { capitalOriginalRate, capitalUsdFromForeign, type CapitalHistoryLike } from '../partner-fx';
 // Cloud Partners Store - Supabase-backed partners management
 import { 
   fetchFromSupabase, 
@@ -254,6 +255,23 @@ export const loadPartnersCloud = async (): Promise<Partner[]> => {
   cacheTimestamp = Date.now();
   savePartnersLocally(partnersCache);
 
+  return partnersCache;
+};
+
+/**
+ * Fresh copy of the partners straight from the cloud (used when the Partners screen opens).
+ * Throws on failure so the caller keeps showing its current data instead of an empty list.
+ */
+export const refreshPartnersFromCloud = async (): Promise<Partner[]> => {
+  if (await isCashierUser()) return [];
+  if (isLocalDataMode()) return loadPartnersLocally() || [];
+  const cloudPartners = await fetchFromSupabase<CloudPartner>('partners', {
+    column: 'created_at',
+    ascending: true,
+  });
+  partnersCache = cloudPartners.map(toPartner);
+  cacheTimestamp = Date.now();
+  savePartnersLocally(partnersCache);
   return partnersCache;
 };
 
@@ -679,9 +697,18 @@ const executePartnerWithdrawal = async (
   operationId?: string,
   originalShift?: { id: string | null },
 ): Promise<PartnerAutoWithdrawalResult> => {
-  const roundedAmount = Math.round(amount * 100) / 100;
+  // D-10: a capital withdrawal in a foreign currency is valued at the ORIGINAL deposit rate (the server does the same)
+  let effectiveAmount = amount;
+  let effectiveRate = exchangeRate;
+  if (withdrawalType === 'capital' && currency !== 'USD' && originalAmount !== undefined) {
+    const capitalRate = capitalOriginalRate(partner.capitalHistory as unknown as CapitalHistoryLike[]);
+    if (capitalRate <= 0) throw new Error('لا يمكن حساب سعر الإيداع الأصلي لرأس مال الشريك');
+    effectiveRate = capitalRate;
+    effectiveAmount = capitalUsdFromForeign(originalAmount, capitalRate);
+  }
+  const roundedAmount = Math.round(effectiveAmount * 100) / 100;
   const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
-  const rate = exchangeRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
+  const rate = effectiveRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
   const label =
     withdrawalType === 'profit'
       ? 'سحب الأرباح'

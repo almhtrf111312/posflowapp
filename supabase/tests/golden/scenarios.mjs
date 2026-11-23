@@ -210,4 +210,38 @@ export async function runScenarios(w, k) {
     check('NEG R-05b catches an expense movement without an expense', (await q(reconQueries().find((r) => r.id === 'R-05b').sql)).length, 1);
     await w.db.exec('rollback');
   }
+
+  // ---------- Owner store reset (KD-08, migration 20261123073000) ----------
+  {
+    const OTHER = 'bbbbbbbb-0000-4000-8000-000000000002';
+    await w.db.exec(`insert into auth.users(id,email) values ('${OTHER}','other@test.local') on conflict do nothing;`);
+    const prod = await one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Keep me',12,7,25) returning id`, [OWNER]);
+    const productsBefore = (await one(`select count(*)::int c from public.products where user_id=$1`, [OWNER])).c;
+    const sh = await newShift(100);
+    const inv = await newInvoice({ number: 'INV-RESET-1', total: 30 });
+    const d = await newDebt({ total: 50, invoice: inv.invoice_number });
+    await one(`select public.record_debt_payment_atomic($1,10,$2,$3,'USD',10,1,'cash')`, [d, op('rst'), sh]);
+    await one(`select public.add_expense_atomic($1,'rent',20,'rent','2026-11-23',null,$2,'drawer','USD',20,1)`, ['22222222-2222-4222-8222-' + String(Date.now()).slice(-12), sh]);
+    await q(`insert into public.invoices(user_id, invoice_number, total, subtotal, payment_type, payment_method, status, currency, exchange_rate, invoice_type) values ($1,'INV-OTHER-1',9,9,'cash','cash','paid','USD',1,'sale')`, [OTHER]);
+
+    // A cashier linked to this owner (user_roles.owner_id) must be refused and must delete nothing.
+    const CASHIER = 'cccccccc-0000-4000-8000-000000000003';
+    await w.db.exec(`insert into auth.users(id,email) values ('${CASHIER}','cashier@test.local') on conflict do nothing;
+      update public.user_roles set role='cashier', owner_id='${OWNER}' where user_id='${CASHIER}';
+      select set_config('request.jwt.claim.sub','${CASHIER}',false);`);
+    const before = (await one(`select count(*)::int c from public.invoices where user_id=$1`, [OWNER])).c;
+    check('RESET cashier is refused', (await fails(one(`select public.reset_user_store_data() r`))) !== null, true);
+    check('RESET refusal deleted nothing', (await one(`select count(*)::int c from public.invoices where user_id=$1`, [OWNER])).c, before);
+    await w.db.exec(`select set_config('request.jwt.claim.sub','${OWNER}',false);`);
+    const res = await one(`select public.reset_user_store_data() r`);
+    check('RESET returns success', res.r.success, true);
+    check('RESET products kept (count unchanged)', (await one(`select count(*)::int c from public.products where user_id=$1`, [OWNER])).c, productsBefore);
+    check('RESET product price kept', Number((await one(`select sale_price::float8 p from public.products where id=$1`, [prod.id])).p), 12);
+    check('RESET product stock zeroed', Number((await one(`select quantity::float8 q from public.products where id=$1`, [prod.id])).q), 0);
+    for (const t of ['invoices', 'debts', 'expenses', 'partners', 'cash_shifts']) {
+      check(`RESET owner ${t} deleted`, (await one(`select count(*)::int c from public.${t} where user_id=$1`, [OWNER])).c, 0);
+    }
+    check('RESET other store invoice untouched', (await one(`select count(*)::int c from public.invoices where user_id=$1`, [OTHER])).c, 1);
+    check('RESET activity logged', (await one(`select count(*)::int c from public.activity_log where user_id=$1 and action_type='store_reset'`, [OWNER])).c >= 1, true);
+  }
 }

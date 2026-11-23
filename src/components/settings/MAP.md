@@ -14,7 +14,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `BackupSettingsSection.tsx` | Backup settings: auto, cloud and export. | BackupSettingsSection, default · 1 types | LocalBackupSection, hooks/use-language, ui/* | — |
 | `ContactLinksSection.tsx` | Contact links settings. | ContactLinksSection, CHANNELS · 1 types | hooks/use-language | tbl: app_settings |
 | `CustomFieldsManager.tsx` | Custom product fields manager. | CustomFieldsManager | hooks/use-language, hooks/use-network-status, lib/custom-fields-config, lib/sonner-bridge, ui/* | — |
-| `DataResetSection.tsx` | Guarded manual data reset section. | default(DataResetSection) | hooks/use-auth, hooks/use-language, hooks/use-network-status, lib/clear-demo-data, lib/i18n, lib/sonner-bridge, ui/* | — |
+| `DataResetSection.tsx` | Guarded manual data reset section. | default(DataResetSection) | hooks/use-auth, hooks/use-language, hooks/use-network-status, lib/clear-demo-data, lib/i18n, lib/sonner-bridge, lib/file-download*, lib/full-backup* (+1) | — |
 | `FinanceSettingsSection.tsx` | Finance settings: currencies, rates, tax. | FinanceSettingsSection, default · 1 types | ShiftToleranceField, SurplusProfitField, hooks/use-language, lib/currencies, lib/sonner-bridge, ui/* | — |
 | `FontSelector.tsx` | App font selector. | FontSelector, default | hooks/use-app-font, hooks/use-language, lib/app-font-config, lib/sonner-bridge, lib/store-settings-sync | — |
 | `IntegrityCheckSection.tsx` | Data integrity check section. | IntegrityCheckSection | ui/* | rpc: posflow_integrity_check · tbl: partner_ledger_reconciliation |

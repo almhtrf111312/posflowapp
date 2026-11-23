@@ -279,7 +279,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
   const [phoneVerificationStatus, setPhoneVerificationStatus] = useState<'available' | 'requires_telegram_verification'>('available');
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const { user: currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab');
@@ -366,33 +366,33 @@ export default function Settings() {
 
       if (status === 'granted') {
         localStorage.setItem('posflow_notifications_enabled', 'true');
-        toast({ title: '✓ تم تفعيل الإشعارات بنجاح', description: 'ستصلك تنبيهات المبيعات والديون ونفاذ المخزون' });
+        toast({ title: t('settings.notifPerm.enabledTitle' as any), description: t('settings.notifPerm.enabledDesc' as any) });
         // إرسال إشعار تجريبي فوري حقيقي في شريط الإشعارات
-        await sendLocalNotification('PosFlow', '🎉 تنبيه تجريبي: نظام الإشعارات يعمل بنجاح!');
+        await sendLocalNotification('PosFlow', t('settings.notifPerm.testBody' as any));
       } else {
         toast({
-          title: 'تنبيه الأذونات',
-          description: 'يرجى السماح بالإشعارات للتطبيق من إعدادات الهاتف (التطبيقات > PosFlow > الإشعارات)',
+          title: t('settings.notifPerm.permissionAlertTitle' as any),
+          description: t('settings.notifPerm.permissionAlertDesc' as any),
           variant: 'destructive'
         });
       }
     } catch (err) {
       console.error('Error requesting notification permission:', err);
-      toast({ title: 'تنبيه', description: 'يرجى مراجعة إعدادات الإشعارات في جهازك', variant: 'destructive' });
+      toast({ title: t('settings.notifPerm.alertTitle' as any), description: t('settings.notifPerm.checkDeviceSettings' as any), variant: 'destructive' });
     }
   };
 
   const handleSendTestNotification = async () => {
-    const success = await sendLocalNotification('PosFlow', '🎉 تنبيه تجريبي: نظام الإشعارات يعمل بنجاح!');
+    const success = await sendLocalNotification('PosFlow', t('settings.notifPerm.testBody' as any));
     if (success) {
       toast({
-        title: '🎉 تم إرسال الإشعار التجريبي',
-        description: 'تحقق من شريط إشعارات الهاتف في الأعلى',
+        title: t('settings.notifPerm.testSentTitle' as any),
+        description: t('settings.notifPerm.testSentDesc' as any),
       });
     } else {
       toast({
-        title: '⚠️ لم يتم إرسال الإشعار',
-        description: 'تأكد من تفعيل إذن الإشعارات للتطبيق في إعدادات الهاتف',
+        title: t('settings.notifPerm.testFailedTitle' as any),
+        description: t('settings.notifPerm.testFailedDesc' as any),
         variant: 'destructive',
       });
     }
@@ -580,15 +580,17 @@ export default function Settings() {
     () => initialUnified?.currencyDisplayMode || {}
   );
   const renderCurrencyDisplayOptions = (code: string) => {
-    const labels = isRTL
-      ? { symbol: 'الرمز فقط', name: 'الاسم فقط', both: 'كلاهما' }
-      : { symbol: 'Symbol', name: 'Name', both: 'Both' };
+    const labels = {
+      symbol: t('settings.currencyDisplay.symbolOnly' as any),
+      name: t('settings.currencyDisplay.nameOnly' as any),
+      both: t('settings.currencyDisplay.both' as any),
+    };
     const selectedMode = currencyDisplayMode[code] || 'symbol';
 
     return (
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30 mt-2">
         <span className="text-[10px] text-muted-foreground font-medium">
-          {isRTL ? 'طريقة العرض:' : 'Display:'}
+          {t('settings.currencyDisplay.label' as any)}
         </span>
         <div className="flex items-center gap-1 rounded-lg border border-border/40 bg-muted/60 p-0.5">
           {(['symbol', 'name', 'both'] as const).map((mode) => (
@@ -659,7 +661,7 @@ export default function Settings() {
     saveStoredPrinterConfig(next);
     toast({
       title: t('common.saved'),
-      description: isRTL ? 'تم حفظ إعدادات الطابعة بنجاح' : 'Printer settings updated',
+      description: t('settings.printerSaved' as any),
     });
   };
 
@@ -672,7 +674,7 @@ export default function Settings() {
       setIsPrinterConnected(true);
       toast({
         title: t('common.success'),
-        description: isRTL ? 'تمت طباعة صفحة الاختبار بنجاح' : 'Test page printed successfully',
+        description: t('settings.printerTestSuccess' as any),
       });
     } catch (e) {
       setIsPrinterConnected(false);
@@ -696,7 +698,7 @@ export default function Settings() {
     } catch {}
     toast({
       title: t('common.saved'),
-      description: isRTL ? 'تم فصل الطابعة' : 'Printer disconnected',
+      description: t('settings.printerDisconnected' as any),
     });
   };
 
@@ -1003,147 +1005,140 @@ export default function Settings() {
   const settingsTabs: SettingsTabItem[] = useMemo(() => [
     {
       id: 'profile',
-      label: t('settings.profile') || 'الملف الشخصي',
-      description: isRTL ? 'إدارة الحساب وكلمة المرور' : 'Account & password',
+      label: t('settings.profile'),
+      description: t('settings.tab.profileDesc' as any),
       icon: User,
       category: 'core',
       color: 'rose',
       badge: isBoss ? 'Boss 👑' : isOwnerAdmin ? 'Owner' : 'Cashier',
-      keywords: ['ملف', 'حساب', 'مستخدم', 'كلمة مرور', 'profile', 'user', 'account', 'password'],
+      keywords: t('settings.tabKeywords.profile' as any).split(','),
     },
     {
       id: 'store',
-      label: t('settings.store') || 'إعدادات المتجر والعملات',
-      description: isRTL ? 'الهوية، الضرائب وأسعار الصرف' : 'Identity, taxes & exchange rates',
+      label: t('settings.store'),
+      description: t('settings.tab.storeDesc' as any),
       icon: Store,
       category: 'core',
       color: 'amber',
       badge: `${primaryCurrency || 'USD'}`,
-      keywords: ['متجر', 'محل', 'شعار', 'عملات', 'صرف', 'ضرائب', 'store', 'currencies', 'taxes', 'rates'],
+      keywords: t('settings.tabKeywords.store' as any).split(','),
     },
     {
       id: 'backup',
-      label: t('settings.backupSync') || 'النسخ والمزامنة',
-      description: isRTL ? 'نسخ احتياطي محلي وسحابي' : 'Cloud sync & local backups',
+      label: t('settings.backupSync'),
+      description: t('settings.tab.backupDesc' as any),
       icon: Database,
       adminOnly: true,
       category: 'core',
       color: 'blue',
-      badge: syncSettings?.lastSync ? (syncSettings.lastSync.includes(' ') ? syncSettings.lastSync.split(' ')[1] : syncSettings.lastSync) : (isRTL ? 'سحابي' : 'Cloud'),
-      keywords: ['نسخ', 'احتياطي', 'مزامنة', 'سحابي', 'تصدير', 'استيراد', 'backup', 'sync', 'cloud', 'import', 'export'],
+      badge: syncSettings?.lastSync ? (syncSettings.lastSync.includes(' ') ? syncSettings.lastSync.split(' ')[1] : syncSettings.lastSync) : t('settings.tab.cloudBadge' as any),
+      keywords: t('settings.tabKeywords.backup' as any).split(','),
     },
     {
       id: 'notifications',
-      label: t('settings.notifications') || 'التنبيهات والإشعارات',
-      description: isRTL ? 'صوت، مبيعات ونفاد المخزون' : 'Sounds, sales & low stock alerts',
+      label: t('settings.notifications'),
+      description: t('settings.tab.notificationsDesc' as any),
       icon: Bell,
       category: 'core',
       color: 'purple',
-      badge: notificationSettings.masterEnabled !== false ? (isRTL ? 'مفعل 🔔' : 'Active 🔔') : (isRTL ? 'معطل' : 'Off'),
-      keywords: ['إشعار', 'إشعارات', 'تنبيه', 'صوت', 'notifications', 'alerts', 'sound'],
+      badge: notificationSettings.masterEnabled !== false ? t('settings.tab.notifActiveBadge' as any) : t('settings.tab.notifOffBadge' as any),
+      keywords: t('settings.tabKeywords.notifications' as any).split(','),
     },
     {
       id: 'productFields',
-      label: t('settings.productFields') || 'حقول المنتجات',
-      description: isRTL ? 'تخصيص بطاقة الأصناف ومواصفاتها' : 'Custom fields for product cards',
+      label: t('settings.productFields'),
+      description: t('settings.tab.productFieldsDesc' as any),
       icon: Package,
       category: 'core',
       color: 'amber',
-      badge: isRTL ? 'تخصيص' : 'Custom',
-      keywords: ['حقول', 'منتجات', 'أصناف', 'بطاقة', 'fields', 'products'],
+      badge: t('settings.tab.customBadge' as any),
+      keywords: t('settings.tabKeywords.productFields' as any).split(','),
     },
     {
       id: 'printing',
-      label: t('settings.printing') || 'الطباعة والمشاركة',
-      description: isRTL ? 'تخصيص الفواتير والبلوتوث' : 'Receipt design & thermal printers',
+      label: t('settings.printing'),
+      description: t('settings.tab.printingDesc' as any),
       icon: Printer,
       category: 'operations',
       color: 'teal',
       badge: printSettings?.paperSize || '80mm',
-      keywords: ['طباعة', 'فاتورة', 'طابعة', 'بلوتوث', 'حرارية', 'printer', 'receipt', 'print'],
+      keywords: t('settings.tabKeywords.printing' as any).split(','),
     },
     {
       id: 'users',
-      label: t('settings.users') || 'المستخدمين والصلاحيات',
-      description: isRTL ? 'إدارة الكاشيرات وضبط الوصول' : 'Staff, cashiers & permissions',
+      label: t('settings.users'),
+      description: t('settings.tab.usersDesc' as any),
       icon: Users,
       adminOnly: true,
       category: 'operations',
       color: 'indigo',
-      badge: isRTL ? 'إدارة' : 'Manage',
-      keywords: ['مستخدمين', 'كاشير', 'صلاحيات', 'وصول', 'users', 'roles', 'cashier'],
+      badge: t('settings.tab.manageBadge' as any),
+      keywords: t('settings.tabKeywords.users' as any).split(','),
     },
     {
       id: 'activity',
-
-      label: isRTL ? 'سجل النشاط والأرشيف' : 'Activity log & archive',
-
-      description: isRTL ? 'تدقيق الحركات، الأرشيف واسترجاع المحذوفات' : 'Audit trail, archive & restore deleted items',
-
+      label: t('settings.tab.activityLabel' as any),
+      description: t('settings.tab.activityDesc' as any),
       icon: Activity,
-
       category: 'operations',
-
       color: 'emerald',
-
-      badge: isRTL ? 'تدقيق آمن' : 'Audit',
-
-      keywords: ['نشاط', 'سجل', 'تدقيق', 'عمليات', 'حركات', 'أرشيف', 'محذوفات', 'استرجاع', 'فواتير', 'activity', 'log', 'audit', 'archive', 'deleted'],
+      badge: t('settings.tab.auditBadge' as any),
+      keywords: t('settings.tabKeywords.activity' as any).split(','),
     },
     {
       id: 'license',
-      label: t('settings.license') || 'الترخيص وتفعيل الجهاز',
-      description: isRTL ? 'كود الترخيص ونقل الرخصة' : 'Device license & activation',
+      label: t('settings.license'),
+      description: t('settings.tab.licenseDesc' as any),
       icon: Key,
       category: 'operations',
       color: 'orange',
-      badge: isRTL ? 'نشط' : 'Active',
-      keywords: ['ترخيص', 'تفعيل', 'كود', 'رخصة', 'license', 'activation', 'key'],
+      badge: t('settings.tab.activeBadge' as any),
+      keywords: t('settings.tabKeywords.license' as any).split(','),
     },
     {
       id: 'partners',
-      label: t('nav.partners') || 'الشركاء ورأس المال',
-      description: isRTL ? 'حصص الأرباح والمسحوبات' : 'Partners & profit sharing',
+      label: t('nav.partners'),
+      description: t('settings.tab.partnersDesc' as any),
       icon: UserCheck,
       adminOnly: true,
       category: 'operations',
       color: 'cyan',
-      badge: isRTL ? 'أرباح' : 'Profits',
-      keywords: ['شركاء', 'أرباح', 'رأس مال', 'مسحوبات', 'partners', 'capital'],
+      badge: t('settings.tab.profitsBadge' as any),
+      keywords: t('settings.tabKeywords.partners' as any).split(','),
     },
     {
       id: 'reset',
-      label: t('settings.resetData') || 'تصفير البيانات',
-      description: isRTL ? 'تهيئة قاعدة البيانات من الصفر' : 'Reset & clear all system data',
+      label: t('settings.resetData'),
+      description: t('settings.tab.resetDesc' as any),
       icon: AlertTriangle,
       adminOnly: true,
       danger: true,
       category: 'operations',
       color: 'destructive',
       badge: '⚠️',
-      keywords: ['تصفير', 'حذف', 'إعادة ضبط', 'بيانات', 'reset', 'clear', 'wipe'],
+      keywords: t('settings.tabKeywords.reset' as any).split(','),
     },
     {
       id: 'contact',
-      label: t('license.contactDeveloper') || 'التواصل مع المطور',
-      description: isRTL ? 'واتساب، تلكرام والدعم المباشر' : 'WhatsApp, Telegram & support',
+      label: t('license.contactDeveloper'),
+      description: t('settings.tab.contactDesc' as any),
       icon: Phone,
       category: 'support',
       color: 'emerald',
-      badge: isRTL ? 'مباشر' : 'Live',
-      keywords: ['تواصل', 'مطور', 'دعم', 'واتساب', 'تلكرام', 'contact', 'support', 'developer'],
+      badge: t('settings.tab.liveBadge' as any),
+      keywords: t('settings.tabKeywords.contact' as any).split(','),
     },
     {
       id: 'about',
-      label: isRTL ? 'حول البرنامج' : 'About',
-      description: isRTL ? 'الإصدار v1.0.68 وسجل التحديثات' : 'v1.0.68 release & updates',
+      label: t('settings.tab.aboutLabel' as any),
+      description: t('settings.tab.aboutDesc' as any),
       icon: FileText,
       category: 'support',
       color: 'primary',
       badge: 'v1.0.68',
-      keywords: ['حول', 'برنامج', 'إصدار', 'تحديث', 'نسخة', 'about', 'version'],
+      keywords: t('settings.tabKeywords.about' as any).split(','),
     },
-  ], [t, isRTL, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationPerm, printSettings?.paperSize]);
+  ], [t, isRTL, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationPerm, notificationSettings.masterEnabled, printSettings?.paperSize]);
 
   // Independent tabs that have no saveable settings form state
   const INDEPENDENT_TABS = ['activity', 'archive', 'license', 'contact', 'reset', 'about', 'users', 'partners', 'profile'];
@@ -1346,12 +1341,18 @@ export default function Settings() {
       const cleanCurrencyNames: Record<string, string | undefined> = { ...currencyNames };
       const cleanCurrencySymbols: Record<string, string | undefined> = { ...currencySymbols };
       if (slot1Code !== 'TRY' && slot2Code !== 'TRY') {
-        cleanCurrencyNames.TRY = 'ليرة تركية';
-        cleanCurrencySymbols.TRY = '₺';
+        const tryDef = PREDEFINED_CURRENCIES.find(c => c.code === 'TRY');
+        if (tryDef) {
+          cleanCurrencyNames.TRY = tryDef.name;
+          cleanCurrencySymbols.TRY = tryDef.symbol;
+        }
       }
       if (slot1Code !== 'SYP' && slot2Code !== 'SYP') {
-        cleanCurrencyNames.SYP = 'ليرة سورية';
-        cleanCurrencySymbols.SYP = 'ل.س';
+        const sypDef = PREDEFINED_CURRENCIES.find(c => c.code === 'SYP');
+        if (sypDef) {
+          cleanCurrencyNames.SYP = sypDef.name;
+          cleanCurrencySymbols.SYP = sypDef.symbol;
+        }
       }
 
       const saveResult = await saveUnifiedStoreSettings({
@@ -1426,24 +1427,24 @@ export default function Settings() {
       if (saveResult.status === 'synced') {
         toast({
           title: t('common.saved'),
-          description: isRTL ? 'تم حفظ الإعدادات ومزامنتها سحابياً بنجاح ☁️' : 'Settings saved & synced to cloud successfully ☁️',
+          description: t('settings.saveSynced' as any),
         });
       } else if (saveResult.status === 'queued') {
         toast({
           title: t('common.saved'),
-          description: isRTL ? 'تم حفظ الإعدادات محلياً — بانتظار المزامنة عند توفر الاتصال ⏳' : 'Settings saved locally — queued for cloud sync ⏳',
+          description: t('settings.saveQueued' as any),
         });
       } else {
         toast({
           title: t('common.saved'),
-          description: isRTL ? 'تم حفظ الإعدادات محلياً بنجاح 💾' : 'Settings saved locally on this device 💾',
+          description: t('settings.saveLocal' as any),
         });
       }
     } catch (err) {
       console.error('[Settings] Save error:', err);
       toast({
         title: t('common.error'),
-        description: isRTL ? 'تعذر حفظ الإعدادات، يرجى المحاولة مرة أخرى' : 'Failed to save settings, please try again',
+        description: t('settings.saveFailed' as any),
         variant: 'destructive',
       });
     } finally {
@@ -1460,7 +1461,7 @@ export default function Settings() {
         });
 
         if (phoneCheck && !phoneCheck.ok && phoneCheck.status === 'conflict_no_telegram') {
-          showToast.error(phoneCheck.error || 'الرقم مرتبط بحساب آخر غير مفعل لديه تيليجرام');
+          showToast.error(phoneCheck.error || t('settings.phoneConflictNoTelegram' as any));
           return;
         }
 
@@ -1542,7 +1543,7 @@ export default function Settings() {
       const { decodeBackupFile, parseBackup } = await import('@/lib/full-backup');
       const parsed = await parseBackup(await decodeBackupFile(file));
       const c = parsed.counts || {};
-      const summary = `منتجات: ${c.products ?? 0} • فواتير: ${c.invoices ?? 0} • مصاريف: ${c.expenses ?? 0} • عملاء: ${c.customers ?? 0} • صور: ${Object.keys(parsed.images || {}).length}`;
+      const summary = t('settings.backupSummaryTemplate' as any).replace('{products}', String(c.products ?? 0)).replace('{invoices}', String(c.invoices ?? 0)).replace('{expenses}', String(c.expenses ?? 0)).replace('{customers}', String(c.customers ?? 0)).replace('{images}', String(Object.keys(parsed.images || {}).length));
       setPendingRestore({ backup: parsed, fileName: file.name, summary });
     } catch (error) {
       console.error('Import error:', error);
@@ -1574,8 +1575,8 @@ export default function Settings() {
       toast({
         title: t('settings.restoreComplete'),
         description: report.failed.length
-          ? `تمت استعادة ${total} سجل. تعذّر جزء: ${report.failed.map((f) => `${f.table} (${f.message})`).join(' | ')}`
-          : `تمت استعادة ${total} سجل و${report.imagesRestored} صورة بنجاح`,
+          ? t('settings.restorePartialDesc' as any).replace('{total}', String(total)).replace('{failed}', report.failed.map((f) => `${f.table} (${f.message})`).join(' | '))
+          : t('settings.restoreSuccessDesc' as any).replace('{total}', String(total)).replace('{images}', String(report.imagesRestored)),
         variant: report.failed.length ? 'destructive' : undefined,
       });
       setPendingRestore(null);
@@ -1617,21 +1618,22 @@ export default function Settings() {
   const handleTestPrint = async () => {
     try {
       const now = new Date();
-      const dateStr = now.toLocaleDateString('ar-SA');
-      const timeStr = now.toLocaleTimeString('ar-SA');
+      const printLocale = language === 'ar' ? 'ar-EG' : 'en-US';
+      const dateStr = now.toLocaleDateString(printLocale);
+      const timeStr = now.toLocaleTimeString(printLocale);
       const storeName = storeSettings.name || 'PosFlow';
       const storePhone = storeSettings.phone || '';
       const storeAddress = storeSettings.address || '';
       const paperSize = printSettings.paperSize || '80mm';
       const copies = printSettings.copies || '1';
-      const footer = printSettings.footer || 'شكراً لتسوقكم معنا!';
+      const footer = printSettings.footer || t('settings.testPrint.defaultFooter' as any);
 
       const testContent = `
         <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
+        <html dir="${isRTL ? 'rtl' : 'ltr'}" lang="${language}">
         <head>
           <meta charset="UTF-8">
-          <title>فحص الطابعة - ${storeName}</title>
+          <title>${t('settings.testPrint.docTitle' as any)} - ${storeName}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', system-ui, sans-serif; }
             body { width: ${paperSize === '58mm' ? '54mm' : paperSize === 'A4' ? '210mm' : '76mm'}; margin: 0 auto; padding: 8px; font-size: 12px; color: #000; }
@@ -1640,7 +1642,7 @@ export default function Settings() {
             .badge { display: inline-block; background: #000; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 4px 0; }
             .info-row { display: flex; justify-content: space-between; font-size: 11px; margin: 3px 0; }
             table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-            th, td { padding: 4px; text-align: right; border-bottom: 1px dotted #ccc; font-size: 11px; }
+            th, td { padding: 4px; text-align: ${isRTL ? 'right' : 'left'}; border-bottom: 1px dotted #ccc; font-size: 11px; }
             th { border-bottom: 1px solid #000; font-weight: bold; }
             .total-box { border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 6px 0; margin: 8px 0; text-align: center; font-weight: bold; font-size: 14px; }
             .footer { text-align: center; font-size: 11px; margin-top: 8px; color: #444; }
@@ -1650,28 +1652,28 @@ export default function Settings() {
           <div class="header">
             <div class="title">${storeName}</div>
             ${storeAddress ? '<div>' + storeAddress + '</div>' : ''}
-            ${storePhone ? '<div>هاتف: ' + storePhone + '</div>' : ''}
-            <div class="badge">تجربة فحص الطابعة / TEST PRINT</div>
+            ${storePhone ? '<div>' + t('settings.testPrint.phoneLabel' as any) + ' ' + storePhone + '</div>' : ''}
+            <div class="badge">${t('settings.testPrint.badge' as any)}</div>
           </div>
-          <div class="info-row"><span>التاريخ:</span><span>${dateStr}</span></div>
-          <div class="info-row"><span>الوقت:</span><span>${timeStr}</span></div>
-          <div class="info-row"><span>مقاس الورق:</span><span>${paperSize}</span></div>
-          <div class="info-row"><span>عدد النسخ:</span><span>${copies}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.dateLabel' as any)}</span><span>${dateStr}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.timeLabel' as any)}</span><span>${timeStr}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.paperSizeLabel' as any)}</span><span>${paperSize}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.copiesLabel' as any)}</span><span>${copies}</span></div>
           <table>
             <thead>
-              <tr><th>الصنف</th><th>الكمية</th><th>السعر</th></tr>
+              <tr><th>${t('settings.testPrint.colItem' as any)}</th><th>${t('settings.testPrint.colQty' as any)}</th><th>${t('settings.testPrint.colPrice' as any)}</th></tr>
             </thead>
             <tbody>
-              <tr><td>صنف فحص تجريبي أ</td><td>1</td><td>$10.00</td></tr>
-              <tr><td>صنف فحص تجريبي ب</td><td>2</td><td>$20.00</td></tr>
+              <tr><td>${t('settings.testPrint.sampleItemA' as any)}</td><td>1</td><td>$10.00</td></tr>
+              <tr><td>${t('settings.testPrint.sampleItemB' as any)}</td><td>2</td><td>$20.00</td></tr>
             </tbody>
           </table>
           <div class="total-box">
-            الإجمالي التجريبي: $30.00
+            ${t('settings.testPrint.totalLabel' as any)} $30.00
           </div>
           <div class="footer">
             <p>${footer}</p>
-            <p style="margin-top: 4px; font-size: 9px; color: #888;">PosFlow • فحص استجابة الطابعة ناجح</p>
+            <p style="margin-top: 4px; font-size: 9px; color: #888;">PosFlow • ${t('settings.testPrint.responseSuccess' as any)}</p>
           </div>
         </body>
         </html>
@@ -1679,14 +1681,14 @@ export default function Settings() {
 
       await printHTML(testContent);
       toast({
-        title: '✓ تم إرسال الطباعة التجريبية',
-        description: 'جاري تمرير الفاتورة التجريبية إلى الطابعة المحددة',
+        title: t('settings.testPrint.sentTitle' as any),
+        description: t('settings.testPrint.sentDesc' as any),
       });
     } catch (err) {
       console.error('Test print failed:', err);
       toast({
-        title: 'خطأ في الطباعة',
-        description: 'تعذر إرسال أمر الطباعة، يرجى التأكد من اتصال الطابعة',
+        title: t('settings.testPrint.errorTitle' as any),
+        description: t('settings.testPrint.errorDesc' as any),
         variant: 'destructive'
       });
     }
@@ -1826,8 +1828,8 @@ export default function Settings() {
           <div className="space-y-4">
             <Tabs defaultValue="info">
               <TabsList className="w-full mb-4">
-                <TabsTrigger value="info" className="flex-1">{t('settings.storeInfoTab') || 'معلومات المتجر'}</TabsTrigger>
-                <TabsTrigger value="finance" className="flex-1">{t('settings.financeTab') || 'العملات والضرائب'}</TabsTrigger>
+                <TabsTrigger value="info" className="flex-1">{t('settings.storeInfoTab')}</TabsTrigger>
+                <TabsTrigger value="finance" className="flex-1">{t('settings.financeTab')}</TabsTrigger>
               </TabsList>
 
               {/* التبويب الفرعي 1: معلومات المتجر */}
@@ -1909,19 +1911,19 @@ export default function Settings() {
                     <Bell className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">إشعارات الجهاز غير مفعّلة</p>
+                    <p className="text-sm font-bold text-foreground">{t('settings.notifDeviceDisabledTitle' as any)}</p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      فعّلها ليصلك تنبيه نفاد المخزون، والديون المستحقة، وردود الدعم الفني، والتحديثات الجديدة حتى والتطبيق في الخلفية.
+                      {t('settings.notifDeviceDisabledDesc' as any)}
                     </p>
                   </div>
                 </div>
                 {notificationPerm === 'denied' ? (
                   <p className="text-[11px] text-muted-foreground">
-                    تم رفض الإذن سابقاً. فعّله من إعدادات الهاتف: التطبيقات ← PosFlow ← الإشعارات.
+                    {t('settings.notifDeviceDeniedHint' as any)}
                   </p>
                 ) : (
                   <Button className="w-full sm:w-auto" onClick={() => void handleRequestNotificationPermission()}>
-                    تفعيل إشعارات الجهاز
+                    {t('settings.notifDeviceEnableBtn' as any)}
                   </Button>
                 )}
               </div>
@@ -1940,12 +1942,12 @@ export default function Settings() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-foreground">
-                    {notificationSettings.masterEnabled ? 'الإشعارات مفعلة' : 'الإشعارات معطلة'}
+                    {notificationSettings.masterEnabled ? t('settings.notifMasterEnabled' as any) : t('settings.notifMasterDisabled' as any)}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     {notificationSettings.masterEnabled
-                      ? 'سيتم إرسال جميع التنبيهات المحددة في النظام'
-                      : 'لن تصلك أي تنبيهات داخلية حتى تعيد التفعيل'}
+                      ? t('settings.notifMasterEnabledDesc' as any)
+                      : t('settings.notifMasterDisabledDesc' as any)}
                   </p>
                 </div>
               </div>
@@ -1960,7 +1962,7 @@ export default function Settings() {
               notificationSettings.masterEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'
             }`}>
               <div className="px-4 py-3 bg-muted/20">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">إعدادات العرض والصوت</h2>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.notifDisplaySoundTitle' as any)}</h2>
               </div>
               {/* الصوت */}
               <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors">
@@ -1971,7 +1973,7 @@ export default function Settings() {
                   <div>
                     <span className="text-sm font-medium text-foreground block">{t('settings.sound')}</span>
                     <span className="text-xs text-muted-foreground block">
-                      {notificationSettings.sound ? 'تشغيل نغمة عند وصول التنبيه' : 'كتم الصوت'}
+                      {notificationSettings.sound ? t('settings.notifSoundOnDesc' as any) : t('settings.notifSoundMutedDesc' as any)}
                     </span>
                   </div>
                 </div>
@@ -1989,14 +1991,14 @@ export default function Settings() {
                       <Clock className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-foreground block">وقت بقاء الإشعار</span>
+                      <span className="text-sm font-medium text-foreground block">{t('settings.notifDurationTitle' as any)}</span>
                       <span className="text-xs text-muted-foreground block">
-                        المدة الزمنية لظهور الإشعار على الشاشة قبل الانكماش التلقائي (من 0.5 إلى 3 ثواني)
+                        {t('settings.notifDurationDesc' as any)}
                       </span>
                     </div>
                   </div>
                   <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
-                    {notificationSettings.durationSeconds ?? 2} ثانية
+                    {notificationSettings.durationSeconds ?? 2} {t('settings.notifSeconds' as any)}
                   </span>
                 </div>
                 <div dir="ltr" className="space-y-1.5 pt-1 px-1">
@@ -2012,9 +2014,9 @@ export default function Settings() {
                     className="w-full cursor-pointer"
                   />
                   <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
-                    <span>0.5s (خاطف)</span>
-                    <span>1.5s (متوسط)</span>
-                    <span>3.0s (أطول)</span>
+                    <span>{t('settings.notifDurationBrief' as any)}</span>
+                    <span>{t('settings.notifDurationMedium' as any)}</span>
+                    <span>{t('settings.notifDurationLong' as any)}</span>
                   </div>
                 </div>
               </div>
@@ -2026,8 +2028,8 @@ export default function Settings() {
             }`}>
               <div className="flex items-center justify-between px-1">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">تخصيص تنبيهات النظام حسب القسم</h3>
-                  <p className="text-xs text-muted-foreground">تفعيل أو كتم التنبيه الفوري لكل حدث تشغيلي في النظام</p>
+                  <h3 className="text-sm font-bold text-foreground">{t('settings.notifCustomizeTitle' as any)}</h3>
+                  <p className="text-xs text-muted-foreground">{t('settings.notifCustomizeDesc' as any)}</p>
                 </div>
               </div>
 
@@ -2050,10 +2052,12 @@ export default function Settings() {
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${colors.bg}`}>
                           <IconComp className="w-4 h-4" />
                         </div>
-                        <span className="text-sm font-bold text-foreground">{group.title}</span>
+                        <span className="text-sm font-bold text-foreground">
+                          {language === 'en' ? ((group as any).titleEn || (group as any).labelEn || group.title) : group.title}
+                        </span>
                       </div>
                       <Badge variant="outline" className={`text-[11px] font-mono font-medium ${colors.badge}`}>
-                        {activeCount} / {totalCount} مفعل
+                        {activeCount} / {totalCount} {t('settings.notifActiveCountLabel' as any)}
                       </Badge>
                     </div>
 
@@ -2070,7 +2074,7 @@ export default function Settings() {
                               <span className={`text-sm block transition-colors ${
                                 isChecked ? 'font-medium text-foreground' : 'text-muted-foreground'
                               }`}>
-                                {evt.title}
+                                {language === 'en' ? ((evt as any).titleEn || (evt as any).labelEn || evt.title) : evt.title}
                               </span>
                             </div>
                             <Switch
@@ -2147,25 +2151,25 @@ export default function Settings() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg">{licenseState.isTrial ? 'فترة تجريبية' : 'اشتراك مفعّل'}</h3>
+                      <h3 className="font-bold text-lg">{licenseState.isTrial ? t('settings.licenseTrial' as any) : t('settings.licenseActive' as any)}</h3>
                       <Badge variant={licenseState.isTrial ? 'outline' : 'default'}>
-                        {(licenseState as any).planName || (licenseState as any).licenseTier || 'الترخيص الأساسي'}
+                        {(licenseState as any).planName || (licenseState as any).licenseTier || t('settings.licenseBasicTier' as any)}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      تاريخ الانتهاء: {licenseState.expiresAt ? new Date(licenseState.expiresAt).toLocaleDateString('ar-SY') : 'غير محدد'}
+                      {t('settings.licenseExpiry' as any)}: {licenseState.expiresAt ? new Date(licenseState.expiresAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : t('settings.licenseUnspecified' as any)}
                     </p>
                   </div>
                   <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0">
-                    تجديد / ترقية الاشتراك
+                    {t('settings.licenseRenewUpgrade' as any)}
                   </Button>
                 </div>
 
-                {/* شريط الأيام المتبقية */}
+                {/* Remaining days bar */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-medium">
-                    <span>المتبقي: {licenseState.remainingDays ?? 0} يوماً</span>
-                    <span>إجمالي المدة: {(licenseState as any).totalDays || 30} يوماً</span>
+                    <span>{t('settings.licenseRemaining' as any)}: {licenseState.remainingDays ?? 0} {t('settings.licenseDays' as any)}</span>
+                    <span>{t('settings.licenseTotalDuration' as any)}: {(licenseState as any).totalDays || 30} {t('settings.licenseDays' as any)}</span>
                   </div>
                   <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
                     <div 
@@ -2187,9 +2191,7 @@ export default function Settings() {
                 {t('settings.transferLicense')}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {isRTL
-                  ? 'فك ارتباط الترخيص من هذا الجهاز لتتمكن من تفعيله على جهاز جديد. سيتم تسجيل خروجك تلقائياً.'
-                  : 'Unbind the license from this device so you can activate it on a new one. You will be signed out automatically.'}
+                {t('settings.transferLicenseInfo' as any)}
               </p>
               <Button
                 variant="outline"
@@ -2215,7 +2217,7 @@ export default function Settings() {
                   {t('license.contactDeveloper')}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {isRTL ? 'تواصل مع فريق الدعم الفني' : 'Contact the support team'}
+                  {t('settings.contactSupportSubtitle' as any)}
                 </p>
               </div>
             </div>
@@ -2236,19 +2238,19 @@ export default function Settings() {
           : { versionName: '1.0.59', versionCode: 289, lastUpdated: '2026-10-02T04:00:00.000Z' };
 
         const releaseDate = new Date(versionInfo.lastUpdated);
-        const releaseDateStr = releaseDate.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+        const releaseDateStr = releaseDate.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
           year: 'numeric', month: 'long', day: 'numeric'
         });
 
         // Load changelog from build-time injection (limited to latest update fixes only)
         const rawChangelog = (globalThis as unknown as { __APP_CHANGELOG__?: unknown }).__APP_CHANGELOG__ ?? (typeof __APP_CHANGELOG__ !== 'undefined' ? __APP_CHANGELOG__ : null);
-        const changelog: { type: 'new' | 'improved' | 'fixed'; ar: string; en: string }[] = Array.isArray(rawChangelog) && rawChangelog.length > 0
+        const changelog: { type: 'new' | 'improved' | 'fixed'; ar?: string; en?: string; textKey?: string }[] = Array.isArray(rawChangelog) && rawChangelog.length > 0
           ? rawChangelog.slice(0, 8)
           : [
-            { type: 'improved', ar: 'تسريع فتح شاشة نقطة البيع واستبعاد المؤرشف ومزامنة المخزون اللحظية مع استرداد الفواتير', en: 'POS loading acceleration, archived exclusion, and real-time stock sync upon refunds' },
-            { type: 'improved', ar: 'تفصيل رسائل أخطاء تسجيل الدخول وإنشاء الحساب وتوضيح أسباب الفشل بدقة', en: 'Detailed auth error messages for login and signup' },
-            { type: 'improved', ar: 'تدقيق رسائل المزامنة والإنترنت وإظهار أسباب الرفض الصادرة من الخادم بدقة', en: 'Accurate sync error messages with server feedback' },
-            { type: 'new', ar: 'إظهار تاريخ ووقت البناء الفعلي ورقم الإصدار في شاشة الإعدادات', en: 'Display build timestamp and version details in Settings' },
+            { type: 'improved', textKey: 'settings.about.changelog1' },
+            { type: 'improved', textKey: 'settings.about.changelog2' },
+            { type: 'improved', textKey: 'settings.about.changelog3' },
+            { type: 'new', textKey: 'settings.about.changelog4' },
           ];
 
         return (
@@ -2258,7 +2260,7 @@ export default function Settings() {
               <img src={appIconUrl} alt="PosFlow" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
               <div>
                 <h2 className="text-xl font-bold text-foreground">PosFlow</h2>
-                <p className="text-sm text-muted-foreground">{isRTL ? 'نظام نقطة البيع المتكامل' : 'Integrated Point of Sale System'}</p>
+                <p className="text-sm text-muted-foreground">{t('settings.about.tagline' as any)}</p>
               </div>
             </div>
 
@@ -2266,15 +2268,15 @@ export default function Settings() {
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-4 py-2.5 border-b border-border bg-muted/30">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {isRTL ? 'معلومات الإصدار' : 'Version Info'}
+                  {t('settings.about.versionInfo' as any)}
                 </p>
               </div>
               <div className="divide-y divide-border">
                 {[
-                  { label: isRTL ? 'الإصدار الحالي' : 'Current Version', value: `v${versionInfo.versionName}`, icon: '🏷️' },
-                  { label: isRTL ? 'تاريخ الإصدار' : 'Release Date', value: releaseDateStr, icon: '📅' },
-                  { label: isRTL ? 'المنصة' : 'Platform', value: 'Android / Web / Windows', icon: '📱' },
-                  { label: isRTL ? 'المطور' : 'Developer', value: 'PosFlow Team', icon: '👨‍💻' },
+                  { label: t('settings.about.currentVersion' as any), value: `v${versionInfo.versionName}`, icon: '🏷️' },
+                  { label: t('settings.about.releaseDate' as any), value: releaseDateStr, icon: '📅' },
+                  { label: t('settings.about.platform' as any), value: 'Android / Web / Windows', icon: '📱' },
+                  { label: t('settings.about.developer' as any), value: 'PosFlow Team', icon: '👨‍💻' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -2291,9 +2293,7 @@ export default function Settings() {
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-4 py-2.5 border-b border-border bg-muted/30">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {isRTL
-                    ? `آخر التحديثات — الإصدار ${versionInfo.versionName}`
-                    : `Latest Updates — v${versionInfo.versionName}`}
+                  {t('settings.about.latestUpdates' as any).replace('{version}', versionInfo.versionName)}
                 </p>
               </div>
               <div className="divide-y divide-border">
@@ -2304,16 +2304,17 @@ export default function Settings() {
                     fixed: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
                   };
                   const labels = {
-                    new: isRTL ? 'جديد' : 'NEW',
-                    improved: isRTL ? 'تحسين' : 'IMPROVED',
-                    fixed: isRTL ? 'إصلاح' : 'FIXED',
+                    new: t('settings.about.badgeNew' as any),
+                    improved: t('settings.about.badgeImproved' as any),
+                    fixed: t('settings.about.badgeFixed' as any),
                   };
+                  const text = item.textKey ? t(item.textKey as any) : (isRTL ? item.ar : item.en);
                   return (
                     <div key={idx} className="flex items-start gap-3 px-4 py-3">
                       <span className={`mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ${colors[item.type]}`}>
                         {labels[item.type]}
                       </span>
-                      <p className="text-sm text-foreground leading-relaxed">{isRTL ? item.ar : item.en}</p>
+                      <p className="text-sm text-foreground leading-relaxed">{text}</p>
                     </div>
                   );
                 })}
@@ -2322,7 +2323,7 @@ export default function Settings() {
 
             {/* Footer */}
             <p className="text-center text-xs text-muted-foreground pb-2">
-              {isRTL ? 'جميع الحقوق محفوظة © ٢٠٢٦ PosFlow' : '© 2026 PosFlow. All rights reserved.'}
+              {t('settings.about.copyright' as any)}
             </p>
           </div>
         );
@@ -2354,7 +2355,7 @@ export default function Settings() {
                 id="settingsSearchInput"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={isRTL ? "بحث سريع في الإعدادات، التراخيص، العملات..." : "Search settings, licenses, currencies..."}
+                placeholder={t('settings.searchPlaceholder' as any)}
                 className="bg-card border border-border/80 rounded-2xl h-10 ps-10 pe-9 text-xs font-semibold placeholder:text-muted-foreground/60 shadow-2xs focus-visible:ring-primary/20"
               />
               {searchQuery && (
@@ -2362,7 +2363,7 @@ export default function Settings() {
                   type="button"
                   onClick={() => setSearchQuery('')}
                   className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
-                  title={isRTL ? "مسح البحث" : "Clear search"}
+                  title={t('settings.clearSearch' as any)}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2380,8 +2381,8 @@ export default function Settings() {
                     ? "bg-background text-foreground shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
                 )}
-                title={isRTL ? "عرض شبكي" : "Grid View"}
-                aria-label={isRTL ? "عرض شبكي" : "Grid View"}
+                title={t('settings.gridView' as any)}
+                aria-label={t('settings.gridView' as any)}
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -2394,8 +2395,8 @@ export default function Settings() {
                     ? "bg-background text-foreground shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
                 )}
-                title={isRTL ? "عرض قائمة" : "List View"}
-                aria-label={isRTL ? "عرض قائمة" : "List View"}
+                title={t('settings.listView' as any)}
+                aria-label={t('settings.listView' as any)}
               >
                 <List className="w-4 h-4" />
               </button>
@@ -2425,18 +2426,18 @@ export default function Settings() {
 
             const getStoreTypeLabel = (type: string) => {
               const map: Record<string, string> = {
-                phones: isRTL ? 'هواتف وإلكترونيات' : 'Phones & Electronics',
-                electronics: isRTL ? 'إلكترونيات' : 'Electronics',
-                clothing: isRTL ? 'ملابس وأزياء' : 'Clothing & Fashion',
-                grocery: isRTL ? 'بقالة ومواد غذائية' : 'Grocery & Food',
-                supermarket: isRTL ? 'سوبرماركت' : 'Supermarket',
-                perfumes: isRTL ? 'عطور ومستحضرات' : 'Perfumes & Cosmetics',
-                pharmacy: isRTL ? 'صيدلية' : 'Pharmacy',
-                bakery: isRTL ? 'مخبز وحلويات' : 'Bakery & Sweets',
-                bookstore: isRTL ? 'مكتبة وقرطاسية' : 'Bookstore & Stationery',
-                services: isRTL ? 'خدمات وصيانة' : 'Services & Maintenance',
-                restaurant: isRTL ? 'مطعم ومقهى' : 'Restaurant & Cafe',
-                general: isRTL ? 'نشاط تجاري عام' : 'General Store',
+                phones: t('settings.storeTypeLabel.phones' as any),
+                electronics: t('settings.storeTypeLabel.electronics' as any),
+                clothing: t('settings.storeTypeLabel.clothing' as any),
+                grocery: t('settings.storeTypeLabel.grocery' as any),
+                supermarket: t('settings.storeTypeLabel.supermarket' as any),
+                perfumes: t('settings.storeTypeLabel.perfumes' as any),
+                pharmacy: t('settings.storeTypeLabel.pharmacy' as any),
+                bakery: t('settings.storeTypeLabel.bakery' as any),
+                bookstore: t('settings.storeTypeLabel.bookstore' as any),
+                services: t('settings.storeTypeLabel.services' as any),
+                restaurant: t('settings.storeTypeLabel.restaurant' as any),
+                general: t('settings.storeTypeLabel.general' as any),
               };
               return map[type] || type;
             };
@@ -2508,13 +2509,13 @@ export default function Settings() {
                 <div className="py-12 text-center text-muted-foreground bg-card/50 rounded-2xl border border-dashed border-border/70 p-6 space-y-3">
                   <Search className="w-8 h-8 mx-auto text-muted-foreground/40" />
                   <p className="text-sm font-bold text-foreground">
-                    {isRTL ? 'لا توجد نتائج مطابقة لبحثك' : 'No matching settings found'}
+                    {t('settings.noMatchingSettings' as any)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {isRTL ? `لم نجد أي إعداد يطابق "${searchQuery}"` : `No setting matching "${searchQuery}"`}
+                    {t('settings.noSettingMatchingQuery' as any).replace('{query}', searchQuery)}
                   </p>
                   <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="rounded-xl text-xs h-8">
-                    {isRTL ? 'مسح البحث' : 'Clear search'}
+                    {t('settings.clearSearch' as any)}
                   </Button>
                 </div>
               );
@@ -2608,7 +2609,7 @@ export default function Settings() {
             <button
               type="button"
               onClick={() => setActiveTab(null)}
-              aria-label={t('common.back') || 'رجوع'}
+              aria-label={t('common.back')}
               className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-border/70 bg-card hover:bg-muted transition-colors flex-shrink-0 shadow-sm"
             >
               {isRTL ? <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" /> : <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -2631,7 +2632,7 @@ export default function Settings() {
           <div className="bg-card/70 sm:bg-card rounded-2xl border border-border/70 sm:border-border p-3.5 sm:p-6 overflow-hidden max-w-full pb-28">
             {/* ✅ حماية كل تبويب داخل إطار معالجة الأخطاء FeatureErrorBoundary لعزل أي خطأ دون إسقاط الشاشة */}
             <FeatureErrorBoundary
-              featureName={`تبويب الإعدادات: ${activeTab || 'العام'}`}
+              featureName={t('settings.errorBoundaryTab' as any).replace('{tab}', activeTab || t('settings.general'))}
               compact
             >
               <Suspense fallback={
@@ -2710,7 +2711,7 @@ export default function Settings() {
               ? (lastSaveStatus === 'synced' ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-amber-600 text-white hover:bg-amber-700")
               : "bg-primary text-primary-foreground hover:scale-105 active:scale-95"
           )}
-          title={t('common.save') || (isRTL ? 'حفظ' : 'Save')}
+          title={t('common.save')}
         >
           {isSavingSettings ? (
             <Loader2 className="w-6 h-6 animate-spin" />
@@ -2725,7 +2726,7 @@ export default function Settings() {
             variant="secondary"
             onClick={handleRevert}
             className="w-14 h-14 rounded-full shadow-2xl p-0 hover:scale-105 active:scale-95 transition-transform"
-            title={t('common.cancel') || (isRTL ? 'تراجع' : 'Cancel')}
+            title={t('common.cancel')}
           >
             <Undo2 className="w-6 h-6" />
           </Button>
@@ -2823,15 +2824,15 @@ export default function Settings() {
       <AlertDialog open={showUnpairDialog} onOpenChange={setShowUnpairDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('printer.disconnectTitle') || 'فصل الطابعة؟'}</AlertDialogTitle>
+            <AlertDialogTitle>{t('printer.disconnectTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('printer.disconnectBody') || 'ما رح نحذف الاقتران من إعدادات الهاتف، بس التطبيق بيوقف الطباعة على هالطابعة. تقدر تربطها من جديد بأي وقت.'}
+              {t('printer.disconnectBody')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel') || 'إلغاء'}</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmUnpair} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-              {t('printer.unpair') || 'فصل'}
+              {t('printer.unpair')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

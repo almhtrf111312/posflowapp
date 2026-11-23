@@ -4,6 +4,7 @@ import { ReportShell } from './ReportShell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { loadProductsLocalFirst, refreshProductsFromCloud, type Product } from '@/lib/cloud/products-cloud';
 import { loadWarehousesCloud, type Warehouse } from '@/lib/cloud/warehouses-cloud';
@@ -153,22 +154,21 @@ export function InventoryStockReport({ dateRange }: Props) {
       hideExportToolbar={true}
       filters={
         <div className="space-y-2">
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم، الباركود، التصنيف..." className="h-9 text-sm" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="بحث بالاسم، الباركود، التصنيف..." className="text-sm" />
           {warehouses.length > 0 && (
-            <select
-              value={warehouseId || ''}
-              onChange={e => setWarehouseId(e.target.value || null)}
-              className="w-full h-9 text-sm rounded-xl border border-border bg-card px-3"
-            >
-              <option value="">كل المستودعات</option>
-              {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+            <Select value={warehouseId || 'all'} onValueChange={v => setWarehouseId(v === 'all' ? null : v)}>
+              <SelectTrigger className="min-h-11 sm:min-h-10 w-full rounded-[14px]">
+                <SelectValue placeholder="كل المستودعات" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
+                <SelectItem value="all">كل المستودعات</SelectItem>
+                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           )}
         </div>
       }
     >
-      <ReportCurrencyBanner />
-
       {/* Accounting Guide Banner */}
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-foreground flex items-start gap-2.5 mb-3">
         <div className="p-1 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
@@ -185,7 +185,7 @@ export function InventoryStockReport({ dateRange }: Props) {
       {!counting ? (
         <>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={handleStartCount} className="h-9 text-xs rounded-xl gap-1.5">
+            <Button onClick={handleStartCount} className="text-xs rounded-xl gap-1.5">
               <ClipboardCheck className="w-4 h-4" /> بدء جرد فعلي
             </Button>
             <div className="text-[11px] text-muted-foreground self-center">
@@ -199,18 +199,18 @@ export function InventoryStockReport({ dateRange }: Props) {
                 <div key={p.id} className="flex items-center gap-2 p-2.5">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold truncate">{p.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{p.barcode || '—'} • {p.category || '—'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{p.barcode || '—'} • {p.category || '—'}</p>
                   </div>
-                  <div className="text-left shrink-0">
-                    <p className={cn('text-xs font-bold', (p.quantity || 0) <= (p.minStockLevel || 0) ? 'text-red-600' : 'text-foreground')}>
-                      {formatNumber(p.quantity || 0)}
+                  <div className="text-end shrink-0">
+                    <p className={cn('text-xs font-bold', (p.quantity || 0) <= (p.minStockLevel || 0) ? 'text-destructive' : 'text-foreground')}>
+                      <span dir="ltr" className="inline-block tabular-nums">{formatNumber(p.quantity || 0)}</span>
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{formatReportAmount((p.quantity || 0) * (p.costPrice || 0))}</p>
+                    <p className="text-xs text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount((p.quantity || 0) * (p.costPrice || 0))}</span></p>
                   </div>
                 </div>
               ))}
               {filtered.length > 200 && (
-                <p className="text-[10px] text-center text-muted-foreground py-2">عرض 200 / {filtered.length} — استخدم البحث للتدقيق</p>
+                <p className="text-xs text-center text-muted-foreground py-2">عرض 200 / {filtered.length} — استخدم البحث للتدقيق</p>
               )}
             </div>
           </CardContent></Card>
@@ -222,7 +222,7 @@ export function InventoryStockReport({ dateRange }: Props) {
                 {history.slice(0, 20).map(h => (
                   <div key={h.id} className="flex items-center justify-between text-[11px] py-1 border-b border-border/30 last:border-0">
                     <span>{new Date(h.created_at).toLocaleDateString('en-GB')} • {h.items_count} صنف</span>
-                    <span className={cn('font-semibold', h.total_variance_value >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+                    <span className={cn('font-semibold', h.total_variance_value >= 0 ? 'text-success' : 'text-destructive')}>
                       {h.total_variance_value >= 0 ? '+' : ''}{formatReportAmount(h.total_variance_value)}
                     </span>
                   </div>
@@ -236,11 +236,11 @@ export function InventoryStockReport({ dateRange }: Props) {
           <Card><CardContent className="p-3 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs font-bold">جلسة جرد فعلي</p>
-              <Button variant="ghost" size="sm" onClick={handleCancelCount} className="h-7 text-[11px]">
+              <Button variant="ghost" size="sm" onClick={handleCancelCount} className="text-xs">
                 <X className="w-3.5 h-3.5" /> إلغاء
               </Button>
             </div>
-            <div className={cn('flex items-center gap-2 text-xs rounded-lg p-2', totalVarianceValue < 0 ? 'bg-red-500/10 text-red-700' : totalVarianceValue > 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted/50 text-muted-foreground')}>
+            <div className={cn('flex items-center gap-2 text-xs rounded-lg p-2', totalVarianceValue < 0 ? 'bg-destructive/10 text-destructive' : totalVarianceValue > 0 ? 'bg-success/10 text-success' : 'bg-muted/50 text-muted-foreground')}>
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>إجمالي قيمة الفروقات: <strong>{formatReportAmount(totalVarianceValue)}</strong></span>
             </div>
@@ -257,7 +257,7 @@ export function InventoryStockReport({ dateRange }: Props) {
                   <div key={p.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-2 p-2.5">
                     <div className="min-w-0">
                       <p className="text-xs font-semibold truncate">{p.name}</p>
-                      <p className="text-[10px] text-muted-foreground">رصيد: {formatNumber(expected)}</p>
+                      <p className="text-xs text-muted-foreground">رصيد: {formatNumber(expected)}</p>
                     </div>
                     <Input
                       type="number"
@@ -272,9 +272,9 @@ export function InventoryStockReport({ dateRange }: Props) {
                         });
                       }}
                       placeholder={String(expected)}
-                      className="h-8 w-20 text-xs text-center"
+                      className="w-20 text-xs text-center tabular-nums" dir="ltr"
                     />
-                    <span className={cn('text-xs font-bold w-12 text-center', variance < 0 ? 'text-red-600' : variance > 0 ? 'text-emerald-600' : 'text-muted-foreground')}>
+                    <span className={cn('text-xs font-bold w-12 text-center', variance < 0 ? 'text-destructive' : variance > 0 ? 'text-success' : 'text-muted-foreground')}>
                       {actual === undefined ? '—' : (variance > 0 ? '+' : '') + formatNumber(variance)}
                     </span>
                   </div>
@@ -284,10 +284,10 @@ export function InventoryStockReport({ dateRange }: Props) {
           </CardContent></Card>
 
           <div className="flex gap-2 sticky bottom-0 bg-background/95 py-2">
-            <Button variant="outline" disabled={saving} onClick={() => handleSaveCount('draft')} className="flex-1 h-9 text-xs rounded-xl">
+            <Button variant="outline" disabled={saving} onClick={() => handleSaveCount('draft')} className="flex-1 text-xs rounded-xl">
               حفظ كمسودة
             </Button>
-            <Button disabled={saving} onClick={() => handleSaveCount('completed')} className="flex-1 h-9 text-xs rounded-xl gap-1.5">
+            <Button disabled={saving} onClick={() => handleSaveCount('completed')} className="flex-1 text-xs rounded-xl gap-1.5">
               <Save className="w-4 h-4" /> {saving ? 'جاري الحفظ...' : 'إغلاق وتسوية'}
             </Button>
           </div>

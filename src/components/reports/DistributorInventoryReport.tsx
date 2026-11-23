@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { loadWarehousesCloud, loadWarehouseStockCloud, loadStockTransfersCloud, getStockTransferItemsCloud } from '@/lib/cloud/warehouses-cloud';
 import { loadProductsCloud, Product } from '@/lib/cloud/products-cloud';
 import { supabase } from '@/integrations/supabase/client';
@@ -321,26 +322,26 @@ export function DistributorInventoryReport() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Package className="w-4 h-4" />
               إجمالي المستلم
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.totalReceived}</div>
+            <div className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{summary.totalReceived}</span></div>
             <p className="text-xs text-muted-foreground">{summary.productCount} منتج</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-success" />
               إجمالي المباع
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{summary.totalSold}</div>
+            <div className="text-2xl font-bold text-success"><span dir="ltr" className="inline-block tabular-nums">{summary.totalSold}</span></div>
             <p className="text-xs text-muted-foreground">
               {summary.totalReceived > 0 ? ((summary.totalSold / summary.totalReceived) * 100).toFixed(1) : 0}% من المستلم
             </p>
@@ -349,13 +350,13 @@ export function DistributorInventoryReport() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Package className="w-4 h-4 text-primary" />
               المتبقي في العهدة
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{summary.totalRemaining}</div>
+            <div className="text-2xl font-bold text-primary"><span dir="ltr" className="inline-block tabular-nums">{summary.totalRemaining}</span></div>
             <p className="text-xs text-muted-foreground">
               {summary.totalReceived > 0 ? ((summary.totalRemaining / summary.totalReceived) * 100).toFixed(1) : 0}% من المستلم
             </p>
@@ -364,17 +365,17 @@ export function DistributorInventoryReport() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-warning" />
               العجز/الفائض
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className={cn(
               "text-2xl font-bold",
-              summary.totalVariance > 0 ? "text-green-600" : summary.totalVariance < 0 ? "text-destructive" : ""
+              summary.totalVariance > 0 ? "text-success" : summary.totalVariance < 0 ? "text-destructive" : ""
             )}>
-              {summary.totalVariance > 0 ? '+' : ''}{summary.totalVariance}
+              <span dir="ltr" className="inline-block tabular-nums">{summary.totalVariance > 0 ? '+' : ''}{summary.totalVariance}</span>
             </div>
             <p className="text-xs text-muted-foreground">
               {summary.totalVariance === 0 ? 'مطابق' : summary.totalVariance > 0 ? 'فائض' : 'عجز'}
@@ -384,7 +385,7 @@ export function DistributorInventoryReport() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               منتجات بفرق
             </CardTitle>
@@ -392,9 +393,9 @@ export function DistributorInventoryReport() {
           <CardContent>
             <div className={cn(
               "text-2xl font-bold",
-              summary.itemsWithVariance > 0 ? "text-amber-500" : "text-green-600"
+              summary.itemsWithVariance > 0 ? "text-warning" : "text-success"
             )}>
-              {summary.itemsWithVariance}
+              <span dir="ltr" className="inline-block tabular-nums">{summary.itemsWithVariance}</span>
             </div>
             <p className="text-xs text-muted-foreground">
               من أصل {summary.productCount} منتج
@@ -423,37 +424,37 @@ export function DistributorInventoryReport() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">المنتج</TableHead>
+                    <TableHead className="text-start">المنتج</TableHead>
                     <TableHead className="text-center">الوحدة</TableHead>
-                    <TableHead className="text-center">المستلم</TableHead>
-                    <TableHead className="text-center">المباع</TableHead>
-                    <TableHead className="text-center">المتبقي</TableHead>
+                    <TableHead className="text-end">المستلم</TableHead>
+                    <TableHead className="text-end">المباع</TableHead>
+                    <TableHead className="text-end">المتبقي</TableHead>
                     <TableHead className="text-center">العجز/الفائض</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stockData.map((item) => (
                     <TableRow key={item.productId} className={cn(
-                      item.variance !== 0 && "bg-amber-50/50 dark:bg-amber-950/20"
+                      item.variance !== 0 && "bg-warning/5"
                     )}>
                       <TableCell className="font-medium">{item.productName}</TableCell>
                       <TableCell className="text-center text-muted-foreground">{item.unit}</TableCell>
-                      <TableCell className="text-center">{item.receivedQuantity}</TableCell>
-                      <TableCell className="text-center text-green-600 font-medium">{item.soldQuantity}</TableCell>
-                      <TableCell className="text-center text-primary font-semibold">{item.remainingQuantity}</TableCell>
+                      <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{item.receivedQuantity}</span></TableCell>
+                      <TableCell className="text-end text-success font-medium"><span dir="ltr" className="inline-block tabular-nums">{item.soldQuantity}</span></TableCell>
+                      <TableCell className="text-end text-primary font-semibold"><span dir="ltr" className="inline-block tabular-nums">{item.remainingQuantity}</span></TableCell>
                       <TableCell className="text-center">
-                        <span className={cn(
-                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                        <Badge variant="outline" className={cn(
+                          "gap-1",
                           item.variance > 0
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            ? "bg-success/15 text-success border-success/30"
                             : item.variance < 0
-                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                              : "bg-muted text-muted-foreground"
+                              ? "bg-destructive/15 text-destructive border-destructive/30"
+                              : "bg-muted text-muted-foreground border-border"
                         )}>
                           {item.variance > 0 && <TrendingUp className="w-3 h-3" />}
                           {item.variance < 0 && <TrendingDown className="w-3 h-3" />}
-                          {item.variance > 0 ? '+' : ''}{item.variance}
-                        </span>
+                          <span dir="ltr" className="inline-block tabular-nums">{item.variance > 0 ? '+' : ''}{item.variance}</span>
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}

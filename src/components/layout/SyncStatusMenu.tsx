@@ -174,7 +174,7 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
     },
     synced: {
       icon: Cloud,
-      color: 'text-green-500',
+      color: 'text-success',
       label: t('sync.synced') || 'تمت المزامنة',
       animate: '',
     },
@@ -187,13 +187,13 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
     switch (itemStatus) {
       case 'synced':
         return (
-          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+          <div className="w-7 h-7 rounded-lg bg-success/15 text-success flex items-center justify-center shrink-0 border border-success/30">
             <Check className="h-4 w-4" />
           </div>
         );
       case 'pending':
         return (
-          <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20">
+          <div className="w-7 h-7 rounded-lg bg-warning/15 text-warning flex items-center justify-center shrink-0 border border-warning/30">
             <Clock className="h-4 w-4" />
           </div>
         );
@@ -278,17 +278,18 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
         <Button
           variant="ghost"
           size="icon"
-          className={cn("relative h-9 w-9 cursor-pointer", config.color)}
+          className={cn("relative cursor-pointer", config.color)}
+          aria-label={config.label}
           title={config.label}
         >
           <StatusIcon className={cn("h-4.5 w-4.5", config.animate)} />
           {(pendingCount > 0 || hasIssues || dueExpenses.length > 0) && (
             <span className={cn(
-              "absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shadow-xs",
+              "absolute -top-0.5 -end-0.5 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shadow-xs",
               hasIssues
                 ? "bg-destructive text-destructive-foreground"
                 : dueExpenses.length > 0
-                ? "bg-amber-500 text-white animate-pulse"
+                ? "bg-warning text-warning-foreground animate-pulse"
                 : "bg-warning text-warning-foreground"
             )}>
               {hasIssues ? queueStatus.failedCount : dueExpenses.length > 0 ? dueExpenses.length : pendingCount}
@@ -325,7 +326,7 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
             </div>
 
             {/* Action Controls */}
-            <div className="flex items-center gap-1.5 shrink-0 rtl:ml-8 ltr:mr-8">
+            <div className="flex items-center gap-1.5 shrink-0 me-8">
               {isPaused ? (
                 <Button size="sm" variant="outline" className="h-8 text-xs gap-1 rounded-xl" onClick={resumeSync}>
                   <Play className="h-3.5 w-3.5" />
@@ -364,19 +365,19 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
 
           {/* Due Recurring Expenses Alert Card */}
           {dueExpenses.length > 0 && (
-            <div className="p-3 bg-amber-500/10 border-b border-amber-500/25">
+            <div className="p-3 bg-warning/10 border-b border-warning/25">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-xs">
+                <div className="flex items-center gap-1.5 text-warning font-bold text-xs">
                   <Clock className="h-3.5 w-3.5" />
                   <span>{t('expenses.dueTodayTitle')} ({dueExpenses.length})</span>
                 </div>
-                <Badge variant="outline" className="border-amber-500/40 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0 font-mono">
+                <Badge variant="outline" className="border-warning/40 text-warning text-[10px] px-1.5 py-0 font-mono">
                   {formatCurrency(dueExpenses.reduce((sum, e) => sum + e.amount, 0))}
                 </Badge>
               </div>
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {dueExpenses.map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between bg-card border border-amber-500/20 rounded-xl p-2 gap-2 text-xs">
+                  <div key={expense.id} className="flex items-center justify-between bg-card border border-warning/20 rounded-xl p-2 gap-2 text-xs">
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-xs truncate text-foreground">{expense.name}</p>
                       <p className="text-[11px] text-muted-foreground font-mono">
@@ -385,7 +386,7 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
                     </div>
                     <Button
                       size="sm"
-                      className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shrink-0 gap-1"
+                      className="h-7 px-2.5 text-xs bg-success hover:bg-success/90 text-success-foreground rounded-lg font-bold shrink-0 gap-1"
                       onClick={() => {
                         setIsOpen(false);
                         navigate(`/expenses?payRecurringId=${expense.id}`);
@@ -474,7 +475,7 @@ export function SyncStatusMenu({ onOpenChange }: SyncStatusMenuProps = {}) {
               navigate('/invoice-tracking');
             }}
           >
-            <Receipt className="h-3.5 w-3.5 ml-1.5" />
+            <Receipt className="h-3.5 w-3.5 me-1.5" />
             <span>شاشة تتبع الفواتير</span>
           </Button>
         </div>

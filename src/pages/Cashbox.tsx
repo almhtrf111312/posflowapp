@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/sonner-bridge';
@@ -204,140 +205,137 @@ export default function Cashbox() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-2.5 sm:p-4 md:p-6 pt-2 sm:pt-3 space-y-3">
-      {/* Top Section: Shift Card (Closed or Active) directly at the top */}
-      {!activeShift ? (
-        /* بطاقة لا توجد ورديات مفتوحة حالياً مرفوعة لأعلى الصفحة مباشرة */
-        <div className="bg-card border border-border/80 rounded-2xl p-5 md:p-6 text-center space-y-3.5 shadow-xs relative overflow-hidden rtl:pr-14 ltr:pl-14 md:rtl:pr-6 md:ltr:pl-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
-                <Clock className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-bold text-foreground">{isEn ? "Shift Cashbox" : "صندوق الوردية"}</span>
-            </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+      <PageHeader
+        title={isEn ? "Shift Cashbox" : "صندوق الوردية"}
+        icon={<Wallet className="w-5 h-5" />}
+        actions={
+          <>
             <Button
               variant="outline"
-              size="sm"
-              className="h-8 px-2.5 rounded-xl text-xs gap-1.5 font-medium border-border/80 shadow-2xs cursor-pointer"
+              size="default"
               onClick={() => setShowHistoryDialog(true)}
             >
-              <History className="w-3.5 h-3.5" />
+              <History className="w-4 h-4 shrink-0" />
               <span>{isEn ? "Shift History" : "سجل الورديات"}</span>
             </Button>
-          </div>
+            {activeShift ? (
+              <Button
+                variant="destructive"
+                size="default"
+                onClick={() => setShowCloseDialog(true)}
+              >
+                <Square className="w-4 h-4 shrink-0 fill-current" />
+                <span>{isEn ? "Close Shift" : "إغلاق الوردية"}</span>
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="default"
+                onClick={() => setShowOpenDialog(true)}
+              >
+                <Play className="w-4 h-4 shrink-0 fill-current" />
+                <span>{isEn ? "Open New Shift Now" : "فتح وردية جديدة الآن"}</span>
+              </Button>
+            )}
+          </>
+        }
+      />
 
-          <div className="py-2">
+      {/* Top Section: Shift Card (Closed or Active) */}
+      {!activeShift ? (
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-warning/15 text-warning flex items-center justify-center">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
             <h2 className="text-base sm:text-lg font-bold text-foreground">{isEn ? "No Open Shifts Right Now" : "لا توجد ورديات مفتوحة حالياً"}</h2>
-            <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
               {isEn ? "Start a new shift to accurately track cash sales, collections, and drawer expenses" : "ابدأ وردية جديدة لتسجيل ومتابعة المبيعات، المقبوضات، والمصروفات النقدية للصندوق بدقة"}
             </p>
           </div>
-          <div className="pt-0.5">
-            <Button
-              onClick={() => setShowOpenDialog(true)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 px-6 rounded-2xl shadow-md shadow-primary/25 text-xs sm:text-sm gap-2 transition-all cursor-pointer"
-            >
-              <Play className="w-4 h-4 fill-current" />
-              <span>{isEn ? "Open New Shift Now" : "فتح وردية جديدة الآن"}</span>
-            </Button>
-          </div>
+          <Button
+            variant="default"
+            size="default"
+            onClick={() => setShowOpenDialog(true)}
+          >
+            <Play className="w-4 h-4 shrink-0 fill-current" />
+            <span>{isEn ? "Open New Shift Now" : "فتح وردية جديدة الآن"}</span>
+          </Button>
         </div>
       ) : (
-        /* بطاقة الوردية النشطة مدمجة بالكامل مع زر إغلاق الوردية بداخلها */
-        <Card className="border border-border/80 rounded-2xl overflow-hidden shadow-xs rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
-          <CardHeader className="p-4 pb-3 border-b border-border/50 bg-muted/20">
+        <Card className="border border-border/80 rounded-2xl overflow-hidden shadow-xs">
+          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/50 bg-muted/20">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-success/15 text-success flex items-center justify-center shrink-0">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm sm:text-base font-bold text-foreground">{isEn ? "Current Open Shift" : "الوردية الحالية المفتوحة"}</CardTitle>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {isEn ? "Cashier:" : "المسؤول:"} <span className="font-semibold text-foreground">{activeShift.userName}</span> • {isEn ? "Started:" : "بدأت:"} <span className="font-mono">{formatDateTime(activeShift.openedAt)}</span>
+                  <CardTitle className="flex items-center gap-2">{isEn ? "Current Open Shift" : "الوردية الحالية المفتوحة"}</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isEn ? "Cashier:" : "المسؤول:"} <span className="font-semibold text-foreground">{activeShift.userName}</span> • {isEn ? "Started:" : "بدأت:"} <span dir="ltr" className="inline-block font-mono tabular-nums">{formatDateTime(activeShift.openedAt)}</span>
                   </p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-end sm:self-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2.5 rounded-xl text-xs gap-1.5 font-medium border-border/80 shadow-2xs cursor-pointer"
-                  onClick={() => setShowHistoryDialog(true)}
-                >
-                  <History className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{isEn ? "History" : "السجل"}</span>
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-8 px-3 rounded-xl text-xs font-bold gap-1.5 shadow-sm cursor-pointer"
-                  onClick={() => setShowCloseDialog(true)}
-                >
-                  <Square className="w-3.5 h-3.5 fill-current" />
-                  <span>{isEn ? "Close Shift" : "إغلاق الوردية"}</span>
-                </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[11px] sm:text-xs text-muted-foreground">{isEn ? "Opening Balance" : "رصيد الافتتاح"}</p>
-                <p className="text-sm sm:text-base font-black text-foreground font-mono mt-0.5">
-                  {m.fmt(activeShift.openingCash)}
+                <p className="text-xs text-muted-foreground">{isEn ? "Opening Balance" : "رصيد الافتتاح"}</p>
+                <p className="text-sm sm:text-base font-bold text-foreground font-mono mt-0.5">
+                  <span dir="ltr" className="inline-block tabular-nums">{m.fmt(activeShift.openingCash)}</span>
                 </p>
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3 text-success" />
                   {isEn ? "Sales" : "المبيعات"}
                 </p>
-                <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                  +{m.fmt(activeShift.salesTotal)}
+                <p className="text-sm sm:text-base font-bold text-success font-mono mt-0.5">
+                  <span dir="ltr" className="inline-block tabular-nums">+{m.fmt(activeShift.salesTotal)}</span>
                 </p>
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                  <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3 text-success" />
                   {isEn ? "Deposits" : "الإيداعات"}
                 </p>
-                <p className="text-sm sm:text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                  +{m.fmt(activeShift.depositsTotal)}
+                <p className="text-sm sm:text-base font-bold text-success font-mono mt-0.5">
+                  <span dir="ltr" className="inline-block tabular-nums">+{m.fmt(activeShift.depositsTotal)}</span>
                 </p>
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <ArrowDownRight className="w-3 h-3 text-destructive" />
                   {isEn ? "Expenses" : "المصاريف"}
                 </p>
-                <p className="text-sm sm:text-base font-black text-destructive font-mono mt-0.5">
-                  -{m.fmt(activeShift.expensesTotal)}
+                <p className="text-sm sm:text-base font-bold text-destructive font-mono mt-0.5">
+                  <span dir="ltr" className="inline-block tabular-nums">-{m.fmt(activeShift.expensesTotal)}</span>
                 </p>
               </div>
 
               <div className="bg-muted/50 rounded-xl p-3 border border-border/40">
-                <p className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
                   <ArrowDownRight className="w-3 h-3 text-destructive" />
                   {isEn ? "Withdrawals" : "السحوبات"}
                 </p>
-                <p className="text-sm sm:text-base font-black text-destructive font-mono mt-0.5">
-                  -{m.fmt(activeShift.withdrawalsTotal)}
+                <p className="text-sm sm:text-base font-bold text-destructive font-mono mt-0.5">
+                  <span dir="ltr" className="inline-block tabular-nums">-{m.fmt(activeShift.withdrawalsTotal)}</span>
                 </p>
               </div>
 
               <div className="bg-primary/10 rounded-xl p-3 border border-primary/30">
-                <p className="text-[11px] sm:text-xs text-primary font-bold flex items-center gap-1">
+                <p className="text-xs text-primary font-bold flex items-center gap-1">
                   <Calculator className="w-3 h-3" />
                   {isEn ? "Expected Balance" : "الرصيد المتوقع"}
                 </p>
-                <p className="text-sm sm:text-base font-black text-primary font-mono mt-0.5">
-                  {m.fmt(expectedClosing)}
+                <p className="text-sm sm:text-base font-bold text-primary font-mono mt-0.5">
+                  <span dir="ltr" className="inline-block tabular-nums">{m.fmt(expectedClosing)}</span>
                 </p>
               </div>
             </div>
@@ -346,31 +344,31 @@ export default function Cashbox() {
       )}
 
       {/* Compact 4-Metric Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 text-center select-none">
-        <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[11px] text-muted-foreground font-medium block truncate">{isEn ? "Shift Status" : "حالة الوردية"}</span>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center select-none">
+        <div className="bg-card p-3 rounded-xl border border-border shadow-xs">
+          <span className="text-xs text-muted-foreground font-medium block truncate">{isEn ? "Shift Status" : "حالة الوردية"}</span>
           <span className={cn(
-            "text-xs sm:text-sm font-black tabular-nums block mt-0.5",
-            activeShift ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"
+            "text-sm sm:text-base font-bold tabular-nums block mt-0.5",
+            activeShift ? "text-success" : "text-warning"
           )}>
             {activeShift ? (isEn ? 'Open' : 'مفتوحة') : (isEn ? 'Closed' : 'مغلقة')}
           </span>
         </div>
-        <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[11px] text-primary font-medium block truncate">{isEn ? "Current Balance" : "الرصيد الحالي"}</span>
-          <span className="text-xs sm:text-sm font-black text-primary font-mono tabular-nums block mt-0.5">
+        <div className="bg-card p-3 rounded-xl border border-border shadow-xs">
+          <span className="text-xs text-primary font-medium block truncate">{isEn ? "Current Balance" : "الرصيد الحالي"}</span>
+          <span dir="ltr" className="inline-block text-sm sm:text-base font-bold text-primary font-mono tabular-nums mt-0.5">
             {m.fmt(cashboxState.currentBalance)}
           </span>
         </div>
-        <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium block truncate">{isEn ? "Total Surplus" : "إجمالي الفائض"}</span>
-          <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums block mt-0.5">
+        <div className="bg-card p-3 rounded-xl border border-border shadow-xs">
+          <span className="text-xs text-success font-medium block truncate">{isEn ? "Total Surplus" : "إجمالي الفائض"}</span>
+          <span dir="ltr" className="inline-block text-sm sm:text-base font-bold text-success font-mono tabular-nums mt-0.5">
             {m.fmt(stats.totalSurplus)}
           </span>
         </div>
-        <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-          <span className="text-[11px] text-destructive font-medium block truncate">{isEn ? "Total Shortage" : "إجمالي العجز"}</span>
-          <span className="text-xs sm:text-sm font-black text-destructive font-mono tabular-nums block mt-0.5">
+        <div className="bg-card p-3 rounded-xl border border-border shadow-xs">
+          <span className="text-xs text-destructive font-medium block truncate">{isEn ? "Total Shortage" : "إجمالي العجز"}</span>
+          <span dir="ltr" className="inline-block text-sm sm:text-base font-bold text-destructive font-mono tabular-nums mt-0.5">
             {m.fmt(stats.totalShortage)}
           </span>
         </div>
@@ -378,7 +376,7 @@ export default function Cashbox() {
 
       {/* Recent Shifts */}
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-5 pb-3">
           <CardTitle className="flex items-center gap-2">
             <History className="w-5 h-5 text-primary" />
             {isEn ? "Recent Shifts" : "آخر الورديات"}
@@ -386,9 +384,9 @@ export default function Cashbox() {
         </CardHeader>
         <CardContent>
           {shifts.filter(s => s.status === 'closed').slice(0, 5).length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>{isEn ? "No closed shifts yet" : "لا توجد ورديات مغلقة"}</p>
+            <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+              <Clock className="w-12 h-12 text-muted-foreground/50 mb-3" />
+              <p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? "No closed shifts yet" : "لا توجد ورديات مغلقة"}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -412,16 +410,16 @@ export default function Cashbox() {
 
                   <div className="text-end">
                     <p className="text-sm text-muted-foreground">{isEn ? "Sales" : "المبيعات"}</p>
-                    <p className="font-bold text-green-600">{m.fmt(shift.salesTotal)}</p>
+                    <p className="font-bold text-success"><span dir="ltr" className="inline-block tabular-nums">{m.fmt(shift.salesTotal)}</span></p>
                   </div>
 
                   <div className="text-end ms-4">
                     <p className="text-sm text-muted-foreground">{isEn ? "Variance" : "الفارق"}</p>
                     <p className={cn(
                       "font-bold",
-                      shift.discrepancy === 0 ? "text-foreground" : shift.discrepancy! > 0 ? "text-green-600" : "text-red-600"
+                      shift.discrepancy === 0 ? "text-foreground" : shift.discrepancy! > 0 ? "text-success" : "text-destructive"
                     )}>
-                      {shift.discrepancy === 0 ? '0' : (shift.discrepancy! > 0 ? '+' : '') + m.fmt(shift.discrepancy!)}
+                      <span dir="ltr" className="inline-block tabular-nums">{shift.discrepancy === 0 ? '0' : (shift.discrepancy! > 0 ? '+' : '') + m.fmt(shift.discrepancy!)}</span>
                     </p>
                   </div>
                 </div>
@@ -433,18 +431,24 @@ export default function Cashbox() {
 
       {/* Open Shift Dialog */}
       <Dialog open={showOpenDialog} onOpenChange={setShowOpenDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (openingAmount) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (openingAmount) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
               <Play className="w-5 h-5 text-primary" />
               {isEn ? "Open New Shift" : "فتح وردية جديدة"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
               <Label>{isEn ? "Opening Balance" : "الرصيد الافتتاحي"}</Label>
               <Input
+                dir="ltr"
+                className="tabular-nums"
                 type="number"
                 value={openingAmount}
                 onChange={(e) => setOpeningAmount(e.target.value)}
@@ -456,13 +460,13 @@ export default function Cashbox() {
                 {isEn ? "Enter the actual cash currently in the drawer when starting the shift" : "أدخل المبلغ النقدي الموجود فعلياً في الصندوق عند بدء الوردية"}
               </p>
             </div>
-          </div>
+          </DialogBody>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowOpenDialog(false)}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowOpenDialog(false)}>
               {isEn ? 'Cancel' : 'إلغاء'}
             </Button>
-            <Button onClick={handleOpenShift}>
+            <Button variant="default" size="default" onClick={handleOpenShift}>
               {isEn ? "Open Shift" : "فتح الوردية"}
             </Button>
           </DialogFooter>
@@ -471,29 +475,35 @@ export default function Cashbox() {
 
       {/* Close Shift Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (closingAmount || closingNotes) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (closingAmount || closingNotes) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
               <Square className="w-5 h-5 text-destructive" />
               {isEn ? 'Close Shift' : 'إغلاق الوردية'}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <DialogBody className="space-y-4">
             {/* Expected vs Actual */}
             <div className="bg-muted rounded-xl p-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-muted-foreground">{isEn ? "Expected Balance:" : "الرصيد المتوقع:"}</span>
-                <span className="font-bold text-primary">{m.fmt(expectedClosing)}</span>
+                <span dir="ltr" className="inline-block font-bold text-primary tabular-nums">{m.fmt(expectedClosing)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 {isEn ? "= Opening + Sales + Deposits - Expenses - Withdrawals" : "= الافتتاح + المبيعات + الإيداعات - المصاريف - السحوبات"}
               </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>{isEn ? "Actual Balance" : "الرصيد الفعلي"}</Label>
               <Input
+                dir="ltr"
+                className="tabular-nums"
                 type="number"
                 value={closingAmount}
                 onChange={(e) => setClosingAmount(e.target.value)}
@@ -507,16 +517,16 @@ export default function Cashbox() {
               <div className={cn(
                 "rounded-xl p-4 border-2",
                 parseFloat(closingAmount) === expectedClosing
-                  ? "bg-green-500/10 border-green-500/30"
+                  ? "bg-success/10 border-success/30"
                   : parseFloat(closingAmount) > expectedClosing
-                    ? "bg-blue-500/10 border-blue-500/30"
-                    : "bg-red-500/10 border-red-500/30"
+                    ? "bg-info/10 border-info/30"
+                    : "bg-destructive/10 border-destructive/30"
               )}>
                 <div className="flex items-center gap-2">
                   {parseFloat(closingAmount) === expectedClosing ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <CheckCircle className="w-5 h-5 text-success" />
                   ) : (
-                    <AlertTriangle className="w-5 h-5 text-orange-500" />
+                    <AlertTriangle className="w-5 h-5 text-warning" />
                   )}
                   <span className="font-medium">
                     {parseFloat(closingAmount) === expectedClosing
@@ -535,7 +545,7 @@ export default function Cashbox() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                        className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => {
                           const diff = expectedClosing - parseFloat(closingAmount);
                           const success = addShiftAdjustment('expense_added', diff, isEn ? 'Cashbox shortage' : 'عجز في الصندوق');
@@ -552,7 +562,7 @@ export default function Cashbox() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="w-full text-green-600 border-green-300 hover:bg-green-50"
+                        className="w-full text-success border-success/40 hover:bg-success/10 hover:text-success"
                         onClick={() => {
                           const diff = parseFloat(closingAmount) - expectedClosing;
                           const success = addShiftAdjustment('income_added', diff, isEn ? 'Cashbox surplus' : 'فائض في الصندوق');
@@ -574,7 +584,7 @@ export default function Cashbox() {
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>{isEn ? "Notes (Optional)" : "ملاحظات (اختياري)"}</Label>
               <Textarea
                 value={closingNotes}
@@ -583,13 +593,13 @@ export default function Cashbox() {
                 rows={2}
               />
             </div>
-          </div>
+          </DialogBody>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCloseDialog(false)}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowCloseDialog(false)}>
               {isEn ? 'Cancel' : 'إلغاء'}
             </Button>
-            <Button variant="destructive" onClick={handleCloseShift}>
+            <Button variant="destructive" size="default" onClick={handleCloseShift}>
               {isEn ? 'Close Shift' : 'إغلاق الوردية'}
             </Button>
           </DialogFooter>
@@ -598,19 +608,19 @@ export default function Cashbox() {
 
       {/* History Dialog */}
       <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),42rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-primary" />
               {isEn ? 'Shift History' : 'سجل الورديات'}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3 py-4">
+          <DialogBody className="space-y-3">
             {shifts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{isEn ? "No shifts found" : "لا توجد ورديات"}</p>
+              <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                <Clock className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                <p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? "No shifts found" : "لا توجد ورديات"}</p>
               </div>
             ) : (
               shifts.map(shift => (
@@ -632,39 +642,39 @@ export default function Cashbox() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                     <div>
                       <span className="text-muted-foreground">{isEn ? "Opening:" : "الافتتاح:"}</span>
-                      <span className="font-medium ms-1">{m.fmt(shift.openingCash)}</span>
+                      <span dir="ltr" className="inline-block font-medium ms-1 tabular-nums">{m.fmt(shift.openingCash)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">{isEn ? "Sales:" : "المبيعات:"}</span>
-                      <span className="font-medium text-green-600 ms-1">+{m.fmt(shift.salesTotal)}</span>
+                      <span dir="ltr" className="inline-block font-medium text-success ms-1 tabular-nums">+{m.fmt(shift.salesTotal)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">{isEn ? "Expenses:" : "المصاريف:"}</span>
-                      <span className="font-medium text-red-600 ms-1">-{m.fmt(shift.expensesTotal)}</span>
+                      <span dir="ltr" className="inline-block font-medium text-destructive ms-1 tabular-nums">-{m.fmt(shift.expensesTotal)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">{isEn ? "Deposits:" : "الإيداعات:"}</span>
-                      <span className="font-medium text-green-600 ms-1">+{m.fmt(shift.depositsTotal)}</span>
+                      <span dir="ltr" className="inline-block font-medium text-success ms-1 tabular-nums">+{m.fmt(shift.depositsTotal)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">{isEn ? "Withdrawals:" : "السحوبات:"}</span>
-                      <span className="font-medium text-red-600 ms-1">-{m.fmt(shift.withdrawalsTotal)}</span>
+                      <span dir="ltr" className="inline-block font-medium text-destructive ms-1 tabular-nums">-{m.fmt(shift.withdrawalsTotal)}</span>
                     </div>
                     {shift.status === 'closed' && (
                       <>
                         <div>
                           <span className="text-muted-foreground">{isEn ? "Expected:" : "المتوقع:"}</span>
-                          <span className="font-medium text-primary ms-1">{m.fmt(shift.expectedCash || 0)}</span>
+                          <span dir="ltr" className="inline-block font-medium text-primary ms-1 tabular-nums">{m.fmt(shift.expectedCash || 0)}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">{isEn ? "Closing:" : "الإغلاق:"}</span>
-                          <span className="font-medium ms-1">{m.fmt(shift.closingCash || 0)}</span>
+                          <span dir="ltr" className="inline-block font-medium ms-1 tabular-nums">{m.fmt(shift.closingCash || 0)}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground">{isEn ? "Variance:" : "الفارق:"}</span>
-                          <span className={cn(
-                            "font-medium ms-1",
-                            shift.discrepancy === 0 ? "" : shift.discrepancy! > 0 ? "text-green-600" : "text-red-600"
+                          <span dir="ltr" className={cn(
+                            "inline-block font-medium ms-1 tabular-nums",
+                            shift.discrepancy === 0 ? "" : shift.discrepancy! > 0 ? "text-success" : "text-destructive"
                           )}>
                             {shift.discrepancy === 0 ? '0' : (shift.discrepancy! > 0 ? '+' : '') + m.fmt(shift.discrepancy!)}
                           </span>
@@ -681,12 +691,12 @@ export default function Cashbox() {
                         {shift.adjustments.map(adj => (
                           <div key={adj.id} className={cn(
                             "text-xs px-2 py-1 rounded flex items-center justify-between",
-                            adj.type === 'expense_added' ? "bg-red-500/10 text-red-700" : "bg-green-500/10 text-green-700"
+                            adj.type === 'expense_added' ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
                           )}>
                             <span>
                               {adj.type === 'expense_added' ? (isEn ? '📉 Expense' : '📉 مصروف') : (isEn ? '📈 Income' : '📈 إيراد')}: {adj.reason}
                             </span>
-                            <span className="font-medium">{m.fmt(adj.amount)}</span>
+                            <span dir="ltr" className="inline-block font-medium tabular-nums">{m.fmt(adj.amount)}</span>
                           </div>
                         ))}
                       </div>
@@ -700,7 +710,13 @@ export default function Cashbox() {
                 </div>
               ))
             )}
-          </div>
+          </DialogBody>
+
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowHistoryDialog(false)}>
+              {isEn ? 'Close' : 'إغلاق'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

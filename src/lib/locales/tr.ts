@@ -1069,6 +1069,7 @@ const tr: TranslationDict = {
   // POS (extended)
   'pos.title': 'Satış Noktası',
   'pos.cart': 'Sepet',
+  'pos.changeView': 'Görünüm modunu değiştir',
   'pos.cartCurrency': 'Sepet Para Birimi',
   'pos.itemPriceCurrency': 'Kalem Fiyat Para Birimi',
   'pos.invoiceCurrency': 'Fatura Para Birimi',

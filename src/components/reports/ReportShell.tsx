@@ -42,7 +42,7 @@ export function ReportShell({
     <div className={cn('space-y-3', className)}>
       {/* Header card */}
       {!hideHeaderCard && (
-        <div className="rounded-2xl bg-gradient-to-l from-primary/15 via-primary/5 to-transparent border border-primary/20 p-4 flex items-start gap-3">
+        <div className="rounded-2xl bg-primary/10 border border-primary/20 p-4 flex items-start gap-3">
           <div className="shrink-0 w-11 h-11 rounded-xl bg-primary/20 text-primary flex items-center justify-center">
             {icon}
           </div>
@@ -64,12 +64,12 @@ export function ReportShell({
       {!hideExportToolbar && (onExportPDF || onExportExcel) && (
         <div className="flex items-center gap-2 sticky top-0 z-10 bg-background py-1.5">
           {onExportPDF && (
-            <Button variant="outline" size="sm" onClick={onExportPDF} disabled={exportDisabled} className="h-9 text-xs rounded-xl gap-1.5 flex-1 max-w-40">
+            <Button variant="outline" size="sm" onClick={onExportPDF} disabled={exportDisabled} className="min-h-11 sm:min-h-10 text-xs rounded-xl gap-1.5 flex-1 max-w-40">
               <FileText className="w-4 h-4" /> {t('reports.exportPDF') || 'تصدير PDF'}
             </Button>
           )}
           {onExportExcel && (
-            <Button variant="outline" size="sm" onClick={onExportExcel} disabled={exportDisabled} className="h-9 text-xs rounded-xl gap-1.5 flex-1 max-w-40">
+            <Button variant="outline" size="sm" onClick={onExportExcel} disabled={exportDisabled} className="min-h-11 sm:min-h-10 text-xs rounded-xl gap-1.5 flex-1 max-w-40">
               <Download className="w-4 h-4" /> {t('reports.exportExcel') || 'تصدير Excel'}
             </Button>
           )}

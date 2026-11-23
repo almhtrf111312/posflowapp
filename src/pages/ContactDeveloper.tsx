@@ -11,6 +11,7 @@ import { CURRENT_VERSION_NAME } from '@/lib/remote-updates';
 import { checkTelegramRelease, compareReleaseVersions } from '@/lib/telegram-updates';
 import { Download, Loader2 } from 'lucide-react';
 import { InlineSupportChatPanel } from '@/components/support/InlineSupportChatPanel';
+import { PageHeader } from '@/components/layout/PageHeader';
 
 export default function ContactDeveloper() {
   const { direction, isRTL, language } = useLanguage();
@@ -98,8 +99,15 @@ export default function ContactDeveloper() {
 
 
 
+  const isStandalone = location.pathname === '/contact-developer';
+
   return (
-    <div className="w-full min-w-0 max-w-none self-stretch px-4 pb-4 pt-12 space-y-5 md:mx-auto md:max-w-4xl md:p-8 md:pt-4" dir={direction}>
+    <div className="w-full min-w-0 max-w-4xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6" dir={direction}>
+      <PageHeader
+        title={isEn ? "Live Technical Support" : "الدعم الفني المباشر"}
+        icon={<Headphones className="w-5 h-5" />}
+        className={isStandalone ? "[&>div:first-child]:ps-0" : undefined}
+      />
       {(supportReason === 'revoked' || supportReason === 'inactive' || supportReason === 'owner_inactive') ? null : (
         /* للعملاء العاديين: بطاقة تجديد وترقية الاشتراك (لا تُعرض للحساب الملغى/المحظور) */
         <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-background p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -120,7 +128,7 @@ export default function ContactDeveloper() {
           </div>
           <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0 w-full sm:w-auto">
             {isEn ? "Renew / Upgrade Now" : "تجديد / ترقية الآن"}
-            {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+            <ArrowRight className="w-4 h-4 rtl:rotate-180" />
           </Button>
         </div>
       )}
@@ -130,7 +138,7 @@ export default function ContactDeveloper() {
           reasonDetails.severity === 'destructive'
             ? 'border-destructive/30 bg-destructive/10 text-destructive-foreground'
             : reasonDetails.severity === 'warning'
-            ? 'border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100'
+            ? 'border-warning/30 bg-warning/10 text-foreground'
             : 'border-primary/30 bg-primary/10 text-foreground'
         }`}>
           <div className="flex items-start gap-3">
@@ -138,7 +146,7 @@ export default function ContactDeveloper() {
               reasonDetails.severity === 'destructive'
                 ? 'bg-destructive/20 text-destructive'
                 : reasonDetails.severity === 'warning'
-                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                ? 'bg-warning/20 text-warning'
                 : 'bg-primary/20 text-primary'
             }`}>
               <AlertCircle className="w-5 h-5" />
@@ -168,7 +176,7 @@ export default function ContactDeveloper() {
               onClick={() => navigate('/login')}
               className="gap-2 text-xs"
             >
-              {isRTL ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+              <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
               {isEn ? "Back to Login" : "العودة لتسجيل الدخول"}
             </Button>
           </div>
@@ -183,7 +191,7 @@ export default function ContactDeveloper() {
             {publishedVersion && <> · {isEn ? "Latest" : "المنشور"} <bdi>v{publishedVersion}</bdi></>}
           </p>
         </div>
-        <Button type="button" size="sm" className="h-8 shrink-0 gap-1 px-2 text-xs" disabled={checkingUpdate} onClick={() => void checkUpdate()}>
+        <Button type="button" size="sm" className="shrink-0 gap-1.5" disabled={checkingUpdate} onClick={() => void checkUpdate()}>
           {checkingUpdate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
           {checkingUpdate ? (isEn ? 'Checking…' : 'جاري الفحص…') : (isEn ? 'Check Updates' : 'فحص التحديثات')}
         </Button>
@@ -196,11 +204,11 @@ export default function ContactDeveloper() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            <h2 className="text-sm font-bold text-foreground">
+            <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
               {isEn ? "Live Technical Support" : "الدعم الفني المباشر"}
             </h2>
-            <Badge className="text-[9px] px-1.5 py-0 h-4 bg-green-500/20 text-green-600 border-green-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse me-1 inline-block" />
+            <Badge variant="outline" className="bg-success/15 text-success border-success/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse me-1 inline-block" />
               {isEn ? "Online" : "متصل"}
             </Badge>
           </div>

@@ -30,7 +30,7 @@ export function PageHeader({ title, subtitle, icon, actions, className = '' }: P
         </div>
       </div>
       {actions && (
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full sm:w-auto [&>button]:min-h-10 sm:[&>button]:h-9 [&>button]:px-3.5 [&_button]:text-xs sm:[&_button]:text-sm [&_button]:transition-[transform,color,background-color,border-color]">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full sm:w-auto [&>button]:min-h-11 sm:[&>button]:min-h-10 [&>button]:px-3.5 [&_button]:text-xs sm:[&_button]:text-sm [&_button]:transition-[transform,color,background-color,border-color]">
           {actions}
         </div>
       )}

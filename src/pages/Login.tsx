@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog';
 import { toast } from '@/lib/sonner-bridge';
 import { markSetupComplete } from '@/lib/setup-flag';
 import { applyTheme } from '@/hooks/use-theme';
@@ -545,7 +545,7 @@ export default function Login() {
   };
   return (
     <div 
-      className="min-h-screen w-full bg-background flex flex-col justify-between p-4 sm:p-6 md:justify-center md:items-center relative"
+      className="min-h-screen w-full bg-background flex flex-col justify-between px-4 sm:px-6 pt-[calc(1rem+var(--app-safe-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] md:justify-center md:items-center relative"
       dir={direction}
     >
       {/* ترويسة آمنة تأخذ بعين الاعتبار نوتش الجوال وSafe Area Insets */}
@@ -567,7 +567,7 @@ export default function Login() {
       {/* المحتوى الرئيسي للنموذج — شاشة كاملة متجاوبة Native */}
       <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center py-4 space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             {t('auth.welcome') || 'مرحباً بك في PosFlow'}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -584,7 +584,7 @@ export default function Login() {
 
         {/* حقول الإدخال والأزرار المصممة بارتفاعات لمس مريحة (h-12) */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs sm:text-sm font-bold text-foreground">
               {t('auth.email')}
             </Label>
@@ -601,7 +601,7 @@ export default function Login() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="password" className="text-xs sm:text-sm font-bold text-foreground">
               {t('auth.password')}
             </Label>
@@ -614,16 +614,19 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                className="h-12 rounded-xl pe-11 text-sm sm:text-base px-3.5 border-border/80"
+                className="h-12 rounded-xl pe-12 text-sm sm:text-base px-3.5 border-border/80"
                 dir="ltr"
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground hover:text-foreground transition-colors p-1"
+                aria-label={t('auth.password')}
+                className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -680,7 +683,7 @@ export default function Login() {
                   {isEn ? "Demo mode uses sample data only, kept for 24 hours before automatic deletion. Continue?" : "بيانات وضع التجربة هي بيانات تجريبية فقط، وسيتم الاحتفاظ بها لمدة 24 ساعة ثم تُحذف. هل تريد المتابعة؟"}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter className="gap-2 sm:gap-0">
+              <AlertDialogFooter>
                 <AlertDialogCancel>{isEn ? "Cancel" : "إلغاء"}</AlertDialogCancel>
                 <AlertDialogAction onClick={() => { setShowDemoConfirm(false); void handleStartDemo(); }}>{isEn ? "Continue" : "موافق، ادخل"}</AlertDialogAction>
               </AlertDialogFooter>
@@ -715,12 +718,12 @@ export default function Login() {
           setTgNotLinkedError(false);
         }
       }}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" dir={direction}>
-          <DialogHeader className="text-center sm:text-center pb-2">
-            <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-2.5 transition-colors shadow-xs bg-sky-500/10 text-sky-500 border border-sky-500/20">
+        <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]" dir={direction}>
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-center sm:text-center pe-12">
+            <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-2.5 transition-colors shadow-xs bg-info/10 text-info border border-info/20">
               <Send className="w-7 h-7" />
             </div>
-            <DialogTitle className="text-lg font-bold">
+            <DialogTitle>
               {isEn ? 'Reset Password via Telegram' : 'استعادة كلمة المرور عبر تيليغرام'}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
@@ -729,7 +732,7 @@ export default function Login() {
           </DialogHeader>
 
           {/* محتوى الاستعادة عبر تيليغرام */}
-          <div className="space-y-4 pt-1">
+          <DialogBody className="space-y-4">
             {telegramStep === 1 ? (
               /* الخطوة 1: إدخال البريد أو الهاتف لطلب الرمز */
               <div className="space-y-3.5">
@@ -759,7 +762,7 @@ export default function Login() {
 
                 {/* تنبيه إذا كان الحساب غير مربوط بعد */}
                 {tgNotLinkedError && (
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs space-y-2 text-amber-700 dark:text-amber-400">
+                  <div className="p-3 bg-warning/10 border border-warning/30 rounded-2xl text-xs space-y-2 text-warning">
                     <div className="flex items-center gap-2 font-bold">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span>{isEn ? 'Your account is not linked to the bot yet' : 'حسابك غير مربوط بالبوت بعد'}</span>
@@ -772,7 +775,7 @@ export default function Login() {
                         href={tgBotLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-sky-500 hover:bg-sky-600 text-white rounded-xl font-bold text-xs transition-colors shadow-sm"
+                        className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-info hover:bg-info/90 text-info-foreground rounded-xl font-bold text-xs transition-colors shadow-sm"
                       >
                         <Send className="w-3.5 h-3.5" />
                         <span>{isEn ? "Open Telegram Bot Now" : "فتح البوت في تيليغرام الآن"}</span>
@@ -784,7 +787,7 @@ export default function Login() {
                 <Button
                   onClick={handleRequestTelegramOTP}
                   disabled={isTgLoading || !tgIdentifier.trim()}
-                  className="w-full h-11 rounded-xl font-bold bg-sky-500 hover:bg-sky-600 active:scale-98 text-white shadow-sm cursor-pointer"
+                  className="w-full h-11 rounded-xl font-bold bg-info hover:bg-info/90 active:scale-[0.97] text-info-foreground shadow-sm cursor-pointer"
                 >
                   {isTgLoading ? (
                     <>
@@ -802,9 +805,9 @@ export default function Login() {
             ) : (
               /* الخطوة 2: إدخال رمز التحقق وتعيين كلمة المرور الجديدة */
               <div className="space-y-3.5">
-                <div className="p-3 bg-sky-500/10 border border-sky-500/20 rounded-2xl text-xs space-y-1">
+                <div className="p-3 bg-info/10 border border-info/20 rounded-2xl text-xs space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sky-700 dark:text-sky-300">{isEn ? "If linked to the bot, the code has been sent" : "إذا كان الحساب مربوطاً بالبوت فقد أُرسل الرمز"}</span>
+                    <span className="font-semibold text-info">{isEn ? "If linked to the bot, the code has been sent" : "إذا كان الحساب مربوطاً بالبوت فقد أُرسل الرمز"}</span>
                     <button
                       type="button"
                       onClick={() => setTelegramStep(1)}
@@ -907,14 +910,14 @@ export default function Login() {
                 </Link>
               </div>
             </div>
-          </div>
+          </DialogBody>
 
-          <DialogFooter className="border-t border-border/40 pt-2.5 mt-2">
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowForgotDialog(false)}
-              className="w-full h-10 rounded-xl text-xs font-semibold cursor-pointer"
+              className="w-full"
             >
               {isEn ? 'Cancel' : 'إلغاء'}
             </Button>
@@ -926,7 +929,7 @@ export default function Login() {
       {/* ========================================================================= */}
       {blockedState?.isBlocked && (
         <div 
-          className="fixed inset-0 z-[250] bg-background/90 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-[250] bg-background/95 flex items-center justify-center p-4"
           dir={direction}
         >
           <div className="w-full max-w-md bg-card border border-destructive/30 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
@@ -936,7 +939,7 @@ export default function Login() {
               <div className="w-16 h-16 bg-destructive/10 text-destructive border border-destructive/20 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
                 <ShieldAlert className="w-9 h-9" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+              <h3 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
                 {isEn ? "Account Bound to Another Device" : "الحساب مقترن بجهاز آخر"}
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed px-2">
@@ -982,7 +985,7 @@ export default function Login() {
                   const botUser = tgBotLink || 'https://t.me/Flowpos_pro_bot';
                   window.open(botUser, '_blank');
                 }}
-                className="w-full h-11 rounded-xl font-bold border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full h-11 rounded-xl font-bold border-info/30 text-info hover:bg-info/10 flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <Send className="w-4 h-4" />
                 <span>{isEn ? "Reset via Telegram Bot (/reset_device)" : "التصفير عبر بوت تيليغرام (/reset_device)"}</span>

@@ -7,10 +7,10 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps |
 |---|---|---|---|
-| `BackgroundSyncIndicator.tsx` | Background sync state indicator and hook. | BackgroundSyncIndicator, useSyncState · 1 types | hooks/use-language, hooks/use-network-status, lib/events, lib/notification-events-config, lib/subscription-lock, lib/sync-queue, lib/toast-config, providers/CloudSyncProvider (+1) |
+| `BackgroundSyncIndicator.tsx` | Background sync state indicator and hook. | BackgroundSyncIndicator, useSyncState · 1 types | hooks/use-language, hooks/use-network-status, lib/events, lib/notification-events-config, lib/sonner-bridge, lib/subscription-lock, lib/sync-queue, providers/CloudSyncProvider (+1) |
 | `CartPanel.tsx` | POS cart panel: items, discounts, checkout, held carts. | CartPanel · 1 types | BackgroundSyncIndicator, MaintenancePanel, SerialPickerDialog, components/settings/SurplusProfitField, hooks/use-auth, hooks/use-language, hooks/use-network-status, hooks/use-smart-toast (+32) |
 | `KeyboardShortcutsHelp.tsx` | POS keyboard shortcuts help. | KeyboardShortcutsHelp | hooks/use-keyboard-shortcuts, hooks/use-language, ui/* |
-| `LoanQuickDialog.tsx` | Quick library loan dialog. | LoanQuickDialog | hooks/use-language, hooks/use-smart-toast, lib/cloud/library-cloud, lib/toast-config, ui/* |
+| `LoanQuickDialog.tsx` | Quick library loan dialog. | LoanQuickDialog | hooks/use-language, hooks/use-smart-toast, lib/cloud/library-cloud, lib/sonner-bridge, ui/* |
 | `MaintenancePanel.tsx` | POS maintenance (repair) job panel. | MaintenancePanel | hooks/use-auth, hooks/use-language, lib/activity-log, lib/cloud/customers-cloud, lib/cloud/debts-cloud, lib/cloud/invoices-cloud, lib/cloud/partners-cloud, lib/currencies (+7) |
 | `POSHeader.tsx` | POS screen header and search. | POSHeader | KeyboardShortcutsHelp, hooks/use-language, hooks/use-mobile, hooks/use-support-unread, hooks/use-user-role, ui/* |
 | `ProductDetailsDialog.tsx` | Product details dialog. | ProductDetailsDialog · 1 types | components/products/ProductImage, hooks/use-language, hooks/use-user-role, lib/cloud/warehouses-cloud, lib/product-units, lib/sonner-bridge, ui/* |

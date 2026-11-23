@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useLanguage } from '@/hooks/use-language';
 import { useMoney } from '@/hooks/use-money';
 import { toast } from '@/lib/sonner-bridge';
@@ -24,7 +26,8 @@ import {
   Camera,
   Image as ImageIcon,
   Loader2,
-  Wallet
+  Wallet,
+  Trash2
 } from 'lucide-react';
 import { addWithdrawalFromShift, getActiveShift } from '@/lib/cashbox-store';
 import { loadSuppliersCloud, createSupplierCloud, SupplierBalance } from '@/lib/cloud/suppliers-cloud';
@@ -589,17 +592,17 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* 1. الترويسة العلوية الثابتة (Full-Screen Sticky Header) */}
-        <div className="shrink-0 bg-card/95 backdrop-blur-md border-b border-border/80 px-4 py-3 sm:px-6 shadow-xs z-40">
+        <div className="shrink-0 bg-card border-b border-border/80 px-4 py-3 sm:px-6 shadow-xs z-40">
           <div className="max-w-4xl w-full mx-auto flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary/10 rounded-xl flex items-center justify-center ring-1 ring-primary/20 shrink-0">
                 <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-black tracking-tight text-foreground truncate">
+                <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
                   {t('purchaseInvoice.title')}
                 </h2>
-                <p className="text-[11px] text-muted-foreground truncate">
+                <p className="text-xs text-muted-foreground truncate">
                   {step === 'header'
                     ? 'الخطوة 1: بيانات المورد ورقم الفاتورة'
                     : step === 'items'
@@ -612,24 +615,24 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
             {/* مؤشر المراحل المتجاوب */}
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
               <div className={cn(
-                "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition-all",
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all",
                 step === 'header' ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground"
               )}>
-                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] bg-black/15">1</span>
+                <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs bg-black/15">1</span>
                 <span className="hidden sm:inline">{t('purchaseInvoice.headerStep')}</span>
               </div>
               <div className={cn(
-                "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition-all",
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all",
                 step === 'items' ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground"
               )}>
-                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] bg-black/15">2</span>
+                <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs bg-black/15">2</span>
                 <span className="hidden sm:inline">{t('purchaseInvoice.itemsStep')}</span>
               </div>
               <div className={cn(
-                "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition-all",
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 transition-all",
                 step === 'finalize' ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground"
               )}>
-                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] bg-black/15">3</span>
+                <span className="w-4 h-4 rounded-full flex items-center justify-center text-xs bg-black/15">3</span>
                 <span className="hidden sm:inline">{t('purchases.finalize')}</span>
               </div>
             </div>
@@ -661,23 +664,27 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     <User className="w-4 h-4 text-primary" />
                     {t('purchaseInvoice.supplierName')} *
                   </Label>
-                  <select
-                    data-testid="pi-supplier"
-                    value={newSupplier ? '__new__' : supplierId}
-                    onChange={(e) => {
-                      if (e.target.value === '__new__') { setNewSupplier(true); setSupplierId(''); }
-                      else { setNewSupplier(false); setSupplierId(e.target.value); }
+                  <Select
+                    value={newSupplier ? '__new__' : (supplierId || '__none__')}
+                    onValueChange={(val) => {
+                      if (val === '__new__') { setNewSupplier(true); setSupplierId(''); }
+                      else if (val === '__none__') { setNewSupplier(false); setSupplierId(''); }
+                      else { setNewSupplier(false); setSupplierId(val); }
                     }}
-                    className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
                   >
-                    <option value="">— اختر المورد —</option>
-                    {suppliers.map(sp => (
-                      <option key={sp.id} value={sp.id}>
-                        {sp.name}{sp.company ? ` (${sp.company})` : ''}
-                      </option>
-                    ))}
-                    <option value="__new__">+ مورد جديد</option>
-                  </select>
+                    <SelectTrigger data-testid="pi-supplier" className="min-h-11 sm:min-h-10 w-full rounded-[14px]">
+                      <SelectValue placeholder="— اختر المورد —" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
+                      <SelectItem value="__none__">— اختر المورد —</SelectItem>
+                      {suppliers.map(sp => (
+                        <SelectItem key={sp.id} value={sp.id}>
+                          {sp.name}{sp.company ? ` (${sp.company})` : ''}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__new__">+ مورد جديد</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {newSupplier && (
@@ -743,13 +750,13 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     onValueChange={(v) => setPaymentMethod(v as 'cash' | 'credit')}
                     className="flex flex-wrap gap-4 pt-1"
                   >
-                    <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                    <div className="flex items-center gap-2 cursor-pointer">
                       <RadioGroupItem value="cash" id="invoice-pay-cash" />
                       <Label htmlFor="invoice-pay-cash" className="cursor-pointer text-xs sm:text-sm font-medium">
                         نقداً (مدفوع كاملاً الآن)
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                    <div className="flex items-center gap-2 cursor-pointer">
                       <RadioGroupItem value="credit" id="invoice-pay-credit" />
                       <Label htmlFor="invoice-pay-credit" className="cursor-pointer text-xs sm:text-sm font-medium text-muted-foreground">
                         آجل (يُسجَّل ديناً للمورد)
@@ -762,13 +769,13 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                       onValueChange={(v) => setPaidFrom(v as 'drawer' | 'external')}
                       className="flex flex-wrap gap-4 pt-2 border-t border-border/40"
                     >
-                      <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                      <div className="flex items-center gap-2 cursor-pointer">
                         <RadioGroupItem value="drawer" id="invoice-src-drawer" disabled={!activeShift} />
                         <Label htmlFor="invoice-src-drawer" className="cursor-pointer text-xs sm:text-sm">
                           من الصندوق (الغلة){!activeShift ? ' — لا توجد وردية مفتوحة' : ''}
                         </Label>
                       </div>
-                      <div className="flex items-center space-x-2 space-x-reverse cursor-pointer">
+                      <div className="flex items-center gap-2 cursor-pointer">
                         <RadioGroupItem value="external" id="invoice-src-external" />
                         <Label htmlFor="invoice-src-external" className="cursor-pointer text-xs sm:text-sm">
                           من مصدر خارجي (لا يمسّ الصندوق)
@@ -786,22 +793,21 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                 <div className="p-3 sm:p-4 bg-card border border-border rounded-2xl flex flex-wrap items-center justify-between gap-2 shadow-2xs">
                   <div className="text-xs sm:text-sm">
                     <span className="text-muted-foreground">{t('purchaseInvoice.itemsAdded')}:</span>
-                    <span className="font-bold mx-1 text-foreground">{invoiceItems.length}</span>
+                    <span dir="ltr" className="inline-block font-bold mx-1 text-foreground tabular-nums">{invoiceItems.length}</span>
                     <span className="text-muted-foreground mx-2">|</span>
                     <span className="text-muted-foreground">{t('common.total')}:</span>
-                    <span className="font-bold mx-1 text-primary font-mono">
+                    <span dir="ltr" className="inline-block font-bold mx-1 text-primary font-mono tabular-nums">
                       {m.fmt(currentInvoice.actual_grand_total || 0)}
                     </span>
                   </div>
                   {!showItemForm && (
                     <Button
-                      size="sm"
+                      size="default"
                       variant="outline"
                       data-testid="pi-add-item"
                       onClick={() => setShowItemForm(true)}
-                      className="h-9 rounded-xl text-xs font-bold gap-1"
                     >
-                      <Plus className="w-4 h-4 text-primary" />
+                      <Plus className="w-4 h-4 shrink-0 text-primary" />
                       {t('purchaseInvoice.addAnotherItem')}
                     </Button>
                   )}
@@ -809,37 +815,38 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
 
                 {invoiceItems.length > 0 && (
                   <div className="border border-border rounded-2xl overflow-x-auto max-w-full bg-card shadow-2xs">
-                    <table className="w-full text-xs sm:text-sm min-w-[21.4rem]">
-                      <thead className="bg-muted/70">
-                        <tr>
-                          <th className="p-2.5 text-right">{t('products.name')}</th>
-                          <th className="p-2.5 text-center">{t('products.quantity')}</th>
-                          <th className="p-2.5 text-center">{t('products.costPrice')}</th>
-                          <th className="p-2.5 text-center">{t('common.total')}</th>
-                          <th className="p-2.5 w-10"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                    <Table className="text-xs sm:text-sm min-w-[21.4rem]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-start">{t('products.name')}</TableHead>
+                          <TableHead className="text-end">{t('products.quantity')}</TableHead>
+                          <TableHead className="text-end">{t('products.costPrice')}</TableHead>
+                          <TableHead className="text-end">{t('common.total')}</TableHead>
+                          <TableHead className="text-center w-12"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {invoiceItems.map((item) => (
-                          <tr key={item.id} className="border-t border-border/60">
-                            <td className="p-2.5 font-medium">{item.product_name}</td>
-                            <td className="p-2.5 text-center font-mono">{item.quantity}</td>
-                            <td className="p-2.5 text-center font-mono">{m.fmt(item.cost_price)}</td>
-                            <td className="p-2.5 text-center font-bold font-mono">{m.fmt(item.total_cost)}</td>
-                            <td className="p-2.5 text-center">
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium text-start">{item.product_name}</TableCell>
+                            <TableCell className="text-end font-mono"><span dir="ltr" className="inline-block tabular-nums">{item.quantity}</span></TableCell>
+                            <TableCell className="text-end font-mono"><span dir="ltr" className="inline-block tabular-nums">{m.fmt(item.cost_price)}</span></TableCell>
+                            <TableCell className="text-end font-bold font-mono"><span dir="ltr" className="inline-block tabular-nums">{m.fmt(item.total_cost)}</span></TableCell>
+                            <TableCell className="text-center">
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                                aria-label={t('common.delete')}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => handleDeleteItem(item.id)}
                               >
-                                <X className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </Button>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
 
@@ -864,25 +871,25 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                       <span className="font-bold text-foreground">{currentInvoice.supplier_name}</span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-muted/40">
-                      <span className="text-muted-foreground block text-[11px]">{t('purchaseInvoice.invoiceNumber')}</span>
-                      <span className="font-bold font-mono text-foreground">#{currentInvoice.invoice_number}</span>
+                      <span className="text-muted-foreground block text-xs">{t('purchaseInvoice.invoiceNumber')}</span>
+                      <span dir="ltr" className="inline-block font-bold font-mono text-foreground tabular-nums">#{currentInvoice.invoice_number}</span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-muted/40">
-                      <span className="text-muted-foreground block text-[11px]">{t('purchaseInvoice.itemsAdded')}</span>
-                      <span className="font-bold text-foreground">{invoiceItems.length}</span>
+                      <span className="text-muted-foreground block text-xs">{t('purchaseInvoice.itemsAdded')}</span>
+                      <span dir="ltr" className="inline-block font-bold text-foreground tabular-nums">{invoiceItems.length}</span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-muted/40">
-                      <span className="text-muted-foreground block text-[11px]">طريقة السداد</span>
+                      <span className="text-muted-foreground block text-xs">طريقة السداد</span>
                       <span className="font-bold text-foreground">
                         {paymentMethod === 'cash' ? (paidFrom === 'drawer' ? 'نقداً من الصندوق (سحب وردية)' : 'نقداً من مصدر خارجي') : 'آجل (ذمم موردين)'}
                       </span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
-                      <span className="text-muted-foreground block text-[11px]">{t('common.total')}</span>
-                      <span className="font-black text-primary font-mono">
-                        {m.fmt(currentInvoice.actual_grand_total || 0)}
+                      <span className="text-muted-foreground block text-xs">{t('common.total')}</span>
+                      <span className="font-bold text-primary font-mono">
+                        <span dir="ltr" className="inline-block tabular-nums">{m.fmt(currentInvoice.actual_grand_total || 0)}</span>
                         {primaryCurrencyCode !== 'USD' && (
-                          <span className="text-[11px] text-muted-foreground font-normal block font-sans">
+                          <span dir="ltr" className="text-xs text-muted-foreground font-normal block font-sans tabular-nums">
                             (${currentInvoice.actual_grand_total?.toFixed(2)} USD)
                           </span>
                         )}
@@ -895,7 +902,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                   {invoiceItems.map((item, index) => (
                     <div key={item.id} className="flex justify-between items-center text-xs sm:text-sm py-1.5 border-b last:border-b-0 border-border/50">
                       <span className="font-medium">{index + 1}. {item.product_name}</span>
-                      <span className="text-muted-foreground font-mono">{item.quantity} × {m.fmt(item.cost_price)}</span>
+                      <span dir="ltr" className="inline-block text-muted-foreground font-mono tabular-nums">{item.quantity} × {m.fmt(item.cost_price)}</span>
                     </div>
                   ))}
                 </div>
@@ -907,7 +914,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                     <div className="relative">
                       <img src={invoiceImagePreview} alt="Invoice" loading="lazy" decoding="async" className="w-full h-48 object-contain bg-muted/30 rounded-xl border" />
                       {invoiceImgStatus === 'syncing' && (
-                        <div className="absolute top-2 left-2 bg-black/60 rounded-full p-1.5">
+                        <div className="absolute top-2 start-2 bg-black/60 rounded-full p-1.5">
                           <Loader2 className="w-4 h-4 text-white animate-spin" />
                         </div>
                       )}
@@ -915,7 +922,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                         type="button"
                         size="sm"
                         variant="destructive"
-                        className="absolute top-2 right-2 h-8 text-xs px-3 rounded-xl"
+                        className="absolute top-2 end-2 rounded-xl"
                         onClick={clearInvoiceImage}
                       >
                         {t('common.delete')}
@@ -960,28 +967,29 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         </div>
 
         {/* 3. شريط الأزرار السفلي الثابت والموحد للموبايل (Sticky Bottom Action Bar) */}
-        <div className="shrink-0 sticky bottom-0 z-40 bg-card/95 backdrop-blur-md border-t border-border/80 p-3 sm:px-6 shadow-lg">
-          <div className="max-w-4xl w-full mx-auto flex items-center gap-3">
+        <div className="shrink-0 sticky bottom-0 z-40 bg-card border-t border-border/80 p-3 sm:px-6 shadow-lg">
+          <div className="max-w-4xl w-full mx-auto flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {step === 'header' && (
               <>
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-11 rounded-xl font-bold text-xs sm:text-sm"
+                  size="default"
                   onClick={() => handleOpenChange(false)}
                 >
                   {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
-                  className="flex-[2] h-11 rounded-xl font-bold text-xs sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md gap-1.5"
+                  variant="default"
+                  size="default"
                   data-testid="pi-create"
                   onClick={handleCreateInvoice}
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   <span>{loading ? t('common.loading') : t('common.next')}</span>
-                  <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+                  <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                 </Button>
               </>
             )}
@@ -991,20 +999,21 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-11 rounded-xl font-bold text-xs sm:text-sm"
+                  size="default"
                   onClick={() => handleOpenChange(false)}
                 >
                   {t('common.cancel')}
                 </Button>
                 <Button
                   type="button"
-                  className="flex-[2] h-11 rounded-xl font-bold text-xs sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md gap-1.5"
+                  variant="default"
+                  size="default"
                   data-testid="pi-go-finalize"
                   onClick={goToFinalize}
                   disabled={invoiceItems.length === 0 || loading}
                 >
                   <span>{t('purchases.finalize')} ({invoiceItems.length})</span>
-                  <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+                  <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                 </Button>
               </>
             )}
@@ -1014,16 +1023,17 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-11 rounded-xl font-bold text-xs sm:text-sm gap-1.5"
+                  size="default"
                   onClick={backToItems}
                   disabled={loading}
                 >
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
                   <span>{t('common.back')}</span>
                 </Button>
                 <Button
                   type="button"
-                  className="flex-[2] h-11 rounded-xl font-bold text-xs sm:text-sm bg-primary hover:bg-primary/90 text-primary-foreground shadow-md gap-1.5"
+                  variant="default"
+                  size="default"
                   data-testid="pi-finalize"
                   onClick={handleFinalize}
                   disabled={loading}

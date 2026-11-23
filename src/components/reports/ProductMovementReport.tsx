@@ -29,10 +29,10 @@ interface Props {
 }
 
 const TYPE_META: Record<MovementRow['type'], { label: string; icon: typeof ArrowDown; color: string; bg: string }> = {
-  purchase: { label: 'شراء', icon: ArrowDown, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-  sale:     { label: 'بيع', icon: ArrowUp, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-  refund:   { label: 'مرتجع', icon: RotateCcw, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-  damage:   { label: 'إتلاف', icon: Trash2, color: 'text-red-600', bg: 'bg-red-500/10' },
+  purchase: { label: 'شراء', icon: ArrowDown, color: 'text-success', bg: 'bg-success/10' },
+  sale:     { label: 'بيع', icon: ArrowUp, color: 'text-info', bg: 'bg-info/10' },
+  refund:   { label: 'مرتجع', icon: RotateCcw, color: 'text-warning', bg: 'bg-warning/10' },
+  damage:   { label: 'إتلاف', icon: Trash2, color: 'text-destructive', bg: 'bg-destructive/10' },
 };
 
 export function ProductMovementReport({ dateRange }: Props) {
@@ -219,16 +219,16 @@ export function ProductMovementReport({ dateRange }: Props) {
       ) : (
         <>
           {/* Summary KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {[
-              { label: 'وارد', value: summary.incoming, color: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-              { label: 'صادر', value: summary.outgoing, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-              { label: 'مرتجع', value: summary.refunded, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-              { label: 'إتلاف', value: summary.damaged, color: 'text-red-600', bg: 'bg-red-500/10' },
+              { label: 'وارد', value: summary.incoming, color: 'text-success', bg: 'bg-success/10' },
+              { label: 'صادر', value: summary.outgoing, color: 'text-info', bg: 'bg-info/10' },
+              { label: 'مرتجع', value: summary.refunded, color: 'text-warning', bg: 'bg-warning/10' },
+              { label: 'إتلاف', value: summary.damaged, color: 'text-destructive', bg: 'bg-destructive/10' },
             ].map(k => (
               <Card key={k.label}><CardContent className="p-3">
-                <p className="text-[10px] text-muted-foreground">{k.label}</p>
-                <p className={cn('text-base font-bold mt-1', k.color)}>{formatNumber(k.value)}</p>
+                <p className="text-xs text-muted-foreground">{k.label}</p>
+                <p className={cn('text-base font-bold mt-1', k.color)}><span dir="ltr" className="inline-block tabular-nums">{formatNumber(k.value)}</span></p>
               </CardContent></Card>
             ))}
           </div>
@@ -236,13 +236,13 @@ export function ProductMovementReport({ dateRange }: Props) {
           <Card><CardContent className="p-3">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">صافي الحركة:</span>
-              <span className={cn('font-bold', summary.net >= 0 ? 'text-emerald-600' : 'text-red-600')}>
+              <span dir="ltr" className={cn('inline-block tabular-nums font-bold', summary.net >= 0 ? 'text-success' : 'text-destructive')}>
                 {summary.net >= 0 ? '+' : ''}{formatNumber(summary.net)}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs mt-1.5">
               <span className="text-muted-foreground">الربح المحقق:</span>
-              <span className="font-bold text-primary">{formatReportAmount(summary.profit)}</span>
+              <span dir="ltr" className="inline-block tabular-nums font-bold text-primary">{formatReportAmount(summary.profit)}</span>
             </div>
           </CardContent></Card>
 
@@ -262,12 +262,12 @@ export function ProductMovementReport({ dateRange }: Props) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold truncate">{meta.label} • {formatNumber(m.qty)}</p>
-                          <p className="text-xs font-bold whitespace-nowrap">{formatReportAmount(m.total)}</p>
+                          <p className="text-xs font-semibold truncate">{meta.label} • <span dir="ltr" className="inline-block tabular-nums">{formatNumber(m.qty)}</span></p>
+                          <p className="text-xs font-bold whitespace-nowrap"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(m.total)}</span></p>
                         </div>
                         <div className="flex items-center justify-between gap-2 mt-0.5">
-                          <p className="text-[10px] text-muted-foreground truncate">{m.reference}{m.cashier ? ` • ${m.cashier}` : ''}</p>
-                          <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          <p className="text-xs text-muted-foreground truncate">{m.reference}{m.cashier ? ` • ${m.cashier}` : ''}</p>
+                          <p className="text-xs text-muted-foreground whitespace-nowrap">
                             {new Date(m.date).toLocaleDateString('en-GB')}
                           </p>
                         </div>

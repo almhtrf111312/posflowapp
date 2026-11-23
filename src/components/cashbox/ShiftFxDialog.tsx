@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
 import { getEnabledCurrencies, toUsd, fromUsd, round8 } from '@/lib/money-engine';
 import { addWithdrawalFromShift, addDepositToShift } from '@/lib/cashbox-store';
@@ -38,23 +40,49 @@ export function ShiftFxDialog({ open, onOpenChange, shiftId, onDone }: { open: b
     } catch (e) { toast.error(extractErrorMessage(e) || 'حدث خطأ'); } finally { setBusy(false); }
   };
 
-  const sel = 'h-10 rounded-md border border-input bg-background px-2 text-sm';
+  const isDirty = busy || Boolean(fromAmt || toAmt);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm" dir="rtl">
-        <DialogHeader><DialogTitle>تحويل عملة داخل الصندوق</DialogTitle></DialogHeader>
-        <div className="space-y-3">
+      <DialogContent
+        className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+        onPointerDownOutside={(e) => { if (isDirty) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (isDirty) e.preventDefault(); }}
+      >
+        <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+          <DialogTitle>تحويل عملة داخل الصندوق</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="space-y-4">
           <div className="text-xs text-muted-foreground">يخرج المبلغ الأول من الصندوق ويدخل المبلغ الثاني بعملة أخرى. عدّل المبلغ الثاني إن اختلف سعر الصرف الفعلي.</div>
-          <div className="flex gap-2">
-            <select className={sel} value={from} onChange={e => { setFrom(e.target.value); suggest(fromAmt, e.target.value, to); }}>{currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}</select>
-            <Input type="number" inputMode="decimal" placeholder="المبلغ الخارج" value={fromAmt} onChange={e => { setFromAmt(e.target.value); suggest(e.target.value, from, to); }} />
+          <div className="flex items-center gap-2">
+            <Select value={from} onValueChange={v => { setFrom(v); suggest(fromAmt, v, to); }}>
+              <SelectTrigger className="min-h-11 sm:min-h-10 w-28 shrink-0 rounded-[14px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
+                {currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Input dir="ltr" className="tabular-nums" type="number" inputMode="decimal" placeholder="المبلغ الخارج" value={fromAmt} onChange={e => { setFromAmt(e.target.value); suggest(e.target.value, from, to); }} />
           </div>
-          <div className="flex gap-2">
-            <select className={sel} value={to} onChange={e => { setTo(e.target.value); suggest(fromAmt, from, e.target.value); }}>{currencies.map(c => <option key={c.code} value={c.code}>{c.code}</option>)}</select>
-            <Input type="number" inputMode="decimal" placeholder="المبلغ الداخل" value={toAmt} onChange={e => setToAmt(e.target.value)} />
+          <div className="flex items-center gap-2">
+            <Select value={to} onValueChange={v => { setTo(v); suggest(fromAmt, from, v); }}>
+              <SelectTrigger className="min-h-11 sm:min-h-10 w-28 shrink-0 rounded-[14px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
+                {currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Input dir="ltr" className="tabular-nums" type="number" inputMode="decimal" placeholder="المبلغ الداخل" value={toAmt} onChange={e => setToAmt(e.target.value)} />
           </div>
-          <Button className="w-full" disabled={busy} onClick={submit}>تأكيد التحويل</Button>
-        </div>
+        </DialogBody>
+        <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+          <Button variant="outline" size="default" disabled={busy} onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <Button variant="default" size="default" disabled={busy} onClick={submit}>
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            تأكيد التحويل
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

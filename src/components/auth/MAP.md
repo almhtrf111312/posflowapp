@@ -12,7 +12,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `DeviceBlockedScreen.tsx` | Device blocked screen. | DeviceBlockedScreen | components/license/ActivationScreen, components/settings/ContactLinksSection, hooks/use-auth, hooks/use-language, ui/* | — |
 | `GoogleSignInButton.tsx` | Google sign-in button (removable, standalone). | GoogleSignInButton, default | hooks/use-auth, lib/auth/google-sign-in, lib/sonner-bridge, ui/* | — |
 | `LanguageQuickSelector.tsx` | Quick language selector. | LanguageQuickSelector | hooks/use-language, lib/i18n, ui/* | — |
-| `MandatoryPinSetupModal.tsx` | Mandatory PIN setup modal. | MandatoryPinSetupModal | hooks/use-app-lock, hooks/use-auth, hooks/use-language, ui/* | — |
+| `MandatoryPinSetupModal.tsx` | Mandatory PIN setup modal. | MandatoryPinSetupModal | hooks/use-app-lock, hooks/use-auth, hooks/use-language, lib/sonner-bridge, ui/* | — |
 | `ProtectedRoute.tsx` | Route guard requiring a signed-in user. | ProtectedRoute | hooks/use-auth, lib/demo-data, lib/sonner-bridge | — |
 | `RoleGuard.tsx` | Role-based guard component and HOC. | RoleGuard, withRoleGuard | hooks/use-auth, hooks/use-user-role, lib/demo-data | — |
 | `TelegramLinkCard.tsx` | Telegram link status card for the account. | TelegramLinkCard | hooks/use-auth, hooks/use-language, lib/auth/phone-claim, ui/* | — |

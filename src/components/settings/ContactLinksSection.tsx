@@ -26,7 +26,7 @@ interface ChannelConfig {
 const CHANNELS: ChannelConfig[] = [
   { key: 'whatsapp', labelKey: 'contact.whatsapp', color: 'bg-green-500 hover:bg-green-600', hoverColor: 'hover:shadow-green-500/30', icon: '💬', openUrl: (v) => `https://wa.me/${v.replace(/[^0-9+]/g, '')}` },
   { key: 'facebook', labelKey: 'contact.facebook', color: 'bg-blue-600 hover:bg-blue-700', hoverColor: 'hover:shadow-blue-600/30', icon: '📘', openUrl: (v) => v.startsWith('http') ? v : `https://facebook.com/${v}` },
-  { key: 'tiktok', labelKey: 'contact.tiktok', color: 'bg-gray-900 hover:bg-black dark:bg-gray-700 dark:hover:bg-gray-600', hoverColor: 'hover:shadow-gray-900/30', icon: '🎵', openUrl: (v) => v.startsWith('http') ? v : `https://tiktok.com/@${v}` },
+  { key: 'tiktok', labelKey: 'contact.tiktok', color: 'bg-foreground text-background hover:bg-foreground/90', hoverColor: 'hover:shadow-gray-900/30', icon: '🎵', openUrl: (v) => v.startsWith('http') ? v : `https://tiktok.com/@${v}` },
   { key: 'telegram', labelKey: 'contact.telegram', color: 'bg-sky-500 hover:bg-sky-600', hoverColor: 'hover:shadow-sky-500/30', icon: '✈️', openUrl: (v) => v.startsWith('http') ? v : `https://t.me/${v}` },
   { key: 'youtube', labelKey: 'contact.youtube', color: 'bg-red-600 hover:bg-red-700', hoverColor: 'hover:shadow-red-600/30', icon: '▶️', openUrl: (v) => v.startsWith('http') ? v : `https://youtube.com/@${v}` },
   { key: 'twitter', labelKey: 'contact.twitter', color: 'bg-gray-700 hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500', hoverColor: 'hover:shadow-gray-700/30', icon: '𝕏', openUrl: (v) => v.startsWith('http') ? v : `https://x.com/${v}` },

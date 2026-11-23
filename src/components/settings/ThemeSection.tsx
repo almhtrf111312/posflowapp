@@ -111,7 +111,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg md:text-xl font-bold text-foreground mb-4">
+        <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight mb-4">
           {t('settings.theme')}
         </h2>
         
@@ -134,7 +134,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
             </div>
             <span className="text-xs md:text-sm font-bold text-foreground">{t('settings.lightMode')}</span>
             {pendingMode === 'light' && (
-              <Check className="w-4 h-4 text-primary absolute rtl:left-2.5 ltr:right-2.5" />
+              <Check className="w-4 h-4 text-primary absolute end-2.5" />
             )}
           </button>
 
@@ -156,7 +156,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
             </div>
             <span className="text-xs md:text-sm font-bold text-foreground">{t('settings.darkMode')}</span>
             {pendingMode === 'dark' && (
-              <Check className="w-4 h-4 text-primary absolute rtl:left-2.5 ltr:right-2.5" />
+              <Check className="w-4 h-4 text-primary absolute end-2.5" />
             )}
           </button>
         </div>
@@ -248,7 +248,7 @@ export function ThemeSection({ onPendingChange, resetSignal, currentDraft }: The
                 {isRTL ? value.nameAr : value.name}
               </span>
               {pendingColor === key && (
-                <div className="absolute top-1 left-1 rtl:left-auto rtl:right-1">
+                <div className="absolute top-1 start-1">
                   <Check className="w-4 h-4 text-primary" />
                 </div>
               )}

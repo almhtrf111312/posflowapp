@@ -22,7 +22,8 @@ import {
   Search,
   Package,
   Repeat,
-  Coins
+  Coins,
+  Loader2
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -30,8 +31,10 @@ import { Input } from '@/components/ui/input';
 import { cn, formatNumber, formatCurrency, formatMoney, roundCurrency, addCurrency, clampNumber } from '@/lib/utils';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -1833,16 +1836,16 @@ export function CartPanel({
     <>
       <div className={cn(
         "bg-card flex flex-col h-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)]",
-          isMobile ? "rounded-t-3xl" : "rounded-3xl border border-black/5 dark:border-white/10"
+          isMobile ? "rounded-t-3xl" : "rounded-3xl border border-border/60"
       )}>
         {/* Cart Header */}
-        <div className="p-3 md:p-3.5 border-b border-black/5 dark:border-white/5 bg-transparent">
+        <div className="p-3 md:p-3.5 border-b border-border/40 bg-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-primary" />
               <h2 className="font-bold text-base md:text-lg">{t('pos.shoppingCart')}</h2>
               {cart.length > 0 && (
-                <span className="bg-primary/20 text-primary text-xs font-bold px-2 py-0.5 rounded-full">
+                <span dir="ltr" className="inline-block tabular-nums bg-primary/20 text-primary text-xs font-bold px-2 py-0.5 rounded-full">
                   {cart.length}
                 </span>
               )}
@@ -1851,9 +1854,9 @@ export function CartPanel({
                   type="button"
                   onClick={() => setShowMaintenance(v => !v)}
                   className={cn(
-                    "text-xs font-bold px-2.5 py-1 rounded-full transition-all duration-200 inline-flex items-center gap-1 cursor-pointer select-none",
+                    "min-h-11 sm:min-h-9 text-xs font-bold px-3 rounded-xl transition-[transform,color,background-color] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring inline-flex items-center gap-1 cursor-pointer select-none",
                     showMaintenance
-                      ? "bg-primary text-primary-foreground shadow-xs scale-105"
+                      ? "bg-primary text-primary-foreground shadow-xs"
                       : "bg-muted hover:bg-muted/80 text-foreground"
                   )}
                 >
@@ -1877,9 +1880,9 @@ export function CartPanel({
                   if (!wholesaleMode) setReceivedAmount(0);
                 }}
                 className={cn(
-                  "text-xs font-bold px-2 py-1 rounded-lg transition-colors inline-flex items-center gap-1 shrink-0",
+                  "min-h-11 sm:min-h-9 text-xs font-bold px-2.5 rounded-xl transition-[transform,color,background-color] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring inline-flex items-center gap-1 shrink-0",
                   wholesaleMode
-                    ? "bg-orange-500 text-white shadow-md"
+                    ? "bg-warning text-warning-foreground shadow-sm"
                     : "bg-muted text-foreground hover:bg-muted/80"
                 )}
               >
@@ -1890,13 +1893,13 @@ export function CartPanel({
                 <button
                   type="button"
                   onClick={onClearCart}
-                  className="text-xs font-semibold text-destructive hover:bg-destructive/10 px-2 py-1 rounded-lg shrink-0 transition-colors"
+                  className="min-h-11 sm:min-h-9 text-xs font-semibold text-destructive hover:bg-destructive/10 px-2.5 rounded-xl shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {t('pos.clear')}
                 </button>
               )}
               {isMobile && onClose && (
-                <Button variant="ghost" size="icon" onClick={onClose} className="h-10 w-10 rounded-full bg-muted/60 hover:bg-destructive/10 shrink-0">
+                <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('common.close') || 'إغلاق'} className="rounded-full bg-muted/60 hover:bg-destructive/10 shrink-0">
                   <X className="w-4 h-4" />
                 </Button>
               )}
@@ -1917,47 +1920,51 @@ export function CartPanel({
           {heldCarts && heldCarts.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 mt-2 scrollbar-none">
               {heldCarts.map((hc) => (
-                <button
+                <div
                   key={hc.id}
-                  type="button"
-                  onClick={() => onSwitchCart?.(hc.id)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-colors shrink-0 border",
+                    "inline-flex items-center rounded-full text-xs font-bold transition-colors shrink-0 border",
                     hc.id === activeCartId
-                      ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
+                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
                       : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground"
                   )}
                 >
-                  <span>{isEn ? hc.name.replace(/^(?:السلة|سلة)\s+/, 'Cart ') : hc.name.replace(/^Cart\s+/i, 'السلة ')}</span>
-                  {hc.cart.length > 0 && (
-                    <span className={cn(
-                      "w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold",
-                      hc.id === activeCartId ? "bg-primary-foreground text-primary" : "bg-primary/20 text-primary"
-                    )}>
-                      {hc.cart.reduce((s, i) => s + i.quantity, 0)}
-                    </span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => onSwitchCart?.(hc.id)}
+                    className="flex min-h-10 sm:min-h-8 items-center gap-1.5 px-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span>{isEn ? hc.name.replace(/^(?:السلة|سلة)\s+/, 'Cart ') : hc.name.replace(/^Cart\s+/i, 'السلة ')}</span>
+                    {hc.cart.length > 0 && (
+                      <span dir="ltr" className={cn(
+                        "min-w-4 h-4 px-1 rounded-full text-[10px] tabular-nums flex items-center justify-center font-bold",
+                        hc.id === activeCartId ? "bg-primary-foreground text-primary" : "bg-primary/20 text-primary"
+                      )}>
+                        {hc.cart.reduce((s, i) => s + i.quantity, 0)}
+                      </span>
+                    )}
+                  </button>
                   {heldCarts.length > 1 && onRemoveCart && (
-                    <span
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
                       onClick={(e) => onRemoveCart(hc.id, e)}
-                      className="hover:text-destructive p-0.5 rounded text-muted-foreground"
+                      aria-label={t('pos.clearCart') || 'إلغاء السلة'}
                       title={t('pos.clearCart') || 'إلغاء السلة'}
+                      className="min-w-8 min-h-8 me-1 flex items-center justify-center rounded-full hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      <X className="w-3 h-3" />
-                    </span>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   )}
-                </button>
+                </div>
               ))}
               {onAddNewCart && (
                 <button
                   type="button"
                   onClick={onAddNewCart}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-dashed border-border/70 transition-colors shrink-0"
+                  className="flex min-h-10 sm:min-h-8 items-center gap-1 px-3 rounded-full text-xs font-semibold bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-dashed border-border/70 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title={t('pos.newCart') || 'إضافة سلة جديدة'}
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>{t('pos.cart') || 'سلة'} +</span>
                 </button>
               )}
@@ -1979,9 +1986,9 @@ export function CartPanel({
                     type="button"
                     onClick={() => onCurrencyChange?.(curr)}
                     className={cn(
-                      "px-2.5 py-1 rounded-full text-xs font-bold transition-all shrink-0 border cursor-pointer select-none flex items-center gap-1",
+                      "min-h-10 sm:min-h-8 px-3 rounded-full text-xs font-bold transition-[transform,color,background-color,border-color] duration-150 shrink-0 border cursor-pointer select-none flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected
-                        ? "bg-primary text-primary-foreground border-primary shadow-xs scale-105"
+                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
                         : "bg-muted/50 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted"
                     )}
                   >
@@ -1998,7 +2005,7 @@ export function CartPanel({
           {/* Customer Name with Autocomplete */}
           <div className="mt-2 flex gap-1.5">
             <div className="flex-1 relative">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
               <Input
                 type="text"
                 data-testid="cart-customer"
@@ -2016,12 +2023,12 @@ export function CartPanel({
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                className="ps-9 pe-3 bg-slate-100 dark:bg-zinc-800 border-none h-9 md:h-10 rounded-xl text-xs md:text-sm shadow-inner focus-visible:ring-2 focus-visible:ring-primary/20"
+                className="ps-9 pe-3 bg-muted/60 border border-border/40 min-h-11 md:min-h-10 rounded-[14px] text-xs md:text-sm shadow-inner focus-visible:ring-2 focus-visible:ring-primary/20"
               />
               {/* Customer Suggestions Dropdown */}
               {showSuggestions && customerSuggestions.length > 0 && (
                 <div 
-                  className="absolute top-full right-0 left-0 z-50 mt-1 bg-popover border border-border rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto"
+                  className="absolute top-full inset-x-0 z-50 mt-1 bg-popover border border-border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto"
                   onMouseDown={(e) => e.preventDefault()}
                 >
                   <div className="p-1 space-y-0.5">
@@ -2031,14 +2038,14 @@ export function CartPanel({
                         role="button"
                         tabIndex={0}
                         onClick={() => selectCustomer(customer)}
-                        className="cursor-pointer px-3 py-2.5 hover:bg-muted active:bg-muted/80 rounded-md flex items-center justify-between transition-colors text-foreground select-none"
+                        className="cursor-pointer min-h-11 px-3 py-2.5 hover:bg-muted active:bg-muted/80 rounded-md flex items-center justify-between transition-colors text-foreground select-none"
                       >
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                           <span className="font-medium text-sm">{customer.name}</span>
                         </div>
                         {customer.phone && (
-                          <span className="text-xs text-muted-foreground font-mono">{customer.phone}</span>
+                          <span dir="ltr" className="inline-block tabular-nums text-xs text-muted-foreground font-mono">{customer.phone}</span>
                         )}
                       </div>
                     ))}
@@ -2049,9 +2056,10 @@ export function CartPanel({
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9 md:h-10 md:w-10 rounded-xl flex-shrink-0 border-none shadow-sm bg-white dark:bg-zinc-800 hover:bg-black/5"
+              className="rounded-xl flex-shrink-0 border border-border/60 shadow-sm bg-card hover:bg-muted"
               onClick={() => setShowCustomerDialog(true)}
               title={t('pos.addNewCustomer') || (isRTL ? 'إضافة عميل جديد' : 'Add Customer')}
+              aria-label={t('pos.addNewCustomer') || (isRTL ? 'إضافة عميل جديد' : 'Add Customer')}
             >
               <UserPlus className="w-4 h-4" />
             </Button>
@@ -2075,9 +2083,9 @@ export function CartPanel({
         <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-1 bg-muted/20">
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
-              <ShoppingCart className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm font-medium">{t('pos.emptyCart')}</p>
-              <p className="text-xs opacity-70 mt-1">{t('pos.clickToAdd')}</p>
+              <ShoppingCart className="w-12 h-12 mb-3 text-muted-foreground/50" />
+              <p className="text-sm font-medium text-foreground">{t('pos.emptyCart')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('pos.clickToAdd')}</p>
             </div>
           ) : (
             cart.map((item, index) => (
@@ -2091,7 +2099,8 @@ export function CartPanel({
                 <button
                   type="button"
                   onClick={() => onRemoveItem(item.id, item.unit)}
-                  className="size-9 rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center shrink-0 transition-[transform,colors] active:scale-90 relative after:absolute after:-inset-1.5 after:content-['']"
+                  aria-label={t('pos.removeFromCart') || 'حذف من السلة'}
+                  className="size-9 rounded-lg text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center shrink-0 transition-[transform,color,background-color] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring relative after:absolute after:-inset-1.5 after:content-['']"
                   title={t('pos.removeFromCart') || 'حذف من السلة'}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -2106,7 +2115,7 @@ export function CartPanel({
                     {!!item.bulkSalePrice && item.bulkSalePrice > 0 && (
                       <div className="flex items-center gap-0.5 shrink-0">
                         <span className={cn(
-                          "text-[9px] px-1 py-0.2 rounded font-medium",
+                          "text-[11px] px-1.5 py-0.5 rounded-full font-medium",
                           item.unit === 'bulk'
                             ? "bg-primary/20 text-primary"
                             : "bg-muted text-muted-foreground"
@@ -2120,7 +2129,8 @@ export function CartPanel({
                             type="button"
                             data-testid="cart-toggle-unit"
                             onClick={() => onToggleUnit(item.id, item.unit)}
-                            className="p-1 text-muted-foreground hover:text-primary transition-colors relative after:absolute after:-inset-2 after:content-['']"
+                            aria-label={t('pos.switchUnit') || 'تبديل الوحدة'}
+                            className="p-1 text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring relative after:absolute after:-inset-2 after:content-['']"
                             title={t('pos.switchUnit') || 'تبديل الوحدة'}
                           >
                             <Repeat className="w-3 h-3" />
@@ -2130,18 +2140,18 @@ export function CartPanel({
                     )}
                   </div>
                   {(wholesaleMode || (isRepairStoreType() && item.costPrice != null)) && (
-                    <div className="text-[9px] text-muted-foreground truncate leading-none mt-0.5">
+                    <div className="text-[11px] text-muted-foreground truncate leading-tight mt-0.5">
                       {wholesaleMode && (() => {
                         const safeCartRate = Number.isFinite(selectedCurrency.rate) && selectedCurrency.rate > 0
                           ? selectedCurrency.rate
                           : 1;
                         const linePrice = roundForCurr(fromUsd(getItemPrice(item), selectedCurrency.code, safeCartRate), selectedCurrency.code);
-                        return <span className="text-warning font-medium">{formatNumber(linePrice)} {selectedCurrency.symbol} × {item.quantity}</span>;
+                        return <span dir="ltr" className="inline-block tabular-nums text-warning font-medium">{formatNumber(linePrice)} {selectedCurrency.symbol} × {item.quantity}</span>;
                       })()}
                       {!isCashier && isRepairStoreType() && item.costPrice != null && (
                         <>
                           {wholesaleMode && ' · '}
-                          {`${t('pos.cost') || 'تكلفة'}: ${formatNumber(item.costPrice || 0)}`}
+                          {t('pos.cost') || 'تكلفة'}: <span dir="ltr" className="inline-block tabular-nums">{formatNumber(item.costPrice || 0)}</span>
                         </>
                       )}
                     </div>
@@ -2153,19 +2163,21 @@ export function CartPanel({
                   <button
                     type="button"
                     onClick={() => onUpdateQuantity(item.id, -1, item.unit)}
-                    className="size-8 rounded-lg bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-90 transition-all shadow-xs relative after:absolute after:-inset-1.5 after:content-['']"
+                    aria-label={t('pos.decreaseQty') || 'تقليل الكمية'}
+                    className="size-10 sm:size-9 rounded-lg bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,background-color] duration-150 shadow-xs"
                     title={t('pos.decreaseQty') || 'تقليل الكمية'}
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <span className="min-w-[1.5rem] px-1 w-auto text-center font-bold text-xs text-foreground tabular-nums select-none">
+                  <span dir="ltr" className="min-w-[1.5rem] px-1 w-auto text-center font-bold text-xs text-foreground tabular-nums select-none">
                     {item.quantity}
                   </span>
                   <button
                     type="button"
                     data-testid="cart-qty-plus"
                     onClick={() => onUpdateQuantity(item.id, 1, item.unit)}
-                    className="size-8 rounded-lg bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-90 transition-all shadow-xs relative after:absolute after:-inset-1.5 after:content-['']"
+                    aria-label={t('pos.increaseQty') || 'زيادة الكمية'}
+                    className="size-10 sm:size-9 rounded-lg bg-card hover:bg-muted text-foreground flex items-center justify-center active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,background-color] duration-150 shadow-xs"
                     title={t('pos.increaseQty') || 'زيادة الكمية'}
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -2174,7 +2186,7 @@ export function CartPanel({
 
                 {/* إجمالي السطر بعملة السلة العامة */}
                 <div className="flex items-center shrink-0 text-end">
-                  <span className={cn("font-bold text-xs md:text-sm tabular-nums min-w-[3.4rem] text-end", wholesaleMode ? "text-warning" : "text-primary")}>
+                  <span dir="ltr" className={cn("inline-block font-bold text-xs md:text-sm tabular-nums min-w-[3.4rem] text-end", wholesaleMode ? "text-warning" : "text-primary")}>
                     {formatCurrency(roundForCurr(fromUsd(getItemPrice(item) * item.quantity, selectedCurrency.code, selectedCurrency.rate), selectedCurrency.code), selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
                   </span>
                 </div>
@@ -2188,7 +2200,7 @@ export function CartPanel({
           {/* Tax Toggle Switch - only show when tax is enabled */}
           {storeTaxEnabled && storeTaxRate > 0 && (
             <div className="flex items-center justify-between px-2 py-1 bg-muted/40 rounded-lg text-xs">
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {t('pos.tax') || 'الضريبة'}: {storeTaxRate}%
                 <span className="ms-1">{taxMode === 'gross' ? (t('pos.inclusive' as never) || 'شامل') : (t('pos.exclusive' as never) || 'غير شامل')}</span>
               </span>
@@ -2206,7 +2218,7 @@ export function CartPanel({
               {settingsDiscountPercentEnabled && (
                 <label
                   className={cn(
-                    "group box-border flex h-10 min-w-0 w-full items-center gap-1.5 overflow-hidden rounded-lg border px-2 transition-colors cursor-text focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary",
+                    "group box-border flex min-h-11 sm:min-h-10 min-w-0 w-full items-center gap-1.5 overflow-hidden rounded-[14px] border px-2 transition-colors cursor-text focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary",
                     discountType === 'percent' && discount > 0
                       ? "bg-primary/5 border-primary/40"
                       : "bg-muted/40 border-border/40 hover:border-border/60"
@@ -2214,6 +2226,7 @@ export function CartPanel({
                 >
                   <Input
                     type="number"
+                    dir="ltr"
                     placeholder={t('pos.discount') || 'خصم'}
                     data-testid="cart-discount-percent"
                     value={discountType === 'percent' ? (discount || '') : ''}
@@ -2223,7 +2236,7 @@ export function CartPanel({
                     }}
                     onFocus={() => setDiscountType('percent')}
                     className={cn(
-                      "box-border h-full min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-xs text-foreground shadow-none outline-none placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
+                      "box-border h-full min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-xs tabular-nums text-foreground shadow-none outline-none placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
                       discountType === 'percent' && discount > 0 && "font-semibold text-primary"
                     )}
                     min="0"
@@ -2240,7 +2253,7 @@ export function CartPanel({
               {settingsDiscountFixedEnabled && (
                 <label
                   className={cn(
-                    "group box-border flex h-10 min-w-0 w-full items-center gap-1.5 overflow-hidden rounded-lg border px-2 transition-colors cursor-text focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary",
+                    "group box-border flex min-h-11 sm:min-h-10 min-w-0 w-full items-center gap-1.5 overflow-hidden rounded-[14px] border px-2 transition-colors cursor-text focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary",
                     discountType === 'fixed' && discount > 0
                       ? "bg-primary/5 border-primary/40"
                       : "bg-muted/40 border-border/40 hover:border-border/60"
@@ -2248,6 +2261,7 @@ export function CartPanel({
                 >
                   <Input
                     type="number"
+                    dir="ltr"
                     placeholder={t('pos.discount') || 'خصم'}
                     data-testid="cart-discount-fixed"
                     value={discountType === 'fixed' ? (discount || '') : ''}
@@ -2257,7 +2271,7 @@ export function CartPanel({
                     }}
                     onFocus={() => setDiscountType('fixed')}
                     className={cn(
-                      "box-border h-full min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-xs text-foreground shadow-none outline-none placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
+                      "box-border h-full min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-xs tabular-nums text-foreground shadow-none outline-none placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
                       discountType === 'fixed' && discount > 0 && "font-semibold text-primary"
                     )}
                     min="0"
@@ -2276,7 +2290,7 @@ export function CartPanel({
           {/* Row 3: Received Amount */}
           <div className="space-y-1">
             <div className={cn(
-              "box-border flex h-10 min-w-0 w-full items-center gap-1.5 overflow-hidden rounded-lg border px-2 transition-colors cursor-text focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary",
+              "box-border flex min-h-11 sm:min-h-10 min-w-0 w-full items-center gap-1.5 overflow-hidden rounded-[14px] border px-2 transition-colors cursor-text focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary",
               receivedAmount > 0
                 ? "bg-primary/5 border-primary/40"
                 : "bg-muted/40 border-border/40 hover:border-border/60"
@@ -2287,6 +2301,7 @@ export function CartPanel({
               )} />
               <Input
                 type="number"
+                dir="ltr"
                 data-testid="cart-received"
                 placeholder={t('pos.receivedAmount') || 'المبلغ المقبوض'}
                 value={receivedAmount === 0 ? '' : receivedAmount}
@@ -2295,7 +2310,7 @@ export function CartPanel({
                   setReceivedAmount(Number.isFinite(value) ? value : 0);
                 }}
                 className={cn(
-                  "box-border h-full min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-xs text-foreground shadow-none outline-none placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
+                  "box-border h-full min-w-0 w-0 flex-1 border-0 bg-transparent p-0 text-xs tabular-nums text-foreground shadow-none outline-none placeholder:text-muted-foreground/70 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
                   wholesaleMode ? "font-semibold text-warning" : receivedAmount > 0 ? "font-semibold text-primary" : ""
                 )}
                 min="0"
@@ -2304,9 +2319,9 @@ export function CartPanel({
 
             {/* بيان توضيحي لقيمة المقبوض بالدولار إذا أُدخل بعملة ثانوية */}
             {receivedAmount > 0 && activeReceivedCurrency.code !== 'USD' && (
-              <div className="flex justify-between items-center text-[10px] text-muted-foreground px-1">
+              <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
                 <span>{t('pos.usdEquivalent') || 'المعادل بالدولار'}:</span>
-                <span className="font-semibold text-foreground">${formatNumber(receivedUSD)} (${t('pos.exchangeRate') || 'سعر الصرف'}: {formatNumber(receivedRate)})</span>
+                <span className="font-semibold text-foreground"><span dir="ltr" className="inline-block tabular-nums">${formatNumber(receivedUSD)}</span> ({t('pos.exchangeRate') || 'سعر الصرف'}: <span dir="ltr" className="inline-block tabular-nums">{formatNumber(receivedRate)}</span>)</span>
               </div>
             )}
           </div>
@@ -2315,25 +2330,25 @@ export function CartPanel({
           <div className="space-y-1">
             {/* Info chips */}
             {(subtotal !== total || discount > 0 || (storeTaxEnabled && taxAmount > 0) || receivedAmount > 0) && (
-              <div className="flex flex-wrap gap-1 text-[9px]">
+              <div className="flex flex-wrap gap-1 text-xs">
                 {subtotal !== total && (
-                  <span className="bg-muted/70 text-muted-foreground px-1.5 py-0.5 rounded">
-                    {wholesaleMode ? (t('pos.wholesale') || 'جملة') : (t('pos.subtotal') || 'المجموع')}: {formatCurrency(subtotal * activeRate, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
+                  <span className="bg-muted/70 text-muted-foreground px-2 py-0.5 rounded-full">
+                    {wholesaleMode ? (t('pos.wholesale') || 'جملة') : (t('pos.subtotal') || 'المجموع')}: <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(subtotal * activeRate, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}</span>
                   </span>
                 )}
                 {discount > 0 && (
-                  <span className="bg-success/10 text-success px-1.5 py-0.5 rounded font-medium">
-                    {t('pos.discount') || 'خصم'}: -{formatCurrency(discountType === 'fixed' ? discount : discountAmount * activeRate, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
+                  <span className="bg-success/10 text-success px-2 py-0.5 rounded-full font-medium">
+                    {t('pos.discount') || 'خصم'}: <span dir="ltr" className="inline-block tabular-nums">-{formatCurrency(discountType === 'fixed' ? discount : discountAmount * activeRate, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}</span>
                   </span>
                 )}
                 {storeTaxEnabled && effectiveTaxRate > 0 && taxAmount > 0 && (
-                  <span className="bg-warning/10 text-warning px-1.5 py-0.5 rounded">
-                    {t('pos.tax') || 'ض.'} {effectiveTaxRate}%: {formatCurrency(taxAmount * activeRate, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
+                  <span className="bg-warning/10 text-warning px-2 py-0.5 rounded-full">
+                    {t('pos.tax') || 'ض.'} <span dir="ltr" className="inline-block tabular-nums">{effectiveTaxRate}%</span>: <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(taxAmount * activeRate, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}</span>
                   </span>
                 )}
                 {receivedAmount > 0 && receivedUSD > total + 0.001 && (
-                  <span className="bg-success/10 text-success px-1.5 py-0.5 rounded font-bold">
-                    {t('pos.acceptExtraProfit') || 'ربح إضافي'}: +{formatMoney(round8(receivedUSD - total), 'USD')}
+                  <span className="bg-success/10 text-success px-2 py-0.5 rounded-full font-bold">
+                    {t('pos.acceptExtraProfit') || 'ربح إضافي'}: <span dir="ltr" className="inline-block tabular-nums">+{formatMoney(round8(receivedUSD - total), 'USD')}</span>
                   </span>
                 )}
                 {receivedAmount > 0 && receivedUSD < total - 0.001 && (
@@ -2343,14 +2358,14 @@ export function CartPanel({
                       {t('pos.shortageAlert') || 'المبلغ المقبوض أقل من الإجمالي - هل ترغب بالمتابعة؟'}
                     </span>
                     <span className="bg-warning/10 text-warning px-1.5 py-0.5 rounded font-bold text-center text-xs">
-                      {t('pos.received') || 'مقبوض'}: {formatCurrency(receivedAmount, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)} — {t('pos.remaining') || 'متبقٍ'}: {formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}
+                      {t('pos.received') || 'مقبوض'}: <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(receivedAmount, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span> — {t('pos.remaining') || 'متبقٍ'}: <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
                     </span>
                   </div>
                 )}
 
                 {!isCashier && receivedAmount > 0 && wholesaleMode && (
-                  <span className={cn("px-1.5 py-0.5 rounded font-bold", wholesaleProfit && wholesaleProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
-                    {t('pos.profit') || 'ربح'}: {formatMoney(wholesaleProfit || 0, 'USD')}
+                  <span className={cn("px-2 py-0.5 rounded-full font-bold", wholesaleProfit && wholesaleProfit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
+                    {t('pos.profit') || 'ربح'}: <span dir="ltr" className="inline-block tabular-nums">{formatMoney(wholesaleProfit || 0, 'USD')}</span>
                   </span>
                 )}
               </div>
@@ -2360,14 +2375,16 @@ export function CartPanel({
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-bold text-foreground">{t('pos.total')}</span>
                 <button
+                  type="button"
                   onClick={() => setShowCalculator(true)}
-                  className="w-8 h-8 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 flex items-center justify-center transition-colors text-sm font-bold relative after:absolute after:-inset-1.5 after:content-['']"
+                  aria-label={t('pos.calculator') || 'آلة حاسبة'}
+                  className="w-8 h-8 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm font-bold relative after:absolute after:-inset-1.5 after:content-['']"
                   title={t('pos.calculator') || 'آلة حاسبة'}
                 >
                   ⊞
                 </button>
               </div>
-              <span data-testid="cart-total" className={cn("text-xl font-bold tabular-nums", wholesaleMode ? "text-warning" : "text-primary")}>
+              <span dir="ltr" data-testid="cart-total" className={cn("inline-block text-xl font-bold tabular-nums", wholesaleMode ? "text-warning" : "text-primary")}>
                 {formatCurrency(totalInCurrency, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
               </span>
             </div>
@@ -2375,11 +2392,11 @@ export function CartPanel({
 
           {/* شريط معالجة عجز المبلغ المقبوض مع خيارات الاعتماد كخصم أو دين */}
           {receivedAmount > 0 && receivedUSD < total - 0.001 && (
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs flex flex-col gap-2 shadow-xs">
+            <div className="p-2.5 rounded-xl bg-warning/10 border border-warning/30 text-warning text-xs flex flex-col gap-2 shadow-xs">
               <div className="flex items-center justify-between gap-1 font-bold">
                 <div className="flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span>{t('pos.receivedShortage')} {formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)} ({formatMoney(remainingUSD, 'USD')})</span>
+                  <AlertCircle className="w-4 h-4 shrink-0 text-warning" />
+                  <span>{t('pos.receivedShortage')} <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span> (<span dir="ltr" className="inline-block tabular-nums">{formatMoney(remainingUSD, 'USD')}</span>)</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -2388,17 +2405,17 @@ export function CartPanel({
                   size="sm"
                   variant="outline"
                   onClick={handleApplyDeficitAsDiscount}
-                  className="flex-1 h-7 text-[11px] font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 dark:text-amber-200 border-amber-500/40 rounded-lg"
+                  className="flex-1 min-h-11 sm:min-h-9 text-xs font-bold bg-warning/15 hover:bg-warning/25 text-warning border-warning/40 rounded-xl"
                   title={t('pos.acceptAsDiscount') || 'اعتماد كخصم'}
                 >
-                  {t('pos.acceptAsDiscount') || 'اعتماد كخصم'} (-{formatMoney(remainingUSD, 'USD')})
+                  {t('pos.acceptAsDiscount') || 'اعتماد كخصم'} (<span dir="ltr" className="inline-block tabular-nums">-{formatMoney(remainingUSD, 'USD')}</span>)
                 </Button>
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={handleDebtSale}
-                  className="flex-1 h-7 text-[11px] font-bold bg-warning/15 hover:bg-warning/25 text-warning border-warning/40 rounded-lg"
+                  className="flex-1 min-h-11 sm:min-h-9 text-xs font-bold bg-warning/15 hover:bg-warning/25 text-warning border-warning/40 rounded-xl"
                   title={t('pos.recordAsDebt') || 'تسجيل كدين'}
                 >
                   {t('pos.recordAsDebt') || 'تسجيل كدين'}
@@ -2413,7 +2430,7 @@ export function CartPanel({
                 key={m}
                 type="button"
                 onClick={() => setPayMethod(m)}
-                className={`flex-1 h-8 rounded-lg border font-semibold transition-colors ${payMethod === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground'}`}
+                className={`flex-1 min-h-11 sm:min-h-9 rounded-xl border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${payMethod === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border'}`}
               >
                 {m === 'cash' ? (isEn ? 'Cash' : 'نقدي') : (isEn ? 'Digital' : 'دفع رقمي')}
               </button>
@@ -2424,7 +2441,7 @@ export function CartPanel({
           <div className="flex items-center gap-1.5">
             <Button
               data-tour="cash-btn"
-              className="flex-1 h-11 bg-success hover:bg-success/90 text-sm font-bold shadow-md shadow-success/25 transition-[transform,colors,box-shadow] active:scale-95 rounded-xl"
+              className="flex-1 h-11 bg-success hover:bg-success/90 text-success-foreground text-sm font-bold shadow-md shadow-success/25 transition-[transform,color,background-color,box-shadow] duration-150 active:scale-[0.97] rounded-xl"
               disabled={cart.length === 0}
               onClick={handleCashSale}
             >
@@ -2435,7 +2452,7 @@ export function CartPanel({
             <Button
                 data-tour="debt-btn"
                 variant="outline"
-                className="flex-1 h-11 border-2 border-warning/70 text-warning hover:bg-warning/10 text-sm font-bold transition-[transform,colors] active:scale-95 rounded-xl"
+                className="flex-1 h-11 border-2 border-warning/70 text-warning hover:bg-warning/10 text-sm font-bold transition-[transform,color,background-color,border-color] duration-150 active:scale-[0.97] rounded-xl"
                 disabled={cart.length === 0}
                 onClick={handleDebtSale}
               >
@@ -2460,21 +2477,21 @@ export function CartPanel({
         }}
       />
       <Dialog open={showCashDialog} onOpenChange={setShowCashDialog}>
-        <DialogContent className="w-[94vw] max-w-md p-4 sm:p-6 rounded-2xl">
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-success" />
+              <Banknote className="w-5 h-5 text-success shrink-0" />
               {t('pos.confirmCashSale')}
             </DialogTitle>
             <DialogDescription>
               {t('pos.confirmCashSaleDesc')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-muted rounded-lg p-4 space-y-2">
+          <DialogBody className="space-y-4 py-4">
+            <div className="bg-muted rounded-xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>{t('pos.productCount') || 'عدد المنتجات'}:</span>
-                <span className="font-semibold">{cart.length}</span>
+                <span dir="ltr" className="inline-block font-semibold tabular-nums">{cart.length}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>{t('pos.customer') || 'العميل'}:</span>
@@ -2482,7 +2499,7 @@ export function CartPanel({
               </div>
               <div className="flex justify-between items-center text-lg font-bold border-t border-border pt-2 mt-2 gap-2">
                 <span className="shrink-0">{t('pos.total') || 'الإجمالي'}:</span>
-                <span className="text-primary font-mono tabular-nums text-base sm:text-lg shrink-0" dir="ltr">
+                <span className="inline-block text-primary font-mono tabular-nums text-base sm:text-lg shrink-0" dir="ltr">
                   {formatCurrency(totalInCurrency, selectedCurrency.symbol, undefined, selectedCurrency.code, selectedCurrency.name)}
                 </span>
               </div>
@@ -2490,7 +2507,7 @@ export function CartPanel({
                 <div className="space-y-1.5 border-t border-border/50 pt-2 text-sm">
                   <div className="flex justify-between text-muted-foreground">
                     <span>{t('pos.receivedAmount') || 'المبلغ المقبوض'}:</span>
-                    <span className="font-semibold text-foreground">
+                    <span dir="ltr" className="inline-block font-semibold tabular-nums text-foreground">
                       {formatCurrency(receivedAmount, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}
                       {activeReceivedCurrency.code !== 'USD' && ` (${formatMoney(receivedUSD, 'USD')})`}
                     </span>
@@ -2499,7 +2516,7 @@ export function CartPanel({
                     <div className="flex flex-col gap-1.5 bg-success/10 p-2.5 rounded-lg border border-success/20">
                       <div className="flex justify-between text-success font-bold text-sm">
                         <span>{t('pos.balance') || 'الباقي للعميل'}:</span>
-                        <span>
+                        <span dir="ltr" className="inline-block tabular-nums">
                           {formatCurrency(changeInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}
                           {activeReceivedCurrency.code !== 'USD' && ` (${formatMoney(changeUSD, 'USD')})`}
                         </span>
@@ -2513,7 +2530,7 @@ export function CartPanel({
                             handleApplySurplusAsProfit();
                             setShowCashDialog(false);
                           }}
-                          className="h-7 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 self-end mt-1 rounded-lg"
+                          className="min-h-11 sm:min-h-9 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 self-end mt-1 rounded-xl"
                         >
                           {t('pos.acceptExtraProfit') || 'اعتماد الزيادة كربح إضافي'} ({t('pos.withoutChange') || 'بدون باقٍ'})
                         </Button>
@@ -2521,10 +2538,10 @@ export function CartPanel({
                     </div>
                   )}
                   {remainingInReceivedCurrency > 0 && receivedUSD < total - 0.001 && (
-                    <div className="flex flex-col gap-1.5 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/30 text-amber-800 dark:text-amber-300">
+                    <div className="flex flex-col gap-1.5 bg-warning/10 p-2.5 rounded-lg border border-warning/30 text-warning">
                       <div className="flex justify-between font-bold text-sm">
                         <span>{t('pos.shortageInReceived')}</span>
-                        <span>{formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
+                        <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
                       </div>
                       <Button
                         type="button"
@@ -2533,7 +2550,7 @@ export function CartPanel({
                         onClick={() => {
                           handleApplyDeficitAsDiscount();
                         }}
-                        className="h-7 text-xs font-semibold text-amber-900 dark:text-amber-200 bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/40 self-end mt-1 rounded-lg"
+                        className="min-h-11 sm:min-h-9 text-xs font-semibold text-warning bg-warning/15 hover:bg-warning/25 border-warning/40 self-end mt-1 rounded-xl"
                       >
                         {t('pos.applyShortageAsDiscount')}
                       </Button>
@@ -2542,24 +2559,24 @@ export function CartPanel({
                 </div>
               )}
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 text-foreground" onClick={() => setShowCashDialog(false)} disabled={isSaving}>
-                {t('common.cancel')}
-              </Button>
-              <Button data-testid="cash-confirm" className="flex-1 bg-success hover:bg-success/90" onClick={confirmCashSale} disabled={isSaving} aria-busy={isSaving}>
-                <Check className={cn('w-4 h-4', isSaving && 'animate-spin')} />
-                {isSaving ? (t('common.saving') || 'جاري الحفظ...') : (t('common.confirm') || 'تأكيد')}
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" className="flex-1 sm:flex-none text-foreground" onClick={() => setShowCashDialog(false)} disabled={isSaving}>
+              {t('common.cancel')}
+            </Button>
+            <Button data-testid="cash-confirm" size="default" className="flex-1 sm:flex-none bg-success hover:bg-success/90 text-success-foreground" onClick={confirmCashSale} disabled={isSaving} aria-busy={isSaving}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Check className="w-4 h-4 shrink-0" />}
+              {isSaving ? (t('common.saving') || 'جاري الحفظ...') : (t('common.confirm') || 'تأكيد')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Deficit Resolution Dialog (Safe for mobile & Android WebView) */}
       <Dialog open={showDeficitDialog} onOpenChange={setShowDeficitDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2 text-warning">
               <AlertCircle className="w-5 h-5 shrink-0" />
               {t('pos.shortageAlertTitle')}
             </DialogTitle>
@@ -2567,26 +2584,27 @@ export function CartPanel({
               {t('pos.shortageAlertDesc')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-3">
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 space-y-2 text-sm text-foreground">
+          <DialogBody className="space-y-4 py-4">
+            <div className="bg-warning/10 border border-warning/30 rounded-xl p-3.5 space-y-2 text-sm text-foreground">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('pos.invoiceTotalLabel')}</span>
-                <span className="font-bold">{formatCurrency(totalInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
+                <span dir="ltr" className="inline-block font-bold tabular-nums">{formatCurrency(totalInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('pos.receivedAmount')}:</span>
-                <span className="font-bold text-success">{formatCurrency(receivedAmount, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
+                <span dir="ltr" className="inline-block font-bold tabular-nums text-success">{formatCurrency(receivedAmount, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
               </div>
-              <div className="flex justify-between border-t border-amber-500/20 pt-2 text-amber-700 dark:text-amber-300 font-bold text-base">
+              <div className="flex justify-between border-t border-warning/20 pt-2 text-warning font-bold text-base">
                 <span>{t('pos.shortageAmountLabel')}</span>
-                <span>{formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
+                <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-2 pt-1">
               <Button
                 type="button"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                size="default"
+                className="w-full bg-success hover:bg-success/90 text-success-foreground font-bold"
                 onClick={() => {
                   setShowDeficitDialog(false);
                   handleApplyDeficitAsDiscount();
@@ -2599,6 +2617,7 @@ export function CartPanel({
                 <Button
                   type="button"
                   variant="outline"
+                  size="default"
                   className="w-full border-warning text-warning hover:bg-warning/10 font-bold"
                   onClick={() => {
                     setShowDeficitDialog(false);
@@ -2616,37 +2635,38 @@ export function CartPanel({
               <Button
                 type="button"
                 variant="ghost"
+                size="default"
                 className="w-full text-muted-foreground mt-1"
                 onClick={() => setShowDeficitDialog(false)}
               >
                 {t('pos.cancelAndModify')}
               </Button>
             </div>
-          </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
 
       {/* Debt Sale Dialog */}
       <Dialog open={showDebtDialog} onOpenChange={setShowDebtDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-warning" />
+              <CreditCard className="w-5 h-5 text-warning shrink-0" />
               {t('pos.confirmDebtSaleTitle')}
             </DialogTitle>
             <DialogDescription>
               {t('pos.confirmDebtSaleDesc')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-muted rounded-lg p-4 space-y-2">
+          <DialogBody className="space-y-4 py-4">
+            <div className="bg-muted rounded-xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span>{t('pos.customer') || 'العميل'}:</span>
                 <span className="font-semibold">{customerName}</span>
               </div>
               {isNewCustomer && (
-                <div className="mt-3 p-3 bg-warning/10 border border-warning/30 rounded-lg">
-                  <label htmlFor="cart-new-customer-phone" className="text-sm font-medium mb-1.5 block text-warning">
+                <div className="mt-3 p-3 bg-warning/10 border border-warning/30 rounded-lg space-y-1.5">
+                  <label htmlFor="cart-new-customer-phone" className="text-sm font-medium block text-warning">
                     {t('pos.requiredForNewCustomer')}
                   </label>
                   <Input
@@ -2657,18 +2677,18 @@ export function CartPanel({
                     placeholder="+963 xxx xxx xxx"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d+]/g, ''))}
-                    className="bg-background border-warning text-left"
+                    className="bg-background border-warning text-start tabular-nums"
                   />
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span>{t('pos.productCount') || 'عدد المنتجات'}:</span>
-                <span className="font-semibold">{cart.length}</span>
+                <span dir="ltr" className="inline-block font-semibold tabular-nums">{cart.length}</span>
               </div>
               {receivedAmount > 0 && (
                 <div className="flex justify-between text-sm text-success font-semibold bg-success/10 p-2 rounded-lg">
                   <span>{t('pos.downPaymentCash')}</span>
-                  <span>
+                  <span dir="ltr" className="inline-block tabular-nums">
                     {formatCurrency(receivedAmount, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}
                     {activeReceivedCurrency.code !== 'USD' && ` (${formatMoney(receivedUSD, 'USD')})`}
                   </span>
@@ -2676,34 +2696,35 @@ export function CartPanel({
               )}
               <div className="flex justify-between text-lg font-bold border-t border-border pt-2 mt-2 text-warning">
                 <span>{t('pos.debtAmount') || 'مبلغ الدين'}:</span>
-                <span>
+                <span dir="ltr" className="inline-block tabular-nums">
                   {formatCurrency(remainingInReceivedCurrency, activeReceivedCurrency.symbol, undefined, activeReceivedCurrency.code, activeReceivedCurrency.name)}
                   {activeReceivedCurrency.code !== 'USD' && ` (${formatMoney(remainingUSD, 'USD')})`}
                 </span>
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 text-foreground" onClick={() => setShowDebtDialog(false)} disabled={isSaving}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                data-testid="debt-confirm"
-                className="flex-1 bg-warning hover:bg-warning/90 text-warning-foreground"
-                disabled={isSaving}
-                aria-busy={isSaving}
-                onClick={() => {
-                  if (isNewCustomer && !customerPhone.trim()) {
-                    showToast.error(t('pos.phoneRequired') || 'يرجى إدخال رقم الهاتف للعميل الجديد');
-                    return;
-                  }
-                  confirmDebtSale(false);
-                }}
-              >
-                <Check className={cn('w-4 h-4', isSaving && 'animate-spin')} />
-                {isSaving ? (t('common.saving') || 'جاري الحفظ...') : (t('pos.confirmDebt') || 'تأكيد البيع المؤجل')}
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" className="flex-1 sm:flex-none text-foreground" onClick={() => setShowDebtDialog(false)} disabled={isSaving}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              data-testid="debt-confirm"
+              size="default"
+              className="flex-1 sm:flex-none bg-warning hover:bg-warning/90 text-warning-foreground"
+              disabled={isSaving}
+              aria-busy={isSaving}
+              onClick={() => {
+                if (isNewCustomer && !customerPhone.trim()) {
+                  toast.error(t('pos.phoneRequired') || 'يرجى إدخال رقم الهاتف للعميل الجديد');
+                  return;
+                }
+                confirmDebtSale(false);
+              }}
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Check className="w-4 h-4 shrink-0" />}
+              {isSaving ? (t('common.saving') || 'جاري الحفظ...') : (t('pos.confirmDebt') || 'تأكيد البيع المؤجل')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -2711,20 +2732,24 @@ export function CartPanel({
 
       {/* Add Customer Dialog */}
       <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (newCustomer.name || newCustomer.phone || newCustomer.email || isAddingCustomer) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (newCustomer.name || newCustomer.phone || newCustomer.email || isAddingCustomer) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" />
+              <UserPlus className="w-5 h-5 text-primary shrink-0" />
               {t('pos.addNewCustomer')}
             </DialogTitle>
             <DialogDescription>
               {t('pos.enterNewCustomerData')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="cart-customer-name" className="text-sm font-medium mb-1.5 block">{t('pos.name') || 'الاسم'} *</label>
+          <DialogBody className="space-y-4 py-4">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="cart-customer-name" className="text-sm font-medium block">{t('pos.name') || 'الاسم'} *</label>
                 <Input
                   id="cart-customer-name"
                   placeholder={t('pos.namePlaceholder') || 'اسم العميل'}
@@ -2732,8 +2757,8 @@ export function CartPanel({
                   onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
-              <div>
-                <label htmlFor="cart-customer-phone" className="text-sm font-medium mb-1.5 block">{t('pos.phone') || 'رقم الهاتف'} *</label>
+              <div className="space-y-1.5">
+                <label htmlFor="cart-customer-phone" className="text-sm font-medium block">{t('pos.phone') || 'رقم الهاتف'} *</label>
                 <Input
                   id="cart-customer-phone"
                   type="tel"
@@ -2745,29 +2770,30 @@ export function CartPanel({
                     const val = e.target.value.replace(/[^\d+]/g, '');
                     setNewCustomer(prev => ({ ...prev, phone: val }));
                   }}
-                  className="text-left"
+                  className="text-start tabular-nums"
                 />
               </div>
-              <div>
-                <label htmlFor="cart-customer-email" className="text-sm font-medium mb-1.5 block">{t('pos.email') || 'البريد الإلكتروني'}</label>
+              <div className="space-y-1.5">
+                <label htmlFor="cart-customer-email" className="text-sm font-medium block">{t('pos.email') || 'البريد الإلكتروني'}</label>
                 <Input
                   id="cart-customer-email"
+                  dir="ltr"
                   placeholder="email@example.com"
                   value={newCustomer.email}
                   onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
                 />
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 text-foreground" onClick={() => setShowCustomerDialog(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button className="flex-1" onClick={handleAddCustomer} disabled={isAddingCustomer}>
-                <UserPlus className="w-4 h-4" />
-                {isAddingCustomer ? (t('common.saving') || 'جاري الحفظ...') : (t('pos.addCustomerBtn') || 'إضافة العميل')}
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" className="flex-1 sm:flex-none text-foreground" onClick={() => setShowCustomerDialog(false)} disabled={isAddingCustomer}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="default" size="default" className="flex-1 sm:flex-none" onClick={handleAddCustomer} disabled={isAddingCustomer}>
+              {isAddingCustomer ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <UserPlus className="w-4 h-4 shrink-0" />}
+              {isAddingCustomer ? (t('common.saving') || 'جاري الحفظ...') : (t('pos.addCustomerBtn') || 'إضافة العميل')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

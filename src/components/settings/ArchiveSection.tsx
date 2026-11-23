@@ -170,7 +170,7 @@ export function ArchiveSection() {
     <div className="space-y-3 max-w-4xl mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between gap-3 bg-card p-3 rounded-2xl border border-border shadow-2xs">
         <div className="min-w-0">
-          <h2 className="text-sm sm:text-base font-bold text-foreground">{t('archive.headerTitle' as any)}</h2>
+          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">{t('archive.headerTitle' as any)}</h2>
           <p className="text-xs text-muted-foreground">{t('archive.recordCount' as any).replace('{count}', String(totalGeneralCount))}</p>
         </div>
         <Button variant="outline" size="sm" onClick={loadGeneralArchive} disabled={isLoading} className="h-8 px-2.5 text-xs shrink-0">

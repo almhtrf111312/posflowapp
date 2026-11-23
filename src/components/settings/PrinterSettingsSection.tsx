@@ -47,7 +47,7 @@ export function PrinterSettingsSection({
   return (
           <div className="bg-muted/30 rounded-xl border border-border/50 p-4 space-y-5">
             <div>
-              <h2 className="text-base font-bold text-foreground mb-1">{t('settings.printing')}</h2>
+              <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight mb-1">{t('settings.printing')}</h2>
               <p className="text-xs text-muted-foreground">{isEn ? "Customize receipt fields, visibility toggles, and secondary currencies for printing and sharing" : "تخصيص بنود وقالب الفاتورة، مفاتيح الإظهار، والعملات البديلة للطباعة والمشاركة"}</p>
             </div>
 
@@ -81,7 +81,7 @@ export function PrinterSettingsSection({
                     <div className="text-xs text-muted-foreground mt-0.5">{isEn ? "For phones & tablets (ESC/POS thermal bitmap)" : "للهواتف والأجهزة اللوحية (ESC/POS حراري معالجة نقطية)"}</div>
                   </div>
                   {printerConfig.connectionType === 'bluetooth' && (
-                    <Check className="w-4 h-4 text-primary absolute rtl:left-3 ltr:right-3 top-3.5" />
+                    <Check className="w-4 h-4 text-primary absolute end-3 top-3.5" />
                   )}
                 </button>
 
@@ -106,7 +106,7 @@ export function PrinterSettingsSection({
                     <div className="text-xs text-muted-foreground mt-0.5">{isEn ? "For PC & web via the system print dialog" : "للكمبيوتر والويب عبر نافذة الطباعة الافتراضية"}</div>
                   </div>
                   {printerConfig.connectionType === 'wired_system' && (
-                    <Check className="w-4 h-4 text-primary absolute rtl:left-3 ltr:right-3 top-3.5" />
+                    <Check className="w-4 h-4 text-primary absolute end-3 top-3.5" />
                   )}
                 </button>
               </div>
@@ -131,9 +131,9 @@ export function PrinterSettingsSection({
                       <Button
                         type="button"
                         onClick={() => setShowBtDialog(true)}
-                        className="w-full sm:w-auto px-6 h-10 gap-2 font-bold bg-primary text-primary-foreground shadow-xs"
+                        className="w-full sm:w-auto px-6"
                       >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="w-4 h-4 shrink-0" />
                         <span>{t('printer.add') || 'إضافة طابعة بلوتوث'}</span>
                       </Button>
                     </div>
@@ -153,13 +153,12 @@ export function PrinterSettingsSection({
                               <Badge
                                 variant="outline"
                                 className={cn(
-                                  "text-[10px] font-bold px-2 py-0.5 rounded-full border",
                                   isPrinterConnected
-                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                    ? "bg-success/15 text-success border-success/30"
                                     : "bg-muted text-muted-foreground border-border/50"
                                 )}
                               >
-                                <span className={cn("w-1.5 h-1.5 rounded-full inline-block me-1", isPrinterConnected ? "bg-emerald-500" : "bg-muted-foreground")}></span>
+                                <span className={cn("w-1.5 h-1.5 rounded-full inline-block me-1", isPrinterConnected ? "bg-success" : "bg-muted-foreground")}></span>
                                 {isPrinterConnected ? (t('printer.connected') || 'متصلة') : (t('printer.notConnected') || 'غير متصلة')}
                               </Badge>
                             </div>

@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogBody,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -190,22 +191,24 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
             {t('customFields.subtitle' as TranslationKey)}
           </p>
         </div>
-        <Button size="sm" onClick={() => setShowAddDialog(true)}>
-          <Plus className="w-4 h-4" />
+        <Button variant="default" size="default" onClick={() => setShowAddDialog(true)}>
+          <Plus className="w-4 h-4 shrink-0" />
           {t('customFields.addField' as TranslationKey)}
         </Button>
       </div>
 
       {fields.length === 0 ? (
-        <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
-          <p className="text-muted-foreground text-sm">
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+          <p className="text-sm sm:text-base font-semibold text-foreground">
             {t('customFields.empty' as TranslationKey)}
           </p>
           <Button
-            variant="link"
-            className="mt-2"
+            variant="default"
+            size="default"
+            className="mt-3"
             onClick={() => setShowAddDialog(true)}
           >
+            <Plus className="w-4 h-4 shrink-0" />
             {t('customFields.addFirstField' as TranslationKey)}
           </Button>
         </div>
@@ -237,29 +240,39 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => handleToggleEnabled(field)}
-                  className="p-2 rounded-lg hover:bg-muted transition-colors"
                   title={field.enabled ? t('customFields.disable' as TranslationKey) : t('customFields.enable' as TranslationKey)}
+                  aria-label={field.enabled ? t('customFields.disable' as TranslationKey) : t('customFields.enable' as TranslationKey)}
                 >
                   {field.enabled ? (
                     <ToggleRight className="w-5 h-5 text-success" />
                   ) : (
                     <ToggleLeft className="w-5 h-5 text-muted-foreground" />
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openEditDialog(field)}
-                  className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  aria-label={t('customFields.editDialog.title' as TranslationKey)}
                 >
                   <Edit2 className="w-4 h-4" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openDeleteDialog(field)}
-                  className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-destructive"
+                  aria-label={t('customFields.actions.delete' as TranslationKey)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="w-4 h-4" />
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -268,12 +281,16 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
 
       {/* Add Field Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (formData.name.trim()) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (formData.name.trim()) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{t('customFields.addDialog.title' as TranslationKey)}</DialogTitle>
             <DialogDescription>{t('customFields.addDialog.description' as TranslationKey)}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <DialogBody className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.nameLabel' as TranslationKey)}</label>
               <Input
@@ -333,8 +350,8 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
                 onCheckedChange={(checked) => setFormData({ ...formData, showInDetails: checked })}
               />
             </div>
-          </div>
-          <DialogFooter>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>
               {t('customFields.actions.cancel' as TranslationKey)}
             </Button>
@@ -347,12 +364,16 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
 
       {/* Edit Field Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (formData.name.trim()) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (formData.name.trim()) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{t('customFields.editDialog.title' as TranslationKey)}</DialogTitle>
             <DialogDescription>{t('customFields.editDialog.description' as TranslationKey)}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <DialogBody className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-1.5 block">{t('customFields.form.nameLabel' as TranslationKey)}</label>
               <Input
@@ -412,8 +433,8 @@ export function CustomFieldsManager({ onFieldsChange }: CustomFieldsManagerProps
                 onCheckedChange={(checked) => setFormData({ ...formData, showInDetails: checked })}
               />
             </div>
-          </div>
-          <DialogFooter>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button variant="outline" onClick={() => { setShowEditDialog(false); setSelectedField(null); resetForm(); }}>
               {t('customFields.actions.cancel' as TranslationKey)}
             </Button>

@@ -47,9 +47,9 @@ export function EntityPicker({ label, placeholder = 'بحث...', items, value, o
           <Check className="w-4 h-4 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate">{selected.name}</p>
-            {selected.subtitle && <p className="text-[10px] text-muted-foreground truncate">{selected.subtitle}</p>}
+            {selected.subtitle && <p className="text-xs text-muted-foreground truncate">{selected.subtitle}</p>}
           </div>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { onChange(null); setOpen(false); }}>
+          <Button variant="ghost" size="icon" aria-label="مسح الاختيار" onClick={() => { onChange(null); setOpen(false); }}>
             <X className="w-4 h-4" />
           </Button>
         </div>
@@ -57,7 +57,7 @@ export function EntityPicker({ label, placeholder = 'بحث...', items, value, o
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
-          className="w-full text-right rounded-xl border border-border/50 bg-card px-3 py-2 text-sm text-muted-foreground hover:border-primary/40 transition-colors"
+          className="w-full text-start rounded-xl border border-border/50 bg-card px-3 py-2 text-sm text-muted-foreground hover:border-primary/40 transition-colors"
         >
           {placeholder}
         </button>
@@ -66,13 +66,13 @@ export function EntityPicker({ label, placeholder = 'بحث...', items, value, o
       {open && !selected && (
         <div className="rounded-xl border border-border bg-card shadow-lg overflow-hidden">
           <div className="relative p-2 border-b border-border/50">
-            <Search className="absolute start-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="pointer-events-none absolute start-5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               autoFocus
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="ابحث بالاسم أو الباركود..."
-              className="h-8 text-xs ps-8 pe-3"
+              className="text-xs ps-9 pe-3"
             />
           </div>
           <div className="max-h-64 overflow-y-auto">
@@ -84,11 +84,11 @@ export function EntityPicker({ label, placeholder = 'بحث...', items, value, o
                   key={it.id}
                   onClick={() => { onChange(it.id); setOpen(false); }}
                   className={cn(
-                    'w-full text-right px-3 py-2 text-sm hover:bg-muted/60 transition-colors border-b border-border/30 last:border-0',
+                    'w-full text-start px-3 py-2 text-sm hover:bg-muted/60 transition-colors border-b border-border/30 last:border-0',
                   )}
                 >
                   <p className="font-medium truncate">{it.name}</p>
-                  {it.subtitle && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{it.subtitle}</p>}
+                  {it.subtitle && <p className="text-xs text-muted-foreground truncate mt-0.5">{it.subtitle}</p>}
                 </button>
               ))
             )}

@@ -57,12 +57,12 @@ export function LicenseWarningBadge() {
       type="button"
       className={cn(
         "fixed z-50 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg cursor-pointer transition-all duration-300 hover:scale-105",
-        "left-2 top-[calc(0.75rem+var(--app-safe-top,0px))] md:top-3 opacity-95 scale-90 origin-top-left",
+        "end-2 top-[calc(0.75rem+var(--app-safe-top,0px))] md:top-3 opacity-95 scale-90 origin-top-end",
         isCritical 
           ? "bg-destructive text-destructive-foreground" 
           : isUrgent 
-            ? "bg-orange-500 text-white" 
-            : "bg-amber-500 text-white"
+            ? "bg-warning text-warning-foreground" 
+            : "bg-warning/90 text-warning-foreground"
       )}
       onClick={() => setVisibleFor(null)}
       dir={isRTL ? 'rtl' : 'ltr'}

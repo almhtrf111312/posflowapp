@@ -86,16 +86,16 @@ export function QuickActions() {
         <Link
           key={action.path}
           to={action.path}
-          className="flex flex-col items-center gap-1.5 min-w-[4.3rem] group fade-in"
+          className="flex flex-col items-center gap-1.5 min-w-[4.3rem] rounded-xl group fade-in active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,color] duration-150"
           style={{ animationDelay: `${index * 40}ms` }}
         >
           <div className={cn(
-            "size-10 rounded-full flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:shadow-md",
+            "size-11 sm:size-10 rounded-full flex items-center justify-center transition-[transform,box-shadow] duration-150 group-hover:scale-110 group-hover:shadow-md",
             iconBgStyles[action.color]
           )}>
-            <action.icon className="w-4.5 h-4.5" />
+            <action.icon className="w-4 h-4" />
           </div>
-          <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">
+          <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors whitespace-nowrap">
             {t(action.labelKey)}
           </span>
         </Link>

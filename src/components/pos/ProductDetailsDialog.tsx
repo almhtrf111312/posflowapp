@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import {
   Barcode,
   Box,
@@ -152,7 +153,7 @@ export function ProductDetailsDialog({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
-        dir="rtl"
+        dir={language === 'en' ? 'ltr' : 'rtl'}
         className="!fixed !inset-x-0 !bottom-0 !top-auto !z-50 !mx-auto !w-full !max-w-md !max-h-[90vh] !max-h-[90dvh] !rounded-t-[32px] !border-t !border-border !bg-background !p-0 !text-foreground !shadow-2xl duration-300 animate-in slide-in-from-bottom [&>button:last-child]:hidden flex flex-col overflow-hidden"
         style={{
           left: 0,
@@ -189,7 +190,7 @@ export function ProductDetailsDialog({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-[transform,colors] border border-border/50"
+              className="flex size-11 sm:size-10 items-center justify-center rounded-full bg-muted/70 text-muted-foreground hover:text-foreground hover:bg-muted active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,color,background-color] duration-150 border border-border/50"
               aria-label={language === 'en' ? 'Close' : 'إغلاق'}
             >
               <X className="h-4 w-4" />
@@ -211,7 +212,7 @@ export function ProductDetailsDialog({
               ) : null}
 
               <div className="flex items-center gap-2.5 mt-2 flex-wrap">
-                <span className="text-lg md:text-xl font-black text-primary tracking-tight font-mono">
+                <span dir="ltr" className="inline-block text-lg md:text-xl font-black text-primary tracking-tight font-mono tabular-nums">
                   ${salePrice.toFixed(2)}
                 </span>
                 {product.barcode && (
@@ -219,14 +220,14 @@ export function ProductDetailsDialog({
                     type="button"
                     onClick={handleCopyBarcode}
                     title={language === 'en' ? 'Click to copy barcode' : 'انقر لنسخ الباركود'}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 text-xs font-mono font-medium active:scale-95 transition-[transform,colors] shadow-2xs"
+                    className="inline-flex min-h-11 sm:min-h-9 items-center gap-1.5 px-2.5 py-1 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/60 text-xs font-mono font-medium active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,color,background-color] duration-150 shadow-2xs"
                   >
-                    <Barcode className="h-3.5 w-3.5 text-primary" />
-                    <span dir="ltr">{product.barcode}</span>
+                    <Barcode className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span dir="ltr" className="inline-block tabular-nums">{product.barcode}</span>
                     {copiedBarcode ? (
-                      <Check className="h-3 w-3 text-emerald-500" />
+                      <Check className="h-3 w-3 text-success shrink-0" />
                     ) : (
-                      <Copy className="h-3 w-3 opacity-50" />
+                      <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
                     )}
                   </button>
                 )}
@@ -252,7 +253,7 @@ export function ProductDetailsDialog({
               type="button"
               onClick={() => setActiveTab('pricing')}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-200 select-none cursor-pointer",
+                "flex-1 flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs md:text-sm font-bold transition-[transform,color,background-color] duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 activeTab === 'pricing'
                   ? "bg-gradient-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-card/60"
@@ -265,7 +266,7 @@ export function ProductDetailsDialog({
               type="button"
               onClick={() => setActiveTab('inventory')}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs md:text-sm font-bold transition-all duration-200 select-none cursor-pointer",
+                "flex-1 flex min-h-11 sm:min-h-10 items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs md:text-sm font-bold transition-[transform,color,background-color] duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 activeTab === 'inventory'
                   ? "bg-gradient-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-card/60"
@@ -293,7 +294,7 @@ export function ProductDetailsDialog({
                     <span className="text-[11px] text-muted-foreground">{language === 'en' ? 'Standard per-unit price' : 'السعر المعتمد للقطعة الواحدة'}</span>
                   </div>
                 </div>
-                <span className="text-base font-black text-primary font-mono">
+                <span dir="ltr" className="inline-block text-base font-black text-primary font-mono tabular-nums">
                   {formatMoney(salePrice)}
                 </span>
               </div>
@@ -310,7 +311,7 @@ export function ProductDetailsDialog({
                       <span className="text-[11px] text-muted-foreground">{language === 'en' ? 'Applied for bulk quantities' : 'يطبق تلقائياً عند طلب الكميات'}</span>
                     </div>
                   </div>
-                  <span className="text-sm md:text-base font-bold text-foreground font-mono">
+                  <span dir="ltr" className="inline-block text-sm md:text-base font-bold text-foreground font-mono tabular-nums">
                     {hasWholesale ? formatMoney(wholesalePrice!) : (language === 'en' ? 'None' : 'لا يوجد')}
                   </span>
                 </div>
@@ -324,16 +325,16 @@ export function ProductDetailsDialog({
               {/* الصف الأول: الكمية المتوفرة بالمحل + حد إعادة الطلب */}
               <div className="grid grid-cols-2 gap-2.5">
                 {/* بطاقة الكمية المتوفرة بالمحل */}
-                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-right">
+                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-start">
                   <span className="text-xs text-muted-foreground block mb-1">
                     {language === 'en' ? 'Available in Store:' : 'الكمية المتوفرة بالمحل:'}
                   </span>
                   <p className={cn("text-base md:text-lg font-black font-mono my-0.5", stock > 0 ? "text-foreground" : "text-destructive")}>
-                    {stock} {getLocalizedUnit(product.smallUnit, false, language)}
+                    <span dir="ltr" className="inline-block tabular-nums">{stock}</span> {getLocalizedUnit(product.smallUnit, false, language)}
                   </p>
                   <div>
                     {stock > 0 ? (
-                      <span className="inline-flex items-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="inline-flex items-center text-[11px] font-semibold text-success">
                         {language === 'en' ? '✓ In stock' : '✓ متوفر للبيع الفوري'}
                       </span>
                     ) : (
@@ -345,12 +346,12 @@ export function ProductDetailsDialog({
                 </div>
 
                 {/* بطاقة حد إعادة الطلب */}
-                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-right">
+                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-start">
                   <span className="text-xs text-muted-foreground block mb-1">
                     {language === 'en' ? 'Reorder Level:' : 'حد إعادة الطلب:'}
                   </span>
-                  <p className="text-base md:text-lg font-black text-rose-500 font-mono my-0.5">
-                    {minStock !== null ? `${minStock} ${getLocalizedUnit(product.smallUnit, false, language)}` : (language === 'en' ? 'None' : 'لا يوجد')}
+                  <p className="text-base md:text-lg font-black text-destructive font-mono my-0.5">
+                    {minStock !== null ? (<><span dir="ltr" className="inline-block tabular-nums">{minStock}</span> {getLocalizedUnit(product.smallUnit, false, language)}</>) : (language === 'en' ? 'None' : 'لا يوجد')}
                   </p>
                   <span className="text-[11px] text-muted-foreground">
                     {language === 'en' ? 'Low stock alert' : 'تنبيه عند الاقتراب'}
@@ -361,7 +362,7 @@ export function ProductDetailsDialog({
               {/* الصف الثاني: الصنف / التصنيف + فترة الضمان */}
               <div className="grid grid-cols-2 gap-2.5">
                 {/* بطاقة الصنف */}
-                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-right">
+                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-start">
                   <span className="text-xs text-muted-foreground block mb-1">
                     {language === 'en' ? 'Category:' : 'الصنف:'}
                   </span>
@@ -374,7 +375,7 @@ export function ProductDetailsDialog({
                 </div>
 
                 {/* بطاقة فترة الضمان */}
-                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-right">
+                <div className="rounded-2xl bg-card p-3.5 border border-border/70 shadow-2xs flex flex-col justify-between text-start">
                   <span className="text-xs text-muted-foreground block mb-1">
                     {language === 'en' ? 'Warranty:' : 'فترة الضمان:'}
                   </span>
@@ -394,7 +395,7 @@ export function ProductDetailsDialog({
                     {language === 'en' ? 'Main Warehouse:' : 'المستودع الرئيسي:'}
                   </span>
                   <span className="font-bold text-foreground font-mono">
-                    {warehouseStockQty} {language === 'en' ? 'extra pcs' : 'قطعة إضافية'}
+                    <span dir="ltr" className="inline-block tabular-nums">{warehouseStockQty}</span> {language === 'en' ? 'extra pcs' : 'قطعة إضافية'}
                   </span>
                 </div>
               )}
@@ -404,61 +405,65 @@ export function ProductDetailsDialog({
 
         {/* شريط الإجراء السفلي: عداد كمية مستقل + زر إضافة عريض بحساب ديناميكي */}
         {stock <= 0 ? (
-          <div className="shrink-0 px-5 pb-6 pt-2">
+          <div className="shrink-0 px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
             <div className="rounded-2xl bg-destructive/10 py-3 text-center text-xs md:text-sm font-bold text-destructive border border-destructive/20 flex items-center justify-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{language === 'en' ? 'This item is currently out of stock' : 'هذا الصنف غير متوفر حالياً بالمخزون'}</span>
             </div>
           </div>
         ) : onAddToCart ? (
-          <div className="shrink-0 flex items-center gap-3 border-t border-border bg-card px-5 py-3.5 pb-6">
+          <div className="shrink-0 flex items-center gap-3 border-t border-border bg-card px-5 pt-3.5 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
             {/* عداد كمية أملس داخل كبسولة مستقلة */}
-            <div className="flex items-center gap-1.5 rounded-2xl bg-muted/60 px-2.5 py-1.5 border border-border/70 shadow-2xs">
+            <div className="flex items-center gap-1.5 rounded-2xl bg-muted/60 px-2 py-1.5 border border-border/70 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setQty(q => Math.max(1, q - 1))}
                 disabled={qty <= 1}
-                className="flex h-7 w-7 items-center justify-center rounded-xl bg-card text-foreground shadow-2xs hover:bg-muted active:scale-90 transition disabled:opacity-30 disabled:pointer-events-none"
+                className="flex size-10 sm:size-9 items-center justify-center rounded-xl bg-card text-foreground shadow-2xs hover:bg-muted active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,background-color,opacity] duration-150 disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="تقليل الكمية"
               >
-                <Minus className="h-3 w-3" />
+                <Minus className="h-3.5 w-3.5" />
               </button>
-              <span className="w-8 text-center text-sm font-bold text-foreground font-mono">{qty}</span>
+              <span dir="ltr" className="w-8 text-center text-sm font-bold text-foreground font-mono tabular-nums">{qty}</span>
               <button
                 type="button"
                 onClick={() => setQty(q => Math.min(stock, q + 1))}
                 disabled={qty >= stock}
-                className="flex h-7 w-7 items-center justify-center rounded-xl bg-card text-foreground shadow-2xs hover:bg-muted active:scale-90 transition disabled:opacity-30 disabled:pointer-events-none"
+                className="flex size-10 sm:size-9 items-center justify-center rounded-xl bg-card text-foreground shadow-2xs hover:bg-muted active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,background-color,opacity] duration-150 disabled:opacity-50 disabled:pointer-events-none"
                 aria-label="زيادة الكمية"
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
 
             {/* زر إضافة عريض بلون الثيم الأساسي (+ إضافة للفاتورة) يحسب المبلغ الإجمالي ديناميكياً */}
-            <button
+            <Button
               type="button"
+              variant="default"
+              size="default"
               onClick={handleAdd}
-              className="flex flex-1 items-center justify-between gap-2 rounded-2xl bg-primary px-4 py-2.5 text-xs md:text-sm font-bold text-primary-foreground shadow-md active:scale-[0.98] transition hover:opacity-95"
+              className="flex flex-1 min-h-11 items-center justify-between gap-2 rounded-2xl px-4 text-xs md:text-sm font-bold"
             >
               <div className="flex items-center gap-1.5">
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 shrink-0" />
                 <span>{language === 'en' ? 'Add to Invoice' : 'إضافة للفاتورة'}</span>
               </div>
-              <span className="px-2.5 py-0.5 rounded-xl bg-white/20 text-white font-mono font-bold text-xs">
+              <span dir="ltr" className="inline-block px-2.5 py-0.5 rounded-xl bg-primary-foreground/20 text-primary-foreground font-mono tabular-nums font-bold text-xs">
                 ${(salePrice * qty).toFixed(2)}
               </span>
-            </button>
+            </Button>
           </div>
         ) : (
-          <div className="shrink-0 px-5 pb-6 pt-2">
-            <button
+          <div className="shrink-0 px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
+            <Button
               type="button"
+              variant="secondary"
+              size="default"
               onClick={onClose}
-              className="w-full rounded-2xl bg-muted py-2.5 text-center text-xs md:text-sm font-bold text-foreground hover:bg-muted/80 transition"
+              className="w-full rounded-2xl text-xs md:text-sm font-bold"
             >
               {language === 'en' ? 'Close' : 'إغلاق'}
-            </button>
+            </Button>
           </div>
         )}
       </DialogContent>

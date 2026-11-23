@@ -195,7 +195,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
 
   return (
     <div className="space-y-4">
-      <ReportCurrencyBanner />
+      {!hideInternalExport && <ReportCurrencyBanner />}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 bg-card rounded-lg border border-border px-3 py-1.5">
           <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -204,7 +204,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-36 h-7 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
+            className="w-36 min-h-10 text-xs border-0 bg-transparent p-0 focus-visible:ring-0"
           />
         </div>
         {!hideInternalExport && (
@@ -216,26 +216,26 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
       </div>
 
       {/* Main stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-card rounded-xl border border-border p-4">
           <DollarSign className="w-5 h-5 text-primary mb-2" />
-          <p className="text-2xl font-bold">{formatReportAmount(data.totalRevenue)}</p>
+          <p className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(data.totalRevenue)}</span></p>
           <p className="text-xs text-muted-foreground">{t('reports.totalRevenue') || 'إجمالي الإيرادات'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
-          <TrendingUp className="w-5 h-5 text-green-500 mb-2" />
-          <p className="text-2xl font-bold">{formatReportAmount(data.totalProfit)}</p>
+          <TrendingUp className="w-5 h-5 text-success mb-2" />
+          <p className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(data.totalProfit)}</span></p>
           <p className="text-xs text-muted-foreground">{t('reports.totalProfit') || 'إجمالي الأرباح'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
-          <TrendingDown className="w-5 h-5 text-red-500 mb-2" />
-          <p className="text-2xl font-bold">{formatReportAmount(data.totalExpenses)}</p>
+          <TrendingDown className="w-5 h-5 text-destructive mb-2" />
+          <p className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(data.totalExpenses)}</span></p>
           <p className="text-xs text-muted-foreground">{t('reports.expenses') || 'المصاريف'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
-          <Wallet className="w-5 h-5 text-emerald-500 mb-2" />
-          <p className={`text-2xl font-bold ${data.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatReportAmount(data.netProfit)}
+          <Wallet className="w-5 h-5 text-success mb-2" />
+          <p className={`text-2xl font-bold ${data.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
+            <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(data.netProfit)}</span>
           </p>
           <p className="text-xs text-muted-foreground">{t('reports.netProfit') || 'صافي الربح'}</p>
         </div>
@@ -251,26 +251,26 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
           {[
             { label: t('reports.productSales') || 'مبيعات المنتجات', value: data.totalSales, color: 'text-foreground', count: `${data.salesInvoices.length} ${t('reports.invoicesUnit') || 'فاتورة'}` },
             { label: t('reports.maintenanceRevenue') || 'إيرادات الصيانة', value: data.totalMaintenance, color: 'text-foreground', count: `${data.maintenanceInvoices.length} ${t('reports.ordersUnit') || 'خدمة'}` },
-            { label: t('reports.cashSales') || 'المبيعات النقدية', value: data.cashSales, color: 'text-green-600' },
-            { label: t('reports.digitalSales' as never) || 'المبيعات الرقمية', value: data.digitalSales, color: 'text-sky-600' },
-            { label: t('reports.debtSales') || 'المبيعات الآجلة', value: data.debtSales, color: 'text-amber-600' },
-            { label: t('reports.totalProfit') || 'إجمالي الأرباح', value: data.totalProfit, color: 'text-green-600' },
-            { label: t('reports.expenses') || 'المصاريف', value: data.totalExpenses, color: 'text-red-500', count: `${data.expenseCount} ${t('reports.vouchersUnit') || 'مصروف'}` },
-            { label: t('reports.newDebts') || 'ديون جديدة', value: data.newDebts, color: 'text-red-500', count: `${data.dayDebts.length} ${t('debts.title') || 'دين'}` },
-            { label: t('reports.debtPayments') || 'تسديدات ديون مستلمة', value: data.debtPayments, color: 'text-green-600' },
+            { label: t('reports.cashSales') || 'المبيعات النقدية', value: data.cashSales, color: 'text-success' },
+            { label: t('reports.digitalSales' as never) || 'المبيعات الرقمية', value: data.digitalSales, color: 'text-info' },
+            { label: t('reports.debtSales') || 'المبيعات الآجلة', value: data.debtSales, color: 'text-warning' },
+            { label: t('reports.totalProfit') || 'إجمالي الأرباح', value: data.totalProfit, color: 'text-success' },
+            { label: t('reports.expenses') || 'المصاريف', value: data.totalExpenses, color: 'text-destructive', count: `${data.expenseCount} ${t('reports.vouchersUnit') || 'مصروف'}` },
+            { label: t('reports.newDebts') || 'ديون جديدة', value: data.newDebts, color: 'text-destructive', count: `${data.dayDebts.length} ${t('debts.title') || 'دين'}` },
+            { label: t('reports.debtPayments') || 'تسديدات ديون مستلمة', value: data.debtPayments, color: 'text-success' },
           ].map((item, i) => (
             <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
               <div className="flex items-center gap-2">
                 <span className="text-sm">{item.label}</span>
                 {item.count && <span className="text-xs text-muted-foreground">({item.count})</span>}
               </div>
-              <span className={`font-bold ${item.color}`}>{formatReportAmount(item.value)}</span>
+              <span dir="ltr" className={`inline-block tabular-nums font-bold ${item.color}`}>{formatReportAmount(item.value)}</span>
             </div>
           ))}
 
           <div className="flex items-center justify-between py-3 border-t-2 border-primary/20 mt-2">
             <span className="text-base font-bold">{t('reports.netProfit') || 'صافي الربح'}</span>
-            <span className={`text-xl font-bold ${data.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <span dir="ltr" className={`inline-block tabular-nums text-xl font-bold ${data.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
               {formatReportAmount(data.netProfit)}
             </span>
           </div>

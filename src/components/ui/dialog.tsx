@@ -78,7 +78,7 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute end-3.5 top-3.5 z-10 inline-flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-muted/60 text-muted-foreground opacity-80 ring-offset-background transition-opacity hover:bg-muted hover:opacity-100 active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+        <DialogPrimitive.Close className="absolute end-3.5 top-3.5 z-10 inline-flex h-10 w-10 sm:h-8 sm:w-8 after:content-[''] after:absolute after:-inset-1 sm:after:inset-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground opacity-80 ring-offset-background transition-opacity hover:bg-muted hover:opacity-100 active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
           <X className="h-4 w-4" />
           <span className="sr-only">{typeof document !== "undefined" && document.documentElement.dir === "rtl" ? "إغلاق" : "Close"}</span>
         </DialogPrimitive.Close>
@@ -89,7 +89,7 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-start pe-8", className)} {...props} />
+  <div className={cn("flex flex-col space-y-1.5 text-start pe-12", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
@@ -115,7 +115,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("text-base sm:text-lg font-semibold leading-tight tracking-tight", className)}
     {...props}
   />
 ));

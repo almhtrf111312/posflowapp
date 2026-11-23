@@ -107,7 +107,7 @@ export function TopProductsReport({ dateRange }: Props) {
               variant={mode === tBtn.id ? 'default' : 'outline'}
               size="sm"
               onClick={() => setMode(tBtn.id)}
-              className="h-8 text-[11px] rounded-xl flex-1"
+              className="text-xs rounded-xl flex-1"
             >{tBtn.label}</Button>
           ))}
         </div>
@@ -125,21 +125,21 @@ export function TopProductsReport({ dateRange }: Props) {
               const margin = r.revenue > 0 ? (r.profit / r.revenue) * 100 : 0;
               return (
                 <div key={r.id} className="flex items-center gap-2 p-2.5">
-                  <div className={cn('w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-[11px] font-bold',
-                    idx < 3 ? 'bg-amber-500/15 text-amber-700' : 'bg-muted text-muted-foreground')}>
-                    {idx + 1}
+                  <div className={cn('w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-xs font-bold',
+                    idx < 3 ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground')}>
+                    <span dir="ltr" className="inline-block tabular-nums">{idx + 1}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold truncate">{r.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {t('reports.quantityLabel') || 'كمية'}: {formatNumber(r.qty)} • {t('reports.revenueLabel') || 'إيراد'}: {formatReportAmount(r.revenue)}
+                    <p className="text-xs text-muted-foreground">
+                      {t('reports.quantityLabel') || 'كمية'}: <span dir="ltr" className="inline-block tabular-nums">{formatNumber(r.qty)}</span> • {t('reports.revenueLabel') || 'إيراد'}: <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.revenue)}</span>
                     </p>
                   </div>
-                  <div className="text-left shrink-0">
-                    <p className={cn('text-xs font-bold', r.profit >= 0 ? 'text-emerald-600' : 'text-red-600')}>
-                      {formatReportAmount(r.profit)}
+                  <div className="text-end shrink-0">
+                    <p className={cn('text-xs font-bold', r.profit >= 0 ? 'text-success' : 'text-destructive')}>
+                      <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.profit)}</span>
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{margin.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{margin.toFixed(1)}%</span></p>
                   </div>
                 </div>
               );

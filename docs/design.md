@@ -115,3 +115,19 @@
 - [ ] أهداف اللمس على Android وشاشات الكاشير `>= 44×44px` مع تباعد `>= 8px`.
 - [ ] استخدام الخصائص المنطقية (`ms/me/ps/pe/start/end`) وضبط الحوارات بأبعاد `100vw`/`100dvh` النسبية.
 - [ ] صفر نصوص ثابتة في المكونات، وتطابق كامل لمفاتيح `src/lib/locales/ar.ts` و`src/lib/locales/en.ts`.
+
+---
+
+## 6. مرجع التوحيد البصري للمكونات (Unified Component Spec — 2026-11-23)
+
+| العنصر | المعيار الموحّد | ملاحظات التنفيذ وRTL |
+| :--- | :--- | :--- |
+| **حاوية الصفحة** | `p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6` | بدون `pt-12`/`pt-14` يدوية؛ `MainLayout` يضبط الهامش عبر `ms-[calc(var(--sidebar-offset,0px)+0.75rem)]`. |
+| **ترويسة الصفحة (`H1`)** | `<PageHeader title={} subtitle={} icon={} actions={} />` | عنوان `<h1>` واحد لكل صفحة (`text-lg sm:text-xl md:text-2xl font-bold`) مع `ps-12 md:ps-0` لتفادي زر القائمة. |
+| **زر الإضافة الأساسي** | `<Button variant="default" size="default"><Plus className="w-4 h-4 shrink-0" />...</Button>` | موقعه دائماً في `PageHeader.actions` دون أزرار عائمة مكررة في الشاشات الإدارية. |
+| **العناوين والبطاقات** | `H2`: `text-base sm:text-lg font-bold` · `H3`: `text-sm sm:text-base font-semibold` · `CardTitle`: `text-base sm:text-lg font-semibold` | بطاقات KPI تستخدم `text-xs sm:text-sm font-medium text-muted-foreground` وشبكة `grid-cols-2 sm:grid-cols-4`. |
+| **الحوارات (`Dialogs`)** | `w-[min(calc(100vw-1.5rem),28rem\|32rem\|42rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]` | ترويسة `pe-12` + `<DialogBody>` + `<DialogFooter>` بترتيب **إلغاء (`outline`) ← تأكيد/حذف (`default`/`destructive`)** مع حماية الإغلاق العرضي. |
+| **حقل البحث والفلاتر** | أيقونة `start-3 pointer-events-none` + `<Input className="ps-9 pe-3" />` + `<Select>` بـ `min-h-11 sm:min-h-10` | استخدام `<Select>` من shadcn بدلاً من `<select>` الأصلي في الشاشات القياسية. |
+| **الجداول والأرقام** | `<TableHeader className="sticky top-0 z-10 bg-muted/60">` + `text-start` / `text-end` | عزل كل مبلغ ورقم فاتورة وباركود وهاتف داخل `<span dir="ltr" className="inline-block tabular-nums">`. |
+| **أزرار الأيقونات والشارات** | `<Button variant="ghost" size="icon" aria-label={...}>` · `<Badge className="text-xs font-semibold rounded-full">` | رموز دلالية فقط (`success`, `warning`, `info`, `destructive`) مع دعم حلقة التركيز `focus-visible:ring-2 ring-ring`. |
+| **التنبيهات (`Toasts`)** | `import { toast } from '@/lib/sonner-bridge'` | توحيد الاستدعاءات مع إبقاء `showSmartToast` للإشعارات الذكية المخصصة. |

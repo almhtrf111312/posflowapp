@@ -67,7 +67,7 @@ export function ActivationCodeInput() {
           <Shield className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{t('license.status')}</h2>
+          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">{t('license.status')}</h2>
           <p className="text-sm text-muted-foreground">{t('license.info')}</p>
         </div>
       </div>
@@ -114,20 +114,20 @@ export function ActivationCodeInput() {
         </h3>
         
         {success ? (
-          <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <span className="text-green-700 dark:text-green-300">{t('license.codeActivated')}</span>
+          <div className="flex items-center gap-3 p-4 bg-success/10 border border-success/30 rounded-xl">
+            <CheckCircle className="w-5 h-5 text-success" />
+            <span className="text-success font-medium">{t('license.codeActivated')}</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="relative">
-              <Key className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground ${language === 'ar' || language === 'fa' || language === 'ku' ? 'right-3' : 'left-3'}`} />
+              <Key className="pointer-events-none absolute top-1/2 -translate-y-1/2 start-3 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="HYPER-XXXX-XXXX-XXXX-XXXX"
                 value={code}
                 onChange={handleCodeChange}
-                className={`${language === 'ar' || language === 'fa' || language === 'ku' ? 'pr-10' : 'pl-10'} font-mono tracking-wider`}
+                className="ps-10 font-mono tracking-wider"
                 maxLength={25}
                 disabled={isLoading}
               />

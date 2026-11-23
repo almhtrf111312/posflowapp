@@ -5,10 +5,20 @@ import { cn, formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -162,7 +172,7 @@ export function RecentInvoices() {
     <>
       <div className="glass rounded-2xl p-4 md:p-6 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">{isEn ? 'Recent Invoices' : 'آخر الفواتير'}</h3>
+          <h3 className="text-sm sm:text-base font-semibold text-foreground">{isEn ? 'Recent Invoices' : 'آخر الفواتير'}</h3>
           <button
             onClick={handleViewAll}
             className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
@@ -172,10 +182,10 @@ export function RecentInvoices() {
         </div>
 
         {invoices.length === 0 ? (
-          <div className="p-8 text-center">
-            <FileX className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">{isEn ? 'No invoices yet' : 'لا توجد فواتير بعد'}</p>
-            <p className="text-sm text-muted-foreground/70 mt-1">{isEn ? 'Start by creating a new invoice from POS' : 'ابدأ بإنشاء فاتورة جديدة من نقطة البيع'}</p>
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <FileX className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? 'No invoices yet' : 'لا توجد فواتير بعد'}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{isEn ? 'Start by creating a new invoice from POS' : 'ابدأ بإنشاء فاتورة جديدة من نقطة البيع'}</p>
             <Button
               variant="outline"
               className="mt-4"
@@ -188,64 +198,75 @@ export function RecentInvoices() {
           <>
             {/* Desktop: Table view */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border/50 text-start">
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Invoice #' : 'رقم الفاتورة'}</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Customer' : 'العميل'}</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Amount' : 'المبلغ'}</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Status' : 'الحالة'}</th>
-                    <th className="py-3 px-4 text-sm font-medium text-muted-foreground">{isEn ? 'Actions' : 'إجراءات'}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-start">{isEn ? 'Invoice #' : 'رقم الفاتورة'}</TableHead>
+                    <TableHead className="text-start">{isEn ? 'Customer' : 'العميل'}</TableHead>
+                    <TableHead className="text-end">{isEn ? 'Amount' : 'المبلغ'}</TableHead>
+                    <TableHead className="text-center">{isEn ? 'Status' : 'الحالة'}</TableHead>
+                    <TableHead className="text-center">{isEn ? 'Actions' : 'إجراءات'}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {invoices.map((invoice, index) => (
-                    <tr
+                    <TableRow
                       key={invoice.id}
-                      className="border-b border-border/30 dark:border-white/[0.06] hover:bg-muted/30 dark:hover:bg-primary/5 transition-colors cursor-pointer fade-in"
+                      className="cursor-pointer fade-in"
                       style={{ animationDelay: `${index * 50}ms` }}
                       onClick={() => handleViewInvoice(invoice)}
                     >
-                      <td className="py-3 px-4">
-                        <span className="font-mono text-sm text-foreground">{invoice.id}</span>
-                      </td>
-                      <td className="py-3 px-4">
+                      <TableCell>
+                        <span dir="ltr" className="inline-block tabular-nums font-mono text-sm text-foreground">{invoice.id}</span>
+                      </TableCell>
+                      <TableCell>
                         <span className="font-medium text-foreground">{invoice.customerName}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-foreground">
+                      </TableCell>
+                      <TableCell className="text-end">
+                        <span dir="ltr" className="inline-block tabular-nums font-semibold text-foreground">
                           {resolveInvoiceCurrencySymbol(invoice.currency, invoice.currencySymbol)}{formatNumber(invoice.totalInCurrency)}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell className="text-center">
                         <span className={cn(
                           "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
                           statusStyles[invoice.status]
                         )}>
                           {statusLabels[invoice.status]}
                         </span>
-                      </td>
-                      <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          <button
-                            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 sm:size-9 text-muted-foreground hover:text-foreground"
                             onClick={() => handleViewInvoice(invoice)}
                             title={isEn ? "View invoice" : "عرض الفاتورة"}
+                            aria-label={isEn ? "View invoice" : "عرض الفاتورة"}
                           >
                             <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="p-1.5 rounded-lg hover:bg-muted transition-colors text-primary hover:bg-primary/10"
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 sm:size-9 text-primary hover:bg-primary/10 hover:text-primary"
                             onClick={() => handleShareInvoice(invoice)}
                             title={isEn ? "Share invoice as image" : "مشاركة الفاتورة كصورة"}
+                            aria-label={isEn ? "Share invoice as image" : "مشاركة الفاتورة كصورة"}
                           >
                             <Share2 className="w-4 h-4" />
-                          </button>
+                          </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-11 sm:size-9 text-muted-foreground hover:text-foreground"
+                                aria-label={isEn ? "Invoice actions" : "إجراءات الفاتورة"}
+                              >
                                 <MoreVertical className="w-4 h-4" />
-                              </button>
+                              </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => handleViewInvoice(invoice)}>
@@ -272,11 +293,11 @@ export function RecentInvoices() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
 
             {/* Mobile: Compact card view */}
@@ -300,7 +321,7 @@ export function RecentInvoices() {
                   }}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                    <span dir="ltr" className="inline-block tabular-nums font-mono text-xs text-muted-foreground whitespace-nowrap">
                       {shortenId(invoice.id)}
                     </span>
                     <span className="text-sm font-medium text-foreground truncate">
@@ -308,11 +329,11 @@ export function RecentInvoices() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">
+                    <span dir="ltr" className="inline-block tabular-nums text-sm font-semibold text-foreground whitespace-nowrap">
                       {invoice.currencySymbol}{formatNumber(invoice.totalInCurrency)}
                     </span>
                     <span className={cn(
-                      "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap",
+                      "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap",
                       statusStyles[invoice.status]
                     )}>
                       {statusLabels[invoice.status]}
@@ -327,92 +348,85 @@ export function RecentInvoices() {
 
       {/* Invoice View Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="sm:max-w-lg glass border-white/10">
-          <DialogHeader className="flex flex-row items-center justify-between">
+        <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] border-border/50">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{isEn ? `Invoice Details ${selectedInvoice?.id}` : `تفاصيل الفاتورة ${selectedInvoice?.id}`}</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowViewDialog(false)}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </DialogHeader>
           {selectedInvoice && (
-            <div className="space-y-4 py-4">
-              <div className="bg-muted/50 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">{isEn ? 'Customer:' : 'العميل:'}</span>
-                  <span className="font-semibold">{selectedInvoice.customerName}</span>
-                </div>
-                {selectedInvoice.customerPhone && (
+            <>
+              <DialogBody className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-muted-foreground">{isEn ? 'Phone:' : 'الهاتف:'}</span>
-                    <span>{selectedInvoice.customerPhone}</span>
+                    <span className="text-muted-foreground">{isEn ? 'Customer:' : 'العميل:'}</span>
+                    <span className="font-semibold">{selectedInvoice.customerName}</span>
                   </div>
-                )}
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">{isEn ? 'Date:' : 'التاريخ:'}</span>
-                  <span>{formatDate(selectedInvoice.createdAt)}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">{isEn ? 'Time:' : 'الوقت:'}</span>
-                  <span>{formatTime(selectedInvoice.createdAt)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">{isEn ? 'Payment Type:' : 'نوع الدفع:'}</span>
-                  <span>{selectedInvoice.paymentType === 'cash' ? (isEn ? 'Cash' : 'نقدي') : (isEn ? 'Credit' : 'آجل')}</span>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-3">{isEn ? 'Items' : 'المنتجات'}</h4>
-                <div className="space-y-2">
-                  {selectedInvoice.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">{isEn ? 'Qty:' : 'الكمية:'} {item.quantity}</p>
-                      </div>
-                      <span className="font-semibold">{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{item.total}</span>
+                  {selectedInvoice.customerPhone && (
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-muted-foreground">{isEn ? 'Phone:' : 'الهاتف:'}</span>
+                      <span dir="ltr" className="inline-block tabular-nums">{selectedInvoice.customerPhone}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-border/50 pt-4">
-                {selectedInvoice.discount > 0 && (
-                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
-                    <span>{isEn ? 'Discount:' : 'الخصم:'}</span>
-                    <span>{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{selectedInvoice.discount}</span>
+                  )}
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-muted-foreground">{isEn ? 'Date:' : 'التاريخ:'}</span>
+                    <span dir="ltr" className="inline-block tabular-nums">{formatDate(selectedInvoice.createdAt)}</span>
                   </div>
-                )}
-                <div className="flex justify-between items-center text-lg font-bold">
-                  <span>{isEn ? 'Total:' : 'المجموع:'}</span>
-                  <span className="text-primary">{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{formatNumber(selectedInvoice.totalInCurrency)}</span>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-muted-foreground">{isEn ? 'Time:' : 'الوقت:'}</span>
+                    <span dir="ltr" className="inline-block tabular-nums">{formatTime(selectedInvoice.createdAt)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">{isEn ? 'Payment Type:' : 'نوع الدفع:'}</span>
+                    <span>{selectedInvoice.paymentType === 'cash' ? (isEn ? 'Cash' : 'نقدي') : (isEn ? 'Credit' : 'آجل')}</span>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-center">
-                <span className={cn(
-                  "inline-flex items-center px-4 py-2 rounded-full text-sm font-medium",
-                  statusStyles[selectedInvoice.status]
-                )}>
-                  {statusLabels[selectedInvoice.status]}
-                </span>
-              </div>
+                <div>
+                  <h4 className="font-semibold mb-3">{isEn ? 'Items' : 'المنتجات'}</h4>
+                  <div className="space-y-2">
+                    {selectedInvoice.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                        <div>
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-muted-foreground">{isEn ? 'Qty:' : 'الكمية:'} <span dir="ltr" className="inline-block tabular-nums">{item.quantity}</span></p>
+                        </div>
+                        <span dir="ltr" className="inline-block tabular-nums font-semibold">{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{item.total}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-              <div className="flex gap-3 pt-4">
+                <div className="border-t border-border/50 pt-4">
+                  {selectedInvoice.discount > 0 && (
+                    <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+                      <span>{isEn ? 'Discount:' : 'الخصم:'}</span>
+                      <span dir="ltr" className="inline-block tabular-nums">{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{selectedInvoice.discount}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center text-lg font-bold">
+                    <span>{isEn ? 'Total:' : 'المجموع:'}</span>
+                    <span dir="ltr" className="inline-block tabular-nums text-primary">{resolveInvoiceCurrencySymbol(selectedInvoice.currency, selectedInvoice.currencySymbol)}{formatNumber(selectedInvoice.totalInCurrency)}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <span className={cn(
+                    "inline-flex items-center px-4 py-2 rounded-full text-sm font-medium",
+                    statusStyles[selectedInvoice.status]
+                  )}>
+                    {statusLabels[selectedInvoice.status]}
+                  </span>
+                </div>
+              </DialogBody>
+              <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
                 <Button
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
-                  onClick={() => handleShareInvoice(selectedInvoice)}
+                  variant="outline"
+                  onClick={() => setShowViewDialog(false)}
                 >
-                  <Share2 className="w-4 h-4" />
-                  {isEn ? 'Share Invoice Image' : 'مشاركة الفاتورة كصورة'}
+                  <X className="w-4 h-4" />
+                  {isEn ? 'Close' : 'إغلاق'}
                 </Button>
                 <Button
-                  className="flex-1"
+                  variant="outline"
                   onClick={() => {
                     setShowViewDialog(false);
                     handleEditInvoice(selectedInvoice);
@@ -421,16 +435,14 @@ export function RecentInvoices() {
                   <Edit className="w-4 h-4" />
                   {isEn ? 'Edit' : 'تعديل'}
                 </Button>
-              </div>
-              <Button
-                variant="secondary"
-                className="w-full mt-2"
-                onClick={() => setShowViewDialog(false)}
-              >
-                <X className="w-4 h-4" />
-                {isEn ? 'Close' : 'إغلاق'}
-              </Button>
-            </div>
+                <Button
+                  onClick={() => handleShareInvoice(selectedInvoice)}
+                >
+                  <Share2 className="w-4 h-4" />
+                  {isEn ? 'Share Invoice Image' : 'مشاركة الفاتورة كصورة'}
+                </Button>
+              </DialogFooter>
+            </>
           )}
         </DialogContent>
       </Dialog>

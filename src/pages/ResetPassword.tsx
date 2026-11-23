@@ -120,7 +120,7 @@ export default function ResetPassword() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4" dir={direction}>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4 pt-[calc(1rem+var(--app-safe-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]" dir={direction}>
         <Card className="w-full max-w-md shadow-2xl border-border/50">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
@@ -135,7 +135,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4" dir={direction}>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4 pt-[calc(1rem+var(--app-safe-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))]" dir={direction}>
       <Card className="w-full max-w-md shadow-2xl border-border/50">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
@@ -147,7 +147,7 @@ export default function ResetPassword() {
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="newPassword">{t('auth.newPassword')}</Label>
               <div className="relative">
                 <Input
@@ -159,19 +159,23 @@ export default function ResetPassword() {
                   required
                   minLength={6}
                   disabled={isLoading}
-                  className="h-11 pe-10"
+                  className="h-11 pe-12"
+                  dir="ltr"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={t('auth.newPassword')}
+                  className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">{t('auth.confirmNewPassword')}</Label>
               <Input
                 id="confirmPassword"
@@ -183,6 +187,7 @@ export default function ResetPassword() {
                 minLength={6}
                 disabled={isLoading}
                 className="h-11"
+                dir="ltr"
               />
             </div>
 

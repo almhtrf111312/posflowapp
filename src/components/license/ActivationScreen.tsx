@@ -94,10 +94,10 @@ export function ActivationScreen() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4" dir={direction}>
         <Card className="w-full max-w-md shadow-xl">
           <CardContent className="pt-8 pb-8 text-center">
-            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+            <div className="w-16 h-16 bg-success/15 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-success" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">{t('license.activationSuccess')}</h2>
+            <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight mb-2">{t('license.activationSuccess')}</h2>
             <p className="text-muted-foreground mb-4">{t('license.canUseFullApp')}</p>
             <Button onClick={() => window.location.reload()} className="w-full">{t('license.continue')}</Button>
           </CardContent>
@@ -113,7 +113,7 @@ export function ActivationScreen() {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle className="text-xl">
+          <CardTitle>
             {isTrial && isExpired
               ? t('license.trialEnded')
               : isExpired

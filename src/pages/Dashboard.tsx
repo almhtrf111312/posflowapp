@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/ui/button';
 import { DashboardSkeleton } from '@/components/ui/page-skeleton';
 import { formatNumber, formatCurrency } from '@/lib/utils';
 import {
@@ -418,7 +419,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
 
     if (dashboardDesign === 'unified_pro') {
     return (
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
         <UnifiedReportsDashboard
           stats={stats}
           isLoading={isLoading}
@@ -433,16 +434,16 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
   }
 
   return (
-    <div className={cn("space-y-3 md:space-y-4", !embedded && "p-4 md:p-6")}>
+    <div className={cn("space-y-4 md:space-y-6", !embedded && "p-3 sm:p-4 md:p-6")}>
       {/* Header */}
       {!embedded && (
         <PageHeader
           title={t('nav.dashboard')}
           actions={
             loadError ? (
-              <button onClick={() => loadStats()} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-destructive/10 border border-destructive/20 text-xs font-medium text-destructive">
+              <Button variant="outline" size="sm" onClick={() => loadStats()} className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive">
                 {t('common.retry') || (isRTL ? 'إعادة المحاولة' : 'Retry')}
-              </button>
+              </Button>
             ) : isLoading ? (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted border border-border">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -457,7 +458,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       <QuickActions />
 
       {/* Sales Row */}
-      <div className="grid grid-cols-3 gap-2 md:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <StatCard
           title={t('dashboard.todaySales')}
           value={formatCurrency(stats.todaySales)}
@@ -486,7 +487,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       </div>
 
       {/* Financial Performance Row */}
-      <div className="grid grid-cols-3 gap-2 md:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <StatCard
           title={t('dashboard.netProfit')}
           value={formatCurrency(stats.netProfit)}
@@ -518,17 +519,17 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
 
       {/* أرباح معلّقة وخسارة ديون معدومة: سطران منفصلان لا يدخلان في الربح المحقق */}
       {((stats.pendingProfit ?? 0) !== 0 || (stats.todayBadDebtLoss ?? 0) !== 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {(stats.pendingProfit ?? 0) !== 0 && (
-            <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between rounded-xl border border-warning/30 bg-warning/5 px-3 py-2 text-sm">
               <span className="text-muted-foreground">{t('dashboard.pendingProfit')}</span>
-              <span className="font-semibold text-amber-600">{formatCurrency(stats.pendingProfit ?? 0)}</span>
+              <span dir="ltr" className="inline-block tabular-nums font-semibold text-warning">{formatCurrency(stats.pendingProfit ?? 0)}</span>
             </div>
           )}
           {(stats.todayBadDebtLoss ?? 0) !== 0 && (
             <div className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
               <span className="text-muted-foreground">{t('dashboard.badDebtLossToday')}</span>
-              <span className="font-semibold text-destructive">{formatCurrency(stats.todayBadDebtLoss ?? 0)}</span>
+              <span dir="ltr" className="inline-block tabular-nums font-semibold text-destructive">{formatCurrency(stats.todayBadDebtLoss ?? 0)}</span>
             </div>
           )}
         </div>
@@ -536,7 +537,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
 
       {/* Capital / Financial Overview Row */}
       {capitalConfig.trackCapital ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {noInventory ? (
             <StatCard
               title={t('dashboard.totalPurchases')}
@@ -581,7 +582,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2 md:gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {noInventory ? (
             <StatCard
               title={t('dashboard.totalPurchases')}
@@ -615,7 +616,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       )}
 
       {/* Refund Stats Row */}
-      <div className="grid grid-cols-2 gap-2 md:gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <StatCard
           title={t('dashboard.refundedToday')}
           value={stats.todayRefundedCount.toString()}

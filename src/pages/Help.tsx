@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { 
   BookOpen, ChevronDown, ChevronUp,
   Barcode, Package, FileText, Shield, Warehouse, Users, CreditCard, 
-  BarChart3, Receipt, Wrench, HelpCircle, Sparkles
+  BarChart3, Receipt, Wrench, HelpCircle, Sparkles, Search
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useLanguage } from '@/hooks/use-language';
@@ -83,7 +83,7 @@ export default function HelpPage() {
 
   return (
     <MainLayout>
-      <div className="p-3 md:p-6 max-w-5xl mx-auto space-y-4">
+      <div className="p-3 sm:p-4 md:p-6 max-w-5xl mx-auto space-y-4 md:space-y-6">
         {/* Page Header */}
         <PageHeader
           title={isAr ? 'مركز التعليمات والمساعدة' : 'Help & Documentation Center'}
@@ -106,7 +106,7 @@ export default function HelpPage() {
           >
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
             <span>{isAr ? 'ميزات النظام' : 'Features'}</span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-background/30 text-current">{displayFeatures.length}</Badge>
+            <Badge variant="secondary" className="bg-background/30 text-current tabular-nums">{displayFeatures.length}</Badge>
           </button>
 
           <button
@@ -121,7 +121,7 @@ export default function HelpPage() {
           >
             <HelpCircle className="w-3.5 h-3.5 shrink-0" />
             <span>{isAr ? 'الأسئلة الشائعة' : 'FAQs'}</span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-background/30 text-current">{faqs.length}</Badge>
+            <Badge variant="secondary" className="bg-background/30 text-current tabular-nums">{faqs.length}</Badge>
           </button>
         </div>
 
@@ -136,7 +136,7 @@ export default function HelpPage() {
                       <f.icon className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-xs text-foreground">{isAr ? f.titleAr : f.titleEn}</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{isAr ? f.titleAr : f.titleEn}</h3>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{isAr ? f.descAr : f.descEn}</p>
                     </div>
                   </div>
@@ -149,12 +149,13 @@ export default function HelpPage() {
         {/* Tab 2: FAQ */}
         {activeTab === 'faq' && (
           <div className="space-y-3">
-            <div className="relative">
+            <div className="relative flex-1 min-w-0">
+              <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 value={faqSearch}
                 onChange={e => setFaqSearch(e.target.value)}
                 placeholder={isAr ? 'ابحث في الأسئلة الشائعة...' : 'Search FAQs...'}
-                className="h-9 text-xs"
+                className="ps-9 pe-3"
               />
             </div>
 
@@ -179,16 +180,19 @@ export default function HelpPage() {
                     )}
                   </button>
                   {expandedFaq === i && (
-                    <div className="px-3 pb-3 pt-0 border-t border-border/40 mt-1 pt-2">
+                    <div className="px-3 pb-3 pt-2 border-t border-border/40 mt-1">
                       <p className="text-xs text-muted-foreground leading-relaxed">{faq.answer}</p>
                     </div>
                   )}
                 </div>
               ))}
               {filteredFaqs.length === 0 && (
-                <p className="text-center text-xs text-muted-foreground py-6">
-                  {isAr ? 'لم يتم العثور على نتائج مطابقة' : 'No matching FAQs found'}
-                </p>
+                <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                  <HelpCircle className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm sm:text-base font-semibold text-foreground">
+                    {isAr ? 'لم يتم العثور على نتائج مطابقة' : 'No matching FAQs found'}
+                  </p>
+                </div>
               )}
             </div>
           </div>

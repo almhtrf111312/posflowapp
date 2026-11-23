@@ -44,7 +44,7 @@ export function POSHeader({
             type="button"
             onClick={onMenuClick}
             aria-label={isEn ? "Main Menu" : "القائمة الرئيسية"}
-            className="w-11 h-11 rounded-xl bg-muted/60 border border-border/40 text-foreground flex items-center justify-center shrink-0 hover:bg-muted active:scale-95 transition-opacity cursor-pointer"
+            className="w-11 h-11 rounded-xl bg-muted/60 border border-border/40 text-foreground flex items-center justify-center shrink-0 hover:bg-muted active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,color,background-color] duration-150 cursor-pointer"
           >
             <Menu className="w-5 h-5 text-foreground" />
           </button>
@@ -55,7 +55,7 @@ export function POSHeader({
           <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <Store className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </div>
-          <h1 className="text-xs md:text-base font-bold text-foreground whitespace-nowrap truncate tracking-tight" title={t('pos.title')}>
+          <h1 className="text-sm md:text-base font-bold text-foreground whitespace-nowrap truncate tracking-tight" title={t('pos.title')}>
             {t('pos.title')}
           </h1>
         </div>
@@ -71,11 +71,12 @@ export function POSHeader({
           size="icon"
           onClick={() => navigate('/contact')}
           title={isEn ? "Contact Developer" : "التواصل مع المطور"}
-          className="relative h-9 w-9 md:h-10 md:w-10 rounded-xl hover:bg-muted"
+          aria-label={isEn ? "Contact Developer" : "التواصل مع المطور"}
+          className="relative rounded-xl hover:bg-muted"
         >
           <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground hover:text-foreground transition-colors" />
           {supportUnread > 0 && (
-            <span className="absolute top-1 end-1 min-w-[0.95rem] h-[0.95rem] px-0.5 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center animate-pulse ring-2 ring-background">
+            <span dir="ltr" className="absolute top-1 end-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums flex items-center justify-center animate-pulse ring-2 ring-background">
               {supportUnread > 9 ? '9+' : supportUnread}
             </span>
           )}
@@ -88,7 +89,8 @@ export function POSHeader({
             size="icon"
             onClick={() => navigate('/settings')}
             title={isEn ? "Settings" : "الإعدادات"}
-            className="h-9 w-9 md:h-10 md:w-10 rounded-xl hover:bg-muted"
+            aria-label={isEn ? "Settings" : "الإعدادات"}
+            className="rounded-xl hover:bg-muted"
           >
             <Settings className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground hover:text-foreground transition-colors" />
           </Button>
@@ -108,7 +110,7 @@ export function POSHeader({
             <ShoppingCart className="w-4 h-4" />
             <span className="text-xs">{t('pos.cart')}</span>
             {cartItemsCount > 0 && (
-              <span className="absolute -top-1.5 ltr:-left-1.5 rtl:-right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] flex items-center justify-center font-bold">
+              <span dir="ltr" className="absolute -top-1.5 -start-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-xs tabular-nums flex items-center justify-center font-bold">
                 {cartItemsCount}
               </span>
             )}

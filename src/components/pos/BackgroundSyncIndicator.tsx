@@ -9,10 +9,10 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
 import { EVENTS } from '@/lib/events';
 import { getQueueStatus, SyncQueueStatus, loadQueue, resetOperationForRetry, QueuedOperation } from '@/lib/sync-queue';
-import { showToast } from '@/lib/toast-config';
+import { toast } from '@/lib/sonner-bridge';
 import { isNotificationEventAllowed } from '@/lib/notification-events-config';
 import { CloudSyncContext } from '@/providers/CloudSyncProvider';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
 export type SyncState = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
@@ -100,7 +100,7 @@ export function BackgroundSyncIndicator({
           resetOperationForRetry(op.id);
         }
       }
-      showToast.info(isRTL ? 'جاري إعادة المحاولة' : 'Retrying...', isRTL ? 'يتم رفع العمليات المعلقة الآن...' : 'Uploading pending operations...');
+      toast.info(isRTL ? 'جاري إعادة المحاولة' : 'Retrying...', { description: isRTL ? 'يتم رفع العمليات المعلقة الآن...' : 'Uploading pending operations...' });
       if (syncContext?.syncNow) {
         await syncContext.syncNow();
       }
@@ -111,7 +111,7 @@ export function BackgroundSyncIndicator({
         setDialogOpen(false);
       }
     } catch {
-      showToast.error(isRTL ? 'فشل بدء إعادة المحاولة' : 'Failed to start retry');
+      toast.error(isRTL ? 'فشل بدء إعادة المحاولة' : 'Failed to start retry');
     } finally {
       setIsRetrying(false);
     }
@@ -172,7 +172,7 @@ export function BackgroundSyncIndicator({
       case 'syncing':
         return 'bg-primary/10 text-primary border-primary/20';
       case 'success':
-        return 'bg-green-500/10 text-green-600 border-green-500/20';
+        return 'bg-success/10 text-success border-success/20';
       case 'error':
         return 'bg-destructive/10 text-destructive border-destructive/20 cursor-pointer hover:bg-destructive/20';
       case 'offline':
@@ -192,7 +192,8 @@ export function BackgroundSyncIndicator({
         onClick={isClickable ? handleOpenDialog : undefined}
         onKeyDown={isClickable ? (e) => e.key === 'Enter' && handleOpenDialog() : undefined}
         className={cn(
-          "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-all select-none",
+          "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-[color,background-color,border-color] duration-150 select-none",
+          isClickable && "min-h-11 sm:min-h-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           getStateStyles(),
           className
         )}
@@ -203,55 +204,55 @@ export function BackgroundSyncIndicator({
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md w-[95vw] max-h-[85vh] max-h-[85dvh] flex flex-col p-4 sm:p-6" dir={isRTL ? "rtl" : "ltr"}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]" dir={isRTL ? "rtl" : "ltr"}>
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
               <span>{isRTL ? 'حالة طابور المزامنة والعمليات المعلقة' : 'Sync Queue & Pending Operations'}</span>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-2.5 py-2 max-h-[50vh] max-h-[50dvh]">
+          <DialogBody className="space-y-2.5 py-4">
             {failedOps.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 {isRTL ? 'لا توجد عمليات معلقة أو فاشلة حالياً' : 'No pending or failed operations'}
               </p>
             ) : (
               failedOps.map((op) => (
-                <div key={op.id} className="p-3 rounded-lg border border-border bg-muted/40 space-y-1.5 text-xs">
+                <div key={op.id} className="p-3 rounded-xl border border-border bg-muted/40 space-y-1.5 text-xs">
                   <div className="flex items-center justify-between font-semibold">
                     <span className="text-foreground">{getOpTypeLabel(op.type)}</span>
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[10px]",
-                      op.status === 'failed' ? "bg-destructive/20 text-destructive" : "bg-primary/20 text-primary"
+                      "px-2 py-0.5 rounded-full text-xs",
+                      op.status === 'failed' ? "bg-destructive/15 text-destructive" : "bg-primary/15 text-primary"
                     )}>
                       {op.status === 'failed' ? (isRTL ? 'فشلت' : 'Failed') : (isRTL ? 'قيد الانتظار' : 'Pending')}
                     </span>
                   </div>
                   {op.error && (
-                    <div className="bg-destructive/10 text-destructive p-2 rounded text-[11px] font-mono break-words leading-tight">
+                    <div className="bg-destructive/10 text-destructive p-2 rounded text-xs font-mono break-words leading-tight">
                       <strong>{isRTL ? 'سبب الرفض: ' : 'Reason: '}</strong>
                       {op.error}
                     </div>
                   )}
-                  <div className="flex justify-between items-center text-[10px] text-muted-foreground pt-1">
-                    <span>{new Date(op.createdAt).toLocaleTimeString('ar-SA')}</span>
+                  <div className="flex justify-between items-center text-xs text-muted-foreground pt-1">
+                    <span dir="ltr" className="inline-block tabular-nums">{new Date(op.createdAt).toLocaleTimeString('ar-SA')}</span>
                     {op.retryCount > 0 && (
-                      <span>{isRTL ? `محاولات: ${op.retryCount}/${op.maxRetries}` : `Retries: ${op.retryCount}/${op.maxRetries}`}</span>
+                      <span>{isRTL ? 'محاولات: ' : 'Retries: '}<span dir="ltr" className="inline-block tabular-nums">{op.retryCount}/{op.maxRetries}</span></span>
                     )}
                   </div>
                 </div>
               ))
             )}
-          </div>
+          </DialogBody>
 
-          <DialogFooter className="flex flex-row justify-between gap-2 pt-2 border-t border-border">
-            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setDialogOpen(false)}>
               {isRTL ? 'إغلاق' : 'Close'}
             </Button>
             {failedOps.some(op => op.status === 'failed') && (
-              <Button size="sm" onClick={handleRetryAll} disabled={isRetrying} className="gap-1.5">
-                <RefreshCw className={cn("h-3.5 w-3.5", isRetrying && "animate-spin")} />
+              <Button variant="default" size="default" onClick={handleRetryAll} disabled={isRetrying} className="gap-1.5">
+                <RefreshCw className={cn("h-4 w-4 shrink-0", isRetrying && "animate-spin")} />
                 <span>{isRTL ? 'إعادة المحاولة الآن' : 'Retry Now'}</span>
               </Button>
             )}
@@ -280,7 +281,7 @@ export function useSyncState() {
     
     // إظهار toast فوري فقط إذا طُلب (للعمليات الطويلة)
     if (showImmediateToast && message) {
-      showToast.info(message);
+      toast.info(message);
     }
   };
 
@@ -300,7 +301,7 @@ export function useSyncState() {
       }
       setSyncMessage(message);
       if (triggerToast && message && isNotificationEventAllowed('sync_completed_success')) {
-        showToast.success(message);
+        toast.success(message);
       }
       
       // العودة لـ idle بعد 3 ثوانٍ
@@ -326,7 +327,7 @@ export function useSyncState() {
       setSyncState('error');
       setSyncMessage(error);
       if (triggerToast && error) {
-        showToast.error(error);
+        toast.error(error);
       }
     }, delay);
     

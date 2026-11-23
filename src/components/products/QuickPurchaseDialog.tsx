@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -334,37 +334,18 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="w-[95vw] max-w-lg sm:max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl border border-border bg-card shadow-2xl"
+          className="w-[min(calc(100vw-1.5rem),36rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] border border-border bg-card shadow-2xl"
           onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => { if (loading || productName.trim() || costPrice) e.preventDefault(); }}
         >
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-border bg-card/80 backdrop-blur-md shrink-0">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenChange(false)}
-                className="rounded-full h-8 w-8 sm:hidden"
-              >
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-              <div>
-                <DialogTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
-                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
-                  <span>{t('purchases.quickAdd') || 'إضافة مشتريات سريعة'}</span>
-                </DialogTitle>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-xs text-muted-foreground"
-            >
-              {t('common.cancel') || 'إلغاء'}
-            </Button>
-          </div>
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-primary shrink-0" />
+              <span>{t('purchases.quickAdd') || 'إضافة مشتريات سريعة'}</span>
+            </DialogTitle>
+          </DialogHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-5 pb-28 sm:pb-5 space-y-3.5 sm:space-y-4">
+          <DialogBody className="space-y-4">
             {/* Existing Product Indicator */}
             {selectedProduct && (
               <div className="flex items-center justify-between p-2.5 bg-primary/10 border border-primary/20 rounded-lg text-xs">
@@ -377,7 +358,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 px-2 text-destructive hover:bg-destructive/10 text-xs"
+                  className="px-2 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs"
                   onClick={handleClearSelectedProduct}
                 >
                   <X className="w-3.5 h-3.5" />
@@ -401,18 +382,19 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     }
                   }}
                   placeholder={t('purchases.itemNamePlaceholder') || 'اكتب اسم المنتج للبحث أو الإضافة...'}
-                  className="h-10 text-sm"
+                  className="pe-9 text-sm"
                   autoFocus
                 />
                 {productName && (
                   <button
                     type="button"
+                    aria-label={isEn ? "Clear" : "مسح"}
                     onClick={() => {
                       setProductName('');
                       setSelectedProduct(null);
                       setSearchResults([]);
                     }}
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute end-2 top-1/2 -translate-y-1/2 inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -421,8 +403,8 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
 
               {/* Autocomplete Dropdown */}
               {showSearchDropdown && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
-                  <div className="p-1.5 bg-muted/60 text-[11px] font-medium text-muted-foreground">
+                <div className="absolute top-full inset-x-0 z-50 mt-1 bg-popover border border-border rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                  <div className="p-1.5 bg-muted/60 text-xs font-medium text-muted-foreground">
                     {isEn ? "Matching products in stock:" : "منتجات مطابقة موجودة بالمخزون:"}
                   </div>
                   {searchResults.map((item) => (
@@ -430,19 +412,19 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                       key={item.id}
                       type="button"
                       onClick={() => handleSelectProduct(item)}
-                      className="w-full text-right p-2.5 hover:bg-accent flex items-center justify-between border-b last:border-b-0 text-xs transition-colors"
+                      className="w-full text-start p-2.5 hover:bg-accent flex items-center justify-between border-b last:border-b-0 text-xs transition-colors"
                     >
                       <div className="flex flex-col">
                         <span className="font-semibold text-foreground">{item.name}</span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {item.barcode ? (isEn ? `Barcode: ${item.barcode}` : `باركود: ${item.barcode}`) : (isEn ? 'No barcode' : 'بدون باركود')}
                           {item.category ? ` • ${item.category}` : ''}
                         </span>
                       </div>
-                      <div className="text-left font-mono">
-                        <span className="text-primary font-bold">${item.cost_price?.toFixed(2) || '0.00'}</span>
-                        <span className="text-[10px] text-muted-foreground block">
-                          {isEn ? 'In stock:' : 'المتوفر:'} {item.quantity ?? 0}
+                      <div className="text-end font-mono">
+                        <span dir="ltr" className="inline-block text-primary font-bold tabular-nums">${item.cost_price?.toFixed(2) || '0.00'}</span>
+                        <span className="text-xs text-muted-foreground block">
+                          {isEn ? 'In stock:' : 'المتوفر:'} <span dir="ltr" className="inline-block tabular-nums">{item.quantity ?? 0}</span>
                         </span>
                       </div>
                     </button>
@@ -471,9 +453,10 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-10 w-10 shrink-0"
+                    className="shrink-0"
                     onClick={() => setShowScanner(true)}
                     title={isEn ? "Scan barcode with camera" : "مسح الباركود بالكاميرا"}
+                    aria-label={isEn ? "Scan barcode with camera" : "مسح الباركود بالكاميرا"}
                   >
                     <ScanLine className="w-4 h-4 text-primary" />
                   </Button>
@@ -487,10 +470,10 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                 </Label>
                 <div className="flex gap-1.5">
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="h-10 text-sm flex-1">
+                    <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px] text-sm flex-1">
                       <SelectValue placeholder={t('products.category') || 'اختر الفئة'} />
                     </SelectTrigger>
-                    <SelectContent className="max-h-56">
+                    <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                       {categories.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
@@ -564,12 +547,12 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value)}
                     placeholder="0.00"
-                    className="h-10 text-left font-mono font-bold text-base"
+                    className="text-end font-mono font-bold text-base tabular-nums"
                     dir="ltr"
                   />
                   {inputCurrency !== 'USD' && costPrice && (
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5 leading-tight">
-                      ≈ ${costNumUSD.toFixed(2)} USD
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5 leading-tight">
+                      <span dir="ltr" className="inline-block tabular-nums">≈ ${costNumUSD.toFixed(2)} USD</span>
                     </p>
                   )}
                 </div>
@@ -589,12 +572,12 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     value={salePrice}
                     onChange={(e) => setSalePrice(e.target.value)}
                     placeholder="0.00"
-                    className="h-10 text-left font-mono"
+                    className="text-end font-mono tabular-nums"
                     dir="ltr"
                   />
                   {inputCurrency !== 'USD' && salePrice && (
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5 leading-tight">
-                      ≈ ${saleNumUSD.toFixed(2)} USD
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5 leading-tight">
+                      <span dir="ltr" className="inline-block tabular-nums">≈ ${saleNumUSD.toFixed(2)} USD</span>
                     </p>
                   )}
                 </div>
@@ -612,12 +595,12 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     value={wholesalePrice}
                     onChange={(e) => setWholesalePrice(e.target.value)}
                     placeholder="0.00"
-                    className="h-10 text-left font-mono"
+                    className="text-end font-mono tabular-nums"
                     dir="ltr"
                   />
                   {inputCurrency !== 'USD' && wholesalePrice && (
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5 leading-tight">
-                      ≈ ${(wholesaleNumUSD || 0).toFixed(2)} USD
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5 leading-tight">
+                      <span dir="ltr" className="inline-block tabular-nums">≈ ${(wholesaleNumUSD || 0).toFixed(2)} USD</span>
                     </p>
                   )}
                 </div>
@@ -628,12 +611,12 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                 <span className="text-xs text-muted-foreground font-medium">
                   {(t('purchases.totalAmount') || 'إجمالي تكلفة الشراء')}:
                 </span>
-                <div className="text-left font-mono">
-                  <span className="text-base font-bold text-primary">
+                <div className="text-end font-mono">
+                  <span dir="ltr" className="inline-block text-base font-bold text-primary tabular-nums">
                     {m.roundForCurrency(totalCostInCurrency, inputCurrency).toLocaleString()} {currencySymbol}
                   </span>
                   {inputCurrency !== 'USD' && (
-                    <span className="text-xs text-muted-foreground block">
+                    <span dir="ltr" className="text-xs text-muted-foreground block tabular-nums">
                       ≈ ${totalCost.toFixed(2)} USD
                     </span>
                   )}
@@ -786,7 +769,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                 <div className="relative w-full h-32 rounded-xl overflow-hidden border border-border group bg-black/5">
                   <img src={imagePreview} alt="Receipt Preview" loading="lazy" decoding="async" className="w-full h-full object-contain" />
                   {imgStatus === 'syncing' && (
-                    <div className="absolute top-2 left-2 bg-black/70 rounded-full px-2 py-1 flex items-center gap-1.5 text-[11px] text-white">
+                    <div className="absolute top-2 start-2 bg-black/70 rounded-full px-2 py-1 flex items-center gap-1.5 text-xs text-white">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       <span>{isEn ? "Syncing..." : "جارٍ المزامنة..."}</span>
                     </div>
@@ -794,7 +777,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                   <Button
                     size="sm"
                     variant="destructive"
-                    className="absolute top-2 right-2 h-7 px-2.5 text-xs shadow-md"
+                    className="absolute top-2 end-2 text-xs shadow-md"
                     onClick={clearImage}
                   >
                     <X className="w-3.5 h-3.5" />
@@ -838,13 +821,13 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
             </div>
 
             {/* Action Buttons */}
-          </div>
+          </DialogBody>
 
-          <div className="sticky bottom-0 p-3 sm:p-4 border-t border-border bg-card/95 backdrop-blur-md shrink-0 flex items-center gap-2 shadow-lg">
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60 bg-card">
             <Button
               type="button"
               variant="outline"
-              className="flex-1 h-11 text-xs sm:text-sm rounded-xl font-bold"
+              size="default"
               onClick={() => onOpenChange(false)}
               disabled={loading}
             >
@@ -852,23 +835,24 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
             </Button>
             <Button
               type="button"
-              className="flex-[2] h-11 text-xs sm:text-sm rounded-xl bg-primary hover:bg-primary/90 font-bold text-primary-foreground shadow-sm"
+              variant="default"
+              size="default"
               onClick={handleSubmit}
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin me-1" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   <span>{t('common.loading') || 'جارٍ الحفظ...'}</span>
                 </>
               ) : (
                 <>
-                  <Package className="w-4 h-4 me-1" />
+                  <Package className="w-4 h-4" />
                   <span>{selectedProduct ? (isEn ? 'Update Stock & Invoice' : 'تحديث المخزون والفاتورة') : (isEn ? 'Save Product & Update Stock' : 'حفظ المنتج وتحديث المخزون')}</span>
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

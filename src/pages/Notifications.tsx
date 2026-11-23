@@ -11,10 +11,13 @@ import {
   Clock,
   ShieldCheck,
   Trash2,
-  ArrowLeft,
+  ArrowRight,
   Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { useLanguage } from '@/hooks/use-language';
 import { useNotifications, type Notification } from '@/hooks/use-notifications';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from '@/lib/sonner-bridge';
@@ -52,6 +55,7 @@ const stripImageTags = (t: string) =>
 export default function Notifications() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { direction } = useLanguage();
   const {
     notifications,
     markAsRead: markUserNotificationAsRead,
@@ -255,29 +259,29 @@ export default function Notifications() {
   };
 
   return (
-    <div className="w-full min-w-0 max-w-none self-stretch px-4 pb-4 pt-[calc(var(--app-safe-top,0px)+4.25rem)] space-y-4 min-h-[70vh] md:mx-auto md:max-w-3xl md:pt-4" dir="rtl">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="flex min-w-0 items-center gap-2 text-base font-bold text-foreground sm:text-lg">
-          <Bell className="h-5 w-5 shrink-0 text-primary" />
-          الإشعارات والتنبيهات
-        </h1>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={markAllRead} disabled={unreadCount === 0}
-            aria-label="تحديد الكل كمقروء" title="تحديد الكل كمقروء" className="h-8 w-8 p-0">
-            <CheckCheck className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={load} aria-label="تحديث" className="h-8 w-8 p-0">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </div>
+    <div className="w-full min-w-0 max-w-3xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 min-h-[70vh]" dir={direction}>
+      <PageHeader
+        title="الإشعارات والتنبيهات"
+        icon={<Bell className="w-5 h-5" />}
+        actions={
+          <div className="flex shrink-0 items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={markAllRead} disabled={unreadCount === 0}
+              aria-label="تحديد الكل كمقروء" title="تحديد الكل كمقروء">
+              <CheckCheck className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={load} aria-label="تحديث">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        }
+      />
 
       {/* كبسولات التصفية (الكل / غير المقروءة / المقروءة) */}
       <div className="grid grid-cols-3 gap-2 border-b border-border/60 pb-2 w-full">
         <Button
           variant={tab === 'all' ? 'default' : 'outline'}
           size="sm"
-          className="rounded-full text-xs h-7 w-full px-1"
+          className="rounded-xl text-xs min-h-10 sm:min-h-9 w-full px-2"
           onClick={() => setTab('all')}
         >
           الكل ({allItems.length})
@@ -285,7 +289,7 @@ export default function Notifications() {
         <Button
           variant={tab === 'unread' ? 'default' : 'outline'}
           size="sm"
-          className="rounded-full text-xs h-7 w-full px-1"
+          className="rounded-xl text-xs min-h-10 sm:min-h-9 w-full px-2"
           onClick={() => setTab('unread')}
         >
           غير مقروءة ({unreadCount})
@@ -293,7 +297,7 @@ export default function Notifications() {
         <Button
           variant={tab === 'read' ? 'default' : 'outline'}
           size="sm"
-          className="rounded-full text-xs h-7 w-full px-1"
+          className="rounded-xl text-xs min-h-10 sm:min-h-9 w-full px-2"
           onClick={() => setTab('read')}
         >
           مقروءة ({readCount})
@@ -302,9 +306,9 @@ export default function Notifications() {
 
       {/* شاشة فارغة */}
       {!loading && displayedItems.length === 0 && (
-        <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground space-y-2">
-          <Bell className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-          <p>
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+          <Bell className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <p className="text-sm sm:text-base font-semibold text-foreground">
             {tab === 'unread'
               ? 'لا توجد إشعارات غير مقروءة'
               : tab === 'read'
@@ -326,7 +330,7 @@ export default function Notifications() {
               key={item.id}
               className={`rounded-2xl border p-4 transition-colors ${
                 item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')
-                  ? 'border-amber-500/40 bg-amber-500/5'
+                  ? 'border-warning/40 bg-warning/10'
                   : isUpdate
                   ? 'border-primary/40 bg-primary/5'
                   : item.isRead
@@ -340,7 +344,7 @@ export default function Notifications() {
                 <span
                   className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                     item.kind === 'warning' || item.kind === 'inventory' || item.kind.includes('stock')
-                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      ? 'bg-warning/15 text-warning'
                       : isUpdate
                       ? 'bg-primary/15 text-primary'
                       : 'bg-muted text-muted-foreground'
@@ -353,14 +357,14 @@ export default function Notifications() {
                   <span className="flex items-start justify-between gap-2">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-bold text-foreground break-words">{item.title}</span>
-                      <span className="rounded-full border px-1.5 text-[10px]">
+                      <Badge variant="outline">
                         {getItemBadge(item)}
-                      </span>
+                      </Badge>
                     </span>
                     {!item.isRead && (
-                      <span className="min-w-5 shrink-0 rounded-full bg-destructive px-1.5 text-center text-[10px] text-destructive-foreground" aria-label="غير مقروء">
+                      <Badge variant="destructive" className="shrink-0 tabular-nums" aria-label="غير مقروء">
                         1
-                      </span>
+                      </Badge>
                     )}
                   </span>
 
@@ -370,7 +374,7 @@ export default function Notifications() {
                     </span>
                   )}
 
-                  <span className="block text-[11px] text-muted-foreground/80 font-mono" dir="ltr">
+                  <span className="block text-xs text-muted-foreground font-mono tabular-nums" dir="ltr">
                     {new Date(item.created_at).toLocaleString('en-GB')}
                   </span>
 
@@ -381,13 +385,13 @@ export default function Notifications() {
                   {link && (
                     <Button
                       size="sm"
-                      className="h-8 gap-1.5 text-xs font-bold"
+                      className="gap-1.5 text-xs font-bold"
                       onClick={() => {
                         markItemRead(item);
                         openExternal(link);
                       }}
                     >
-                      <Download className="w-3.5 h-3.5" />
+                      <Download className="w-4 h-4" />
                       {isUpdate ? 'تحميل التحديث وتثبيته' : 'فتح الرابط'}
                     </Button>
                   )}
@@ -396,10 +400,10 @@ export default function Notifications() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="h-8 gap-1.5 text-xs font-semibold"
+                      className="gap-1.5 text-xs font-semibold"
                       onClick={() => { markItemRead(item); navigate(item.actionUrl!); }}
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                       عرض التفاصيل
                     </Button>
                   )}
@@ -407,11 +411,11 @@ export default function Notifications() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+                    className="gap-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={() => handleDeleteOrArchive(item)}
                     title="حذف أو أرشفة"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                     حذف
                   </Button>
               </div>

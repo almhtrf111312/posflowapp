@@ -77,7 +77,7 @@ function LicenseChoiceScreen({ onChooseActivation, onChooseTrial, isStartingTria
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4" dir={direction}>
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center pb-2">
-          <CardTitle className="text-xl">
+          <CardTitle>
             {t('license.welcome')}
           </CardTitle>
           <CardDescription>
@@ -191,7 +191,7 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
             <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <WifiOff className="w-8 h-8 text-destructive" />
             </div>
-            <CardTitle className="text-xl">{t('license.internetRequired' as any)}</CardTitle>
+            <CardTitle>{t('license.internetRequired' as any)}</CardTitle>
             <CardDescription>
               {reasonMessages[offlineLeaseReason || ''] || t('license.offlineVerifyFailed' as any)}
               {' '}{t('license.offlineReconnectHint' as any)}
@@ -225,10 +225,10 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4" dir={direction}>
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="text-center pb-2">
-            <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+            <div className="w-16 h-16 bg-warning/15 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Clock className="w-8 h-8 text-warning" />
             </div>
-            <CardTitle className="text-xl">{t('license.ownerNotActivated')}</CardTitle>
+            <CardTitle>{t('license.ownerNotActivated')}</CardTitle>
             <CardDescription>{t('license.ownerNotActivatedDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

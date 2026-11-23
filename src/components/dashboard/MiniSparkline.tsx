@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 
 interface MiniSparklineProps {
   data: number[];
@@ -8,6 +8,7 @@ interface MiniSparklineProps {
 }
 
 export function MiniSparkline({ data, width = 120, height = 30, color = 'hsl(var(--primary))' }: MiniSparklineProps) {
+  const uid = useId();
   const { linePath, areaPath } = useMemo(() => {
     if (!data.length || data.every(v => v === 0)) {
       return { linePath: '', areaPath: '' };
@@ -33,7 +34,7 @@ export function MiniSparkline({ data, width = 120, height = 30, color = 'hsl(var
 
   if (!linePath) return null;
 
-  const gradientId = `spark-${Math.random().toString(36).slice(2, 8)}`;
+  const gradientId = `spark-${uid}`;
 
   return (
     <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="mt-1">

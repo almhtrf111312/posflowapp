@@ -31,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
@@ -64,7 +64,10 @@ interface DiagnosticStats {
 export function SystemDiagnostics() {
   const { language } = useLanguage();
   const isEn = language === 'en';
-  const { toast } = useToast();
+  const toast = ({ title, description, variant }: { title?: string; description?: string; variant?: 'destructive' | 'default' }) => {
+    if (variant === 'destructive') sonnerToast.error(title || description || '', title && description ? { description } : undefined);
+    else sonnerToast.success(title || description || '', title && description ? { description } : undefined);
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<DiagnosticUser[]>([]);
   const [stats, setStats] = useState<DiagnosticStats | null>(null);
@@ -220,17 +223,17 @@ export function SystemDiagnostics() {
 
   const getRoleBadge = (role: string | null) => {
     switch (role) {
-      case 'boss': return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">{isEn ? 'Boss' : 'بوس'}</Badge>;
-      case 'admin': return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{isEn ? 'Admin' : 'مدير'}</Badge>;
-      case 'cashier': return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">{isEn ? 'Cashier' : 'كاشير'}</Badge>;
+      case 'boss': return <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">{isEn ? 'Boss' : 'بوس'}</Badge>;
+      case 'admin': return <Badge variant="outline" className="bg-info/15 text-info border-info/30">{isEn ? 'Admin' : 'مدير'}</Badge>;
+      case 'cashier': return <Badge variant="outline" className="bg-success/15 text-success border-success/30">{isEn ? 'Cashier' : 'كاشير'}</Badge>;
       default: return <Badge variant="destructive">{isEn ? 'No Role' : 'بدون دور'}</Badge>;
     }
   };
 
   const getStatusIcon = (user: DiagnosticUser) => {
-    if (user.issues.length === 0) return <CheckCircle2 className="w-5 h-5 text-green-500" />;
-    if (user.issues.some(i => i.includes('مفقود') || i.includes('Missing'))) return <XCircle className="w-5 h-5 text-red-500" />;
-    return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+    if (user.issues.length === 0) return <CheckCircle2 className="w-5 h-5 text-success" />;
+    if (user.issues.some(i => i.includes('مفقود') || i.includes('Missing'))) return <XCircle className="w-5 h-5 text-destructive" />;
+    return <AlertTriangle className="w-5 h-5 text-warning" />;
   };
 
   const getActionButtons = (user: DiagnosticUser) => {
@@ -270,8 +273,8 @@ export function SystemDiagnostics() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Shield className="w-6 h-6 text-primary" />
+          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
+            <Shield className="w-4 h-4 text-primary shrink-0" />
             {isEn ? "System Diagnostics" : "تشخيص النظام"}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -290,11 +293,11 @@ export function SystemDiagnostics() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-500" />
+                <div className="w-10 h-10 rounded-lg bg-info/15 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-info" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.total_users}</p>
+                  <p className="text-2xl font-bold tabular-nums">{stats.total_users}</p>
                   <p className="text-xs text-muted-foreground">{isEn ? "Total Users" : "إجمالي المستخدمين"}</p>
                 </div>
               </div>
@@ -304,11 +307,11 @@ export function SystemDiagnostics() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <UserCheck className="w-5 h-5 text-green-500" />
+                <div className="w-10 h-10 rounded-lg bg-success/15 flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{stats.users_with_roles}</p>
+                  <p className="text-2xl font-bold tabular-nums">{stats.users_with_roles}</p>
                   <p className="text-xs text-muted-foreground">{isEn ? "With Roles" : "لديهم أدوار"}</p>
                 </div>
               </div>
@@ -318,11 +321,11 @@ export function SystemDiagnostics() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.users_without_roles > 0 ? 'bg-red-500/20' : 'bg-muted'}`}>
-                  <UserX className={`w-5 h-5 ${stats.users_without_roles > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.users_without_roles > 0 ? 'bg-destructive/15' : 'bg-muted'}`}>
+                  <UserX className={`w-5 h-5 ${stats.users_without_roles > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
                 </div>
                 <div>
-                  <p className={`text-2xl font-bold ${stats.users_without_roles > 0 ? 'text-red-500' : ''}`}>
+                  <p className={`text-2xl font-bold tabular-nums ${stats.users_without_roles > 0 ? 'text-destructive' : ''}`}>
                     {stats.users_without_roles}
                   </p>
                   <p className="text-xs text-muted-foreground">{isEn ? "Without Roles" : "بدون أدوار"}</p>
@@ -334,11 +337,11 @@ export function SystemDiagnostics() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.expired_licenses > 0 ? 'bg-yellow-500/20' : 'bg-muted'}`}>
-                  <Clock className={`w-5 h-5 ${stats.expired_licenses > 0 ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stats.expired_licenses > 0 ? 'bg-warning/15' : 'bg-muted'}`}>
+                  <Clock className={`w-5 h-5 ${stats.expired_licenses > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
                 </div>
                 <div>
-                  <p className={`text-2xl font-bold ${stats.expired_licenses > 0 ? 'text-yellow-500' : ''}`}>
+                  <p className={`text-2xl font-bold tabular-nums ${stats.expired_licenses > 0 ? 'text-warning' : ''}`}>
                     {stats.expired_licenses}
                   </p>
                   <p className="text-xs text-muted-foreground">{isEn ? "Expired Licenses" : "تراخيص منتهية"}</p>
@@ -351,9 +354,9 @@ export function SystemDiagnostics() {
 
       {/* Issues Alert */}
       {usersWithIssues.length > 0 && (
-        <Card className="border-red-500/30 bg-red-500/5">
+        <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader className="pb-3">
-            <CardTitle className="text-red-500 flex items-center gap-2">
+            <CardTitle className="text-destructive flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
               {isEn ? `Users with Issues (${usersWithIssues.length})` : `مستخدمين لديهم مشاكل (${usersWithIssues.length})`}
             </CardTitle>
@@ -370,7 +373,7 @@ export function SystemDiagnostics() {
                   <TableHead className="text-start">{isEn ? "Email" : "البريد"}</TableHead>
                   <TableHead className="text-start">{isEn ? "Role" : "الدور"}</TableHead>
                   <TableHead className="text-start">{isEn ? "Issues" : "المشاكل"}</TableHead>
-                  <TableHead className="text-start">{isEn ? "Actions" : "إجراءات"}</TableHead>
+                  <TableHead className="text-center">{isEn ? "Actions" : "إجراءات"}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

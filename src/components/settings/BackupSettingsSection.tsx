@@ -57,14 +57,14 @@ export function BackupSettingsSection({
 
             {/* Backup & Import */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <Button size="sm" onClick={handleBackupNow} disabled={isBackingUp} className="w-full h-9">
-                {isBackingUp ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Download className="w-3.5 h-3.5 shrink-0" />}
-                <span className="text-xs">{t('settings.downloadBackup')}</span>
+              <Button size="sm" onClick={handleBackupNow} disabled={isBackingUp} className="w-full">
+                {isBackingUp ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Download className="w-4 h-4 shrink-0" />}
+                <span>{t('settings.downloadBackup')}</span>
               </Button>
               <div className="w-full">
                 <input type="file" accept=".posflowbak,.json,application/json,text/plain" onChange={handleImportBackup} className="hidden" id="import-backup" ref={importInputRef} />
                 <label htmlFor="import-backup" className="w-full block">
-                  <Button variant="outline" size="sm" className="w-full h-9" asChild disabled={isImporting}>
+                  <Button variant="outline" size="sm" className="w-full" asChild disabled={isImporting}>
                     <span className="cursor-pointer">
                       {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <FileUp className="w-3.5 h-3.5 shrink-0" />}
                       <span className="text-xs">{t('settings.importBackup')}</span>
@@ -99,8 +99,8 @@ export function BackupSettingsSection({
                   <p className="text-xs font-medium text-foreground truncate">{t('settings.lastSync')}</p>
                   <p className="text-[10px] text-muted-foreground truncate">{syncSettings.lastSync}</p>
                 </div>
-                <Button size="sm" variant="ghost" onClick={handleSync} disabled={isSyncing} className="h-7 w-7 p-0 shrink-0">
-                  {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                <Button size="icon" variant="ghost" onClick={handleSync} disabled={isSyncing} aria-label={t('settings.lastSync')} className="shrink-0">
+                  {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 </Button>
               </div>
             </div>
@@ -112,21 +112,22 @@ export function BackupSettingsSection({
                 <select
                   value={backupSettings.interval}
                   onChange={(e) => setBackupSettings({ ...backupSettings, interval: e.target.value })}
-                  className="w-full h-8 px-2 text-xs rounded-md bg-muted border-0 text-foreground"
+                  className="w-full min-h-11 sm:min-h-10 px-3 text-sm rounded-[14px] bg-muted border-0 text-foreground"
                 >
                   <option value="daily">{t('settings.daily')}</option>
                   <option value="weekly">{t('settings.weekly')}</option>
                   <option value="monthly">{t('settings.monthly')}</option>
                 </select>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">{t('settings.keepDays')}</label>
                 <Input
                   type="number"
                   value={backupSettings.keepDays}
                   onChange={(e) => setBackupSettings({ ...backupSettings, keepDays: e.target.value })}
                   min="7" max="365"
-                  className="h-8 text-xs bg-muted border-0"
+                  dir="ltr"
+                  className="bg-muted border-0 tabular-nums"
                 />
               </div>
             </div>
@@ -147,12 +148,12 @@ export function BackupSettingsSection({
                     </div>
                   </div>
                   <div className="flex items-center gap-1 border-t border-border/50 pt-1.5">
-                    <Button variant="ghost" size="sm" className="flex-1 h-7 gap-1 text-xs" onClick={() => handleRestoreBackup(backup)}>
-                      <RefreshCw className="w-3 h-3" />
+                    <Button variant="ghost" size="sm" className="flex-1 gap-1.5" onClick={() => handleRestoreBackup(backup)}>
+                      <RefreshCw className="w-4 h-4" />
                       {t('settings.restoreBtn')}
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 h-7 gap-1 text-xs text-destructive" onClick={() => handleDeleteBackup(backup)}>
-                      <Trash2 className="w-3 h-3" />
+                    <Button variant="ghost" size="sm" className="flex-1 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBackup(backup)}>
+                      <Trash2 className="w-4 h-4" />
                       {t('common.delete')}
                     </Button>
                   </div>

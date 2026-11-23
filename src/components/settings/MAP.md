@@ -16,21 +16,21 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `CustomFieldsManager.tsx` | Custom product fields manager. | CustomFieldsManager | hooks/use-language, hooks/use-network-status, lib/custom-fields-config, lib/sonner-bridge, ui/* | — |
 | `DataResetSection.tsx` | Guarded manual data reset section. | default(DataResetSection) | hooks/use-auth, hooks/use-language, hooks/use-network-status, lib/clear-demo-data, lib/i18n, lib/sonner-bridge, ui/* | — |
 | `FinanceSettingsSection.tsx` | Finance settings: currencies, rates, tax. | FinanceSettingsSection, default · 1 types | ShiftToleranceField, SurplusProfitField, hooks/use-language, lib/currencies, lib/sonner-bridge, ui/* | — |
-| `FontSelector.tsx` | App font selector. | FontSelector, default | hooks/use-app-font, hooks/use-language, lib/app-font-config, lib/store-settings-sync, lib/toast-config | — |
+| `FontSelector.tsx` | App font selector. | FontSelector, default | hooks/use-app-font, hooks/use-language, lib/app-font-config, lib/sonner-bridge, lib/store-settings-sync | — |
 | `IntegrityCheckSection.tsx` | Data integrity check section. | IntegrityCheckSection | ui/* | rpc: posflow_integrity_check · tbl: partner_ledger_reconciliation |
 | `LanguageSection.tsx` | Language selection section. | LanguageSection | hooks/use-language, lib/i18n, lib/sonner-bridge, lib/store-settings-sync, ui/* | — |
 | `LocalBackupSection.tsx` | Recent local auto-backups list and restore. | LocalBackupSection | hooks/use-language, lib/events, lib/local-auto-backup, lib/sonner-bridge, lib/store-settings-sync, ui/* | — |
-| `PasswordChangeDialog.tsx` | Password change dialog. | PasswordChangeDialog | hooks/use-auth, hooks/use-language, hooks/use-toast, hooks/use-user-role, ui/* | — |
+| `PasswordChangeDialog.tsx` | Password change dialog. | PasswordChangeDialog | hooks/use-auth, hooks/use-language, hooks/use-user-role, lib/sonner-bridge, ui/* | — |
 | `PrinterSettingsSection.tsx` | Printer settings section. | PrinterSettingsSection, default · 1 types | hooks/use-language, ui/* | — |
 | `ProductFieldsSection.tsx` | Product form fields settings. | ProductFieldsSection | CustomFieldsManager, hooks/use-language, hooks/use-network-status, lib/product-fields-config, ui/* | — |
 | `ProfileManagement.tsx` | User profile management. | ProfileManagement | hooks/use-app-lock, hooks/use-auth, hooks/use-language, hooks/use-user-role, lib/demo-data, lib/phone-utils, lib/sonner-bridge, ui/* | tbl: profiles |
-| `RestoreWarningDialog.tsx` | Backup restore warning dialog. | RestoreWarningDialog, default | ui/* | — |
+| `RestoreWarningDialog.tsx` | Backup restore warning dialog. | RestoreWarningDialog, default | hooks/use-language, ui/* | — |
 | `ShiftToleranceField.tsx` | Shift variance tolerance field. | ShiftToleranceField | hooks/use-language, hooks/use-user-role, lib/cloud/cashbox-cloud, lib/sonner-bridge, ui/* | — |
 | `StoreInfoSection.tsx` | Store information section. | StoreInfoSection, default · 1 types | LanguageSection, hooks/use-language, lib/product-fields-config, ui/* | — |
-| `StorePhoneVerificationDialog.tsx` | Store phone verification dialog. | StorePhoneVerificationDialog | hooks/use-language, lib/toast-config, ui/* | — |
+| `StorePhoneVerificationDialog.tsx` | Store phone verification dialog. | StorePhoneVerificationDialog | hooks/use-language, lib/sonner-bridge, ui/* | — |
 | `SurplusProfitField.tsx` | Surplus-profit setting field and sync. | syncSurplusSetting, SurplusProfitField | hooks/use-language, hooks/use-user-role, lib/supabase-store, ui/* | tbl: store_settings |
-| `SystemDiagnostics.tsx` | System diagnostics panel. | SystemDiagnostics | hooks/use-language, hooks/use-network-status, hooks/use-toast, ui/* | tbl: app_licenses, profiles, user_roles |
+| `SystemDiagnostics.tsx` | System diagnostics panel. | SystemDiagnostics | hooks/use-language, hooks/use-network-status, lib/sonner-bridge, ui/* | tbl: app_licenses, profiles, user_roles |
 | `ThemeLivePreview.tsx` | Theme live preview. | ThemeLivePreview | hooks/use-language, hooks/use-theme | — |
 | `ThemeSection.tsx` | Theme settings section. | ThemeSection · 1 types | ThemeLivePreview, hooks/use-language, hooks/use-theme, lib/performance-mode, ui/* | — |
 | `UIScaleSelector.tsx` | UI scale selector. | UIScaleSelector, default | hooks/use-language, lib/events, lib/sonner-bridge, lib/store-settings-sync, lib/ui-scale-config, ui/* | — |
-| `UsersTab.tsx` | Store users management tab. | UsersTab, default | PasswordChangeDialog, hooks/use-auth, hooks/use-language, hooks/use-license, hooks/use-toast, hooks/use-user-role, hooks/use-users-management, lib/demo-data (+1) | — |
+| `UsersTab.tsx` | Store users management tab. | UsersTab, default | PasswordChangeDialog, hooks/use-auth, hooks/use-language, hooks/use-license, hooks/use-user-role, hooks/use-users-management, lib/demo-data, lib/sonner-bridge (+1) | — |

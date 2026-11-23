@@ -55,7 +55,7 @@ export function DeviceBanGate({ children }: { children: ReactNode }) {
     >
       <div className="max-w-sm w-full text-center space-y-4 rounded-2xl border border-destructive/40 bg-card p-6 shadow-2xl">
         <ShieldOff className="w-14 h-14 mx-auto text-destructive" />
-        <h1 className="text-xl font-black text-foreground">جهازك محظور</h1>
+        <h1 className="text-xl font-bold text-foreground tracking-tight">جهازك محظور</h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
           تم حظر هذا الجهاز من استخدام التطبيق، ولا يمكن الدخول منه بأي حساب. للاستفسار تواصل مع المطور.
         </p>

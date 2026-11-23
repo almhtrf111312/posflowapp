@@ -28,12 +28,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Table,
   TableBody,
@@ -383,30 +385,30 @@ export default function CashShifts() {
   }, [shifts]);
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
       <PageHeader
         title={t('cashShifts.pageTitle')}
         subtitle={t('cashShifts.pageSubtitle')}
         icon={<Wallet className="h-5 w-5 text-primary" />}
         actions={
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-            <Button variant="outline" size="sm" onClick={loadData}>
-              <RefreshCw className="h-4 w-4" />
+          <>
+            <Button variant="outline" size="default" onClick={loadData}>
+              <RefreshCw className="h-4 w-4 shrink-0" />
               {t('cashShifts.refresh')}
             </Button>
             {openShift ? (
-              <Button variant="destructive" size="sm" onClick={() => setShowCloseDialog(true)}>
-                <StopCircle className="h-4 w-4" />
+              <Button variant="destructive" size="default" onClick={() => setShowCloseDialog(true)}>
+                <StopCircle className="h-4 w-4 shrink-0" />
                 {t('cashShifts.closeShift')}
               </Button>
             ) : (
-              <Button size="sm" onClick={() => setShowStartDialog(true)}>
-                <PlayCircle className="h-4 w-4" />
+              <Button variant="default" size="default" onClick={() => setShowStartDialog(true)}>
+                <PlayCircle className="h-4 w-4 shrink-0" />
                 {t('cashShifts.startShift')}
               </Button>
             )}
-          </div>
+          </>
         }
       />
 
@@ -426,7 +428,7 @@ export default function CashShifts() {
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setShowFx(true)}>{isEn ? "Currency Exchange" : "تحويل عملة"}</Button>
-                <Badge variant="default" className="bg-green-500">
+                <Badge variant="outline" className="bg-success/15 text-success border-success/30">
                   {t('cashShifts.active')}
                 </Badge>
               </div>
@@ -434,31 +436,31 @@ export default function CashShifts() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-background rounded-lg p-4 border">
-                <div className="text-sm text-muted-foreground mb-1">{t('cashShifts.openingCash')}</div>
-                <div className="text-xl font-bold">{formatUsd(openShift.openingCash)}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1">{t('cashShifts.openingCash')}</div>
+                <div className="text-xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(openShift.openingCash)}</span></div>
               </div>
               <div className="bg-background rounded-lg p-4 border">
-                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4 text-success" />
                   {t('cashShifts.cashSales')}
                 </div>
-                <div className="text-xl font-bold text-green-600">{formatUsd(shiftStatus.cashSales)}</div>
+                <div className="text-xl font-bold text-success"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(shiftStatus.cashSales)}</span></div>
               </div>
               <div className="bg-background rounded-lg p-4 border">
-                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                  <TrendingDown className="h-4 w-4 text-red-500" />
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                  <TrendingDown className="h-4 w-4 text-destructive" />
                   {t('cashShifts.cashExpenses')}
                 </div>
-                <div className="text-xl font-bold text-red-600">{formatUsd(shiftStatus.cashExpenses)}</div>
+                <div className="text-xl font-bold text-destructive"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(shiftStatus.cashExpenses)}</span></div>
               </div>
               <div className="bg-background rounded-lg p-4 border border-primary">
-                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
                   <Banknote className="h-4 w-4 text-primary" />
                   {t('cashShifts.expectedCash')}
                 </div>
-                <div className="text-xl font-bold text-primary">{formatUsd(shiftStatus.expectedCash)}</div>
+                <div className="text-xl font-bold text-primary"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(shiftStatus.expectedCash)}</span></div>
               </div>
             </div>
 
@@ -473,7 +475,7 @@ export default function CashShifts() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {enabledCurrencies.map((currency) => {
-                    const color = currency.code === 'USD' ? 'text-blue-600' : 'text-primary';
+                    const color = currency.code === 'USD' ? 'text-info' : 'text-primary';
                     const data = openShiftCurrencies[currency.code] || { opening: 0, sales: 0, expenses: 0, expected: 0 };
                     const fmt = (amount: number) => formatCurrency(
                       amount,
@@ -494,19 +496,19 @@ export default function CashShifts() {
                         <div className="text-xs space-y-1 text-muted-foreground pt-1">
                           <div className="flex justify-between">
                             <span>{isEn ? "Opening:" : "الافتتاحي:"}</span>
-                            <span className="font-medium text-foreground">{fmt(data.opening)}</span>
+                            <span dir="ltr" className="inline-block font-medium text-foreground tabular-nums">{fmt(data.opening)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>{isEn ? "Sales & Collections:" : "المبيعات والمقبوضات:"}</span>
-                            <span className="font-medium text-green-600">+{fmt(data.sales)}</span>
+                            <span dir="ltr" className="inline-block font-medium text-success tabular-nums">+{fmt(data.sales)}</span>
                           </div>
                           <div className="flex justify-between">
                             <span>{isEn ? "Expenses:" : "المصروفات:"}</span>
-                            <span className="font-medium text-red-600">-{fmt(data.expenses)}</span>
+                            <span dir="ltr" className="inline-block font-medium text-destructive tabular-nums">-{fmt(data.expenses)}</span>
                           </div>
                           <div className="flex justify-between pt-1 border-t font-bold text-foreground text-sm">
                             <span>{isEn ? "Expected in Drawer:" : "المتوقع بالدرج:"}</span>
-                            <span className={`${color} font-mono`}>{fmt(data.expected)}</span>
+                            <span dir="ltr" className={`inline-block ${color} font-mono tabular-nums`}>{fmt(data.expected)}</span>
                           </div>
                         </div>
                       </div>
@@ -532,9 +534,9 @@ export default function CashShifts() {
       )}
 
       {isOwner && deferred.length > 0 && (
-        <Card className="border-amber-400">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base"><AlertTriangle className="w-4 h-4 text-amber-600" /> {isEn ? `Pending Variances (${deferred.length})` : `فروقات بانتظار القرار (${deferred.length})`}</CardTitle>
+        <Card className="border-warning/40">
+          <CardHeader className="p-4 sm:p-5 pb-3">
+            <CardTitle className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-warning" /> {isEn ? `Pending Variances (${deferred.length})` : `فروقات بانتظار القرار (${deferred.length})`}</CardTitle>
             <CardDescription>{isEn ? "Shifts closed with a variance above tolerance awaiting owner decision." : "ورديات أُقفلت بفرق أكبر من حد السماح وأُجّل قرارها."}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -542,7 +544,7 @@ export default function CashShifts() {
               <div key={d.id} className="rounded-lg border p-3 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{d.cashier_name || (isEn ? 'Cashier' : 'كاشير')} — {d.closed_at ? formatDateTime(d.closed_at) : ''}</span>
-                  <span className={cn('font-mono font-bold', (d.variance || 0) < 0 ? 'text-red-600' : 'text-blue-600')}>{(d.variance || 0) > 0 ? '+' : ''}{formatUsd(d.variance || 0)}</span>
+                  <span dir="ltr" className={cn('inline-block font-mono font-bold tabular-nums', (d.variance || 0) < 0 ? 'text-destructive' : 'text-info')}>{(d.variance || 0) > 0 ? '+' : ''}{formatUsd(d.variance || 0)}</span>
                 </div>
                 <div className="text-[11px] text-muted-foreground font-mono space-y-0.5">
                   {(d.currency_counts || []).filter(c => c.variance !== 0).map(c => (
@@ -575,67 +577,69 @@ export default function CashShifts() {
           {isLoadingCloud && recentShifts.length === 0 ? (
             <ListPageSkeleton rows={4} />
           ) : recentShifts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('cashShifts.noShifts')}
+            <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+              <Clock className="w-12 h-12 text-muted-foreground/50 mb-3" />
+              <p className="text-sm sm:text-base font-semibold text-foreground">{t('cashShifts.noShifts')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('cashShifts.user')}</TableHead>
-                    <TableHead>{t('cashShifts.openTime')}</TableHead>
-                    <TableHead>{t('cashShifts.closeTime')}</TableHead>
-                    <TableHead>{t('cashShifts.opening')}</TableHead>
-                    <TableHead>{t('cashShifts.sales')}</TableHead>
-                    <TableHead>{t('cashShifts.expected')}</TableHead>
-                    <TableHead>{t('cashShifts.actual')}</TableHead>
-                    <TableHead>{t('cashShifts.discrepancy')}</TableHead>
-                    <TableHead>{isEn ? "Adjustments" : "التعديلات"}</TableHead>
-                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead className="text-start">{t('cashShifts.user')}</TableHead>
+                    <TableHead className="text-start">{t('cashShifts.openTime')}</TableHead>
+                    <TableHead className="text-start">{t('cashShifts.closeTime')}</TableHead>
+                    <TableHead className="text-end">{t('cashShifts.opening')}</TableHead>
+                    <TableHead className="text-end">{t('cashShifts.sales')}</TableHead>
+                    <TableHead className="text-end">{t('cashShifts.expected')}</TableHead>
+                    <TableHead className="text-end">{t('cashShifts.actual')}</TableHead>
+                    <TableHead className="text-end">{t('cashShifts.discrepancy')}</TableHead>
+                    <TableHead className="text-start">{isEn ? "Adjustments" : "التعديلات"}</TableHead>
+                    <TableHead className="text-center">{t('common.status')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recentShifts.map((shift) => (
                     <TableRow key={shift.id}>
-                      <TableCell className="font-medium">{shift.userName}</TableCell>
-                      <TableCell className="text-sm">{formatDateTime(shift.openedAt)}</TableCell>
-                      <TableCell className="text-sm">
-                        {shift.closedAt ? formatDateTime(shift.closedAt) : '-'}
+                      <TableCell className="font-medium text-start">{shift.userName}</TableCell>
+                      <TableCell className="text-sm text-start"><span dir="ltr" className="inline-block tabular-nums">{formatDateTime(shift.openedAt)}</span></TableCell>
+                      <TableCell className="text-sm text-start">
+                        {shift.closedAt ? <span dir="ltr" className="inline-block tabular-nums">{formatDateTime(shift.closedAt)}</span> : '-'}
                       </TableCell>
-                      <TableCell>{formatUsd(shift.openingCash)}</TableCell>
-                      <TableCell className="text-green-600">
-                        {formatUsd(shift.salesTotal)}
+                      <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.openingCash)}</span></TableCell>
+                      <TableCell className="text-end text-success">
+                        <span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.salesTotal)}</span>
                       </TableCell>
-                      <TableCell>{formatUsd(shift.expectedCash || 0)}</TableCell>
-                      <TableCell>
-                        {shift.closingCash !== undefined ? formatUsd(shift.closingCash) : '-'}
+                      <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.expectedCash || 0)}</span></TableCell>
+                      <TableCell className="text-end">
+                        {shift.closingCash !== undefined ? <span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.closingCash)}</span> : '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-end">
                         {shift.discrepancy !== undefined ? (
-                          <span className={
+                          <span dir="ltr" className={cn(
+                            'inline-block tabular-nums',
                             shift.discrepancy === 0
                               ? 'text-muted-foreground'
                               : shift.discrepancy > 0
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                          }>
+                                ? 'text-success'
+                                : 'text-destructive'
+                          )}>
                             {shift.discrepancy > 0 ? '+' : ''}{formatUsd(shift.discrepancy)}
                           </span>
                         ) : '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-start">
                         {shift.adjustments && shift.adjustments.length > 0 ? (
                           <div className="space-y-1">
                             {shift.adjustments.map(adj => (
                               <Badge key={adj.id} variant={adj.type === 'expense_added' ? 'destructive' : 'secondary'} className="text-xs">
-                                {adj.type === 'expense_added' ? (isEn ? 'Expense' : 'مصروف') : (isEn ? 'Income' : 'إيراد')} {formatUsd(adj.amount)}
+                                {adj.type === 'expense_added' ? (isEn ? 'Expense' : 'مصروف') : (isEn ? 'Income' : 'إيراد')} <span dir="ltr" className="inline-block tabular-nums ms-1">{formatUsd(adj.amount)}</span>
                               </Badge>
                             ))}
                           </div>
                         ) : '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-center">
                         <Badge variant={shift.status === 'open' ? 'default' : 'secondary'}>
                           {shift.status === 'open' ? t('cashShifts.status.open') : t('cashShifts.status.closed')}
                         </Badge>
@@ -651,8 +655,12 @@ export default function CashShifts() {
 
       {/* Start Shift Dialog */}
       <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (Object.values(openings).some(Boolean)) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (Object.values(openings).some(Boolean)) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
               <PlayCircle className="h-5 w-5 text-primary" />
               {t('cashShifts.startShiftTitle')}
@@ -662,12 +670,12 @@ export default function CashShifts() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
+          <DialogBody className="space-y-4">
             <div className="text-xs text-muted-foreground">
               {isEn ? "Enter the opening cash available in the drawer for each currency:" : "أدخل الرصيد الافتتاحي المتوفر في درج الكاشير لكل عملة:"}
             </div>
 
-            <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pe-1">
               {enabledCurrencies.map((curr) => {
                 const val = openings[curr.code] || '';
                 const numVal = parseFloat(val) || 0;
@@ -697,7 +705,7 @@ export default function CashShifts() {
                       const row = closingRows.find(r => r.code === curr.code);
                       if (!row || row.variance === 0) return null;
                       return (
-                        <div className={cn('text-[11px] font-mono font-bold', Math.abs(row.varianceUsd) > toleranceUsd ? 'text-red-600' : 'text-amber-600')}>
+                        <div className={cn('text-xs font-mono font-bold', Math.abs(row.varianceUsd) > toleranceUsd ? 'text-destructive' : 'text-warning')}>
                           {row.variance > 0 ? (isEn ? 'Surplus' : 'زيادة') : (isEn ? 'Shortage' : 'نقص')} {formatCurrency(Math.abs(row.variance), curr.symbol, curr.decimals, curr.code, curr.name)}
                           {curr.code !== 'USD' && <> (≈ ${formatNumber(Math.abs(row.varianceUsd), 2)})</>}
                         </div>
@@ -716,7 +724,7 @@ export default function CashShifts() {
             {/* Total USD preview */}
             <div className="bg-primary/10 rounded-lg p-3 text-sm flex items-center justify-between border border-primary/20">
               <span className="font-semibold text-primary">{isEn ? "Total Opening (USD):" : "إجمالي الافتتاحي بالدولار:"}</span>
-              <span className="font-bold text-lg font-mono text-primary">
+              <span dir="ltr" className="inline-block font-bold text-lg font-mono text-primary tabular-nums">
                 ${totalOpeningUSD.toFixed(2)}
               </span>
             </div>
@@ -724,13 +732,13 @@ export default function CashShifts() {
             <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground flex justify-between items-center">
               <span><strong>{t('cashShifts.employee')}:</strong> {userName}</span>
             </div>
-          </div>
+          </DialogBody>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStartDialog(false)}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowStartDialog(false)}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleStartShift}>
+            <Button variant="default" size="default" onClick={handleStartShift}>
               {t('cashShifts.startShift')}
             </Button>
           </DialogFooter>
@@ -739,8 +747,12 @@ export default function CashShifts() {
 
       {/* Close Shift Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),42rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (hasAnyClosingInput || closeShiftGuard.isRunning) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (hasAnyClosingInput || closeShiftGuard.isRunning) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
               <StopCircle className="h-5 w-5 text-destructive" />
               {t('cashShifts.closeShiftTitle')}
@@ -750,15 +762,15 @@ export default function CashShifts() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3 max-h-[70vh] overflow-y-auto pr-1">
+          <DialogBody className="space-y-4">
             {/* Quick Fill Button */}
-            <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-lg border">
+            <div className="flex items-center justify-between gap-2 bg-muted/40 p-2.5 rounded-lg border">
               <span className="text-xs text-muted-foreground">{isEn ? "Quickly fill actual amounts matching expected totals:" : "لإدخال المبالغ الفعلية المطابقة للحساب فوراً:"}</span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="text-xs h-7"
+                className="text-xs shrink-0"
                 onClick={() => {
                   if (openShiftCurrencies) {
                     const matched: Record<string, string> = {};
@@ -772,7 +784,7 @@ export default function CashShifts() {
                   }
                 }}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                 {isEn ? "Match Expected" : "مطابقة مع المتوقع"}
               </Button>
             </div>
@@ -885,18 +897,18 @@ export default function CashShifts() {
                 </div>
 
                 <div className={`rounded-xl p-4 border-2 ${previewDiscrepancy === 0
-                    ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
+                    ? 'bg-success/10 border-success/30'
                     : previewDiscrepancy > 0
-                      ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
-                      : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
+                      ? 'bg-info/10 border-info/30'
+                      : 'bg-destructive/10 border-destructive/30'
                   }`}>
                   <div className="flex items-center gap-2 mb-1">
                     {previewDiscrepancy === 0 ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CheckCircle2 className="h-5 w-5 text-success" />
                     ) : previewDiscrepancy > 0 ? (
-                      <TrendingUp className="h-5 w-5 text-blue-600" />
+                      <TrendingUp className="h-5 w-5 text-info" />
                     ) : (
-                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
                     )}
                     <span className="font-semibold text-sm">
                       {previewDiscrepancy === 0
@@ -907,12 +919,12 @@ export default function CashShifts() {
                     </span>
                   </div>
                   <div className={`text-2xl font-bold font-mono ${previewDiscrepancy === 0
-                      ? 'text-green-600'
+                      ? 'text-success'
                       : previewDiscrepancy > 0
-                        ? 'text-blue-600'
-                        : 'text-red-600'
+                        ? 'text-info'
+                        : 'text-destructive'
                     }`}>
-                    {previewDiscrepancy > 0 ? '+' : ''}{formatUsd(previewDiscrepancy)}
+                    <span dir="ltr" className="inline-block tabular-nums">{previewDiscrepancy > 0 ? '+' : ''}{formatUsd(previewDiscrepancy)}</span>
                   </div>
                   {activeShiftCurrency !== 'USD' && (() => {
                     const activeCurrency = enabledCurrencies.find(c => c.code === activeShiftCurrency);
@@ -950,32 +962,38 @@ export default function CashShifts() {
 
             {/* قرار الفرق: ضمن حد السماح أو أكبر منه */}
             {hasAnyClosingInput && !beyondTolerance && closingRows.some(r => r.variance !== 0) && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-300">
+              <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
                 {isEn ? `Variance is within tolerance (up to ${formatUsd(toleranceUsd)}) — accepted as rounding difference.` : `الفرق ضمن حد السماح (حتى ${formatUsd(toleranceUsd)}) — يُعتمد كفرق تقريب دون إجراء إضافي.`}
               </div>
             )}
             {beyondTolerance && (
-              <div className="rounded-lg border-2 border-red-300 p-3 space-y-2">
-                <div className="text-xs font-semibold text-red-700 dark:text-red-400">
-                  {isEn ? `Variance exceeds tolerance (${formatUsd(toleranceUsd)}). Net diff:` : `الفرق أكبر من حد السماح (${formatUsd(toleranceUsd)}). صافي الفرق:`} {netVarianceUsd > 0 ? '+' : ''}{formatUsd(netVarianceUsd)}
+              <div className="rounded-lg border-2 border-destructive/40 bg-destructive/5 p-3 space-y-2.5">
+                <div className="text-xs font-semibold text-destructive">
+                  {isEn ? `Variance exceeds tolerance (${formatUsd(toleranceUsd)}). Net diff:` : `الفرق أكبر من حد السماح (${formatUsd(toleranceUsd)}). صافي الفرق:`} <span dir="ltr" className="inline-block tabular-nums">{netVarianceUsd > 0 ? '+' : ''}{formatUsd(netVarianceUsd)}</span>
                 </div>
-                <label className="flex items-start gap-2 text-sm cursor-pointer">
-                  <input type="radio" name="varianceDecision" checked={varianceDecision === 'accept'} onChange={() => setVarianceDecision('accept')} className="mt-1" />
-                  <span>{isEn ? "Record variance now as cashbox surplus/shortage" : "تسجيل الفرق الآن كفائض أو عجز في الصندوق"}</span>
-                </label>
-                <label className="flex items-start gap-2 text-sm cursor-pointer">
-                  <input type="radio" name="varianceDecision" checked={varianceDecision === 'defer'} onChange={() => setVarianceDecision('defer')} className="mt-1" />
-                  <span>{isEn ? "Defer decision to owner (not recorded now; appears under Pending Variances)" : "تأجيل القرار للمالك (لا يُسجَّل شيء الآن ويظهر في «فروقات بانتظار القرار»)"}</span>
-                </label>
+                <RadioGroup value={varianceDecision} onValueChange={(v) => setVarianceDecision(v as 'accept' | 'defer')} className="space-y-2">
+                  <div className="flex items-start gap-2 text-sm">
+                    <RadioGroupItem value="accept" id="var-dec-accept" className="mt-0.5" />
+                    <Label htmlFor="var-dec-accept" className="cursor-pointer font-normal leading-snug">
+                      {isEn ? "Record variance now as cashbox surplus/shortage" : "تسجيل الفرق الآن كفائض أو عجز في الصندوق"}
+                    </Label>
+                  </div>
+                  <div className="flex items-start gap-2 text-sm">
+                    <RadioGroupItem value="defer" id="var-dec-defer" className="mt-0.5" />
+                    <Label htmlFor="var-dec-defer" className="cursor-pointer font-normal leading-snug">
+                      {isEn ? "Defer decision to owner (not recorded now; appears under Pending Variances)" : "تأجيل القرار للمالك (لا يُسجَّل شيء الآن ويظهر في «فروقات بانتظار القرار»)"}
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
             )}
-          </div>
+          </DialogBody>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCloseDialog(false)}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowCloseDialog(false)}>
               {t('common.cancel')}
             </Button>
-            <Button variant="destructive" onClick={handleCloseShift} disabled={closeShiftGuard.isRunning}>
+            <Button variant="destructive" size="default" onClick={handleCloseShift} disabled={closeShiftGuard.isRunning}>
               {closeShiftGuard.isRunning && <Loader2 className="h-4 w-4 animate-spin" />}
               {t('cashShifts.closeShift')}
             </Button>
@@ -984,15 +1002,21 @@ export default function CashShifts() {
       </Dialog>
 
       <Dialog open={!!dismissTarget} onOpenChange={(o) => { if (!o) setDismissTarget(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (dismissNote.trim()) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (dismissNote.trim()) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{isEn ? "Dismiss Variance Without Recording" : "إغلاق الفرق دون تسجيل"}</DialogTitle>
             <DialogDescription>{isEn ? "No surplus or shortage will be recorded. Enter a clear reason for audit tracking." : "لن يُسجَّل أي فائض أو عجز. اكتب سبباً واضحاً للتوثيق."}</DialogDescription>
           </DialogHeader>
-          <Input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} placeholder={isEn ? "Reason (required)" : "السبب (إلزامي)"} />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDismissTarget(null)}>{isEn ? "Cancel" : "إلغاء"}</Button>
-            <Button disabled={!dismissNote.trim()} onClick={async () => {
+          <DialogBody>
+            <Input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} placeholder={isEn ? "Reason (required)" : "السبب (إلزامي)"} />
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setDismissTarget(null)}>{isEn ? "Cancel" : "إلغاء"}</Button>
+            <Button variant="default" size="default" disabled={!dismissNote.trim()} onClick={async () => {
               if (!dismissTarget) return;
               const r = await resolveShiftVarianceCloud(dismissTarget, 'dismiss', dismissNote.trim());
               if (r.ok) { toast.success(isEn ? 'Variance closed' : 'أُغلق الفرق'); setDismissTarget(null); loadDeferred(); } else toast.error(r.error || (isEn ? 'Action failed' : 'تعذر التنفيذ'));

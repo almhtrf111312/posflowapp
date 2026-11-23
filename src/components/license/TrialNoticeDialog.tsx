@@ -29,7 +29,7 @@ export function TrialNoticeDialog({ open, onOpenChange, onConfirm }: TrialNotice
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent dir={direction} className="max-w-md">
+      <AlertDialogContent dir={direction}>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('license.trialNoticeTitle' as any)}</AlertDialogTitle>
           <AlertDialogDescription>

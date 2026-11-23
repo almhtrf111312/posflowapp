@@ -1,3 +1,4 @@
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
@@ -99,7 +100,7 @@ export function ProfitTrendChart({
   }, [chartData]);
 
   const TrendIcon = summary.trend === 'up' ? TrendingUp : summary.trend === 'down' ? TrendingDown : Minus;
-  const trendColor = summary.trend === 'up' ? 'text-green-500' : summary.trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = summary.trend === 'up' ? 'text-success' : summary.trend === 'down' ? 'text-destructive' : 'text-muted-foreground';
 
   if (chartData.length === 0) {
     return (
@@ -188,17 +189,17 @@ export function ProfitTrendChart({
                 <Line
                   type="monotone"
                   dataKey="grossProfit"
-                  stroke="hsl(142, 76%, 36%)"
+                  stroke="hsl(var(--success))"
                   strokeWidth={2}
-                  dot={{ fill: 'hsl(142, 76%, 36%)', strokeWidth: 2, r: 4 }}
+                  dot={{ fill: 'hsl(var(--success))', strokeWidth: 2, r: 4 }}
                   activeDot={{ r: 6 }}
                 />
                 <Line
                   type="monotone"
                   dataKey="netProfit"
-                  stroke="hsl(217, 91%, 60%)"
+                  stroke="hsl(var(--info))"
                   strokeWidth={2}
-                  dot={{ fill: 'hsl(217, 91%, 60%)', strokeWidth: 2, r: 4 }}
+                  dot={{ fill: 'hsl(var(--info))', strokeWidth: 2, r: 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
@@ -207,47 +208,47 @@ export function ProfitTrendChart({
           </div>
         ) : (
           <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-border/70 bg-card">
-            <table className="w-full min-w-[560px] text-xs sm:text-sm">
-              <thead className="bg-muted/70 text-muted-foreground sticky top-0">
-                <tr>
-                  <th scope="col" className="p-3 text-start font-semibold">{t('products.dateLabel')}</th>
-                  <th scope="col" className="p-3 text-end font-semibold">{t('products.totalSalesLabel')}</th>
-                  <th scope="col" className="p-3 text-end font-semibold">{t('products.grossProfitLabel')}</th>
-                  <th scope="col" className="p-3 text-end font-semibold">{t('products.expensesLabel')}</th>
-                  <th scope="col" className="p-3 text-end font-semibold">{t('products.netProfitLabel')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
+            <Table className="min-w-[560px] text-xs sm:text-sm">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-start">{t('products.dateLabel')}</TableHead>
+                  <TableHead className="text-end">{t('products.totalSalesLabel')}</TableHead>
+                  <TableHead className="text-end">{t('products.grossProfitLabel')}</TableHead>
+                  <TableHead className="text-end">{t('products.expensesLabel')}</TableHead>
+                  <TableHead className="text-end">{t('products.netProfitLabel')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {chartData.map((row) => (
-                  <tr key={row.date} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-3 text-start font-medium text-foreground">{row.dateLabel || row.date}</td>
-                    <td className="p-3 text-end tabular-nums text-foreground">{formatReportAmount(row.sales)}</td>
-                    <td className="p-3 text-end tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
-                      {formatReportAmount(row.grossProfit)}
-                    </td>
-                    <td className="p-3 text-end tabular-nums text-red-600 dark:text-red-400">
-                      {formatReportAmount(row.expenses)}
-                    </td>
-                    <td className={cn(
-                      "p-3 text-end tabular-nums font-black",
-                      row.netProfit >= 0 ? "text-blue-600 dark:text-blue-400" : "text-red-600 dark:text-red-400"
+                  <TableRow key={row.date}>
+                    <TableCell className="text-start font-medium text-foreground"><span dir="ltr" className="inline-block tabular-nums">{row.dateLabel || row.date}</span></TableCell>
+                    <TableCell className="text-end text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(row.sales)}</span></TableCell>
+                    <TableCell className="text-end font-semibold text-success">
+                      <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(row.grossProfit)}</span>
+                    </TableCell>
+                    <TableCell className="text-end text-destructive">
+                      <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(row.expenses)}</span>
+                    </TableCell>
+                    <TableCell className={cn(
+                      "text-end font-bold",
+                      row.netProfit >= 0 ? "text-info" : "text-destructive"
                     )}>
-                      {formatReportAmount(row.netProfit)}
-                    </td>
-                  </tr>
+                      <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(row.netProfit)}</span>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
 
         {/* إحصائيات المؤشر النهائي النظيف فقط */}
         <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
           <span>
-            {t('products.avgDailyProfit')}: <strong className="text-foreground font-black text-primary">{formatReportAmount(summary.avgDailyProfit)}</strong>
+            {t('products.avgDailyProfit')}: <strong className="font-bold text-primary"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(summary.avgDailyProfit)}</span></strong>
           </span>
           <span>
-            {t('products.profitMargin')}: <strong className="text-foreground font-black">{summary.profitMargin.toFixed(1)}%</strong>
+            {t('products.profitMargin')}: <strong className="text-foreground font-bold"><span dir="ltr" className="inline-block tabular-nums">{summary.profitMargin.toFixed(1)}%</span></strong>
           </span>
         </div>
       </CardContent>

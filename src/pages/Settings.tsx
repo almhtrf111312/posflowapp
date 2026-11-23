@@ -114,14 +114,13 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogBody } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVerificationDialog';
 import { RestoreWarningDialog } from '@/components/settings/RestoreWarningDialog';
 import { TelegramLinkCard } from '@/components/auth/TelegramLinkCard';
-import { showToast } from '@/lib/toast-config';
-import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -276,7 +275,10 @@ interface BackupData {
 
 export default function Settings() {
   const licenseState = useLicense();
-  const { toast } = useToast();
+  const toast = ({ title, description, variant }: { title?: string; description?: string; variant?: 'destructive' | 'default' }) => {
+    if (variant === 'destructive') sonnerToast.error(title || description || '', title && description ? { description } : undefined);
+    else sonnerToast.success(title || description || '', title && description ? { description } : undefined);
+  };
   const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
   const [phoneVerificationStatus, setPhoneVerificationStatus] = useState<'available' | 'requires_telegram_verification'>('available');
   const { t, isRTL, language } = useLanguage();
@@ -600,7 +602,7 @@ export default function Settings() {
               aria-pressed={selectedMode === mode}
               onClick={() => setCurrencyDisplayMode(prev => ({ ...prev, [code]: mode }))}
               className={cn(
-                "min-h-7 rounded-md px-2 text-[9px] font-bold transition-colors",
+                "min-h-9 rounded-md px-2.5 text-xs font-semibold transition-colors",
                 selectedMode === mode ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -1461,7 +1463,7 @@ export default function Settings() {
         });
 
         if (phoneCheck && !phoneCheck.ok && phoneCheck.status === 'conflict_no_telegram') {
-          showToast.error(phoneCheck.error || t('settings.phoneConflictNoTelegram' as any));
+          sonnerToast.error(phoneCheck.error || t('settings.phoneConflictNoTelegram' as any));
           return;
         }
 
@@ -1905,9 +1907,9 @@ export default function Settings() {
           <div className="space-y-4">
             {/* إذن إشعارات الجهاز: يُطلب هنا فقط بضغطة من المستخدم */}
             {notificationPerm !== 'granted' && (
-              <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 space-y-3">
+              <div className="p-4 rounded-2xl border border-warning/30 bg-warning/10 space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-warning/20 text-warning flex items-center justify-center shrink-0">
                     <Bell className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
@@ -1959,10 +1961,10 @@ export default function Settings() {
 
             {/* إعدادات الصوت ومدة العرض */}
             <div className={`bg-card/80 dark:bg-card/40 rounded-2xl border border-border/50 divide-y divide-border/40 overflow-hidden transition-opacity ${
-              notificationSettings.masterEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'
+              notificationSettings.masterEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'
             }`}>
               <div className="px-4 py-3 bg-muted/20">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.notifDisplaySoundTitle' as any)}</h2>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.notifDisplaySoundTitle' as any)}</p>
               </div>
               {/* الصوت */}
               <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors">
@@ -2024,7 +2026,7 @@ export default function Settings() {
 
             {/* تصنيفات أحداث الإشعارات السبعة المفصلة */}
             <div className={`space-y-4 pt-1 transition-opacity ${
-              notificationSettings.masterEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'
+              notificationSettings.masterEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'
             }`}>
               <div className="flex items-center justify-between px-1">
                 <div>
@@ -2070,7 +2072,7 @@ export default function Settings() {
                             key={evt.key}
                             className="flex items-center justify-between px-4 py-3 hover:bg-muted/15 transition-colors"
                           >
-                            <div className="min-w-0 pr-2">
+                            <div className="min-w-0 pe-2">
                               <span className={`text-sm block transition-colors ${
                                 isChecked ? 'font-medium text-foreground' : 'text-muted-foreground'
                               }`}>
@@ -2151,7 +2153,7 @@ export default function Settings() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg">{licenseState.isTrial ? t('settings.licenseTrial' as any) : t('settings.licenseActive' as any)}</h3>
+                      <h3 className="text-sm sm:text-base font-semibold text-foreground">{licenseState.isTrial ? t('settings.licenseTrial' as any) : t('settings.licenseActive' as any)}</h3>
                       <Badge variant={licenseState.isTrial ? 'outline' : 'default'}>
                         {(licenseState as any).planName || (licenseState as any).licenseTier || t('settings.licenseBasicTier' as any)}
                       </Badge>
@@ -2174,7 +2176,7 @@ export default function Settings() {
                   <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all ${
-                        (licenseState.remainingDays ?? 0) <= 3 ? 'bg-destructive' : (licenseState.remainingDays ?? 0) <= 10 ? 'bg-amber-500' : 'bg-primary'
+                        (licenseState.remainingDays ?? 0) <= 3 ? 'bg-destructive' : (licenseState.remainingDays ?? 0) <= 10 ? 'bg-warning' : 'bg-primary'
                       }`}
                       style={{ width: `${Math.min(100, Math.max(5, (((licenseState.remainingDays ?? 0)) / ((licenseState as any).totalDays || 30)) * 100))}%` }}
                     />
@@ -2195,7 +2197,7 @@ export default function Settings() {
               </p>
               <Button
                 variant="outline"
-                className="w-full gap-2 border-orange-500/50 text-orange-600 hover:bg-orange-500/10"
+                className="w-full gap-2 border-warning/50 text-warning hover:bg-warning/10"
                 onClick={() => setTransferDialogOpen(true)}
               >
                 <Smartphone className="w-4 h-4" />
@@ -2259,7 +2261,7 @@ export default function Settings() {
             <div className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
               <img src={appIconUrl} alt="PosFlow" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
               <div>
-                <h2 className="text-xl font-bold text-foreground">PosFlow</h2>
+                <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">PosFlow</h2>
                 <p className="text-sm text-muted-foreground">{t('settings.about.tagline' as any)}</p>
               </div>
             </div>
@@ -2299,9 +2301,9 @@ export default function Settings() {
               <div className="divide-y divide-border">
                 {changelog.map((item, idx) => {
                   const colors = {
-                    new: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-                    improved: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-                    fixed: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+                    new: 'bg-success/15 text-success border-success/30',
+                    improved: 'bg-info/15 text-info border-info/30',
+                    fixed: 'bg-warning/15 text-warning border-warning/30',
                   };
                   const labels = {
                     new: t('settings.about.badgeNew' as any),
@@ -2311,9 +2313,9 @@ export default function Settings() {
                   const text = item.textKey ? t(item.textKey as any) : (isRTL ? item.ar : item.en);
                   return (
                     <div key={idx} className="flex items-start gap-3 px-4 py-3">
-                      <span className={`mt-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0 ${colors[item.type]}`}>
+                      <Badge variant="outline" className={`mt-0.5 shrink-0 ${colors[item.type]}`}>
                         {labels[item.type]}
-                      </span>
+                      </Badge>
                       <p className="text-sm text-foreground leading-relaxed">{text}</p>
                     </div>
                   );
@@ -2337,7 +2339,7 @@ export default function Settings() {
 
 
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-x-hidden max-w-full">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 overflow-x-hidden max-w-full">
       {activeTab === null ? (
         <>
           {/* Header */}
@@ -2348,35 +2350,38 @@ export default function Settings() {
 
           {/* Instant Search Bar & Layout Switcher */}
           <div className="flex items-center gap-2 mb-3.5">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-muted-foreground absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative flex-1 min-w-0">
+              <Search className="w-4 h-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <Input
                 type="text"
                 id="settingsSearchInput"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('settings.searchPlaceholder' as any)}
-                className="bg-card border border-border/80 rounded-2xl h-10 ps-10 pe-9 text-xs font-semibold placeholder:text-muted-foreground/60 shadow-2xs focus-visible:ring-primary/20"
+                className="bg-card border border-border/80 rounded-[14px] ps-9 pe-9 text-sm shadow-2xs focus-visible:ring-primary/20"
               />
               {searchQuery && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setSearchQuery('')}
-                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
+                  className="absolute end-1 top-1/2 -translate-y-1/2 size-9 sm:size-8 rounded-full text-muted-foreground hover:text-foreground"
                   title={t('settings.clearSearch' as any)}
+                  aria-label={t('settings.clearSearch' as any)}
                 >
                   <X className="w-4 h-4" />
-                </button>
+                </Button>
               )}
             </div>
 
             {/* Layout Toggle Buttons */}
-            <div className="flex items-center bg-muted/60 p-1 rounded-2xl border border-border/70 shrink-0 h-10 gap-0.5">
+            <div className="flex items-center bg-muted/60 p-1 rounded-2xl border border-border/70 shrink-0 min-h-11 sm:min-h-10 gap-0.5">
               <button
                 type="button"
                 onClick={() => handleLayoutChange('grid')}
                 className={cn(
-                  "p-1.5 rounded-xl transition-all",
+                  "inline-flex items-center justify-center size-9 sm:size-8 rounded-xl transition-colors",
                   settingsLayout === 'grid'
                     ? "bg-background text-foreground shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
@@ -2390,7 +2395,7 @@ export default function Settings() {
                 type="button"
                 onClick={() => handleLayoutChange('list')}
                 className={cn(
-                  "p-1.5 rounded-xl transition-all",
+                  "inline-flex items-center justify-center size-9 sm:size-8 rounded-xl transition-colors",
                   settingsLayout === 'list'
                     ? "bg-background text-foreground shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
@@ -2506,15 +2511,15 @@ export default function Settings() {
             // Empty search state
             if (filteredTabs.length === 0) {
               return (
-                <div className="py-12 text-center text-muted-foreground bg-card/50 rounded-2xl border border-dashed border-border/70 p-6 space-y-3">
-                  <Search className="w-8 h-8 mx-auto text-muted-foreground/40" />
-                  <p className="text-sm font-bold text-foreground">
+                <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 space-y-2">
+                  <Search className="w-12 h-12 text-muted-foreground/50 mb-1" />
+                  <p className="text-sm sm:text-base font-semibold text-foreground">
                     {t('settings.noMatchingSettings' as any)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     {t('settings.noSettingMatchingQuery' as any).replace('{query}', searchQuery)}
                   </p>
-                  <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="rounded-xl text-xs h-8">
+                  <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="rounded-xl mt-2">
                     {t('settings.clearSearch' as any)}
                   </Button>
                 </div>
@@ -2548,9 +2553,9 @@ export default function Settings() {
                         )}
                       </div>
                       {tab.badge && (
-                        <span className={cn("text-[9px] font-bold px-1.5 py-0.2 rounded-full border mt-1 shrink-0", colors.badge)}>
+                        <Badge variant="outline" className={cn("mt-1 shrink-0", colors.badge)}>
                           {tab.badge}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   );
@@ -2579,9 +2584,9 @@ export default function Settings() {
                               {tab.label}
                             </span>
                             {tab.badge && (
-                              <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0", colors.badge)}>
+                              <Badge variant="outline" className={cn("shrink-0", colors.badge)}>
                                 {tab.badge}
-                              </span>
+                              </Badge>
                             )}
                           </div>
                           {tab.description && (
@@ -2605,24 +2610,26 @@ export default function Settings() {
       ) : (
         <>
           {/* Sub-page header with back button */}
-          <div className="flex items-center gap-2.5 rtl:pr-12 ltr:pl-12 md:rtl:pr-0 md:ltr:pl-0">
-            <button
+          <div className="flex items-center gap-2.5 ps-12 md:ps-0">
+            <Button
               type="button"
+              variant="outline"
+              size="icon"
               onClick={() => setActiveTab(null)}
               aria-label={t('common.back')}
-              className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-border/70 bg-card hover:bg-muted transition-colors flex-shrink-0 shadow-sm"
+              className="shrink-0"
             >
-              {isRTL ? <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" /> : <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />}
-            </button>
+              <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+            </Button>
             {(() => {
               const current = settingsTabs.find(tab => tab.id === activeTab);
               if (!current) return null;
               return (
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                    <current.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="size-10 rounded-[14px] bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 shadow-xs">
+                    <current.icon className="w-5 h-5" />
                   </div>
-                  <h1 className="text-base sm:text-xl md:text-2xl font-bold text-foreground truncate">{current.label}</h1>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground leading-tight tracking-tight truncate">{current.label}</h1>
                 </div>
               );
             })()}
@@ -2669,21 +2676,24 @@ export default function Settings() {
                 className="pe-10"
                 onKeyDown={(e) => { if (e.key === 'Enter' && transferPassword) handleTransferLicense(); }}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setShowTransferPassword(!showTransferPassword)}
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-label={t('settings.password')}
+                className="absolute end-1 top-1/2 -translate-y-1/2 size-9 sm:size-8 text-muted-foreground hover:text-foreground"
               >
                 {showTransferPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              </Button>
             </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <Button
+              variant="destructive"
               onClick={handleTransferLicense}
               disabled={!transferPassword || isTransferring}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
             >
               {isTransferring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
               {t('settings.confirmUnbind')}
@@ -2695,8 +2705,7 @@ export default function Settings() {
       {/* Floating Action Buttons (FAB) موحد ومطابق للمظهر */}
       <div
         className={cn(
-          "fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-3 transition-[opacity,transform] duration-300 ease-in-out",
-          isRTL ? "left-6" : "right-6",
+          "fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] end-6 z-50 flex items-center gap-3 transition-[opacity,transform] duration-300 ease-in-out",
           (hasUnsavedChanges || isSaveSuccess)
             ? "scale-100 opacity-100"
             : "scale-0 opacity-0 pointer-events-none"
@@ -2706,12 +2715,13 @@ export default function Settings() {
           onClick={handleSaveSettings}
           disabled={isSavingSettings}
           className={cn(
-            "w-14 h-14 rounded-full shadow-2xl p-0 transition-[transform,colors] duration-200",
+            "w-14 h-14 rounded-full shadow-2xl p-0 transition-[transform,color,background-color,box-shadow] duration-200",
             isSaveSuccess
-              ? (lastSaveStatus === 'synced' ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-amber-600 text-white hover:bg-amber-700")
+              ? (lastSaveStatus === 'synced' ? "bg-success text-success-foreground hover:bg-success/90" : "bg-warning text-warning-foreground hover:bg-warning/90")
               : "bg-primary text-primary-foreground hover:scale-105 active:scale-95"
           )}
           title={t('common.save')}
+          aria-label={t('common.save')}
         >
           {isSavingSettings ? (
             <Loader2 className="w-6 h-6 animate-spin" />
@@ -2727,6 +2737,7 @@ export default function Settings() {
             onClick={handleRevert}
             className="w-14 h-14 rounded-full shadow-2xl p-0 hover:scale-105 active:scale-95 transition-transform"
             title={t('common.cancel')}
+            aria-label={t('common.cancel')}
           >
             <Undo2 className="w-6 h-6" />
           </Button>
@@ -2735,14 +2746,16 @@ export default function Settings() {
 
       {/* تأكيد تغيير التصنيفات عند تغيير نوع المحل */}
       <Dialog open={storeTypeConfirmOpen} onOpenChange={setStoreTypeConfirmOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{t('settings.updateCategories')}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {t('settings.updateCategoriesDesc')}
-          </p>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">
+              {t('settings.updateCategoriesDesc')}
+            </p>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button
               variant="outline"
               onClick={async () => {

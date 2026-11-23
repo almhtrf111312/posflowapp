@@ -58,22 +58,22 @@ export function ReportCurrencyBanner() {
                 type="button"
                 onClick={() => choose(curr.code)}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors flex items-center gap-1",
+                  "min-h-9 px-2.5 py-1 rounded-xl border text-xs font-semibold transition-colors flex items-center gap-1",
                   isSelected
                     ? "bg-primary text-primary-foreground border-primary shadow-xs"
                     : "bg-background border-border hover:bg-muted text-muted-foreground"
                 )}
               >
                 <span>{curr.name}</span>
-                <span className="opacity-80 text-[10px]">({curr.symbol})</span>
+                <span className="opacity-80 text-xs">({curr.symbol})</span>
               </button>
             );
           })}
         </div>
       </div>
       {!active.isUsd && (
-        <div className="text-[11px] font-mono bg-background/80 px-2.5 py-1 rounded-lg border border-border/50 text-foreground shrink-0">
-          1 $ = {active.rate.toLocaleString('en-US', { maximumFractionDigits: 4 })} {active.symbol}
+        <div className="text-xs font-mono bg-background/80 px-2.5 py-1 rounded-lg border border-border/50 text-foreground shrink-0">
+          <span dir="ltr" className="inline-block tabular-nums">1 $ = {active.rate.toLocaleString('en-US', { maximumFractionDigits: 4 })} {active.symbol}</span>
         </div>
       )}
     </div>

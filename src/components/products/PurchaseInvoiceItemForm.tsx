@@ -316,15 +316,16 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
           placeholder={t('products.exampleName')}
         />
         {showSearch && searchResults.length > 0 && (
-          <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg max-h-32 overflow-y-auto">
+          <div className="absolute z-10 top-full inset-x-0 mt-1 bg-popover border rounded-lg shadow-lg max-h-32 overflow-y-auto">
             {searchResults.map((product) => (
               <button
                 key={product.id}
-                className="w-full p-2 text-right hover:bg-muted flex items-center justify-between text-sm"
+                type="button"
+                className="w-full p-2 text-start hover:bg-muted flex items-center justify-between text-sm"
                 onClick={() => selectExistingProduct(product)}
               >
                 <span>{product.name}</span>
-                <span className="text-xs text-muted-foreground">{product.barcode}</span>
+                <span dir="ltr" className="inline-block text-xs text-muted-foreground tabular-nums">{product.barcode}</span>
               </button>
             ))}
           </div>
@@ -348,9 +349,10 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
             type="button"
             variant="outline"
             size="icon"
-            className="h-9 w-9 flex-shrink-0"
+            className="shrink-0"
             onClick={() => setShowScanner(true)}
             title={t('pos.scanBarcode')}
+            aria-label={t('pos.scanBarcode')}
           >
             <ScanLine className="w-4 h-4" />
           </Button>
@@ -584,7 +586,7 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
                 <div key={idx} className="flex items-center gap-2">
                   <span className="w-12 shrink-0 text-xs text-muted-foreground">جهاز {idx + 1}</span>
                   <Input dir="ltr" className="font-mono" value={rows[idx] || ''} onChange={(e) => setRow(idx, e.target.value)} placeholder="IMEI / Serial" />
-                  <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={() => setSerialScanIdx(idx)}>
+                  <Button type="button" variant="outline" size="icon" className="shrink-0" aria-label={t('pos.scanBarcode')} onClick={() => setSerialScanIdx(idx)}>
                     <ScanLine className="w-4 h-4" />
                   </Button>
                 </div>
@@ -753,9 +755,10 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
             type="button"
             variant="outline"
             size="icon"
-            className="h-9 w-9 flex-shrink-0"
+            className="shrink-0"
             onClick={handleCameraCapture}
             title="التقاط صورة"
+            aria-label="التقاط صورة"
           >
             <Camera className="w-4 h-4" />
           </Button>
@@ -764,11 +767,11 @@ export function PurchaseInvoiceItemForm({ onAdd, onClose, loading }: PurchaseInv
 
       {/* Buttons */}
       <div className="flex gap-2 pt-1">
-        <Button variant="outline" size="sm" onClick={onClose} disabled={loading} className="flex-1">
+        <Button variant="outline" size="default" onClick={onClose} disabled={loading} className="flex-1">
           {t('purchaseInvoice.finishAdding')}
         </Button>
-        <Button data-testid="pii-submit" size="sm" onClick={handleSubmit} disabled={loading || !productName || !quantity || !costPrice} className="flex-1">
-          <Plus className="w-4 h-4" />
+        <Button data-testid="pii-submit" variant="default" size="default" onClick={handleSubmit} disabled={loading || !productName || !quantity || !costPrice} className="flex-1">
+          <Plus className="w-4 h-4 shrink-0" />
           {loading ? t('common.loading') : t('purchaseInvoice.addAndContinue')}
         </Button>
       </div>

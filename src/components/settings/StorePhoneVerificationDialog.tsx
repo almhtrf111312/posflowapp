@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogBody } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import { showToast } from '@/lib/toast-config';
+import { toast as showToast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
 import { KeyRound, Send, ShieldAlert, CheckCircle2, Loader2 } from 'lucide-react';
 
@@ -133,35 +133,36 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`sm:max-w-[420px] ${direction}`} dir={direction}>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+      <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]" dir={direction}>
+        <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+          <DialogTitle className="flex items-center gap-2">
             {status === 'available' ? (
               <>
-                <KeyRound className="w-5 h-5 text-primary" />
+                <KeyRound className="w-5 h-5 text-primary shrink-0" />
                 {t('phoneVerify.titleConfirm')}
               </>
             ) : (
               <>
-                <ShieldAlert className="w-5 h-5 text-amber-500" />
+                <ShieldAlert className="w-5 h-5 text-warning shrink-0" />
                 {t('phoneVerify.titleTransfer')}
               </>
             )}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground pt-1">
-            {t('phoneVerify.storePhoneLabel')} <span className="font-mono font-bold text-foreground" dir="ltr">{phone}</span>
+            {t('phoneVerify.storePhoneLabel')} <span className="inline-block tabular-nums font-mono font-bold text-foreground" dir="ltr">{phone}</span>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-3 space-y-4">
+        <DialogBody className="space-y-4">
           {status === 'available' ? (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label className="text-sm font-medium">{t('phoneVerify.enterPasswordLabel')}</Label>
               <Input
                 type="password"
                 placeholder={t('phoneVerify.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                dir="ltr"
                 autoFocus
               />
             </div>
@@ -182,13 +183,13 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
                   {t('phoneVerify.sendOtpBtn')}
                 </Button>
               ) : (
-                <div className="space-y-2 pt-1">
+                <div className="space-y-1.5 pt-1">
                   <Label className="text-xs font-medium">{t('phoneVerify.enterOtpLabel')}</Label>
                   <Input
                     type="text"
                     maxLength={6}
                     placeholder="123456"
-                    className="text-center font-mono text-lg tracking-widest"
+                    className="text-center font-mono text-lg tracking-widest tabular-nums"
                     dir="ltr"
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
@@ -198,9 +199,12 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
               )}
             </div>
           )}
-        </div>
+        </DialogBody>
 
-        <DialogFooter className="flex gap-2 sm:justify-start">
+        <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+            {t('password.cancel')}
+          </Button>
           {status === 'available' ? (
             <Button onClick={handleVerifyPassword} disabled={isSubmitting} className="gap-2">
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
@@ -212,9 +216,6 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
               {t('phoneVerify.verifyTransferBtn')}
             </Button>
           ) : null}
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-            {t('password.cancel')}
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

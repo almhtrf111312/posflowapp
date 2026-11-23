@@ -50,7 +50,7 @@ export function DualUnitDisplay({
             "font-semibold text-foreground",
             size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base' : 'text-sm'
           )}>
-            {totalPieces} {locSmall}
+            <span dir="ltr" className="inline-block tabular-nums">{totalPieces}</span> {locSmall}
           </span>
         </div>
       </div>
@@ -61,8 +61,8 @@ export function DualUnitDisplay({
   const fullBulkUnits = Math.floor(totalPieces / conversionFactor);
   const remainingPieces = totalPieces % conversionFactor;
 
-  const badgeSize = size === 'sm' ? 'text-[10px] px-1.5 py-0.5' : size === 'lg' ? 'text-sm px-3 py-1.5' : 'text-xs px-2 py-1';
-  const totalSize = size === 'sm' ? 'text-[10px]' : size === 'lg' ? 'text-sm' : 'text-xs';
+  const badgeSize = size === 'sm' ? 'text-xs px-2 py-0.5' : size === 'lg' ? 'text-sm px-3 py-1.5' : 'text-xs px-2.5 py-1';
+  const totalSize = size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-sm' : 'text-xs';
 
   return (
     <div className={cn(
@@ -71,11 +71,11 @@ export function DualUnitDisplay({
     )}>
       {/* خانة الكراتين */}
       <div className={cn(
-        "inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary font-semibold",
+        "inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary font-semibold",
         badgeSize
       )}>
         {showIcon && <Boxes className="w-3 h-3" />}
-        <span>{fullBulkUnits}</span>
+        <span dir="ltr" className="inline-block tabular-nums">{fullBulkUnits}</span>
         <span className="font-normal opacity-80">{locBulk}</span>
       </div>
 
@@ -84,10 +84,10 @@ export function DualUnitDisplay({
         <>
           <span className={cn("text-muted-foreground", totalSize)}>+</span>
           <div className={cn(
-            "inline-flex items-center gap-1 rounded-md bg-muted text-foreground font-semibold",
+            "inline-flex items-center gap-1 rounded-full bg-muted text-foreground font-semibold",
             badgeSize
           )}>
-            <span>{remainingPieces}</span>
+            <span dir="ltr" className="inline-block tabular-nums">{remainingPieces}</span>
             <span className="font-normal text-muted-foreground">
               {getLocalizedUnit(smallUnit, false, language, { count: remainingPieces })}
             </span>
@@ -102,7 +102,7 @@ export function DualUnitDisplay({
           totalSize,
           direction === 'horizontal' ? 'basis-full mt-0.5' : 'mt-0.5'
         )}>
-          {language === 'en' ? 'Total' : 'المجموع'}: {totalPieces} {locSmall}
+          {language === 'en' ? 'Total' : 'المجموع'}: <span dir="ltr" className="inline-block tabular-nums">{totalPieces}</span> {locSmall}
         </div>
       )}
     </div>
@@ -125,8 +125,8 @@ export function DualUnitDisplayCompact({
   // No conversion factor or factor=1: show pieces directly
   if (!conversionFactor || conversionFactor <= 1) {
     return (
-      <span className="text-[10px] md:text-xs text-muted-foreground">
-        {totalPieces} {locSmall}
+      <span className="text-xs text-muted-foreground">
+        <span dir="ltr" className="inline-block tabular-nums">{totalPieces}</span> {locSmall}
       </span>
     );
   }
@@ -137,19 +137,19 @@ export function DualUnitDisplayCompact({
   // If less than one full bulk unit, show pieces directly (avoid showing "0 كرتونة")
   if (fullBulkUnits === 0) {
     return (
-      <span className="text-[10px] md:text-xs text-muted-foreground">
-        {totalPieces} {locSmall}
+      <span className="text-xs text-muted-foreground">
+        <span dir="ltr" className="inline-block tabular-nums">{totalPieces}</span> {locSmall}
       </span>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 text-[10px] md:text-xs">
-      <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
-        {fullBulkUnits} {locBulk}
+    <div className="flex flex-wrap items-center gap-1 text-xs">
+      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+        <span dir="ltr" className="inline-block tabular-nums">{fullBulkUnits}</span> {locBulk}
       </span>
       {remainingPieces > 0 && (
-        <span className="text-muted-foreground">
+        <span dir="ltr" className="inline-block tabular-nums text-muted-foreground">
           +{remainingPieces}
         </span>
       )}

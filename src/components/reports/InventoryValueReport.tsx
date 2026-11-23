@@ -3,6 +3,7 @@ import { Wallet, Package, TrendingUp, Layers } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { ReportShell } from './ReportShell';
 import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { loadProductsLocalFirst, refreshProductsFromCloud, type Product } from '@/lib/cloud/products-cloud';
 import { exportGenericToExcel, exportGenericToPDF } from '@/lib/reports/dataset-builder';
 import { formatNumber, formatReportAmount, cn } from '@/lib/utils';
@@ -14,7 +15,7 @@ export interface InventoryValueReportProps {
   displayMode?: 'chart' | 'table';
 }
 
-const COLORS = ['#6366f1', 'var(--emerald-500)', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+const COLORS = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--destructive))', 'hsl(var(--info))', 'hsl(var(--accent))', 'hsl(var(--secondary-foreground))', 'hsl(var(--muted-foreground))'];
 
 export function InventoryValueReport({ dateRange, displayMode = 'chart' }: InventoryValueReportProps) {
   const { t } = useLanguage();
@@ -80,8 +81,8 @@ export function InventoryValueReport({ dateRange, displayMode = 'chart' }: Inven
           <Icon className={cn('w-3.5 h-3.5', color)} />
         </div>
       </div>
-      <p className="text-base font-bold">{value}</p>
-      <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+      <p className="text-base font-bold"><span dir="ltr" className="inline-block tabular-nums">{value}</span></p>
+      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
     </CardContent></Card>
   );
 
@@ -95,11 +96,11 @@ export function InventoryValueReport({ dateRange, displayMode = 'chart' }: Inven
       exportDisabled={loading}
     >
       <ReportCurrencyBanner />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <KPI icon={Wallet} label="قيمة العهدة (تكلفة)" value={formatReportAmount(stats.totalCost)} color="text-primary" bg="bg-primary/10" />
-        <KPI icon={TrendingUp} label="قيمة بيع متوقعة" value={formatReportAmount(stats.totalSale)} color="text-emerald-600" bg="bg-emerald-500/10" />
-        <KPI icon={TrendingUp} label="الربح الكامن" value={formatReportAmount(stats.potentialProfit)} color="text-amber-600" bg="bg-amber-500/10" />
-        <KPI icon={Package} label="القطع / الأصناف" value={`${formatNumber(stats.totalUnits)} / ${formatNumber(stats.skus)}`} color="text-blue-600" bg="bg-blue-500/10" />
+        <KPI icon={TrendingUp} label="قيمة بيع متوقعة" value={formatReportAmount(stats.totalSale)} color="text-success" bg="bg-success/10" />
+        <KPI icon={TrendingUp} label="الربح الكامن" value={formatReportAmount(stats.potentialProfit)} color="text-warning" bg="bg-warning/10" />
+        <KPI icon={Package} label="القطع / الأصناف" value={`${formatNumber(stats.totalUnits)} / ${formatNumber(stats.skus)}`} color="text-info" bg="bg-info/10" />
       </div>
 
       {byCategory.length > 0 && (
@@ -122,29 +123,29 @@ export function InventoryValueReport({ dateRange, displayMode = 'chart' }: Inven
             </div>
           ) : (
             <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-border/60">
-              <table className="w-full text-xs">
-                <thead className="bg-muted/70 text-muted-foreground">
-                  <tr>
-                    <th scope="col" className="p-2.5 text-start font-semibold">{t('products.category') || 'التصنيف'}</th>
-                    <th scope="col" className="p-2.5 text-end font-semibold">{t('reports.custodyValue') || 'قيمة العهدة (تكلفة)'}</th>
-                    <th scope="col" className="p-2.5 text-end font-semibold">النسبة</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
+              <Table className="text-xs">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-start">{t('products.category') || 'التصنيف'}</TableHead>
+                    <TableHead className="text-end">{t('reports.custodyValue') || 'قيمة العهدة (تكلفة)'}</TableHead>
+                    <TableHead className="text-end">النسبة</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {byCategory.map((cat, i) => (
-                    <tr key={cat.name} className="hover:bg-muted/30">
-                      <td className="p-2.5 text-start font-medium flex items-center gap-2">
+                    <TableRow key={cat.name}>
+                      <TableCell className="text-start font-medium flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                         <span>{cat.name}</span>
-                      </td>
-                      <td className="p-2.5 text-end tabular-nums font-semibold text-foreground">{formatReportAmount(cat.value)}</td>
-                      <td className="p-2.5 text-end tabular-nums text-muted-foreground font-mono">
-                        {stats.totalCost > 0 ? ((cat.value / stats.totalCost) * 100).toFixed(1) + '%' : '-'}
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-end font-semibold text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(cat.value)}</span></TableCell>
+                      <TableCell className="text-end text-muted-foreground font-mono">
+                        <span dir="ltr" className="inline-block tabular-nums">{stats.totalCost > 0 ? ((cat.value / stats.totalCost) * 100).toFixed(1) + '%' : '-'}</span>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent></Card>

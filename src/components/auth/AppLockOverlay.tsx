@@ -212,8 +212,8 @@ export function AppLockOverlay() {
       <div className="flex flex-col items-center mt-6 text-center">
         <div className="relative mb-3 flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 shadow-inner">
           <ShieldCheck className="w-9 h-9 text-primary animate-pulse" />
-          <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
-            <Lock className="w-3 h-3 text-white stroke-[3]" />
+          <div className="absolute -bottom-1 -end-1 w-5 h-5 rounded-full bg-success border-2 border-background flex items-center justify-center">
+            <Lock className="w-3 h-3 text-success-foreground stroke-[3]" />
           </div>
         </div>
 

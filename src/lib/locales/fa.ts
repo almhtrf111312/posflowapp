@@ -2045,6 +2045,7 @@ const fa: TranslationDict = {
   // POS (extended)
   'pos.title': 'صندوق فروش',
   'pos.cart': 'سبد خرید',
+  'pos.changeView': 'تغییر حالت نمایش',
   'pos.cartCurrency': 'ارز سبد خرید',
   'pos.itemPriceCurrency': 'ارز قیمت کالا',
   'pos.invoiceCurrency': 'ارز فاکتور',

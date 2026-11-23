@@ -92,15 +92,15 @@ export function StockDiscrepancyReport({ search, warehouseId }: Props) {
     >
       <ReportCurrencyBanner />
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} className="h-9 gap-1.5">
+        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading} className="gap-1.5">
           <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} /> تحديث
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        <Card><CardContent className="p-3"><p className="text-[10px] text-muted-foreground">منتجات بفروقات</p><p className="mt-1 text-lg font-bold text-destructive">{formatNumber(mismatches.length)}</p></CardContent></Card>
-        <Card><CardContent className="p-3"><p className="text-[10px] text-muted-foreground">فرق الوحدات</p><p className="mt-1 text-lg font-bold">{formatNumber(totalUnits)}</p></CardContent></Card>
-        <Card className="col-span-2 md:col-span-1"><CardContent className="p-3"><p className="text-[10px] text-muted-foreground">قيمة الفروقات</p><p className="mt-1 text-lg font-bold text-destructive">{formatReportAmount(totalValue)}</p></CardContent></Card>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">منتجات بفروقات</p><p className="mt-1 text-lg font-bold text-destructive"><span dir="ltr" className="inline-block tabular-nums">{formatNumber(mismatches.length)}</span></p></CardContent></Card>
+        <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">فرق الوحدات</p><p className="mt-1 text-lg font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatNumber(totalUnits)}</span></p></CardContent></Card>
+        <Card className="col-span-2 sm:col-span-1"><CardContent className="p-3"><p className="text-xs text-muted-foreground">قيمة الفروقات</p><p className="mt-1 text-lg font-bold text-destructive"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(totalValue)}</span></p></CardContent></Card>
       </div>
 
       <Card><CardContent className="p-0">
@@ -118,13 +118,13 @@ export function StockDiscrepancyReport({ search, warehouseId }: Props) {
                 <div className="w-9 h-9 rounded-lg bg-destructive/10 text-destructive flex items-center justify-center shrink-0"><AlertTriangle className="w-4 h-4" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0"><p className="text-sm font-semibold truncate">{row.product_name}</p><p className="text-[10px] text-muted-foreground">{row.warehouse_name || 'المخزون الرئيسي'}</p></div>
-                    <p className={cn('text-sm font-bold whitespace-nowrap', row.variance > 0 ? 'text-success' : 'text-destructive')}>{row.variance > 0 ? '+' : ''}{formatNumber(row.variance)}</p>
+                    <div className="min-w-0"><p className="text-sm font-semibold truncate">{row.product_name}</p><p className="text-xs text-muted-foreground">{row.warehouse_name || 'المخزون الرئيسي'}</p></div>
+                    <p className={cn('text-sm font-bold whitespace-nowrap', row.variance > 0 ? 'text-success' : 'text-destructive')}><span dir="ltr" className="inline-block tabular-nums">{row.variance > 0 ? '+' : ''}{formatNumber(row.variance)}</span></p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
-                    <span className="text-muted-foreground">المتوقع: <b className="text-foreground">{formatNumber(row.expected_quantity)}</b></span>
-                    <span className="text-muted-foreground">الفعلي: <b className="text-foreground">{formatNumber(row.actual_quantity)}</b></span>
-                    <span className="text-muted-foreground">القيمة: <b className="text-foreground">{formatReportAmount(Math.abs(row.variance_value))}</b></span>
+                  <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
+                    <span className="text-muted-foreground">المتوقع: <b className="text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatNumber(row.expected_quantity)}</span></b></span>
+                    <span className="text-muted-foreground">الفعلي: <b className="text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatNumber(row.actual_quantity)}</span></b></span>
+                    <span className="text-muted-foreground">القيمة: <b className="text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(Math.abs(row.variance_value))}</span></b></span>
                   </div>
                 </div>
               </div>

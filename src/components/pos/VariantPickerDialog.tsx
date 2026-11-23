@@ -1,6 +1,7 @@
 import { Package } from 'lucide-react';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -43,23 +44,24 @@ export function VariantPickerDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md overflow-hidden rounded-2xl bg-background border-border/50 shadow-2xl p-0">
-        <DialogHeader className="p-5 border-b border-border/40 bg-muted/30">
+      <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] bg-background border-border/50 shadow-2xl">
+        <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 bg-muted/30 text-start pe-12">
           <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
+            <Package className="w-5 h-5 text-primary shrink-0" />
             {language === 'en' ? 'Select Product Variant' : 'اختر المنتج المطلوب'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-2 max-h-[60vh] max-h-[60dvh] overflow-y-auto py-2">
+        <DialogBody className="space-y-2 py-4">
           {products.map((product) => (
             <button
               key={product.id}
+              type="button"
               onClick={() => {
                 onSelect(product);
                 onClose();
               }}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-colors text-right"
+              className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors text-start"
             >
               <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                 {product.image ? (
@@ -80,15 +82,15 @@ export function VariantPickerDialog({
                   <p className="text-sm text-primary font-medium">({product.variantLabel})</p>
                 )}
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                  <span className="font-bold text-foreground text-sm tabular-nums">${product.price}</span>
+                  <span dir="ltr" className="inline-block font-bold text-foreground text-sm tabular-nums">${product.price}</span>
                   <span>
-                    {language === 'en' ? 'Available:' : 'متوفر:'} {product.quantity} {getLocalizedUnit(product.smallUnit, false, language)}
+                    {language === 'en' ? 'Available:' : 'متوفر:'} <span dir="ltr" className="inline-block tabular-nums">{product.quantity}</span> {getLocalizedUnit(product.smallUnit, false, language)}
                   </span>
                 </div>
               </div>
             </button>
           ))}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

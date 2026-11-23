@@ -410,20 +410,20 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
         {errorMessage && (
           <div className="absolute inset-0 z-[200] flex items-center justify-center p-4 bg-black/90">
             <div
-              className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-2xl text-white"
+              className="w-full max-w-md bg-card border border-border rounded-[24px] p-6 shadow-2xl text-card-foreground"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center gap-3 text-amber-400 mb-3">
+              <div className="flex items-center gap-3 text-warning mb-3">
                 <AlertTriangle className="w-6 h-6 shrink-0" />
-                <h3 className="text-base font-semibold">تعذر تشغيل كاميرا الماسح</h3>
+                <h3 className="text-base font-semibold text-foreground">تعذر تشغيل كاميرا الماسح</h3>
               </div>
-              <p className="text-sm text-neutral-300 leading-relaxed mb-4">
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                 {errorMessage}
               </p>
 
               {/* Manual barcode input form */}
               <form onSubmit={handleManualSubmit} className="space-y-3 mb-5">
-                <label className="block text-xs font-medium text-neutral-400">
+                <label className="block text-xs font-medium text-muted-foreground">
                   إدخال الباركود يدوياً:
                 </label>
                 <div className="flex gap-2">
@@ -434,12 +434,12 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
                     value={manualBarcode}
                     onChange={e => setManualBarcode(e.target.value)}
                     placeholder="مثال: 628100123456"
-                    className="flex-1 px-3 py-2.5 rounded-lg bg-neutral-800 border border-neutral-700 text-white placeholder:text-neutral-500 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="flex-1 min-h-11 px-3 py-2 rounded-[14px] bg-background border border-input text-foreground placeholder:text-muted-foreground font-mono tabular-nums text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                   <button
                     type="submit"
                     disabled={!manualBarcode.trim()}
-                    className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:pointer-events-none text-white text-sm font-medium flex items-center gap-1.5 transition-colors"
+                    className="min-h-11 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none text-primary-foreground text-sm font-medium flex items-center gap-1.5 transition-colors"
                   >
                     <Check className="w-4 h-4" />
                     <span>تأكيد</span>
@@ -448,12 +448,12 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
               </form>
 
               {/* Action buttons */}
-              <div className="flex flex-col gap-2 pt-2 border-t border-neutral-800">
+              <div className="flex flex-col gap-2 pt-3 border-t border-border/60">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleRetry}
-                    className="flex-1 py-2.5 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 [&_svg]:text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:[&_svg]:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                    className="flex-1 min-h-11 py-2 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>إعادة المحاولة</span>
@@ -465,7 +465,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
                         handleClose();
                         onFallbackRef.current?.();
                       }}
-                      className="flex-1 py-2.5 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 [&_svg]:text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:[&_svg]:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+                      className="flex-1 min-h-11 py-2 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <span>ماسح الويب</span>
                     </button>
@@ -474,7 +474,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="w-full py-2 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 [&_svg]:text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:[&_svg]:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-xs transition-colors"
+                  className="w-full min-h-11 py-2 px-3 rounded-xl bg-background hover:bg-muted text-foreground border border-border text-xs font-medium transition-colors"
                 >
                   إلغاء وإغلاق
                 </button>
@@ -490,26 +490,27 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
             onClick={() => setShowManualInput(false)}
           >
             <div
-              className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-2xl text-white"
+              className="w-full max-w-md bg-card border border-border rounded-[24px] p-6 shadow-2xl text-card-foreground"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Keyboard className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-base font-semibold">إدخال الباركود يدوياً</h3>
+                  <Keyboard className="w-5 h-5 text-primary" />
+                  <h3 className="text-base font-semibold text-foreground">إدخال الباركود يدوياً</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowManualInput(false)}
-                  className="p-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 [&_svg]:text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:[&_svg]:text-zinc-100 border border-zinc-300 dark:border-zinc-700"
+                  aria-label="إغلاق"
+                  className="h-11 w-11 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               <form onSubmit={handleManualSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-400 mb-1.5">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-muted-foreground">
                     رقم الباركود:
                   </label>
                   <input
@@ -519,24 +520,24 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
                     value={manualBarcode}
                     onChange={e => setManualBarcode(e.target.value)}
                     placeholder="مثال: 628100123456"
-                    className="w-full px-3 py-2.5 rounded-lg bg-neutral-800 border border-neutral-700 text-white placeholder:text-neutral-500 font-mono text-base focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full min-h-11 px-3 py-2 rounded-[14px] bg-background border border-input text-foreground placeholder:text-muted-foreground font-mono tabular-nums text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={!manualBarcode.trim()}
-                    className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>إضافة المنتج</span>
-                  </button>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setShowManualInput(false)}
-                    className="px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 [&_svg]:text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:[&_svg]:text-zinc-100 border border-zinc-300 dark:border-zinc-700 text-sm transition-colors"
+                    className="min-h-11 sm:min-h-10 px-4 py-2 rounded-xl bg-background hover:bg-muted text-foreground border border-border text-sm font-medium transition-colors"
                   >
                     رجوع للكاميرا
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!manualBarcode.trim()}
+                    className="min-h-11 sm:min-h-10 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground text-sm font-medium flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>إضافة المنتج</span>
                   </button>
                 </div>
               </form>
@@ -554,7 +555,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
             <button
               type="button"
               onClick={() => handleZoomStep('out')}
-              className="h-9 w-9 rounded-full bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md flex items-center justify-center transition-colors"
+              className="h-11 w-11 rounded-full bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md flex items-center justify-center transition-colors"
               aria-label="تصغير الزووم"
             >
               <ZoomOut className="w-4 h-4" />
@@ -564,7 +565,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
                 key={z}
                 type="button"
                 onClick={() => handleZoomPreset(z)}
-                className={`h-9 min-w-[2.5rem] px-2 rounded-full border text-xs font-bold transition-colors
+                className={`h-11 min-w-[2.75rem] px-2.5 rounded-full border text-xs font-bold tabular-nums transition-colors
                   ${Math.abs(currentZoom - z) < 0.2
                     ? 'bg-white text-black border-white shadow-md'
                     : 'bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md'}`}
@@ -576,7 +577,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
             <button
               type="button"
               onClick={() => handleZoomStep('in')}
-              className="h-9 w-9 rounded-full bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md flex items-center justify-center transition-colors"
+              className="h-11 w-11 rounded-full bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md flex items-center justify-center transition-colors"
               aria-label="تكبير الزووم"
             >
               <ZoomIn className="w-4 h-4" />

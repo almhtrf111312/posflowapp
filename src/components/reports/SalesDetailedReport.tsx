@@ -6,6 +6,9 @@ import { EntityPicker, PickableEntity } from './EntityPicker';
 import { Invoice, isValidActiveInvoice } from '@/lib/cloud/invoices-cloud';
 import { formatNumber, formatReportAmount } from '@/lib/utils';
 import { ReportCurrencyBanner } from './ReportCurrencyBanner';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
 import { exportGenericToPDF, exportGenericToExcel } from '@/lib/reports/dataset-builder';
 import { toast } from '@/lib/sonner-bridge';
@@ -171,22 +174,21 @@ export function SalesDetailedReport({
       hideHeaderCard={hideHeaderCard}
       filters={
         <div className="space-y-3">
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {([
               { id: 'all', label: 'الكل' },
               { id: 'customer', label: 'حسب العميل' },
               { id: 'cashier', label: 'حسب الكاشير' },
               { id: 'invoice', label: 'فاتورة محددة' },
             ] as { id: ScopeMode; label: string }[]).map(opt => (
-              <button
+              <Button
                 key={opt.id}
+                type="button"
+                size="sm"
+                variant={scope === opt.id ? 'default' : 'outline'}
                 onClick={() => { setScope(opt.id); setSelectedId(null); }}
-                className={`text-[11px] py-1.5 rounded-lg border transition-colors ${
-                  scope === opt.id
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'border-border bg-card text-muted-foreground hover:border-primary/40'
-                }`}
-              >{opt.label}</button>
+                className="rounded-xl text-xs"
+              >{opt.label}</Button>
             ))}
           </div>
           {scope !== 'all' && (
@@ -201,73 +203,73 @@ export function SalesDetailedReport({
         </div>
       }
     >
-      <ReportCurrencyBanner />
+      {!hideExportToolbar && <ReportCurrencyBanner />}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Kpi icon={<Receipt className="w-4 h-4" />} label="الفواتير" value={formatNumber(stats.count)} color="text-blue-500" />
-        <Kpi icon={<TrendingUp className="w-4 h-4" />} label="المبيعات" value={formatReportAmount(stats.totalSales)} color="text-emerald-500" />
-        <Kpi icon={<TrendingUp className="w-4 h-4" />} label="الأرباح المحققة" value={formatReportAmount(stats.totalProfit)} color="text-green-500" />
-        <Kpi icon={<Users className="w-4 h-4" />} label="متوسط الفاتورة" value={formatReportAmount(stats.avg)} color="text-violet-500" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <Kpi icon={<Receipt className="w-4 h-4" />} label="الفواتير" value={formatNumber(stats.count)} color="text-info" />
+        <Kpi icon={<TrendingUp className="w-4 h-4" />} label="المبيعات" value={formatReportAmount(stats.totalSales)} color="text-success" />
+        <Kpi icon={<TrendingUp className="w-4 h-4" />} label="الأرباح المحققة" value={formatReportAmount(stats.totalProfit)} color="text-success" />
+        <Kpi icon={<Users className="w-4 h-4" />} label="متوسط الفاتورة" value={formatReportAmount(stats.avg)} color="text-primary" />
       </div>
 
       {/* Cash vs Debt */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <div className="rounded-xl border border-border/40 bg-card p-3">
-          <p className="text-[11px] text-muted-foreground">نقدي</p>
-          <p className="text-sm font-bold text-emerald-600">{formatReportAmount(stats.cashTotal)}</p>
+          <p className="text-xs text-muted-foreground">نقدي</p>
+          <p className="text-sm font-bold text-success"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(stats.cashTotal)}</span></p>
         </div>
         <div className="rounded-xl border border-border/40 bg-card p-3">
-          <p className="text-[11px] text-muted-foreground">آجل</p>
-          <p className="text-sm font-bold text-amber-600">{formatReportAmount(stats.debtTotal)}</p>
+          <p className="text-xs text-muted-foreground">آجل</p>
+          <p className="text-sm font-bold text-warning"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(stats.debtTotal)}</span></p>
         </div>
       </div>
 
       {/* Table */}
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-card">
-          <Receipt className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">لا توجد فواتير ضمن الفلاتر الحالية</p>
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+          <Receipt className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <p className="text-sm sm:text-base font-semibold text-foreground">لا توجد فواتير ضمن الفلاتر الحالية</p>
         </div>
       ) : (
         <div className="w-full max-w-full overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="min-w-[620px] w-full text-xs">
-              <thead className="bg-muted/40">
-                <tr>
-                  <th className="p-2 text-start font-semibold">{t('pos.invoiceTitle') || 'الفاتورة'}</th>
-                  <th className="p-2 text-start font-semibold">{t('invoices.date') || 'التاريخ'}</th>
-                  <th className="p-2 text-start font-semibold">{t('pos.customerLabel') || 'العميل'}</th>
-                  <th className="p-2 text-start font-semibold">{t('cashShifts.cashier') || 'الكاشير'}</th>
-                  <th className="p-2 text-center font-semibold">{t('pos.paymentMethodLabel') || 'الدفع'}</th>
-                  <th className="p-2 text-center font-semibold">{t('reports.itemsInAudit') || 'الأصناف'}</th>
-                  <th className="p-2 text-center font-semibold">{t('pos.profit') || 'الربح'}</th>
-                  <th className="p-2 text-center font-semibold">{t('pos.totalLabel') || 'الإجمالي'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(0, 200).map((r, i) => (
-                  <tr key={i} className="border-t border-border/40 hover:bg-muted/30 cursor-pointer" onClick={() => navigate(invoicesLink({ invoice: r.number }))}>
-                    <td className="p-2 text-start font-mono">#{r.number}</td>
-                    <td className="p-2 text-start text-muted-foreground">{r.date}</td>
-                    <td className="p-2 text-start">{r.customer}</td>
-                    <td className="p-2 text-start text-muted-foreground">{r.cashier}</td>
-                    <td className="p-2 text-center">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${r.payment === 'نقدي' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'}`}>{r.payment}</span>
-                    </td>
-                    <td className="p-2 text-center">{r.items}</td>
-                    <td className="p-2 text-center text-green-600">{formatReportAmount(r.profit)}</td>
-                    <td className="p-2 text-center font-bold">{formatReportAmount(r.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-muted/30 font-bold">
-                <tr>
-                  <td className="p-2" colSpan={6}>الإجمالي ({stats.count} فاتورة)</td>
-                  <td className="p-2 text-center text-green-600">{formatReportAmount(stats.totalProfit)}</td>
-                  <td className="p-2 text-center">{formatReportAmount(stats.totalSales)}</td>
-                </tr>
-              </tfoot>
-            </table>
+          <Table className="min-w-[620px] text-xs">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-start">{t('pos.invoiceTitle') || 'الفاتورة'}</TableHead>
+                <TableHead className="text-start">{t('invoices.date') || 'التاريخ'}</TableHead>
+                <TableHead className="text-start">{t('pos.customerLabel') || 'العميل'}</TableHead>
+                <TableHead className="text-start">{t('cashShifts.cashier') || 'الكاشير'}</TableHead>
+                <TableHead className="text-center">{t('pos.paymentMethodLabel') || 'الدفع'}</TableHead>
+                <TableHead className="text-end">{t('reports.itemsInAudit') || 'الأصناف'}</TableHead>
+                <TableHead className="text-end">{t('pos.profit') || 'الربح'}</TableHead>
+                <TableHead className="text-end">{t('pos.totalLabel') || 'الإجمالي'}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.slice(0, 200).map((r, i) => (
+                <TableRow key={i} className="cursor-pointer" onClick={() => navigate(invoicesLink({ invoice: r.number }))}>
+                  <TableCell className="text-start font-mono"><span dir="ltr" className="inline-block tabular-nums">#{r.number}</span></TableCell>
+                  <TableCell className="text-start text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{r.date}</span></TableCell>
+                  <TableCell className="text-start">{r.customer}</TableCell>
+                  <TableCell className="text-start text-muted-foreground">{r.cashier}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={r.payment === 'نقدي' ? 'bg-success/15 text-success border-success/30' : 'bg-warning/15 text-warning border-warning/30'}>{r.payment}</Badge>
+                  </TableCell>
+                  <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{r.items}</span></TableCell>
+                  <TableCell className="text-end text-success"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.profit)}</span></TableCell>
+                  <TableCell className="text-end font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.total)}</span></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow className="font-bold">
+                <TableCell colSpan={6}>الإجمالي (<span dir="ltr" className="inline-block tabular-nums">{stats.count}</span> فاتورة)</TableCell>
+                <TableCell className="text-end text-success"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(stats.totalProfit)}</span></TableCell>
+                <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(stats.totalSales)}</span></TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
           {rows.length > 200 && (
             <p className="text-center text-[10px] text-muted-foreground py-2 border-t border-border/40">
               يعرض أول 200 من {rows.length} • قم بالتصدير لرؤية الكامل
@@ -282,8 +284,8 @@ export function SalesDetailedReport({
 function Kpi({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
   return (
     <div className="rounded-xl border border-border/40 bg-card p-2.5">
-      <div className={`flex items-center gap-1 ${color}`}>{icon}<span className="text-[10px] text-muted-foreground">{label}</span></div>
-      <p className="text-sm font-bold mt-1 truncate">{value}</p>
+      <div className={`flex items-center gap-1 ${color}`}>{icon}<span className="text-xs text-muted-foreground">{label}</span></div>
+      <p className="text-sm font-bold mt-1 truncate"><span dir="ltr" className="inline-block tabular-nums">{value}</span></p>
     </div>
   );
 }

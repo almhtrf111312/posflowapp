@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Lock, Loader2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,11 +84,11 @@ export function PeriodClosingPanel({ invoices, expenses, profitLedger, canClose 
 
   const rows: { label: string; value: number; tone?: string; strong?: boolean }[] = [
     { label: tr('المبيعات (بدون الضريبة)', 'Sales (excluding tax)'), value: preview.sales },
-    { label: tr('الربح المحقق', 'Realized profit'), value: preview.realizedProfit, tone: 'text-emerald-600' },
-    { label: tr('المصاريف', 'Expenses'), value: preview.expenses, tone: 'text-rose-600' },
+    { label: tr('الربح المحقق', 'Realized profit'), value: preview.realizedProfit, tone: 'text-success' },
+    { label: tr('المصاريف', 'Expenses'), value: preview.expenses, tone: 'text-destructive' },
     { label: tr('خسارة الديون المعدومة', 'Bad-debt loss'), value: preview.badDebtLoss, tone: 'text-destructive' },
-    { label: tr('صافي الربح', 'Net profit'), value: preview.netProfit, tone: preview.netProfit >= 0 ? 'text-emerald-600' : 'text-destructive', strong: true },
-    { label: tr('أرباح معلّقة (لا تدخل في الصافي)', 'Pending profit (not in net)'), value: preview.pendingProfit, tone: 'text-amber-600' },
+    { label: tr('صافي الربح', 'Net profit'), value: preview.netProfit, tone: preview.netProfit >= 0 ? 'text-success' : 'text-destructive', strong: true },
+    { label: tr('أرباح معلّقة (لا تدخل في الصافي)', 'Pending profit (not in net)'), value: preview.pendingProfit, tone: 'text-warning' },
   ];
 
   const runClose = () => closeGuard.run(async () => {
@@ -120,11 +121,11 @@ export function PeriodClosingPanel({ invoices, expenses, profitLedger, canClose 
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs space-y-1">
             <span className="text-muted-foreground">{tr('من', 'From')}</span>
-            <Input type="date" value={from} max={today} onChange={e => setFrom(e.target.value)} className="h-9" />
+            <Input type="date" value={from} max={today} onChange={e => setFrom(e.target.value)} />
           </label>
           <label className="text-xs space-y-1">
             <span className="text-muted-foreground">{tr('إلى', 'To')}</span>
-            <Input type="date" value={to} max={today} onChange={e => setTo(e.target.value)} className="h-9" />
+            <Input type="date" value={to} max={today} onChange={e => setTo(e.target.value)} />
           </label>
         </div>
 
@@ -132,7 +133,7 @@ export function PeriodClosingPanel({ invoices, expenses, profitLedger, canClose 
           {rows.map(row => (
             <div key={row.label} className="flex items-center justify-between px-3 py-2">
               <span className={row.strong ? 'font-bold' : 'text-muted-foreground'}>{row.label}</span>
-              <span className={`${row.strong ? 'font-bold' : 'font-medium'} ${row.tone ?? ''}`}>{formatReportAmount(row.value)}</span>
+              <span dir="ltr" className={`inline-block tabular-nums ${row.strong ? 'font-bold' : 'font-medium'} ${row.tone ?? ''}`}>{formatReportAmount(row.value)}</span>
             </div>
           ))}
         </div>
@@ -170,39 +171,39 @@ export function PeriodClosingPanel({ invoices, expenses, profitLedger, canClose 
           <p className="p-6 text-center text-sm text-muted-foreground">{tr('لا توجد فترات مقفلة بعد', 'No closed periods yet')}</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="p-2 text-start font-semibold">{tr('الفترة', 'Period')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('المبيعات', 'Sales')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('الربح المحقق', 'Realized')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('المصاريف', 'Expenses')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('ديون معدومة', 'Bad debts')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('الصافي', 'Net')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('معلّق', 'Pending')}</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-start">{tr('الفترة', 'Period')}</TableHead>
+                  <TableHead className="text-end">{tr('المبيعات', 'Sales')}</TableHead>
+                  <TableHead className="text-end">{tr('الربح المحقق', 'Realized')}</TableHead>
+                  <TableHead className="text-end">{tr('المصاريف', 'Expenses')}</TableHead>
+                  <TableHead className="text-end">{tr('ديون معدومة', 'Bad debts')}</TableHead>
+                  <TableHead className="text-end">{tr('الصافي', 'Net')}</TableHead>
+                  <TableHead className="text-end">{tr('معلّق', 'Pending')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {closures.map(c => (
-                  <tr key={c.id} className="border-t border-border">
-                    <td className="p-2 whitespace-nowrap">{c.periodStart} → {c.periodEnd}</td>
-                    <td className="p-2 text-center">{formatReportAmount(c.revenue)}</td>
-                    <td className="p-2 text-center">{c.realizedProfit === null ? '—' : formatReportAmount(c.realizedProfit)}</td>
-                    <td className="p-2 text-center">{formatReportAmount(c.expenses)}</td>
-                    <td className="p-2 text-center">{c.badDebtLoss === null ? '—' : formatReportAmount(c.badDebtLoss)}</td>
-                    <td className={`p-2 text-center font-bold ${c.netProfit >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>{formatReportAmount(c.netProfit)}</td>
-                    <td className="p-2 text-center">{c.pendingProfit === null ? '—' : formatReportAmount(c.pendingProfit)}</td>
-                  </tr>
+                  <TableRow key={c.id}>
+                    <TableCell className="whitespace-nowrap"><span dir="ltr" className="inline-block tabular-nums">{c.periodStart} → {c.periodEnd}</span></TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(c.revenue)}</span></TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{c.realizedProfit === null ? '—' : formatReportAmount(c.realizedProfit)}</span></TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(c.expenses)}</span></TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{c.badDebtLoss === null ? '—' : formatReportAmount(c.badDebtLoss)}</span></TableCell>
+                    <TableCell className={`text-end font-bold ${c.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(c.netProfit)}</span></TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{c.pendingProfit === null ? '—' : formatReportAmount(c.pendingProfit)}</span></TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
 
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <AlertDialogContent className="max-w-md w-[95vw] rounded-3xl p-5 border border-border shadow-2xl bg-card">
-          <AlertDialogHeader className="text-right">
+        <AlertDialogContent>
+          <AlertDialogHeader className="text-start">
             <AlertDialogTitle className="flex items-center gap-2 text-base font-bold">
               <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Lock className="w-4 h-4" />
@@ -216,10 +217,10 @@ export function PeriodClosingPanel({ invoices, expenses, profitLedger, canClose 
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-2 pt-3">
-            <AlertDialogCancel className="flex-1 h-9 rounded-xl text-xs">{tr('إلغاء', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction className="flex-1 h-9 rounded-xl text-xs font-bold" onClick={runClose}>
-              {tr('إقفال الفترة', 'Close the period')}
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tr('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction disabled={closeGuard.isRunning} onClick={runClose}>
+              {closeGuard.isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : tr('إقفال الفترة', 'Close the period')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

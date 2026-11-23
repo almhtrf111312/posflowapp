@@ -4,6 +4,7 @@ import { App } from '@capacitor/app';
 import { AlertTriangle, Bluetooth, CheckCircle2, Loader2, Printer, RefreshCw } from 'lucide-react';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -273,11 +274,13 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         dir={isRTL ? 'rtl' : 'ltr'}
-        className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto"
+        className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] gap-0"
+        onPointerDownOutside={(e) => { if (step === 'working') e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (step === 'working') e.preventDefault(); }}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
           <DialogTitle className="flex items-center gap-2">
-            <Bluetooth className="w-4 h-4" />
+            <Bluetooth className="w-4 h-4 text-primary shrink-0" />
             {L(isRTL, 'إضافة طابعة بلوتوث', 'Add Bluetooth printer')}
           </DialogTitle>
           <DialogDescription>
@@ -285,169 +288,187 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
           </DialogDescription>
         </DialogHeader>
 
-        {error && (
-          <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        <DialogBody className="space-y-4">
+          {error && (
+            <div role="alert" className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
 
-        {/* 1) التحقق */}
-        {step === 'checking' && (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
-        )}
+          {/* 1) التحقق */}
+          {step === 'checking' && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          )}
 
-        {/* 2) شي بيمنع البحث */}
-        {step === 'blocked' && (
-          <div className="space-y-4">
+          {/* 2) شي بيمنع البحث */}
+          {step === 'blocked' && (
             <p className="text-sm text-muted-foreground">{blockedText(blockReason)}</p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              {blockReason === 'BT_OFF' && (
-                <Button onClick={() => void enableBluetooth()}>
-                  {L(isRTL, 'تشغيل البلوتوث', 'Turn on Bluetooth')}
-                </Button>
-              )}
-              {blockReason === 'NO_PERMISSION' && (
-                <Button onClick={() => void requestPermissions()}>
-                  {L(isRTL, 'السماح', 'Allow')}
-                </Button>
-              )}
-              {(blockReason === 'NO_LOCATION' || blockReason === 'NO_PERMISSION' || blockReason === 'BT_OFF' || blockReason === null) && (
-                <Button variant="outline" onClick={() => void refreshReadiness()}>
-                  {L(isRTL, 'تحقق مرة ثانية', 'Check again')}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* 3) قائمة الأجهزة */}
-        {step === 'list' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm text-muted-foreground">
-                {scanning
-                  ? L(isRTL, 'جاري البحث عن طابعات قريبة…', 'Searching for nearby printers…')
-                  : L(isRTL, 'انتهى البحث', 'Scan finished')}
-              </p>
-              {scanning ? (
-                <Button size="sm" variant="outline" onClick={() => void stopScan()}>
-                  {L(isRTL, 'إيقاف البحث', 'Stop scan')}
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={() => void restartScan()}>
-                  <RefreshCw className="w-3.5 h-3.5 me-1" />
-                  {L(isRTL, 'بحث من جديد', 'Scan again')}
-                </Button>
-              )}
-            </div>
-
-            {scanning && (
-              <div className="h-1 w-full overflow-hidden rounded bg-muted">
-                <div className="h-full w-1/3 animate-pulse bg-primary" />
-              </div>
-            )}
-
-            {savedList.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground">
-                  {L(isRTL, 'الأجهزة المقترنة', 'Paired devices')}
-                </h3>
-                {savedList.map((d) => (
-                  <DeviceRow key={d.address} device={d} isRTL={isRTL} onPick={selectDevice} />
-                ))}
-              </section>
-            )}
-
-            {nearbyList.length > 0 && (
-              <section className="space-y-2">
-                <h3 className="text-xs font-semibold text-muted-foreground">
-                  {L(isRTL, 'أجهزة قريبة', 'Nearby devices')}
-                </h3>
-                {nearbyList.map((d) => (
-                  <DeviceRow key={d.address} device={d} isRTL={isRTL} onPick={selectDevice} />
-                ))}
-              </section>
-            )}
-
-            {!scanning && savedList.length === 0 && nearbyList.length === 0 && (
-              <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-                {L(
-                  isRTL,
-                  'ما لقينا طابعات. شغّل الطابعة وقرّبها من الهاتف، وتأكد إنها بوضع الاقتران (غالباً ضغطة مطوّلة على زر التغذية أو الـ Power حسب دليل الطابعة)',
-                  'No printers found. Turn the printer on, bring it close, and make sure it is in pairing mode (usually a long press on the feed or power button)'
+          {/* 3) قائمة الأجهزة */}
+          {step === 'list' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {scanning
+                    ? L(isRTL, 'جاري البحث عن طابعات قريبة…', 'Searching for nearby printers…')
+                    : L(isRTL, 'انتهى البحث', 'Scan finished')}
+                </p>
+                {scanning ? (
+                  <Button size="sm" variant="outline" onClick={() => void stopScan()}>
+                    {L(isRTL, 'إيقاف البحث', 'Stop scan')}
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => void restartScan()}>
+                    <RefreshCw className="w-3.5 h-3.5 me-1" />
+                    {L(isRTL, 'بحث من جديد', 'Scan again')}
+                  </Button>
                 )}
               </div>
-            )}
 
-            <div className="flex justify-end">
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                {L(isRTL, 'إغلاق', 'Close')}
-              </Button>
+              {scanning && (
+                <div className="h-1 w-full overflow-hidden rounded bg-muted">
+                  <div className="h-full w-1/3 animate-pulse bg-primary" />
+                </div>
+              )}
+
+              {savedList.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground">
+                    {L(isRTL, 'الأجهزة المقترنة', 'Paired devices')}
+                  </h3>
+                  {savedList.map((d) => (
+                    <DeviceRow key={d.address} device={d} isRTL={isRTL} onPick={selectDevice} />
+                  ))}
+                </section>
+              )}
+
+              {nearbyList.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground">
+                    {L(isRTL, 'أجهزة قريبة', 'Nearby devices')}
+                  </h3>
+                  {nearbyList.map((d) => (
+                    <DeviceRow key={d.address} device={d} isRTL={isRTL} onPick={selectDevice} />
+                  ))}
+                </section>
+              )}
+
+              {!scanning && savedList.length === 0 && nearbyList.length === 0 && (
+                <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                  <Printer className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-xs sm:text-sm text-muted-foreground max-w-sm">
+                    {L(
+                      isRTL,
+                      'ما لقينا طابعات. شغّل الطابعة وقرّبها من الهاتف، وتأكد إنها بوضع الاقتران (غالباً ضغطة مطوّلة على زر التغذية أو الـ Power حسب دليل الطابعة)',
+                      'No printers found. Turn the printer on, bring it close, and make sure it is in pairing mode (usually a long press on the feed or power button)'
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 4) رمز الاقتران (للطابعة الجديدة فقط) */}
-        {step === 'pair' && selected && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl border p-3">
-              <Printer className="w-5 h-5 text-primary shrink-0" />
-              <div className="min-w-0">
-                <div className="font-semibold truncate">{selected.name || selected.address}</div>
-                <div className="text-xs font-mono text-muted-foreground">{selected.address}</div>
+          {/* 4) رمز الاقتران (للطابعة الجديدة فقط) */}
+          {step === 'pair' && selected && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-xl border p-3">
+                <Printer className="w-5 h-5 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{selected.name || selected.address}</div>
+                  <div className="text-xs font-mono text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{selected.address}</span></div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="bt-printer-pin" className="text-sm font-medium">
+                  {L(isRTL, 'رمز الاقتران', 'Pairing PIN')}
+                </label>
+                <Input
+                  id="bt-printer-pin"
+                  type="text"
+                  inputMode="numeric"
+                  dir="ltr"
+                  className="tabular-nums"
+                  autoComplete="off"
+                  maxLength={8}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {L(isRTL, 'أغلب الطابعات بتستخدم 0000 أو 1234. إذا ما اشتغل، راجع دليل الطابعة.', 'Most printers use 0000 or 1234. If it fails, check the printer manual.')}
+                </p>
               </div>
             </div>
+          )}
 
-            <div className="space-y-2">
-              <label htmlFor="bt-printer-pin" className="text-sm font-medium">
-                {L(isRTL, 'رمز الاقتران', 'Pairing PIN')}
-              </label>
-              <Input
-                id="bt-printer-pin"
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={8}
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-              />
-              <p className="text-xs text-muted-foreground">
-                {L(isRTL, 'أغلب الطابعات بتستخدم 0000 أو 1234. إذا ما اشتغل، راجع دليل الطابعة.', 'Most printers use 0000 or 1234. If it fails, check the printer manual.')}
-              </p>
+          {/* 5) شغّال */}
+          {step === 'working' && (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 className="w-7 h-7 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">{progress}</p>
             </div>
+          )}
 
-            <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-              <Button variant="ghost" onClick={() => setStep('list')}>
-                {L(isRTL, 'رجوع', 'Back')}
+          {/* 6) تم */}
+          {step === 'done' && selected && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <CheckCircle2 className="w-10 h-10 text-success" />
+              <p className="font-semibold">{L(isRTL, 'تم حفظ الطابعة', 'Printer saved')}</p>
+              <p className="text-sm text-muted-foreground">{selected.name || selected.address}</p>
+            </div>
+          )}
+        </DialogBody>
+
+        {step === 'blocked' && (
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            {(blockReason === 'NO_LOCATION' || blockReason === 'NO_PERMISSION' || blockReason === 'BT_OFF' || blockReason === null) && (
+              <Button variant="outline" size="default" onClick={() => void refreshReadiness()}>
+                {L(isRTL, 'تحقق مرة ثانية', 'Check again')}
               </Button>
-              <Button onClick={() => void pairAndSave(selected, pin || undefined)}>
-                {L(isRTL, 'اقتران', 'Pair')}
+            )}
+            {blockReason === 'BT_OFF' && (
+              <Button size="default" onClick={() => void enableBluetooth()}>
+                {L(isRTL, 'تشغيل البلوتوث', 'Turn on Bluetooth')}
               </Button>
-            </DialogFooter>
-          </div>
+            )}
+            {blockReason === 'NO_PERMISSION' && (
+              <Button size="default" onClick={() => void requestPermissions()}>
+                {L(isRTL, 'السماح', 'Allow')}
+              </Button>
+            )}
+          </DialogFooter>
         )}
 
-        {/* 5) شغّال */}
-        {step === 'working' && (
-          <div className="flex flex-col items-center gap-3 py-8">
-            <Loader2 className="w-7 h-7 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">{progress}</p>
-          </div>
+        {step === 'list' && (
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => onOpenChange(false)}>
+              {L(isRTL, 'إغلاق', 'Close')}
+            </Button>
+          </DialogFooter>
         )}
 
-        {/* 6) تم */}
+        {step === 'pair' && selected && (
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setStep('list')}>
+              {L(isRTL, 'رجوع', 'Back')}
+            </Button>
+            <Button size="default" disabled={busyRef.current} onClick={() => void pairAndSave(selected, pin || undefined)}>
+              {busyRef.current && <Loader2 className="w-4 h-4 animate-spin" />}
+              {L(isRTL, 'اقتران', 'Pair')}
+            </Button>
+          </DialogFooter>
+        )}
+
         {step === 'done' && selected && (
-          <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-            <p className="font-semibold">{L(isRTL, 'تم حفظ الطابعة', 'Printer saved')}</p>
-            <p className="text-sm text-muted-foreground">{selected.name || selected.address}</p>
-            <Button className="mt-2" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button size="default" onClick={() => onOpenChange(false)}>
               {L(isRTL, 'تم', 'Done')}
             </Button>
-          </div>
+          </DialogFooter>
         )}
       </DialogContent>
     </Dialog>
@@ -472,7 +493,7 @@ function DeviceRow({
       <Printer className="w-5 h-5 shrink-0 text-primary" />
       <div className="min-w-0 flex-1">
         <div className="font-semibold truncate">{device.name || device.address}</div>
-        <div className="text-xs font-mono text-muted-foreground">{device.address}</div>
+        <div className="text-xs font-mono text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{device.address}</span></div>
       </div>
       <Badge variant={device.paired ? 'secondary' : 'default'}>
         {device.paired

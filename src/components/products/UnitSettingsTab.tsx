@@ -41,16 +41,16 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
     : `إدخال الكمية بالـ${data.smallUnit || 'قطعة'}`;
 
   return (
-    <div className="space-y-4 border border-border rounded-lg p-4 bg-muted/30">
+    <div className="space-y-4 border border-border rounded-2xl p-4 bg-muted/30">
       <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
         <Boxes className="w-4 h-4 text-primary" />
         إعدادات الوحدات (كرتونة / قطعة)
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {/* Bulk Unit Name */}
-        <div>
-          <Label className="text-sm font-medium mb-1.5 block">الوحدة الكبرى</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium block">الوحدة الكبرى</Label>
           <Input
             placeholder="كرتونة / طرد / شوال"
             value={data.bulkUnit}
@@ -59,8 +59,8 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
         </div>
         
         {/* Small Unit Name */}
-        <div>
-          <Label className="text-sm font-medium mb-1.5 block">الوحدة الصغرى</Label>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium block">الوحدة الصغرى</Label>
           <Input
             placeholder="قطعة / حبة / علبة"
             value={data.smallUnit}
@@ -69,8 +69,8 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
         </div>
         
         {/* Conversion Factor */}
-        <div className="sm:col-span-2">
-          <Label className="text-sm font-medium mb-1.5 flex items-center gap-2">
+        <div className="sm:col-span-2 space-y-1.5">
+          <Label className="text-sm font-medium flex items-center gap-2">
             <ArrowLeftRight className="w-4 h-4 text-muted-foreground" />
             معامل التحويل (عدد القطع في الوحدة الكبرى)
           </Label>
@@ -78,6 +78,8 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
+            dir="ltr"
+            className="tabular-nums"
             placeholder="مثال: 20 قطعة في الكرتونة"
             value={data.conversionFactor === 0 ? '' : data.conversionFactor?.toString() || ''}
             onChange={(e) => {
@@ -100,14 +102,14 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
               }
             }}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            1 {data.bulkUnit || 'كرتونة'} = {data.conversionFactor || 1} {data.smallUnit || 'قطعة'}
+          <p className="text-xs text-muted-foreground">
+            <span dir="ltr" className="inline-block tabular-nums">1</span> {data.bulkUnit || 'كرتونة'} = <span dir="ltr" className="inline-block tabular-nums">{data.conversionFactor || 1}</span> {data.smallUnit || 'قطعة'}
           </p>
         </div>
         
         {/* Bulk Cost Price - calculated automatically */}
-        <div>
-          <Label className="text-sm font-medium mb-1.5 flex items-center gap-2">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-muted-foreground" />
             سعر تكلفة {data.bulkUnit || 'الكرتونة'} (محسوب تلقائياً)
           </Label>
@@ -115,19 +117,20 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
             type="number"
             min="0"
             step="0.01"
+            dir="ltr"
             placeholder="0"
             value={calculatedBulkCostPrice.toFixed(2)}
             readOnly
-            className="bg-muted/50"
+            className="bg-muted/50 tabular-nums"
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            = سعر القطعة ({pieceCostPrice.toFixed(2)}$) × معامل التحويل ({conversionFactor})
+          <p className="text-xs text-muted-foreground">
+            = سعر القطعة (<span dir="ltr" className="inline-block tabular-nums">{pieceCostPrice.toFixed(2)}$</span>) × معامل التحويل (<span dir="ltr" className="inline-block tabular-nums">{conversionFactor}</span>)
           </p>
         </div>
         
         {/* Bulk Sale Price */}
-        <div>
-          <Label className="text-sm font-medium mb-1.5 flex items-center gap-2">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-primary" />
             سعر بيع {data.bulkUnit || 'الكرتونة'} (جملة)
           </Label>
@@ -135,6 +138,8 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
             type="number"
             min="0"
             step="0.01"
+            dir="ltr"
+            className="tabular-nums"
             placeholder="0"
             value={data.bulkSalePrice || ''}
             onChange={(e) => onChange({ bulkSalePrice: Number(e.target.value) })}
@@ -153,7 +158,7 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
             type="button"
             onClick={() => onChange({ trackByUnit: 'piece' })}
             className={cn(
-              "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border-2 transition-all",
+              "flex-1 min-h-11 sm:min-h-10 px-4 rounded-xl text-sm font-medium border-2 transition-[transform,color,background-color,border-color,opacity,box-shadow] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               data.trackByUnit === 'piece'
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
@@ -165,7 +170,7 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
             type="button"
             onClick={() => onChange({ trackByUnit: 'bulk' })}
             className={cn(
-              "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium border-2 transition-all",
+              "flex-1 min-h-11 sm:min-h-10 px-4 rounded-xl text-sm font-medium border-2 transition-[transform,color,background-color,border-color,opacity,box-shadow] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               data.trackByUnit === 'bulk'
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border bg-card text-muted-foreground hover:border-muted-foreground/50"
@@ -177,8 +182,8 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
       </div>
       
       {/* Tracking Explanation */}
-      <Alert className="bg-blue-500/10 border-blue-500/30">
-        <Info className="h-4 w-4 text-blue-500" />
+      <Alert className="bg-info/10 border-info/30">
+        <Info className="h-4 w-4 text-info" />
         <AlertDescription className="text-sm text-muted-foreground">
           <strong>ملاحظة:</strong> {trackingExplanation}. 
           يتم تخزين الكمية دائماً بالقطع في قاعدة البيانات.
@@ -187,12 +192,14 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
       
       {/* Stock Summary - Always shows pieces as the base unit */}
       {totalPieces > 0 && (
-        <div className="bg-primary/10 rounded-lg p-3 text-sm">
-          <div className="flex items-center justify-between">
+        <div className="bg-primary/10 rounded-xl p-3 text-sm">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-muted-foreground">إجمالي المخزون:</span>
             <span className="font-semibold text-foreground">
-              {totalPieces} {data.smallUnit || 'قطعة'} = {fullBulkUnits} {data.bulkUnit || 'كرتونة'}
-              {remainingPieces > 0 && ` + ${remainingPieces} ${data.smallUnit || 'قطعة'}`}
+              <span dir="ltr" className="inline-block tabular-nums">{totalPieces}</span> {data.smallUnit || 'قطعة'} = <span dir="ltr" className="inline-block tabular-nums">{fullBulkUnits}</span> {data.bulkUnit || 'كرتونة'}
+              {remainingPieces > 0 && (
+                <> + <span dir="ltr" className="inline-block tabular-nums">{remainingPieces}</span> {data.smallUnit || 'قطعة'}</>
+              )}
             </span>
           </div>
         </div>
@@ -200,16 +207,16 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
       
       {/* Pricing Summary */}
       {pieceCostPrice > 0 && conversionFactor > 1 && (
-        <div className="bg-success/10 rounded-lg p-3 text-sm space-y-1">
+        <div className="bg-success/10 rounded-xl p-3 text-sm space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">تكلفة القطعة الواحدة:</span>
-            <span className="font-semibold text-foreground">
+            <span dir="ltr" className="inline-block tabular-nums font-semibold text-foreground">
               ${pieceCostPrice.toFixed(2)}
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">تكلفة {data.bulkUnit || 'الكرتونة'}:</span>
-            <span className="font-semibold text-foreground">
+            <span dir="ltr" className="inline-block tabular-nums font-semibold text-foreground">
               ${calculatedBulkCostPrice.toFixed(2)}
             </span>
           </div>
@@ -217,13 +224,13 @@ export function UnitSettingsTab({ data, onChange, quantityInPieces, pieceCostPri
             <>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">سعر بيع القطعة من {data.bulkUnit || 'الكرتونة'}:</span>
-                <span className="font-semibold text-foreground">
+                <span dir="ltr" className="inline-block tabular-nums font-semibold text-foreground">
                   ${(data.bulkSalePrice / conversionFactor).toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center justify-between border-t border-success/20 pt-1 mt-1">
                 <span className="text-muted-foreground">ربح {data.bulkUnit || 'الكرتونة'}:</span>
-                <span className="font-semibold text-success">
+                <span dir="ltr" className="inline-block tabular-nums font-semibold text-success">
                   ${(data.bulkSalePrice - calculatedBulkCostPrice).toFixed(2)}
                 </span>
               </div>

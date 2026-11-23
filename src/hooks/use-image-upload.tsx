@@ -36,15 +36,15 @@ export function useImageUpload(onValueChange?: (value: string) => void): UseImag
   const uploadInBackground = useCallback(async (base64: string) => {
     setUploadStatus('syncing');
     try {
-      // Compress locally first — guaranteed offline
-      const { compressImageOffline } = await import('@/lib/image-upload');
-      const compressed = await compressImageOffline(base64);
+      // Compress locally first with WebP preference (q=0.82, automatic JPEG fallback) — guaranteed offline
+      const { compressImage, uploadProductImage } = await import('@/lib/image-upload');
+      const compressed = await compressImage(base64, 30, 400, 400, 0.82);
+      setImagePreview(compressed);
       setImageValue(compressed);
       onValueChange?.(compressed);
       setUploadStatus('done');
       
       // Then attempt cloud upload silently in background
-      const { uploadProductImage } = await import('@/lib/image-upload');
       const cloudPath = await uploadProductImage(compressed);
       if (cloudPath && !cloudPath.startsWith('data:')) {
         setImageValue(cloudPath);
@@ -101,4 +101,3 @@ export function useImageUpload(onValueChange?: (value: string) => void): UseImag
     setInitialImage,
   };
 }
-

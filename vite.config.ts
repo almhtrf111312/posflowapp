@@ -132,11 +132,14 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('recharts') || id.includes('d3-')) {
               return 'vendor-charts';
             }
-            if (id.includes('jspdf')) {
+            if (id.includes('jspdf') || id.includes('arabic-reshaper') || id.includes('bidi-js')) {
               return 'vendor-pdf';
             }
             if (id.includes('exceljs')) {
               return 'vendor-excel';
+            }
+            if (id.includes('@zxing')) {
+              return 'vendor-barcode';
             }
             if (id.includes('@radix-ui')) {
               return 'vendor-radix';

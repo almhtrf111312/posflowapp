@@ -50,17 +50,8 @@ import { FeatureErrorBoundary } from "@/components/debug/FeatureErrorBoundary";
 // Lazy-loaded heavy pages to keep the initial startup bundle ultra-fast
 // نقطة البيع هي الشاشة الأولى: يبدأ تحميلها فوراً مع الإقلاع بدلاً من انتظار أول رسم (يلغي شاشة "جاري تحميل الصفحة")
 const POS = lazy(() => import("./pages/POS"));
-const Products = lazy(() => import("./pages/Products"));
-const Customers = lazy(() => import("./pages/Customers"));
-const Services = lazy(() => import("./pages/Services"));
-const Invoices = lazy(() => import("./pages/Invoices"));
 const InvoiceTracking = lazy(() => import("./pages/InvoiceTracking"));
-const Expenses = lazy(() => import("./pages/Expenses"));
 const CashShifts = lazy(() => import("./pages/CashShifts"));
-const Settings = lazy(() => import("./pages/Settings"));
-const Reports = lazy(() => import("./pages/Reports"));
-const Purchases = lazy(() => import("./pages/Purchases"));
-const Appearance = lazy(() => import("./pages/Appearance"));
 const LibraryMembers = lazy(() => import("./pages/LibraryMembers"));
 
 /** يفتح القسم فقط لنوع المتجر الخاص به (مثل المكتبة)، وإلا يرجع للرئيسية — يتبع تغيير نوع المتجر فوراً */
@@ -568,4 +559,3 @@ const App = () => (
 );
 
 export default App;
-

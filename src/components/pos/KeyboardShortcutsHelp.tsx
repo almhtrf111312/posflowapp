@@ -2,6 +2,7 @@ import { Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -28,20 +29,21 @@ export function KeyboardShortcutsHelp() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
           title={t('shortcuts.title')}
+          aria-label={t('shortcuts.title')}
         >
           <Keyboard className="w-4 h-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+        <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
           <DialogTitle className="flex items-center gap-2">
             <Keyboard className="w-5 h-5" />
             {t('shortcuts.title')}
           </DialogTitle>
         </DialogHeader>
-        <div className="py-4">
+        <DialogBody className="py-4">
           <div className="space-y-3">
             {shortcuts.map((shortcut) => (
               <div 
@@ -49,7 +51,7 @@ export function KeyboardShortcutsHelp() {
                 className="flex items-center justify-between p-2 rounded-lg bg-muted"
               >
                 <span className="text-sm">{shortcut.description}</span>
-                <kbd className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-background border border-border rounded shadow-sm">
+                <kbd dir="ltr" className="inline-block tabular-nums px-2 py-1 text-xs font-semibold text-muted-foreground bg-background border border-border rounded shadow-sm">
                   {shortcut.key}
                 </kbd>
               </div>
@@ -58,7 +60,7 @@ export function KeyboardShortcutsHelp() {
           <p className="text-xs text-muted-foreground mt-4 text-center">
             {t('shortcuts.useToSpeedUp')}
           </p>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

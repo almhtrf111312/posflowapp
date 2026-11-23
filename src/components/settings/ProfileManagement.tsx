@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogBody } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -324,7 +324,7 @@ export function ProfileManagement() {
   const getRoleBadge = () => {
     if (isBoss) {
       return (
-        <Badge className="bg-amber-500/20 text-amber-600 border-amber-500/30">
+        <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">
           <Crown className="w-3 h-3 me-1" />
           {t('profile.role.boss')}
         </Badge>
@@ -332,7 +332,7 @@ export function ProfileManagement() {
     }
     if (isAdmin) {
       return (
-        <Badge className="bg-blue-500/20 text-blue-600 border-blue-500/30">
+        <Badge variant="outline" className="bg-info/15 text-info border-info/30">
           <Shield className="w-3 h-3 me-1" />
           {t('profile.role.admin')}
         </Badge>
@@ -378,10 +378,10 @@ export function ProfileManagement() {
                   placeholder={t('profile.enterName')}
                   className="flex-1 min-w-0"
                 />
-                <Button size="icon" onClick={handleSaveName} disabled={isSavingName} className="shrink-0">
+                <Button size="icon" onClick={handleSaveName} disabled={isSavingName} aria-label={t('common.save')} className="shrink-0">
                   {isSavingName ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 </Button>
-                <Button size="icon" variant="outline" onClick={() => { setIsEditingName(false); setNewName(profile?.full_name || ''); }} className="shrink-0">
+                <Button size="icon" variant="outline" onClick={() => { setIsEditingName(false); setNewName(profile?.full_name || ''); }} aria-label={t('common.cancel')} className="shrink-0">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -402,16 +402,16 @@ export function ProfileManagement() {
               <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
               <span>{t('profile.email')}</span>
               {!isBoss && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{t('profile.readOnly')}</Badge>
+                <Badge variant="outline">{t('profile.readOnly')}</Badge>
               )}
             </Label>
             {isBoss && isEditingEmail ? (
               <div className="flex gap-2">
                 <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder={t('profile.enterNewEmail')} className="flex-1 min-w-0" dir="ltr" />
-                <Button size="icon" onClick={handleSaveEmail} disabled={isSavingEmail} className="shrink-0">
+                <Button size="icon" onClick={handleSaveEmail} disabled={isSavingEmail} aria-label={t('common.save')} className="shrink-0">
                   {isSavingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 </Button>
-                <Button size="icon" variant="outline" onClick={() => { setIsEditingEmail(false); setNewEmail(user?.email || ''); }} className="shrink-0">
+                <Button size="icon" variant="outline" onClick={() => { setIsEditingEmail(false); setNewEmail(user?.email || ''); }} aria-label={t('common.cancel')} className="shrink-0">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -452,13 +452,13 @@ export function ProfileManagement() {
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
                   placeholder="09XXXXXXXX / +963... / +90..."
-                  className="flex-1 min-w-0 font-mono text-left"
+                  className="flex-1 min-w-0 font-mono text-start tabular-nums"
                   dir="ltr"
                 />
-                <Button size="icon" onClick={handleUpdatePhone} disabled={isSavingPhone} className="shrink-0">
+                <Button size="icon" onClick={handleUpdatePhone} disabled={isSavingPhone} aria-label={t('common.save')} className="shrink-0">
                   {isSavingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 </Button>
-                <Button size="icon" variant="outline" onClick={() => { setIsEditingPhone(false); setNewPhone(profile?.phone || ''); }} className="shrink-0">
+                <Button size="icon" variant="outline" onClick={() => { setIsEditingPhone(false); setNewPhone(profile?.phone || ''); }} aria-label={t('common.cancel')} className="shrink-0">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -644,41 +644,41 @@ export function ProfileManagement() {
 
       {/* Password Change Dialog */}
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{t('password.change')}</DialogTitle>
             <DialogDescription>{t('profile.enterCurrentAndNew')}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
               <Label>{t('password.currentPassword')}</Label>
               <div className="relative">
-                <Input type={showPasswords.current ? 'text' : 'password'} value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} placeholder="••••••••" className="pe-10" />
-                <button type="button" onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })} className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground">
+                <Input type={showPasswords.current ? 'text' : 'password'} value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} placeholder="••••••••" className="pe-12" dir="ltr" />
+                <Button type="button" variant="ghost" size="icon" aria-label={t('password.currentPassword')} onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })} className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground">
                   {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>{t('password.newPassword')}</Label>
               <div className="relative">
-                <Input type={showPasswords.new ? 'text' : 'password'} value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} placeholder="••••••••" className="pe-10" />
-                <button type="button" onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })} className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground">
+                <Input type={showPasswords.new ? 'text' : 'password'} value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} placeholder="••••••••" className="pe-12" dir="ltr" />
+                <Button type="button" variant="ghost" size="icon" aria-label={t('password.newPassword')} onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })} className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground">
                   {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>{t('password.confirmPassword')}</Label>
               <div className="relative">
-                <Input type={showPasswords.confirm ? 'text' : 'password'} value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} placeholder="••••••••" className="pe-10" />
-                <button type="button" onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })} className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground">
+                <Input type={showPasswords.confirm ? 'text' : 'password'} value={passwordForm.confirmPassword} onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} placeholder="••••••••" className="pe-12" dir="ltr" />
+                <Button type="button" variant="ghost" size="icon" aria-label={t('password.confirmPassword')} onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })} className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground">
                   {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
-          <DialogFooter>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
               {t('password.cancel')}
             </Button>
@@ -701,15 +701,15 @@ export function ProfileManagement() {
 
       {/* PIN Setup Dialog */}
       <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{t('profile.setQuickPinTitle')}</DialogTitle>
             <DialogDescription>
               {t('profile.setQuickPinDesc')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
               <Label>{t('profile.newPinLabel')}</Label>
               <div className="relative">
                 <Input
@@ -719,19 +719,22 @@ export function ProfileManagement() {
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="pe-10 font-mono tracking-widest text-center"
+                  className="pe-12 font-mono tracking-widest text-center"
                   dir="ltr"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t('profile.newPinLabel')}
                   onClick={() => setShowPin(!showPin)}
-                  className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground"
+                  className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground"
                 >
                   {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>{t('profile.confirmPinLabel')}</Label>
               <Input
                 type="password"
@@ -744,15 +747,15 @@ export function ProfileManagement() {
                 dir="ltr"
               />
             </div>
-          </div>
-          <DialogFooter>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button variant="outline" onClick={() => { setShowPinDialog(false); setNewPin(''); setConfirmPin(''); }}>
               {t('password.cancel')}
             </Button>
             <Button onClick={handleSavePin} disabled={isSavingPin || !newPin || newPin.length < 4}>
               {isSavingPin ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin me-2" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   {t('password.saving')}
                 </>
               ) : (

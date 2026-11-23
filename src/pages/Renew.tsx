@@ -7,13 +7,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogBody } from '@/components/ui/dialog';
 import {
   Check,
   Copy,
   ExternalLink,
   ShieldCheck,
-  ArrowRight,
+  ArrowLeft,
   MessageSquareQuote,
   Sparkles,
   QrCode,
@@ -24,7 +24,9 @@ import {
   CreditCard,
   Download,
 } from 'lucide-react';
-import { showToast } from '@/lib/toast';
+import { toast as showToast } from '@/lib/sonner-bridge';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { useLanguage } from '@/hooks/use-language';
 import { compressImage } from '@/lib/image-upload';
 import { sendBossTelegramChatAlert } from '@/lib/telegram-alerts';
 
@@ -74,6 +76,7 @@ interface ContactLinks {
 
 export default function RenewPage() {
   const { user } = useAuth();
+  const { direction } = useLanguage();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<any[]>(DEFAULT_PLANS);
   const [methods, setMethods] = useState<any[]>([]);
@@ -382,35 +385,30 @@ export default function RenewPage() {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4 font-sans dir-rtl" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            تجديد وترقية الاشتراك
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            اختر باقة الاشتراك وطريقة الدفع المفضلة لمتجرك وسعة منتجاتك
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => navigate(-1)} className="gap-2">
-          <ArrowRight className="w-4 h-4" /> العودة
-        </Button>
-      </div>
+    <div className="max-w-4xl mx-auto p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 font-sans" dir={direction}>
+      <PageHeader
+        title="تجديد وترقية الاشتراك"
+        subtitle="اختر باقة الاشتراك وطريقة الدفع المفضلة لمتجرك وسعة منتجاتك"
+        icon={<Sparkles className="w-5 h-5" />}
+        actions={
+          <Button variant="outline" onClick={() => navigate(-1)} className="gap-2">
+            <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> العودة
+          </Button>
+        }
+      />
 
       {/* في حال وجود طلب قيد المراجعة */}
       {activeRequest && (
-        <Card className="mb-8 border-amber-500/30 bg-amber-500/10">
+        <Card className="border-warning/30 bg-warning/10">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <Badge variant="outline" className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500">
-                  طلبك قيد المراجعة: {activeRequest.ref_code}
+                <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">
+                  طلبك قيد المراجعة: <span dir="ltr" className="inline-block tabular-nums">{activeRequest.ref_code}</span>
                 </Badge>
-                <h3 className="font-semibold text-lg mt-2">{activeRequest.plan_name} — {activeRequest.price_usd}$</h3>
+                <h3 className="text-sm sm:text-base font-semibold text-foreground mt-2">{activeRequest.plan_name} — <span dir="ltr" className="inline-block tabular-nums">${activeRequest.price_usd}</span></h3>
                 <p className="text-sm text-muted-foreground">
-                  طريقة التحويل: {activeRequest.method_name} | رقم المرجع: {activeRequest.ref_code}
+                  طريقة التحويل: {activeRequest.method_name} | رقم المرجع: <span dir="ltr" className="inline-block tabular-nums">{activeRequest.ref_code}</span>
                 </p>
               </div>
               <Button variant="secondary" onClick={() => navigate('/contact')} className="gap-2 shrink-0">
@@ -422,8 +420,8 @@ export default function RenewPage() {
       )}
 
       {/* 1. شبكة الباقات */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">1. اختر الباقة المناسبة</h2>
+      <div className="space-y-4">
+        <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">1. اختر الباقة المناسبة</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {plans.map((p) => {
             const isSelected = selectedPlan?.id === p.id;
@@ -441,8 +439,8 @@ export default function RenewPage() {
                     {p.badge && <Badge variant={isSelected ? 'default' : 'secondary'}>{p.badge}</Badge>}
                   </div>
                   <div className="mt-2">
-                    <span className="text-2xl font-bold">${p.price_usd}</span>
-                    <span className="text-xs text-muted-foreground mr-1">/ {p.duration_days} يوماً</span>
+                    <span dir="ltr" className="inline-block tabular-nums text-2xl font-bold">${p.price_usd}</span>
+                    <span className="text-xs text-muted-foreground ms-1">/ {p.duration_days} يوماً</span>
                   </div>
                   {Array.isArray(p.equivalents) && p.equivalents.map((eq: any, idx: number) => (
                     <div key={idx} className="text-xs text-muted-foreground font-medium mt-1">
@@ -462,7 +460,7 @@ export default function RenewPage() {
                   <div className="pt-1 space-y-1">
                     {p.features?.map((f: string, i: number) => (
                       <div key={i} className="flex items-center gap-1.5 text-muted-foreground">
-                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-success shrink-0" />
                         <span>{f}</span>
                       </div>
                     ))}
@@ -477,7 +475,7 @@ export default function RenewPage() {
       {/* 2. أزرار وطرق الدفع الديناميكية والـ QR */}
       {selectedPlan && (
         <div className="space-y-6">
-          <h2 className="text-lg font-semibold">2. اختر طريقة التحويل</h2>
+          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">2. اختر طريقة التحويل</h2>
 
           {methods.length === 0 && (
             <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -499,7 +497,7 @@ export default function RenewPage() {
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-sm">{m.name}</span>
-                    {m.badge && <Badge variant="secondary" className="text-[10px]">{m.badge}</Badge>}
+                    {m.badge && <Badge variant="secondary">{m.badge}</Badge>}
                   </div>
                 </Button>
               );
@@ -551,7 +549,7 @@ export default function RenewPage() {
                               size="sm"
                               variant={isCodeCopied ? "default" : "outline"}
                               className={`gap-1.5 shrink-0 h-9 px-3 font-semibold transition-all ${
-                                isCodeCopied ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
+                                isCodeCopied ? 'bg-success hover:bg-success/90 text-success-foreground' : ''
                               }`}
                               onClick={() => handleCopy(transferCode, 'كود التحويل / المحفظة')}
                             >
@@ -579,7 +577,7 @@ export default function RenewPage() {
                         <div className="space-y-1.5 pt-1">
                           <Button
                             onClick={() => window.open(selectedMethod.link_url, '_blank')}
-                            className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 text-sm shadow-xs"
+                            className="w-full gap-2 bg-success hover:bg-success/90 text-success-foreground font-bold h-11 text-sm shadow-xs"
                           >
                             <ExternalLink className="w-4 h-4" />
                             {selectedMethod.button_label || 'فتح رابط الدفع المباشر'}
@@ -666,31 +664,31 @@ export default function RenewPage() {
 
       {/* حوار تأكيد الطلب وتوجيه العميل للدعم الفني */}
       <Dialog open={successDialog.open} onOpenChange={(open) => setSuccessDialog(prev => ({ ...prev, open }))}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader>
-            <div className="flex items-center gap-2 text-emerald-600 mb-1">
-              <CheckCircle2 className="w-6 h-6" />
-              <DialogTitle className="text-lg">تم تسجيل طلب التجديد بنجاح!</DialogTitle>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]" dir={direction}>
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <div className="flex items-center gap-2 text-success">
+              <CheckCircle2 className="w-6 h-6 shrink-0" />
+              <DialogTitle>تم تسجيل طلب التجديد بنجاح!</DialogTitle>
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-2 text-sm">
+          <DialogBody className="space-y-4 text-sm">
             <div className="p-4 rounded-2xl bg-muted/60 border text-center space-y-1.5">
               <span className="text-xs text-muted-foreground block">رقم مرجع الطلب الرسمي:</span>
               <div className="flex items-center justify-center gap-2">
-                <span className="font-mono text-2xl font-black text-primary tracking-wider">
+                <span dir="ltr" className="inline-block tabular-nums font-mono text-2xl font-bold text-primary tracking-wider">
                   {successDialog.refCode}
                 </span>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8"
+                  aria-label="نسخ رقم المرجع"
                   onClick={() => handleCopy(successDialog.refCode, 'رقم المرجع')}
                 >
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 احتفظ بهذا الرقم أو أرسله مباشرة عبر واتساب / تليجرام مع صورة الإيصال.
               </p>
             </div>
@@ -701,7 +699,7 @@ export default function RenewPage() {
                 {successDialog.whatsappUrl && (
                   <Button
                     onClick={() => window.open(successDialog.whatsappUrl, '_blank')}
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 justify-center"
+                    className="gap-2 bg-success hover:bg-success/90 text-success-foreground font-bold h-11 justify-center"
                   >
                     <MessageCircle className="w-5 h-5" />
                     إرسال الإشعار عبر واتساب
@@ -713,15 +711,15 @@ export default function RenewPage() {
                     onClick={() => window.open(successDialog.telegramUrl, '_blank')}
                     className="gap-2 font-bold h-11 justify-center border-primary/30"
                   >
-                    <Send className="w-4 h-4 text-sky-500" />
+                    <Send className="w-4 h-4 text-info" />
                     محادثة تليجرام
                   </Button>
                 )}
               </div>
             </div>
-          </div>
+          </DialogBody>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button variant="outline" className="w-full" onClick={() => setSuccessDialog(prev => ({ ...prev, open: false }))}>
               تم، العودة للشاشة
             </Button>

@@ -31,14 +31,16 @@ import {
 import { cn, formatNumber, formatCurrency, formatDateTime } from '@/lib/utils';
 import { useMoney } from '@/hooks/use-money';
 import { Button } from '@/components/ui/button';
-import { SmartFab } from '@/components/ui/SmartFab';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -590,58 +592,75 @@ export default function Expenses() {
   };
 
   return (
-    <div className="p-2.5 sm:p-4 md:p-6 pt-2 sm:pt-3 space-y-3 overflow-x-hidden relative min-h-screen">
-      {/* Top Header with Fixed Add Button */}
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <PageHeader title={t('expenses.title')} className="mb-0 md:mb-0 min-h-0" />
-        <Button
-          type="button"
-          size="sm"
-          className="h-10 shrink-0 gap-1.5 rounded-xl px-3 text-xs font-bold shadow-sm"
-          onClick={() => {
-            resetForm();
-            setShowAddDialog(true);
-          }}
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          <span>{t('expenses.addExpense')}</span>
-        </Button>
-      </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 overflow-x-hidden relative">
+      {/* Top Header with Primary Add Actions */}
+      <PageHeader
+        title={t('expenses.title')}
+        icon={<Receipt className="w-5 h-5" />}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="default"
+              onClick={() => {
+                resetRecurringForm();
+                setShowRecurringDialog(true);
+              }}
+            >
+              <RefreshCw className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{t('expenses.addRecurring')}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              size="default"
+              onClick={() => {
+                resetForm();
+                setShowAddDialog(true);
+              }}
+            >
+              <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{t('expenses.addExpense')}</span>
+            </Button>
+          </>
+        }
+      />
 
-      {/* Top Search with Smart Mobile Clearance */}
-      <div className="flex items-center justify-between gap-2 rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
-        <div className="relative flex-1">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      {/* Top Search */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder={t('expenses.searchExpenses')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="ps-9 pe-3 h-10 text-xs md:text-sm bg-card border-border rounded-xl shadow-2xs"
+            className="ps-9 pe-3"
           />
         </div>
       </div>
 
       {/* Due Expenses Alert Banner */}
       {dueExpenses.length > 0 && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
+        <div className="p-3 bg-warning/10 border border-warning/30 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-warning/20 text-warning flex items-center justify-center shrink-0">
               <Bell className="w-4 h-4" />
             </div>
             <div className="min-w-0">
               <span className="font-bold text-xs text-foreground block truncate">
-                {dueExpenses.length} {t('expenses.dueToday')}
+                <span dir="ltr" className="inline-block tabular-nums">{dueExpenses.length}</span> {t('expenses.dueToday')}
               </span>
-              <p className="text-[11px] text-muted-foreground font-mono">
-                {t('common.total')}: <span className="font-bold text-foreground">{m.fmt(dueExpenses.reduce((sum, e) => sum + e.amount, 0))}</span>
+              <p className="text-xs text-muted-foreground font-mono">
+                {t('common.total')}: <span dir="ltr" className="inline-block font-bold text-foreground tabular-nums">{m.fmt(dueExpenses.reduce((sum, e) => sum + e.amount, 0))}</span>
               </p>
             </div>
           </div>
           <Button
             size="sm"
             variant="outline"
-            className="border-amber-500/40 hover:bg-amber-500/15 text-xs font-bold h-8 px-3 rounded-xl shrink-0 text-amber-700 dark:text-amber-300"
+            className="border-warning/40 hover:bg-warning/15 text-xs font-bold rounded-xl shrink-0 text-warning"
             onClick={() => setShowRecurringListDialog(true)}
           >
             {t('expenses.reviewAndPay')}
@@ -650,44 +669,44 @@ export default function Expenses() {
       )}
 
       {/* Compressed 4-Metric Stats Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 md:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Metric 1: هذا الشهر */}
-        <div className="bg-card border border-border rounded-xl md:rounded-2xl p-2 md:p-3 text-center relative overflow-hidden">
-          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
+        <div className="bg-card border border-border rounded-xl md:rounded-2xl p-3 text-center relative overflow-hidden">
+          <span className="text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.thisMonth')}
           </span>
-          <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-destructive block mt-0.5 truncate whitespace-nowrap">
+          <span dir="ltr" className="inline-block text-sm sm:text-base md:text-lg font-bold font-mono text-destructive tabular-nums mt-0.5 truncate whitespace-nowrap">
             {m.fmt(stats.totalThisMonth)}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-xs text-muted-foreground">
             <TrendingDown className="w-3 h-3 text-destructive shrink-0" />
             <span className="truncate">{t('expenses.expense')}</span>
           </div>
         </div>
 
         {/* Metric 2: عمليات الشهر */}
-        <div className="bg-card border border-border rounded-xl md:rounded-2xl p-2 md:p-3 text-center relative overflow-hidden">
-          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
+        <div className="bg-card border border-border rounded-xl md:rounded-2xl p-3 text-center relative overflow-hidden">
+          <span className="text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.monthlyExpenses')}
           </span>
-          <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-foreground block mt-0.5 truncate">
+          <span dir="ltr" className="inline-block text-sm sm:text-base md:text-lg font-bold font-mono text-foreground tabular-nums mt-0.5 truncate">
             {stats.monthlyCount}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-xs text-muted-foreground">
             <Receipt className="w-3 h-3 text-warning shrink-0" />
             <span className="truncate">{t('expenses.operations')}</span>
           </div>
         </div>
 
         {/* Metric 3: إجمالي المصاريف */}
-        <div className="bg-card border border-border rounded-xl md:rounded-2xl p-2 md:p-3 text-center relative overflow-hidden">
-          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
+        <div className="bg-card border border-border rounded-xl md:rounded-2xl p-3 text-center relative overflow-hidden">
+          <span className="text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.totalExpenses')}
           </span>
-          <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-foreground block mt-0.5 truncate whitespace-nowrap">
+          <span dir="ltr" className="inline-block text-sm sm:text-base md:text-lg font-bold font-mono text-foreground tabular-nums mt-0.5 truncate whitespace-nowrap">
             {m.fmt(stats.totalExpenses)}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-xs text-muted-foreground">
             <DollarSign className="w-3 h-3 text-info shrink-0" />
             <span className="truncate">{t('expenses.total')}</span>
           </div>
@@ -695,17 +714,17 @@ export default function Expenses() {
 
         {/* Metric 4: مصاريف ثابتة */}
         <div
-          className="bg-card border border-border rounded-xl md:rounded-2xl p-2 md:p-3 text-center relative overflow-hidden cursor-pointer hover:bg-muted/40 transition-colors"
+          className="bg-card border border-border rounded-xl md:rounded-2xl p-3 text-center relative overflow-hidden cursor-pointer hover:bg-muted/40 transition-colors"
           onClick={() => setShowRecurringListDialog(true)}
           title={t('expenses.manageRecurring')}
         >
-          <span className="text-[11px] md:text-xs text-muted-foreground block truncate font-medium">
+          <span className="text-xs text-muted-foreground block truncate font-medium">
             {t('expenses.fixedExpenses')}
           </span>
-          <span className="text-xs sm:text-sm md:text-lg font-black font-mono text-primary block mt-0.5 truncate">
+          <span dir="ltr" className="inline-block text-sm sm:text-base md:text-lg font-bold font-mono text-primary tabular-nums mt-0.5 truncate">
             {recurringExpenses.length}
           </span>
-          <div className="flex items-center justify-center gap-1 mt-0.5 text-[11px] md:text-[11px] text-primary">
+          <div className="flex items-center justify-center gap-1 mt-0.5 text-xs text-primary">
             <RefreshCw className="w-3 h-3 shrink-0" />
             <span className="truncate font-semibold">{t('expenses.manage')}</span>
           </div>
@@ -714,33 +733,31 @@ export default function Expenses() {
 
       {/* Expense Types Summary */}
       {Object.keys(stats.byType).length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-2.5 md:p-3 space-y-1.5">
+        <div className="bg-card border border-border rounded-2xl p-3 space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground px-0.5">
             <span>{t('expenses.monthlyDistribution')}</span>
-            <span className="text-[11px] font-mono">{Object.keys(stats.byType).length} {t('expenses.categories')}</span>
+            <span className="text-xs font-mono"><span dir="ltr" className="inline-block tabular-nums">{Object.keys(stats.byType).length}</span> {t('expenses.categories')}</span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {Object.entries(stats.byType).map(([type, amount]) => (
-              <div key={type} className="min-w-0 px-2 py-1.5 bg-muted/60 border border-border/40 rounded-xl text-xs flex items-center justify-between gap-1.5">
+              <div key={type} className="min-w-0 px-2.5 py-1.5 bg-muted/60 border border-border/40 rounded-xl text-xs flex items-center justify-between gap-1.5">
                 <span className="min-w-0 truncate text-muted-foreground">{getLocalizedExpenseType(type)}:</span>
-                <span className="min-w-0 truncate font-bold font-mono text-foreground whitespace-nowrap" title={m.fmt(amount)}>{m.fmt(amount)}</span>
+                <span dir="ltr" className="inline-block min-w-0 truncate font-bold font-mono text-foreground whitespace-nowrap tabular-nums" title={m.fmt(amount)}>{m.fmt(amount)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-
-
       {/* Expenses List */}
       <div className="space-y-2 md:space-y-2.5">
         {isLoading && expenses.length === 0 ? (
           <ListPageSkeleton rows={5} />
         ) : filteredExpenses.length === 0 ? (
-          <div className="bg-card rounded-2xl border border-border p-8 text-center">
-            <Receipt className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-40" />
-            <p className="text-xs md:text-sm font-semibold text-muted-foreground">{t('expenses.noExpenses')}</p>
-            <p className="text-[11px] text-muted-foreground/80 mt-0.5">{t('expenses.startAdding')}</p>
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <Receipt className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm sm:text-base font-semibold text-foreground">{t('expenses.noExpenses')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('expenses.startAdding')}</p>
           </div>
         ) : (
           filteredExpenses.map((expense, index) => (
@@ -749,22 +766,25 @@ export default function Expenses() {
               className="bg-card rounded-2xl border border-border p-3 md:p-3.5 relative overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/40 fade-in"
               style={{ animationDelay: `${index * 30}ms` }}
             >
-              {/* 3-Dots Dropdown Menu in Top-Left */}
-              <div className="absolute left-2.5 top-2.5 z-10">
+              {/* 3-Dots Dropdown Menu in Top-End */}
+              <div className="absolute end-2 top-2 z-10">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground"
                       title={t('common.options')}
+                      aria-label={t('common.options')}
                     >
                       <MoreVertical className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-44 rounded-2xl p-1.5 border-border shadow-xl">
                     <DropdownMenuItem
                       onClick={() => openDeleteDialog(expense)}
                       disabled={expense.is_reversed}
-                      className="gap-2 text-xs font-semibold text-amber-600 dark:text-amber-400 focus:text-amber-700 focus:bg-amber-500/10 rounded-xl cursor-pointer"
+                      className="gap-2 text-xs font-semibold text-warning focus:text-warning focus:bg-warning/10 rounded-xl cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       <span>{expense.is_reversed ? t('expenses.alreadyReversed') : t('expenses.reverseExpense')}</span>
@@ -774,26 +794,26 @@ export default function Expenses() {
               </div>
 
               {/* Title & Amount Row */}
-              <div className="flex items-start justify-between gap-2 pl-8">
+              <div className="flex items-start justify-between gap-2 pe-12">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
                     <Receipt className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="font-bold text-xs md:text-sm text-foreground truncate">{getLocalizedExpenseType(expense.type, expense.typeLabel)}</h3>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h3 className="text-sm sm:text-base font-semibold text-foreground truncate">{getLocalizedExpenseType(expense.type, expense.typeLabel)}</h3>
                       {expense.is_reversed && (
-                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                        <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30 shrink-0">
                           {t('expenses.reversed')}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="text-left shrink-0 whitespace-nowrap">
-                  <span className={cn(
-                    "text-sm md:text-base font-black font-mono whitespace-nowrap",
+                <div className="text-end shrink-0 whitespace-nowrap">
+                  <span dir="ltr" className={cn(
+                    "inline-block text-sm md:text-base font-bold font-mono whitespace-nowrap tabular-nums",
                     expense.is_reversed ? "line-through text-muted-foreground" : "text-destructive"
                   )}>
                     -{m.fmt(expense.amount)}
@@ -829,8 +849,8 @@ export default function Expenses() {
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {expense.distributions.map(dist => (
-                      <span key={dist.partnerId} className="px-2 py-0.5 bg-muted/70 border border-border/50 rounded-lg text-[10.5px] font-mono font-medium text-foreground">
-                        {dist.partnerName}: ${dist.amount.toFixed(0)} ({dist.percentage.toFixed(0)}%)
+                      <span key={dist.partnerId} className="px-2 py-0.5 bg-muted/70 border border-border/50 rounded-lg text-xs font-mono font-medium text-foreground">
+                        {dist.partnerName}: <span dir="ltr" className="inline-block tabular-nums">${dist.amount.toFixed(0)} ({dist.percentage.toFixed(0)}%)</span>
                       </span>
                     ))}
                   </div>
@@ -843,31 +863,33 @@ export default function Expenses() {
 
       {/* Add Expense Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] rounded-2xl p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col">
-          <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between shrink-0">
-            <DialogHeader className="p-0 space-y-0.5 text-right">
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <span>{t('expenses.addNewExpense')}</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mr-10">
-                {t('expenses.addNewExpenseDesc')}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 overscroll-contain">
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.expenseType')}</label>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] rounded-[24px] p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col"
+          onPointerDownOutside={(e) => { if (isSaving || formData.amount > 0 || formData.notes.trim()) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSaving || formData.amount > 0 || formData.notes.trim()) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 bg-muted/40 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Receipt className="w-4 h-4" />
+              </div>
+              <span>{t('expenses.addNewExpense')}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground ms-10">
+              {t('expenses.addNewExpenseDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4 overscroll-contain">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.expenseType')}</label>
               <Select
                 value={formData.type}
                 onValueChange={(value: ExpenseType) => setFormData({ ...formData, type: value })}
               >
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]">
                   <SelectValue placeholder={t('expenses.selectExpenseType')} />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-2xl max-h-[min(20rem,60dvh)] overflow-y-auto">
                   {expenseTypes.map(type => (
                     <SelectItem key={type.value} value={type.value} className="rounded-xl">
                       {getLocalizedExpenseType(type.value, type.label)}
@@ -915,19 +937,20 @@ export default function Expenses() {
             <div>
               <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.amount')} ({currentExpenseDef.symbol})</label>
               <div className="relative">
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold font-mono text-muted-foreground">{currentExpenseDef.symbol}</span>
+                <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-xs font-bold font-mono text-muted-foreground">{currentExpenseDef.symbol}</span>
                 <Input
+                  dir="ltr"
                   type="number"
                   placeholder="0.00"
                   value={formData.amount || ''}
                   onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
                   min="0"
-                  className="pr-9 h-10 rounded-xl font-mono text-sm font-bold"
+                  className="ps-9 font-mono text-sm font-bold tabular-nums"
                 />
               </div>
               {expenseCurrency !== 'USD' && formData.amount > 0 && (
-                <p className="text-[11px] text-muted-foreground font-mono mt-1">
-                  ≈ ${m.toUsd(formData.amount, expenseCurrency, currentExpenseDef.rate).toFixed(2)} USD
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  <span dir="ltr" className="inline-block tabular-nums">≈ ${m.toUsd(formData.amount, expenseCurrency, currentExpenseDef.rate).toFixed(2)} USD</span>
                 </p>
               )}
             </div>
@@ -941,8 +964,8 @@ export default function Expenses() {
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.notes')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.notes')}</label>
               <Textarea
                 placeholder={t('expenses.notesPlaceholder')}
                 value={formData.notes}
@@ -951,56 +974,57 @@ export default function Expenses() {
                 className="rounded-xl text-xs resize-none"
               />
             </div>
-          </div>
-          <div className="shrink-0 p-3 bg-muted/30 border-t border-border flex gap-2">
-            <Button variant="outline" className="flex-1 h-9 rounded-xl text-xs" onClick={() => setShowAddDialog(false)}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 bg-muted/30 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowAddDialog(false)} disabled={isSaving}>
               {t('expenses.cancel')}
             </Button>
-            <Button className="flex-1 h-9 rounded-xl text-xs font-bold bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground shadow-sm" onClick={handleAddExpense} disabled={isSaving}>
-              <Save className="w-3.5 h-3.5" />
+            <Button variant="default" size="default" onClick={handleAddExpense} disabled={isSaving}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {isSaving ? t('common.saving') : t('expenses.save')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add Recurring Expense Dialog */}
       <Dialog open={showRecurringDialog} onOpenChange={setShowRecurringDialog}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] rounded-2xl p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col">
-          <div className="shrink-0 p-4 bg-muted/40 border-b border-border flex items-center justify-between">
-            <DialogHeader className="p-0 space-y-0.5 text-right">
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <RefreshCw className="w-4 h-4" />
-                </div>
-                <span>{t('expenses.addRecurring')}</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mr-10">
-                {t('expenses.addRecurringDesc')}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 overscroll-contain">
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.expenseName')}</label>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] rounded-[24px] p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col"
+          onPointerDownOutside={(e) => { if (recurringForm.name.trim() || recurringForm.amount > 0) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (recurringForm.name.trim() || recurringForm.amount > 0) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 bg-muted/40 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <RefreshCw className="w-4 h-4" />
+              </div>
+              <span>{t('expenses.addRecurring')}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground ms-10">
+              {t('expenses.addRecurringDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4 overscroll-contain">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.expenseName')}</label>
               <Input
                 placeholder={t('expenses.expenseNamePlaceholder')}
                 value={recurringForm.name}
                 onChange={(e) => setRecurringForm({ ...recurringForm, name: e.target.value })}
-                className="h-10 rounded-xl"
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.expenseType')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.expenseType')}</label>
               <Select
                 value={recurringForm.type}
                 onValueChange={(value: ExpenseType) => setRecurringForm({ ...recurringForm, type: value })}
               >
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]">
                   <SelectValue placeholder={t('expenses.selectExpenseType')} />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-2xl max-h-[min(20rem,60dvh)] overflow-y-auto">
                   {expenseTypes.map(type => (
                     <SelectItem key={type.value} value={type.value} className="rounded-xl">
                       {getLocalizedExpenseType(type.value, type.label)}
@@ -1038,35 +1062,36 @@ export default function Expenses() {
                 {t('expenses.amount')} ({recurringCurrencyDef.symbol})
               </label>
               <div className="relative">
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold font-mono text-muted-foreground">
+                <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-xs font-bold font-mono text-muted-foreground">
                   {recurringCurrencyDef.symbol}
                 </span>
                 <Input
+                  dir="ltr"
                   type="number"
                   placeholder="0.00"
                   value={recurringForm.amount || ''}
                   onChange={(e) => setRecurringForm({ ...recurringForm, amount: Number(e.target.value) })}
                   min="0"
-                  className="pr-9 h-10 rounded-xl font-mono text-sm font-bold"
+                  className="ps-9 font-mono text-sm font-bold tabular-nums"
                 />
               </div>
               {(recurringForm.currency || m.activeCode) !== 'USD' && recurringForm.amount > 0 && (
-                <p className="text-[11px] text-muted-foreground font-mono mt-1">
-                  ≈ ${m.toUsd(recurringForm.amount, recurringForm.currency || m.activeCode, recurringCurrencyDef.rate).toFixed(2)} USD
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  <span dir="ltr" className="inline-block tabular-nums">≈ ${m.toUsd(recurringForm.amount, recurringForm.currency || m.activeCode, recurringCurrencyDef.rate).toFixed(2)} USD</span>
                 </p>
               )}
             </div>
 
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.repeatEvery')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.repeatEvery')}</label>
               <Select
                 value={String(recurringForm.intervalDays)}
                 onValueChange={(value) => setRecurringForm({ ...recurringForm, intervalDays: Number(value) })}
               >
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]">
                   <SelectValue placeholder={t('expenses.selectRepeatInterval')} />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-2xl max-h-[min(20rem,60dvh)] overflow-y-auto">
                   {recurringIntervals.map(interval => (
                     <SelectItem key={interval.value} value={String(interval.value)} className="rounded-xl">
                       {getLocalizedInterval(interval)}
@@ -1097,7 +1122,7 @@ export default function Expenses() {
               />
             </div>
 
-            <div className="flex items-center space-x-2 space-x-reverse pt-1">
+            <div className="flex items-center gap-2 pt-1">
               <Checkbox
                 id="payToday"
                 checked={recurringForm.payImmediately}
@@ -1111,7 +1136,7 @@ export default function Expenses() {
               </label>
             </div>
 
-            <div className="flex items-center space-x-2 space-x-reverse pt-1">
+            <div className="flex items-center gap-2 pt-1">
               <Checkbox
                 id="autoPay"
                 checked={recurringForm.autoPay}
@@ -1124,38 +1149,39 @@ export default function Expenses() {
                 {t('expenses.autoPayDescription')}
               </label>
             </div>
-          </div>
-          <div className="shrink-0 p-3 bg-muted/30 border-t border-border flex gap-2">
-            <Button variant="outline" className="flex-1 h-9 rounded-xl text-xs" onClick={() => setShowRecurringDialog(false)}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 bg-muted/30 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowRecurringDialog(false)}>
               {t('expenses.cancel')}
             </Button>
-            <Button className="flex-1 h-9 rounded-xl text-xs font-bold bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground shadow-sm" onClick={handleAddRecurringExpense}>
-              <Save className="w-3.5 h-3.5" />
+            <Button variant="default" size="default" onClick={handleAddRecurringExpense}>
+              <Save className="w-4 h-4" />
               {t('expenses.save')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Recurring Expenses List Dialog */}
       <Dialog open={showRecurringListDialog} onOpenChange={setShowRecurringListDialog}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] rounded-2xl p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col">
-          <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between shrink-0">
-            <DialogHeader className="p-0 space-y-0.5 text-right">
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Settings2 className="w-4 h-4" />
-                </div>
-                <span>{t('expenses.manageFixed')}</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mr-10">
-                {t('expenses.recurringSubtitle')}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 overscroll-contain">
+        <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] rounded-[24px] p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 bg-muted/40 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Settings2 className="w-4 h-4" />
+              </div>
+              <span>{t('expenses.manageFixed')}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground ms-10">
+              {t('expenses.recurringSubtitle')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-2 overscroll-contain">
             {recurringExpenses.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8 text-xs">{t('expenses.noFixedExpenses')}</p>
+              <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                <RefreshCw className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                <p className="text-sm font-semibold text-foreground">{t('expenses.noFixedExpenses')}</p>
+              </div>
             ) : (
               recurringExpenses.map(expense => {
                 const todayStr = toLocalDateString(new Date());
@@ -1169,30 +1195,30 @@ export default function Expenses() {
                 return (
                   <div key={expense.id} className="flex items-center justify-between bg-muted/40 border border-border/50 rounded-2xl p-3 gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-bold text-xs truncate text-foreground">{expense.name}</p>
                         {isPaidToday && (
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+                          <Badge variant="outline" className="bg-success/15 text-success border-success/30">
                             {t('expenses.paidTodayBadge')}
-                          </span>
+                          </Badge>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground font-mono">
-                        <span className="font-bold text-foreground">{expense.currency && expense.currency !== 'USD' && expense.exchangeRate ? `${m.roundForCurrency(m.fromUsd(expense.amount, expense.currency, expense.exchangeRate), expense.currency)} ${expense.currency} (≈ ${m.fmt(expense.amount)})` : m.fmt(expense.amount)}</span> - {t('expenses.every')} {expense.intervalDays} {t('expenses.days')}
+                      <p className="text-xs text-muted-foreground font-mono">
+                        <span dir="ltr" className="inline-block font-bold text-foreground tabular-nums">{expense.currency && expense.currency !== 'USD' && expense.exchangeRate ? `${m.roundForCurrency(m.fromUsd(expense.amount, expense.currency, expense.exchangeRate), expense.currency)} ${expense.currency} (≈ ${m.fmt(expense.amount)})` : m.fmt(expense.amount)}</span> - {t('expenses.every')} {expense.intervalDays} {t('expenses.days')}
                       </p>
-                      <p className="text-[11px] text-muted-foreground font-mono flex items-center gap-1.5">
-                        <span>{t('expenses.nextDue')}: {expense.nextDueDate}</span>
+                      <p className="text-xs text-muted-foreground font-mono flex items-center gap-1.5 flex-wrap">
+                        <span>{t('expenses.nextDue')}: <span dir="ltr" className="inline-block tabular-nums">{expense.nextDueDate}</span></span>
                         {expense.lastPaidDate && (
-                          <span className="text-muted-foreground/80">({t('expenses.lastPaid')}: {expense.lastPaidDate})</span>
+                          <span>({t('expenses.lastPaid')}: <span dir="ltr" className="inline-block tabular-nums">{expense.lastPaidDate}</span>)</span>
                         )}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       {isPaidToday ? (
                         <Button
                           size="sm"
                           disabled
-                          className="h-8 text-xs bg-muted text-muted-foreground gap-1 px-2.5 rounded-xl font-bold cursor-not-allowed opacity-60"
+                          className="text-xs bg-muted text-muted-foreground gap-1 rounded-xl font-bold cursor-not-allowed opacity-60"
                           title={t('expenses.paidTodayBadge')}
                         >
                           <Check className="w-3.5 h-3.5" />
@@ -1203,7 +1229,7 @@ export default function Expenses() {
                           size="sm"
                           disabled
                           variant="outline"
-                          className="h-8 text-xs text-muted-foreground gap-1 px-2.5 rounded-xl font-medium cursor-not-allowed opacity-50"
+                          className="text-xs text-muted-foreground gap-1 rounded-xl font-medium cursor-not-allowed opacity-50"
                           title={t('expenses.notDueYet')}
                         >
                           <Calendar className="w-3.5 h-3.5" />
@@ -1212,7 +1238,7 @@ export default function Expenses() {
                       ) : (
                         <Button
                           size="sm"
-                          className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1 px-2.5 rounded-xl font-bold shadow-sm"
+                          className="text-xs bg-success hover:bg-success/90 text-success-foreground gap-1 rounded-xl font-bold shadow-sm"
                           onClick={() => openPayConfirmDialog(expense)}
                           title={t('expenses.payNow')}
                         >
@@ -1222,73 +1248,76 @@ export default function Expenses() {
                       )}
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-xl"
+                        size="icon"
+                        className="text-primary hover:text-primary hover:bg-primary/10"
                         onClick={() => handleOpenEditRecurring(expense)}
                         title={t('common.edit')}
+                        aria-label={t('common.edit')}
                       >
-                        <Pencil className="w-3.5 h-3.5" />
+                        <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive/80 hover:bg-destructive/10 rounded-xl"
+                        size="icon"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => handleDeleteRecurring(expense.id)}
                         title={t('common.delete')}
+                        aria-label={t('common.delete')}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 );
               })
             )}
-          </div>
-          <div className="shrink-0 p-3 bg-muted/30 border-t border-border flex justify-end">
-            <Button variant="outline" className="h-9 px-4 rounded-xl text-xs" onClick={() => setShowRecurringListDialog(false)}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 bg-muted/30 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowRecurringListDialog(false)}>
               {t('common.close')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Recurring Expense Dialog */}
       <Dialog open={showEditRecurringDialog} onOpenChange={setShowEditRecurringDialog}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] rounded-2xl p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col">
-          <div className="p-4 bg-muted/40 border-b border-border flex items-center justify-between shrink-0">
-            <DialogHeader className="p-0 space-y-0.5 text-right">
-              <DialogTitle className="text-base font-bold flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Pencil className="w-4 h-4" />
-                </div>
-                <span>{t('expenses.editRecurring')}</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mr-10">
-                {t('expenses.editRecurringDesc')}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 overscroll-contain">
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.expenseName')}</label>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] rounded-[24px] p-0 overflow-hidden border border-border shadow-2xl modal-dot-expand bg-card text-sm flex flex-col"
+          onPointerDownOutside={(e) => { if (editRecurringForm.name.trim() || editRecurringForm.amount > 0) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (editRecurringForm.name.trim() || editRecurringForm.amount > 0) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 bg-muted/40 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Pencil className="w-4 h-4" />
+              </div>
+              <span>{t('expenses.editRecurring')}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground ms-10">
+              {t('expenses.editRecurringDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4 overscroll-contain">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.expenseName')}</label>
               <Input
                 placeholder={t('expenses.expenseNamePlaceholder')}
                 value={editRecurringForm.name}
                 onChange={(e) => setEditRecurringForm({ ...editRecurringForm, name: e.target.value })}
-                className="h-10 rounded-xl"
               />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.expenseType')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.expenseType')}</label>
               <Select
                 value={editRecurringForm.type}
                 onValueChange={(value: ExpenseType) => setEditRecurringForm({ ...editRecurringForm, type: value })}
               >
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]">
                   <SelectValue placeholder={t('expenses.selectExpenseType')} />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-2xl max-h-[min(20rem,60dvh)] overflow-y-auto">
                   {expenseTypes.map(type => (
                     <SelectItem key={type.value} value={type.value} className="rounded-xl">
                       {getLocalizedExpenseType(type.value, type.label)}
@@ -1326,35 +1355,36 @@ export default function Expenses() {
                 {t('expenses.amount')} ({editRecurringCurrencyDef.symbol})
               </label>
               <div className="relative">
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold font-mono text-muted-foreground">
+                <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-xs font-bold font-mono text-muted-foreground">
                   {editRecurringCurrencyDef.symbol}
                 </span>
                 <Input
+                  dir="ltr"
                   type="number"
                   placeholder="0.00"
                   value={editRecurringForm.amount || ''}
                   onChange={(e) => setEditRecurringForm({ ...editRecurringForm, amount: Number(e.target.value) })}
                   min="0"
-                  className="pr-9 h-10 rounded-xl font-mono text-sm font-bold"
+                  className="ps-9 font-mono text-sm font-bold tabular-nums"
                 />
               </div>
               {(editRecurringForm.currency || m.activeCode) !== 'USD' && editRecurringForm.amount > 0 && (
-                <p className="text-[11px] text-muted-foreground font-mono mt-1">
-                  ≈ ${m.toUsd(editRecurringForm.amount, editRecurringForm.currency || m.activeCode, editRecurringCurrencyDef.rate).toFixed(2)} USD
+                <p className="text-xs text-muted-foreground font-mono mt-1">
+                  <span dir="ltr" className="inline-block tabular-nums">≈ ${m.toUsd(editRecurringForm.amount, editRecurringForm.currency || m.activeCode, editRecurringCurrencyDef.rate).toFixed(2)} USD</span>
                 </p>
               )}
             </div>
 
-            <div>
-              <label className="text-xs font-semibold mb-1 block text-muted-foreground">{t('expenses.repeatEvery')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.repeatEvery')}</label>
               <Select
                 value={String(editRecurringForm.intervalDays)}
                 onValueChange={(value) => setEditRecurringForm({ ...editRecurringForm, intervalDays: Number(value) })}
               >
-                <SelectTrigger className="h-10 rounded-xl">
+                <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]">
                   <SelectValue placeholder={t('expenses.selectRepeatInterval')} />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-2xl max-h-[min(20rem,60dvh)] overflow-y-auto">
                   {recurringIntervals.map(interval => (
                     <SelectItem key={interval.value} value={String(interval.value)} className="rounded-xl">
                       {getLocalizedInterval(interval)}
@@ -1375,7 +1405,7 @@ export default function Expenses() {
               />
             </div>
 
-            <div className="flex items-center space-x-2 space-x-reverse pt-1">
+            <div className="flex items-center gap-2 pt-1">
               <Checkbox
                 id="editAutoPay"
                 checked={editRecurringForm.autoPay}
@@ -1388,47 +1418,47 @@ export default function Expenses() {
                 {t('expenses.autoPayDescription')}
               </label>
             </div>
-          </div>
-          <div className="shrink-0 p-3 bg-muted/30 border-t border-border flex gap-2">
-            <Button variant="outline" className="flex-1 h-9 rounded-xl text-xs" onClick={() => setShowEditRecurringDialog(false)}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 bg-muted/30 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowEditRecurringDialog(false)}>
               {t('expenses.cancel')}
             </Button>
-            <Button className="flex-1 h-9 rounded-xl text-xs font-bold bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground shadow-sm" onClick={handleUpdateRecurringExpense}>
-              <Save className="w-3.5 h-3.5" />
+            <Button variant="default" size="default" onClick={handleUpdateRecurringExpense}>
+              <Save className="w-4 h-4" />
               {t('expenses.saveChanges')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Pay Confirmation Dialog */}
       <AlertDialog open={showPayConfirmDialog} onOpenChange={setShowPayConfirmDialog}>
-        <AlertDialogContent className="max-w-md w-[95vw] rounded-3xl p-5 border border-border shadow-2xl modal-dot-expand bg-card">
-          <AlertDialogHeader className="text-right">
-            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+        <AlertDialogContent>
+          <AlertDialogHeader className="text-start">
+            <AlertDialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-success/15 text-success flex items-center justify-center shrink-0">
                 <Check className="w-4 h-4" />
               </div>
               <span>{t('expenses.confirmPayExpense')}</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground pt-2">
               {t('expenses.payExpenseConfirm').replace('{name}', selectedRecurring?.name || '').replace('{amount}', selectedRecurring ? m.fmt(selectedRecurring.amount) : '0')}
-              <span className="block mt-2 font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="block mt-2 font-medium text-success">
                 💰 {t('expenses.confirmDeductFromCashbox')}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-2 pt-3">
-            <AlertDialogCancel disabled={isPaying} className="flex-1 h-9 rounded-xl text-xs">{t('expenses.cancel')}</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handlePayRecurring} 
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPaying}>{t('expenses.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePayRecurring}
               disabled={isPaying}
-              className="flex-1 h-9 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+              className="bg-success hover:bg-success/90 text-success-foreground disabled:opacity-50"
             >
               {isPaying ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-4 h-4" />
               )}
               {isPaying ? t('common.loading') : t('expenses.payNow')}
             </AlertDialogAction>
@@ -1438,85 +1468,29 @@ export default function Expenses() {
 
       {/* Delete/Refund Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="max-w-md w-[95vw] rounded-3xl p-5 border border-border shadow-2xl modal-dot-expand bg-card">
-          <AlertDialogHeader className="text-right">
-            <AlertDialogTitle className="flex items-center gap-2 text-base font-bold">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+        <AlertDialogContent>
+          <AlertDialogHeader className="text-start">
+            <AlertDialogTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-warning/15 text-warning flex items-center justify-center shrink-0">
                 <RotateCcw className="w-4 h-4" />
               </div>
               <span>{t('expenses.reverseExpense')}</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground pt-2">
               {t('expenses.deleteConfirmDesc').replace('{name}', selectedExpense ? getLocalizedExpenseType(selectedExpense.type, selectedExpense.typeLabel) : '').replace('{amount}', formatNumber(selectedExpense?.amount || 0))}
-              <span className="block mt-2 font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="block mt-2 font-medium text-success">
                 💰 {t('expenses.reverseExpenseNote')}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-2 pt-3">
-            <AlertDialogCancel className="flex-1 h-9 rounded-xl text-xs">{t('expenses.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteExpense} className="flex-1 h-9 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white">
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('expenses.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteExpense} className="bg-warning hover:bg-warning/90 text-warning-foreground">
               {t('expenses.confirmReverse')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Scroll-aware Smart FAB with Speed Dial Options عبر المكوّن الذكي الموحد */}
-      <SmartFab label={t('expenses.addExpense')}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              className={cn(
-                "flex items-center justify-center size-16 rounded-full p-0",
-                "bg-gradient-primary hover:opacity-95 active:scale-95 text-primary-foreground font-bold",
-                "shadow-xl shadow-primary/35 hover:shadow-2xl border border-primary-foreground/25 ring-4 ring-primary/15 transition-[transform,opacity] duration-300 ease-out cursor-pointer"
-              )}
-              title={t('expenses.addExpense')}
-              aria-label={t('expenses.addExpense')}
-            >
-              <Plus className="w-7 h-7 stroke-[2.5]" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="top"
-            align={isRTL ? "start" : "end"}
-            className="w-56 p-1.5 rounded-2xl border-border bg-card shadow-2xl space-y-1 mb-2 z-50 pointer-events-auto"
-          >
-            <DropdownMenuItem
-              className="flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-bold cursor-pointer hover:bg-primary/10 hover:text-primary transition-all"
-              onClick={() => {
-                resetForm();
-                setShowAddDialog(true);
-              }}
-            >
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                <Receipt className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-foreground">{t('expenses.oneTimeExpense') || 'مصروف لمرة واحدة'}</span>
-                <span className="text-[11px] text-muted-foreground font-normal">فاتورة، نثرية، أو مشترى فوري</span>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-bold cursor-pointer hover:bg-info/10 hover:text-info transition-all"
-              onClick={() => {
-                resetRecurringForm();
-                setShowRecurringDialog(true);
-              }}
-            >
-              <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center text-info shrink-0">
-                <RefreshCw className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-foreground">{t('expenses.recurringExpense') || 'مصروف ثابت / متكرر'}</span>
-                <span className="text-[11px] text-muted-foreground font-normal">إيجار، رواتب، اشتراكات</span>
-              </div>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SmartFab>
     </div>
   );
 }

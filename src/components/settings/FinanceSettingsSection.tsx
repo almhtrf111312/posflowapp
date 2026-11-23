@@ -154,7 +154,7 @@ export function FinanceSettingsSection({
 
                       <div className="mt-4 pt-3 border-t border-border/40 space-y-2">
                         <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="text-[10px] font-medium bg-muted/60 text-muted-foreground">
+                          <Badge variant="secondary" className="bg-muted/60 text-muted-foreground">
                             {t('storeSettings.accountingReferenceUsd')}
                           </Badge>
                           <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -454,7 +454,7 @@ export function FinanceSettingsSection({
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.taxRate')}</label>
                       <div className="relative flex-1">
-                        <Percent className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Percent className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           type="number"
                           value={taxRate || ''}
@@ -462,7 +462,8 @@ export function FinanceSettingsSection({
                             const val = Number(e.target.value);
                             setTaxRate(val);
                           }}
-                          className="pr-10 bg-muted border-0 h-9 text-sm"
+                          dir="ltr"
+                          className="ps-10 bg-muted border-0 text-sm tabular-nums"
                           placeholder="15"
                           min="0"
                           max="100"
@@ -530,7 +531,7 @@ export function FinanceSettingsSection({
                         {t('storeSettings.initialCapitalLabel')}
                       </label>
                       <div className="relative">
-                        <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <DollarSign className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           type="number"
                           value={initialCapital || ''}
@@ -538,7 +539,8 @@ export function FinanceSettingsSection({
                             const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value));
                             setInitialCapital(val);
                           }}
-                          className="pr-10 bg-background border-border/80 h-9 text-sm"
+                          dir="ltr"
+                          className="ps-10 bg-background border-border/80 text-sm tabular-nums"
                           placeholder="0.00"
                           min="0"
                           step="any"

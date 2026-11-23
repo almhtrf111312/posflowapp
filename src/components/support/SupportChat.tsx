@@ -195,8 +195,8 @@ export function ChatMessages({
                 className={cn(
                   'max-w-[78%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed break-words',
                   isMe
-                    ? 'bg-primary text-primary-foreground rounded-br-sm shadow-sm'
-                    : 'bg-muted text-foreground rounded-bl-sm border border-border/50',
+                    ? 'bg-primary text-primary-foreground rounded-ee-sm shadow-sm'
+                    : 'bg-muted text-foreground rounded-es-sm border border-border/50',
                 )}
               >
                 {/* Support label */}
@@ -244,8 +244,9 @@ export function ChatMessages({
           <button
             type="button"
             onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors z-10"
+            className="absolute top-4 end-4 p-2.5 rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors z-10"
             title={isEn ? "Close" : "إغلاق"}
+            aria-label={isEn ? "Close" : "إغلاق"}
           >
             <X className="w-6 h-6" />
           </button>
@@ -270,7 +271,7 @@ export function InputBar({
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
 }) {
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
   const isEn = language === 'en';
   const [text, setText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -385,8 +386,9 @@ export function InputBar({
           size="icon"
           onClick={() => fileInputRef.current?.click()}
           disabled={submitting || compressing}
-          className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground rounded-xl"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
           title={isEn ? "Attach image" : "إرفاق صورة"}
+          aria-label={isEn ? "Attach image" : "إرفاق صورة"}
         >
           {compressing ? (
             <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -401,16 +403,17 @@ export function InputBar({
           onKeyDown={onKeyDown}
           placeholder={isEn ? "Type your message here..." : "اكتب رسالتك هنا..."}
           disabled={submitting || compressing}
-          className="text-xs h-9 bg-card flex-1 rounded-xl"
-          dir="rtl"
+          className="bg-card flex-1"
+          dir={direction}
         />
 
         <Button
           onClick={send}
           disabled={submitting || compressing || (!text.trim() && !selectedImage)}
-          size="sm"
-          className="h-9 px-3 gap-1 shrink-0 rounded-xl"
+          size="icon"
+          className="shrink-0"
           title={isEn ? "Send" : "إرسال"}
+          aria-label={isEn ? "Send" : "إرسال"}
         >
           {submitting ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />

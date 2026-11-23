@@ -114,7 +114,7 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
               type="date"
               value={filters.dateRange.from}
               onChange={(e) => update({ dateRange: { ...filters.dateRange, from: e.target.value } })}
-              className="h-7 text-xs border-0 bg-transparent p-0 w-32 focus-visible:ring-0"
+              className="min-h-10 text-xs border-0 bg-transparent p-0 w-32 focus-visible:ring-0"
             />
           </div>
           <div className="flex items-center gap-1.5 bg-card rounded-lg border border-border/50 px-2.5 py-1.5">
@@ -123,7 +123,7 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
               type="date"
               value={filters.dateRange.to}
               onChange={(e) => update({ dateRange: { ...filters.dateRange, to: e.target.value } })}
-              className="h-7 text-xs border-0 bg-transparent p-0 w-32 focus-visible:ring-0"
+              className="min-h-10 text-xs border-0 bg-transparent p-0 w-32 focus-visible:ring-0"
             />
           </div>
         </div>
@@ -134,19 +134,19 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
         {/* Search */}
         {config.showSearch !== false && (
           <div className="relative flex-1 min-w-48 w-full sm:max-w-xs">
-            <Search className={cn("pointer-events-none absolute top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground", isRTL ? "right-3" : "left-3")} />
+            <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder={t('reports.searchPlaceholder') || 'ابحث بالاسم أو الرقم أو الباركود...'}
               value={filters.search}
               onChange={(e) => update({ search: e.target.value })}
-              className={cn("h-10 text-sm rounded-lg", isRTL ? "pr-9 pl-11" : "pl-9 pr-11")}
+              className="min-h-11 sm:min-h-10 text-sm rounded-[14px] ps-9 pe-9"
             />
             {filters.search && (
               <button
                 type="button"
                 aria-label={t('common.clear') || 'مسح البحث'}
                 onClick={() => update({ search: '' })}
-                className={cn("absolute top-0 h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground z-10", isRTL ? "left-0" : "right-0")}
+                className="absolute top-1/2 -translate-y-1/2 end-2 size-9 flex items-center justify-center text-muted-foreground hover:text-foreground z-10 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -157,10 +157,10 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
         {/* Status filter */}
         {config.showStatus && (
           <Select value={filters.status} onValueChange={(v) => update({ status: v })}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-32 min-w-28 rounded-lg">
+            <SelectTrigger className="min-h-11 sm:min-h-10 text-xs w-full sm:w-40 rounded-[14px]">
               <SelectValue placeholder={t('common.status') || 'الحالة'} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
               <SelectItem value="all">{t('reports.allStatuses') || 'كل الحالات'}</SelectItem>
               {(config.statusOptions || [
                 { value: 'completed', label: t('reports.statusCompleted') || 'مكتملة' },
@@ -176,10 +176,10 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
         {/* Cashier filter */}
         {config.showCashier && config.cashiers && config.cashiers.length > 0 && (
           <Select value={filters.cashierId} onValueChange={(v) => update({ cashierId: v })}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-36 min-w-32 rounded-lg">
+            <SelectTrigger className="min-h-11 sm:min-h-10 text-xs w-full sm:w-44 rounded-[14px]">
               <SelectValue placeholder={t('cashShifts.cashier') || 'الكاشير'} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
               <SelectItem value="all">{t('reports.filterAllCashiers') || 'جميع الكاشيرات'}</SelectItem>
               {config.cashiers.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -191,10 +191,10 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
         {/* Warehouse filter */}
         {config.showWarehouse && config.warehouses && config.warehouses.length > 0 && (
           <Select value={filters.warehouseId} onValueChange={(v) => update({ warehouseId: v })}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-36 min-w-32 rounded-lg">
+            <SelectTrigger className="min-h-11 sm:min-h-10 text-xs w-full sm:w-44 rounded-[14px]">
               <SelectValue placeholder={t('reports.warehouse') || 'المستودع'} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
               <SelectItem value="all">{t('reports.allWarehouses') || 'جميع المستودعات'}</SelectItem>
               {config.warehouses.map((w) => (
                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
@@ -206,10 +206,10 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
         {/* Category filter */}
         {config.showCategory && config.categories && config.categories.length > 0 && (
           <Select value={filters.category} onValueChange={(v) => update({ category: v })}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-36 min-w-32 rounded-lg">
+            <SelectTrigger className="min-h-11 sm:min-h-10 text-xs w-full sm:w-44 rounded-[14px]">
               <SelectValue placeholder={t('products.category') || 'القسم'} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
               <SelectItem value="all">{t('reports.filterAllCategories') || 'جميع الأقسام'}</SelectItem>
               {config.categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -221,10 +221,10 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
         {/* Payment type filter */}
         {config.showPaymentType && (
           <Select value={filters.paymentType} onValueChange={(v) => update({ paymentType: v })}>
-            <SelectTrigger className="h-8 text-xs w-full sm:w-28 min-w-24 rounded-lg">
+            <SelectTrigger className="min-h-11 sm:min-h-10 text-xs w-full sm:w-36 rounded-[14px]">
               <SelectValue placeholder={t('reports.paymentType') || 'نوع الدفع'} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
               <SelectItem value="all">{t('common.all') || 'الكل'}</SelectItem>
               <SelectItem value="cash">{t('pos.cash') || 'نقدي'}</SelectItem>
               <SelectItem value="debt">{t('pos.debt') || 'آجل'}</SelectItem>
@@ -234,7 +234,7 @@ export function ReportFiltersBar({ filters, onChange, config }: Props) {
 
         {/* Clear filters */}
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 text-xs gap-1 text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs gap-1 text-muted-foreground">
             <X className="w-3 h-3" />
             {t('reports.clearFilters') || 'مسح الفلاتر'}
           </Button>

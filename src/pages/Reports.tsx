@@ -16,6 +16,7 @@ import {
   PieChart,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowLeft,
   ArrowRight,
   RefreshCw,
   Wallet,
@@ -72,6 +73,9 @@ import { invoicesLink } from '@/lib/report-links';
 import { useUserRole } from '@/hooks/use-user-role';
 import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 const PartnerProfitDetailedReport = lazy(() => import('@/components/reports/PartnerProfitDetailedReport').then(m => ({ default: m.PartnerProfitDetailedReport })));
 const ProfitTrendChart = lazy(() => import('@/components/reports/ProfitTrendChart').then(m => ({ default: m.ProfitTrendChart })));
 const ProductProfitReport = lazy(() => import('@/components/reports/AnalyticsReports').then(m => ({ default: m.ProductProfitReport })));
@@ -973,24 +977,24 @@ function ReportsContent() {
             icon: TrendingUp,
             value: formatReportAmount(grossProfit),
             label: isRTL ? 'الربح المحقق' : 'Realized profit',
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: isEn ? `Net after expenses: ${formatReportAmount(netProfit)}` : `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,
           },
           {
             icon: ShoppingBag,
             value: `${reportData.summary.totalOrders} ${t('reports.ordersUnit')}`,
             label: t('reports.ordersCount'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: reportData.summary.totalOrders > 0 ? `${reportData.summary.totalOrders} ${t('reports.completedOrders') || 'طلب مكتمل'}` : (t('reports.noOrdersFound') || 'لا توجد طلبات'),
           },
           {
             icon: Clock,
             value: formatReportAmount(reportData.summary.avgOrderValue),
             label: t('reports.avgOrderValue'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: reportData.allCustomers.length > 0 ? `${reportData.allCustomers.length} ${t('reports.customersInPeriod') || 'عميل بالفترة'}` : (t('reports.perRegisteredOrder') || 'لكل طلب مسجل'),
           },
         ];
@@ -1001,16 +1005,16 @@ function ReportsContent() {
             icon: TrendingUp,
             value: formatReportAmount(grossProfit),
             label: isRTL ? 'الربح المحقق (المحصَّل فعلاً)' : 'Realized profit (collected)',
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: `${t('reports.profitMarginRate') || 'هامش المجمل'}: ${profitMargin}%`,
           },
           {
             icon: Clock,
             value: formatReportAmount(pendingProfit),
             label: isRTL ? 'أرباح معلّقة (ديون لم تُحصَّل)' : 'Pending profit (uncollected debts)',
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: isRTL ? 'لا تدخل في الربح حتى التحصيل' : 'Not counted until collected',
           },
           {
@@ -1025,32 +1029,32 @@ function ReportsContent() {
             icon: Receipt,
             value: formatReportAmount(totalExpenses),
             label: isEn ? 'Operating Expenses' : 'المصروفات التشغيلية',
-            color: 'text-rose-600',
-            bg: 'bg-rose-500/10',
+            color: 'text-destructive',
+            bg: 'bg-destructive/10',
             subtext: isEn ? 'Total expenses for the selected period' : 'إجمالي مصاريف الفترة المحددة',
           },
           {
             icon: Coins,
             value: formatReportAmount(netProfit),
             label: isEn ? 'Actual Net Profit' : 'صافي الربح الفعلي (Net Profit)',
-            color: netProfit >= 0 ? 'text-emerald-600' : 'text-destructive',
-            bg: netProfit >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10',
+            color: netProfit >= 0 ? 'text-success' : 'text-destructive',
+            bg: netProfit >= 0 ? 'bg-success/10' : 'bg-destructive/10',
             subtext: isRTL ? `هامش الصافي: ${netProfitMargin}% (بعد المصاريف والديون المعدومة${fxDifference !== 0 ? ' وفرق الصرف' : ''})` : `Net margin: ${netProfitMargin}% (after expenses and bad debts${fxDifference !== 0 ? ' and FX difference' : ''})`,
           },
           ...(fxDifference !== 0 ? [{
             icon: Coins,
             value: formatReportAmount(fxDifference),
             label: isEn ? 'FX difference on debt collection' : 'فرق الصرف على تحصيل الديون',
-            color: fxDifference >= 0 ? 'text-emerald-600' : 'text-destructive',
-            bg: fxDifference >= 0 ? 'bg-emerald-500/10' : 'bg-destructive/10',
+            color: fxDifference >= 0 ? 'text-success' : 'text-destructive',
+            bg: fxDifference >= 0 ? 'bg-success/10' : 'bg-destructive/10',
             subtext: isEn ? 'Included in net profit; not sales profit and not shared with partners' : 'مُضمَّن في صافي الربح؛ ليس ربح مبيعات ولا يُوزَّع على الشركاء',
           }] : []),
           {
             icon: Banknote,
             value: formatReportAmount(reportData.summary.totalSales),
             label: t('reports.profitGeneratingSales'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: t('reports.totalSalesRevenue') || 'إجمالي إيراد المبيعات',
           },
         ];
@@ -1065,16 +1069,16 @@ function ReportsContent() {
             icon: Banknote,
             value: formatReportAmount(costValue),
             label: t('reports.inventoryValueAtCost'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: t('reports.actualPurchasePrice') || 'سعر الشراء الفعلي',
           },
           {
             icon: TrendingUp,
             value: formatReportAmount(saleValue),
             label: t('reports.expectedSalesValue'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: t('reports.expectedSalesRevenue') || 'عائد البيع المتوقع',
           },
           {
@@ -1089,8 +1093,8 @@ function ReportsContent() {
             icon: ShoppingCart,
             value: `${formatNumber(totalQty)} ${t('reports.piecesUnit')}`,
             label: t('reports.totalAvailablePieces'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: t('reports.totalUnitsInStock') || 'إجمالي الوحدات بالمخزن',
           },
         ];
@@ -1116,24 +1120,24 @@ function ReportsContent() {
             icon: Clock,
             value: `${lowStock} ${t('reports.itemsUnit')}`,
             label: t('reports.lowStockItems'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: t('reports.qtyUnderMin') || 'الكمية ≤ الحد الأدنى',
           },
           {
             icon: X,
             value: `${outStock} ${t('reports.itemsUnit')}`,
             label: t('reports.outOfStockItems'),
-            color: 'text-rose-600',
-            bg: 'bg-rose-500/10',
+            color: 'text-destructive',
+            bg: 'bg-destructive/10',
             subtext: t('reports.stockBalanceZero') || 'الرصيد بالمخزن = 0',
           },
           {
             icon: ShoppingBag,
             value: `${formatNumber(totalQty)} ${t('reports.piecesUnit')}`,
             label: t('reports.totalAuditQuantities'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: `${t('reports.atCostValue') || 'بالتكلفة'}: ${formatReportAmount(costValue)}`,
           },
         ];
@@ -1158,24 +1162,24 @@ function ReportsContent() {
             icon: Banknote,
             value: formatReportAmount(totalRev),
             label: t('reports.productsSalesRevenue'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: t('reports.totalItemsRevenue') || 'إجمالي إيراد الأصناف',
           },
           {
             icon: Flame,
             value: topQtyProd,
             label: t('reports.mostDemandedItem'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: t('reports.topDemandByQty') || 'الأعلى طلباً بالكمية',
           },
           {
             icon: TrendingUp,
             value: topProfitProd,
             label: t('reports.highestProfitItem'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: t('reports.topByProfit') || 'الأعلى تحقيقاً للأرباح',
           },
         ];
@@ -1192,16 +1196,16 @@ function ReportsContent() {
             icon: Banknote,
             value: formatReportAmount(remDebt),
             label: t('reports.totalOutstandingDebts'),
-            color: 'text-rose-600',
-            bg: 'bg-rose-500/10',
+            color: 'text-destructive',
+            bg: 'bg-destructive/10',
             subtext: t('reports.duesToCollect') || 'مستحقات واجبة التحصيل',
           },
           {
             icon: UserCheck,
             value: formatReportAmount(paidDebt),
             label: t('reports.totalPaid'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: t('reports.collectedPayments') || 'دفعات تم تحصيلها',
           },
           {
@@ -1216,8 +1220,8 @@ function ReportsContent() {
             icon: Users,
             value: `${debtorCount} ${t('reports.customersUnit')}`,
             label: t('reports.debtorCustomersCount'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: t('reports.customersWithBalance') || 'عملاء لديهم رصيد مستحق',
           },
         ];
@@ -1237,24 +1241,24 @@ function ReportsContent() {
             icon: UserCheck,
             value: `${reportData.allCustomers.length} ${t('reports.customersUnit')}`,
             label: t('reports.activeCustomersInPeriod'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: t('reports.orderedInPeriod') || 'أجروا طلبات خلال الفترة',
           },
           {
             icon: Banknote,
             value: formatReportAmount(reportData.summary.totalSales),
             label: t('reports.totalCustomerPurchases'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: t('reports.totalSalesRevenue') || 'إيراد المبيعات بالفترة',
           },
           {
             icon: Sparkles,
             value: reportData.summary.topCustomer,
             label: t('reports.topPurchasingCustomer'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: t('reports.topSpenderInPeriod') || 'الأعلى إنفاقاً بالفترة',
           },
         ];
@@ -1278,24 +1282,24 @@ function ReportsContent() {
             icon: ShoppingCart,
             value: `${purchCount} ${t('reports.invoicesUnit')}`,
             label: t('reports.purchaseInvoicesCount'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: t('reports.receivedSupplyInvoices') || 'فواتير توريد مستلمة',
           },
           {
             icon: Truck,
             value: `${suppCount} ${t('reports.suppliersUnit')}`,
             label: t('reports.suppliersCount'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: t('reports.activeSuppliersInPeriod') || 'تم التعامل معهم بالفترة',
           },
           {
             icon: Clock,
             value: formatReportAmount(avgPurch),
             label: t('reports.avgPurchaseInvoice'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: t('reports.avgSupplyCost') || 'متوسط تكلفة التوريد',
           },
         ];
@@ -1320,16 +1324,16 @@ function ReportsContent() {
             icon: FileText,
             value: `${exps.length} ${t('reports.vouchersUnit')}`,
             label: t('reports.expenseVouchersCount'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: isEn ? 'Recorded expense vouchers' : 'سندات صرف مسجلة',
           },
           {
             icon: TrendingUp,
             value: topExp ? topExp.type : (isEn ? 'None' : 'لا يوجد'),
             label: t('reports.largestExpenseItem'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: topExp ? (isEn ? `Amount: ${formatReportAmount(topExp.amount)}` : `بقيمة: ${formatReportAmount(topExp.amount)}`) : (isEn ? 'No expenses' : 'لا توجد مصاريف'),
           },
           {
@@ -1350,8 +1354,8 @@ function ReportsContent() {
             icon: TrendingUp,
             value: formatReportAmount(partnerReportData.summary.totalProfitInPeriod),
             label: t('reports.partnersProfitInPeriod'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: isEn ? 'Net partners share' : 'صافي نصيب الشركاء',
           },
           {
@@ -1366,16 +1370,16 @@ function ReportsContent() {
             icon: Banknote,
             value: formatReportAmount(partnerReportData.summary.totalWithdrawnInPeriod),
             label: t('reports.withdrawnInPeriod'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: isEn ? 'Partner withdrawals' : 'دفعات مسحوبة للشركاء',
           },
           {
             icon: UsersRound,
             value: `${partnerReportData.summary.partnersCount} ${t('reports.partnersUnit')}`,
             label: t('reports.partnersCount'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: isEn ? 'Registered partners' : 'شركاء مسجلون بالنظام',
           },
         ];
@@ -1400,24 +1404,24 @@ function ReportsContent() {
             icon: TrendingUp,
             value: formatReportAmount(dProfit),
             label: t('reports.todayNetProfit'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: dSales > 0 ? (isEn ? `Profit margin: ${Math.round((dProfit / dSales) * 100)}%` : `هامش ربح: ${Math.round((dProfit / dSales) * 100)}%`) : (isEn ? 'Today net profit' : 'صافي ربح اليوم'),
           },
           {
             icon: ShoppingBag,
             value: `${dOrders} ${t('reports.invoicesUnit')}`,
             label: t('reports.todayInvoicesCount'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: isEn ? 'Today recorded invoices' : 'فواتير اليوم المسجلة',
           },
           {
             icon: Clock,
             value: formatReportAmount(dAvg),
             label: t('reports.avgDailyInvoice'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: isEn ? 'Average daily invoice' : 'متوسط الفاتورة اليومية',
           },
         ];
@@ -1454,24 +1458,24 @@ function ReportsContent() {
             icon: ShoppingBag,
             value: `${topCOrders} ${t('reports.invoicesUnit')}`,
             label: t('reports.topCashierInvoices'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: isEn ? 'Top sales performance' : 'أعلى إنجاز مبيعات',
           },
           {
             icon: Users,
             value: `${activeCCount} ${t('reports.cashiersUnit')}`,
             label: t('reports.totalActiveCashiers'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: isEn ? 'Active in period' : 'باشروا البيع بالفترة',
           },
           {
             icon: Banknote,
             value: formatReportAmount(avgC),
             label: t('reports.avgSalesPerCashier'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: isEn ? 'Avg. sales per employee' : 'معدل مبيعات الموظف',
           },
         ];
@@ -1496,24 +1500,24 @@ function ReportsContent() {
             icon: TrendingUp,
             value: formatReportAmount(mProf),
             label: t('reports.maintenanceNetProfit'),
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: mTot > 0 ? (isEn ? `Profit margin: ${Math.round((mProf / mTot) * 100)}%` : `هامش ربح: ${Math.round((mProf / mTot) * 100)}%`) : (isEn ? 'Maintenance profit' : 'أرباح الصيانة'),
           },
           {
             icon: ShoppingBag,
             value: `${mCount} ${t('reports.invoicesUnit')}`,
             label: t('reports.maintenanceInvoicesCount'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: isEn ? 'Devices received / repaired' : 'أجهزة مستلمة/مصلحة',
           },
           {
             icon: Clock,
             value: formatReportAmount(mAvg),
             label: t('reports.avgMaintenanceInvoice'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: isEn ? 'Average service cost' : 'متوسط تكلفة الخدمة',
           },
         ];
@@ -1533,24 +1537,24 @@ function ReportsContent() {
             icon: TrendingUp,
             value: formatReportAmount(grossProfit),
             label: isRTL ? 'الربح المحقق' : 'Realized profit',
-            color: 'text-emerald-600',
-            bg: 'bg-emerald-500/10',
+            color: 'text-success',
+            bg: 'bg-success/10',
             subtext: isEn ? `Net after expenses: ${formatReportAmount(netProfit)}` : `الصافي بعد المصاريف: ${formatReportAmount(netProfit)}`,
           },
           {
             icon: ShoppingBag,
             value: `${reportData.summary.totalOrders} ${t('reports.ordersUnit')}`,
             label: t('reports.ordersCount'),
-            color: 'text-blue-600',
-            bg: 'bg-blue-500/10',
+            color: 'text-info',
+            bg: 'bg-info/10',
             subtext: reportData.summary.totalOrders > 0 ? (isEn ? `${reportData.summary.totalOrders} completed orders` : `${reportData.summary.totalOrders} طلب مكتمل`) : (isEn ? 'No orders' : 'لا توجد طلبات'),
           },
           {
             icon: Clock,
             value: formatReportAmount(reportData.summary.avgOrderValue),
             label: t('reports.avgOrderValue'),
-            color: 'text-amber-600',
-            bg: 'bg-amber-500/10',
+            color: 'text-warning',
+            bg: 'bg-warning/10',
             subtext: reportData.allCustomers.length > 0 ? (isEn ? `${reportData.allCustomers.length} customers in period` : `${reportData.allCustomers.length} عميل بالفترة`) : (isEn ? 'Per recorded order' : 'لكل طلب مسجل'),
           },
         ];
@@ -2288,46 +2292,46 @@ function ReportsContent() {
     {
       category: t('reports.category.sales') || 'المبيعات والأرباح',
       items: [
-        { id: 'sales', name: t('reports.sales'), icon: ShoppingCart, bg: 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-600' },
-        { id: 'profits', name: t('reports.profitLoss'), icon: TrendingUp, bg: 'bg-green-100/70 dark:bg-green-950/60 text-green-600' },
-        { id: 'partner-detailed', name: t('reports.partnerDetailedReport'), icon: ClipboardList, bg: 'bg-blue-100/70 dark:bg-blue-950/60 text-blue-600' },
-        { id: 'expenses', name: t('reports.expenses'), icon: Receipt, bg: 'bg-rose-100/70 dark:bg-rose-950/60 text-rose-600' },
-        { id: 'returns-discounts', name: t('reports.returnsDiscounts'), icon: Undo2, bg: 'bg-orange-100/70 dark:bg-orange-950/60 text-orange-600' },
-        { id: 'tax-summary', name: t('reports.taxSummary'), icon: Receipt, bg: 'bg-slate-100/70 dark:bg-slate-900/60 text-slate-600' },
+        { id: 'sales', name: t('reports.sales'), icon: ShoppingCart, bg: 'bg-success/15 text-success' },
+        { id: 'profits', name: t('reports.profitLoss'), icon: TrendingUp, bg: 'bg-success/15 text-success' },
+        { id: 'partner-detailed', name: t('reports.partnerDetailedReport'), icon: ClipboardList, bg: 'bg-info/15 text-info' },
+        { id: 'expenses', name: t('reports.expenses'), icon: Receipt, bg: 'bg-destructive/15 text-destructive' },
+        { id: 'returns-discounts', name: t('reports.returnsDiscounts'), icon: Undo2, bg: 'bg-warning/15 text-warning' },
+        { id: 'tax-summary', name: t('reports.taxSummary'), icon: Receipt, bg: 'bg-muted text-muted-foreground' },
       ]
     },
     {
       category: t('reports.category.inventory') || 'المخزون والمشتريات',
       items: [
-        { id: 'top-products', name: t('reports.topProducts'), icon: Flame, bg: 'bg-amber-100/70 dark:bg-amber-950/60 text-amber-600' },
+        { id: 'top-products', name: t('reports.topProducts'), icon: Flame, bg: 'bg-warning/15 text-warning' },
         ...(!noInventory ? [
-          { id: 'inventory', name: t('reports.inventoryValueCost'), icon: Package, bg: 'bg-orange-100/70 dark:bg-orange-950/60 text-orange-600' },
-          { id: 'product-movement', name: t('reports.productMovement'), icon: RefreshCw, bg: 'bg-purple-100/70 dark:bg-purple-950/60 text-purple-600' },
-          { id: 'inventory-stock', name: t('reports.inventoryStockDiscrepancy'), icon: ClipboardCheck, bg: 'bg-cyan-100/70 dark:bg-cyan-950/60 text-cyan-600' },
-          { id: 'product-profit', name: t('reports.productProfitability'), icon: DollarSign, bg: 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-600' },
-          { id: 'slow-moving-stock', name: t('reports.slowMovingStock'), icon: AlertTriangle, bg: 'bg-amber-100/70 dark:bg-amber-950/60 text-amber-600' },
+          { id: 'inventory', name: t('reports.inventoryValueCost'), icon: Package, bg: 'bg-warning/15 text-warning' },
+          { id: 'product-movement', name: t('reports.productMovement'), icon: RefreshCw, bg: 'bg-primary/15 text-primary' },
+          { id: 'inventory-stock', name: t('reports.inventoryStockDiscrepancy'), icon: ClipboardCheck, bg: 'bg-info/15 text-info' },
+          { id: 'product-profit', name: t('reports.productProfitability'), icon: DollarSign, bg: 'bg-success/15 text-success' },
+          { id: 'slow-moving-stock', name: t('reports.slowMovingStock'), icon: AlertTriangle, bg: 'bg-warning/15 text-warning' },
         ] : []),
-        { id: 'purchases', name: t('reports.purchasesInvoices'), icon: FileText, bg: 'bg-sky-100/70 dark:bg-sky-950/60 text-sky-600' },
+        { id: 'purchases', name: t('reports.purchasesInvoices'), icon: FileText, bg: 'bg-info/15 text-info' },
       ]
     },
     {
       category: t('reports.category.debts') || 'الديون والشركاء',
       items: [
-        { id: 'debts', name: t('reports.debtsDeferredSale'), icon: Banknote, bg: 'bg-red-100/70 dark:bg-red-950/60 text-red-600' },
-        { id: 'customers', name: t('reports.customers'), icon: Users, bg: 'bg-indigo-100/70 dark:bg-indigo-950/60 text-indigo-600' },
-        { id: 'partners', name: t('reports.partners'), icon: UsersRound, bg: 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-600' },
-        { id: 'debt-writeoffs', name: t('reports.debtWriteoffs'), icon: Undo2, bg: 'bg-rose-100/70 dark:bg-rose-950/60 text-rose-600' },
-        { id: 'receivables-aging', name: t('reports.receivablesAging'), icon: Clock, bg: 'bg-red-100/70 dark:bg-red-950/60 text-red-600' },
+        { id: 'debts', name: t('reports.debtsDeferredSale'), icon: Banknote, bg: 'bg-destructive/15 text-destructive' },
+        { id: 'customers', name: t('reports.customers'), icon: Users, bg: 'bg-primary/15 text-primary' },
+        { id: 'partners', name: t('reports.partners'), icon: UsersRound, bg: 'bg-success/15 text-success' },
+        { id: 'debt-writeoffs', name: t('reports.debtWriteoffs'), icon: Undo2, bg: 'bg-destructive/15 text-destructive' },
+        { id: 'receivables-aging', name: t('reports.receivablesAging'), icon: Clock, bg: 'bg-destructive/15 text-destructive' },
       ]
     },
     {
       category: t('reports.category.admin') || 'الصندوق والعمليات',
       items: [
         { id: 'daily-closing', name: t('reports.dailyClosing'), icon: Lock, bg: 'bg-pink-100/70 dark:bg-pink-950/60 text-pink-600' },
-        { id: 'period-closing', name: t('reports.periodClosing'), icon: Lock, bg: 'bg-slate-100/70 dark:bg-slate-900/60 text-slate-600' },
-        { id: 'cashier-performance', name: t('reports.cashierPerformance'), icon: UserCheck, bg: 'bg-teal-100/70 dark:bg-teal-950/60 text-teal-600' },
+        { id: 'period-closing', name: t('reports.periodClosing'), icon: Lock, bg: 'bg-muted text-muted-foreground' },
+        { id: 'cashier-performance', name: t('reports.cashierPerformance'), icon: UserCheck, bg: 'bg-info/15 text-info' },
         ...(visibleSections.maintenance ? [{ id: 'maintenance', name: t('reports.maintenanceServices'), icon: ClipboardList, bg: 'bg-violet-100/70 dark:bg-violet-950/60 text-violet-600' }] : []),
-        ...(storeType === 'bookstore' ? [{ id: 'library', name: t('reports.libraryReport'), icon: BookOpen, bg: 'bg-blue-100/70 dark:bg-blue-950/60 text-blue-600' }] : []),
+        ...(storeType === 'bookstore' ? [{ id: 'library', name: t('reports.libraryReport'), icon: BookOpen, bg: 'bg-info/15 text-info' }] : []),
       ]
     }
   ], [t, noInventory, visibleSections.maintenance, storeType, isDistributorStore]);
@@ -2336,31 +2340,17 @@ function ReportsContent() {
 
   return (
 
-      <div className="p-3 md:p-6 space-y-3.5 md:space-y-4 w-full max-w-4xl min-w-0 mx-auto overflow-x-hidden">
-        {/* Sticky Header: العنوان وبجانبه مباشرة زر الواجهة الذكية / الاحترافية */}
-        <div className="sticky top-0 z-30 bg-background/95 -mx-3 px-3 md:-mx-6 md:px-6 py-2.5 border-b border-border/50 shadow-sm backdrop-blur-md">
-          <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
-            {/* حاوية العنوان المدمج مع زر التبديل بجانبه مباشرة */}
-            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-              <h1 className="text-lg sm:text-xl font-black text-foreground tracking-tight whitespace-nowrap">
-                {t('reports.financialReportsTitle') || 'التقارير المالية'}
-              </h1>
-
-              {/* الواجهة الذكية فقط مع إزالة الواجهة الاحترافية */}
-              <div
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-bold text-primary shadow-2xs shrink-0"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-                <span>{t('reports.displayModeSmart') || 'الواجهة الذكية'}</span>
-              </div>
+      <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6 w-full max-w-4xl min-w-0 mx-auto overflow-x-hidden">
+        <PageHeader
+          title={t('reports.financialReportsTitle') || 'التقارير المالية'}
+          icon={<BarChart3 className="w-5 h-5" />}
+          actions={
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary shrink-0">
+              <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+              <span>{t('reports.displayModeSmart') || 'الواجهة الذكية'}</span>
             </div>
-
-            {/* أدوات إضافية سريعة مثل التحديث والتاريخ إن وجدت */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* ... أزرار التحديث أو الإجراءات السريعة ... */}
-            </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Currency selection banner for reports (Single consolidated banner) */}
         <ReportCurrencyBanner />
@@ -2472,16 +2462,26 @@ function ReportsContent() {
           </div>
 
           {/* Search & Export Actions */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-              <input
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
                 type="text"
                 value={filters.search}
                 onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
                 placeholder={t('reports.searchPlaceholder') || (isRTL ? 'بحث بالمنتج أو الرقم...' : 'Search product or number...')}
-                className="w-full h-10 ps-9 pe-3 text-xs bg-background border border-border/80 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted-foreground/70 transition-colors"
+                className="ps-9 pe-9 text-xs"
               />
+              {filters.search && (
+                <button
+                  type="button"
+                  aria-label={t('common.clear') || (isRTL ? 'مسح البحث' : 'Clear search')}
+                  onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                  className="absolute end-2 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             <Button
@@ -2489,10 +2489,11 @@ function ReportsContent() {
               size="icon"
               onClick={() => setShowFilterDrawer(v => !v)}
               className={cn(
-                "h-10 w-10 rounded-xl border-border/80 shrink-0 shadow-sm transition-colors",
+                "shrink-0",
                 showFilterDrawer && "border-primary bg-primary/10 text-primary"
               )}
               title={t('reports.extraFilter')}
+              aria-label={t('reports.extraFilter')}
             >
               <Filter className="w-4 h-4 text-muted-foreground" />
             </Button>
@@ -2501,7 +2502,7 @@ function ReportsContent() {
               variant="outline"
               onClick={() => loadCloudData(false)}
               disabled={isLoading || isRefreshingCloud}
-              className="h-10 px-3 rounded-xl border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary shrink-0 shadow-sm transition-[colors,transform] active:scale-95 flex items-center gap-1.5 text-[11px] font-bold"
+              className="px-3 rounded-xl border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary shrink-0 text-xs font-semibold gap-1.5"
               title={isRTL ? 'تحديث البيانات من السحابة' : 'Refresh Cloud Data'}
             >
               <RefreshCw className={cn("w-4 h-4", (isLoading || isRefreshingCloud) && "animate-spin")} />
@@ -2512,7 +2513,7 @@ function ReportsContent() {
               variant="outline"
               onClick={handleExportExcel}
               disabled={isLoading}
-              className="h-10 px-3 rounded-xl border-emerald-300 dark:border-emerald-800 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shrink-0 shadow-sm transition-[colors,transform] active:scale-95 flex items-center gap-1.5 text-[11px] font-bold"
+              className="px-3 rounded-xl border-success/40 bg-success/10 hover:bg-success/15 text-success shrink-0 text-xs font-semibold gap-1.5"
               title="Excel"
             >
               <FileSpreadsheet className="w-4 h-4" />
@@ -2523,7 +2524,7 @@ function ReportsContent() {
               variant="outline"
               onClick={handleExportPDF}
               disabled={isLoading}
-              className="h-10 px-3 rounded-xl border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 shrink-0 shadow-sm transition-[colors,transform] active:scale-95 flex items-center gap-1.5 text-[11px] font-bold"
+              className="px-3 rounded-xl border-destructive/40 bg-destructive/10 hover:bg-destructive/15 text-destructive shrink-0 text-xs font-semibold gap-1.5"
               title="PDF"
             >
               <FileText className="w-4 h-4" />
@@ -2533,12 +2534,12 @@ function ReportsContent() {
 
           {/* Sub-bar: Dates & Auto update badge */}
           <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/40">
-            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+            <span className="font-medium text-success">
               ● {t('reports.autoUpdated')}
             </span>
             <div className="flex items-center gap-1.5 font-mono">
               <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              <span>{dateRange.from} — {dateRange.to}</span>
+              <span dir="ltr" className="inline-block tabular-nums">{dateRange.from} — {dateRange.to}</span>
             </div>
           </div>
         </div>
@@ -2551,18 +2552,18 @@ function ReportsContent() {
                 <SlidersHorizontal className="w-4 h-4 text-primary" />
                 <span>{t('reports.extraFilterData')}</span>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowFilterDrawer(false)} className="h-7 px-2 text-xs">
+              <Button variant="ghost" size="sm" onClick={() => setShowFilterDrawer(false)} className="text-xs">
                 {t('common.close')}
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] text-muted-foreground block mb-1">{t('reports.cashierFilter')}</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground block">{t('reports.cashierFilter')}</label>
                 <Select value={filters.cashierId} onValueChange={v => setFilters(prev => ({ ...prev, cashierId: v }))}>
-                  <SelectTrigger className="h-9 text-xs rounded-xl">
+                  <SelectTrigger className="min-h-11 sm:min-h-10 w-full text-xs rounded-[14px]">
                     <SelectValue placeholder={t('common.all')} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                     <SelectItem value="all">{t('reports.allCashiers')}</SelectItem>
                     {uniqueCashiers.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -2570,13 +2571,13 @@ function ReportsContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-[11px] text-muted-foreground block mb-1">{t('reports.paymentMethod')}</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground block">{t('reports.paymentMethod')}</label>
                 <Select value={filters.paymentType} onValueChange={v => setFilters(prev => ({ ...prev, paymentType: v }))}>
-                  <SelectTrigger className="h-9 text-xs rounded-xl">
+                  <SelectTrigger className="min-h-11 sm:min-h-10 w-full text-xs rounded-[14px]">
                     <SelectValue placeholder={t('common.all')} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                     <SelectItem value="all">{t('reports.allMethods')}</SelectItem>
                     <SelectItem value="cash">{t('pos.cash')}</SelectItem>
                     <SelectItem value="card">{t('pos.card')}</SelectItem>
@@ -2585,13 +2586,13 @@ function ReportsContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-[11px] text-muted-foreground block mb-1">{t('reports.statusFilter')}</label>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground block">{t('reports.statusFilter')}</label>
                 <Select value={filters.status} onValueChange={v => setFilters(prev => ({ ...prev, status: v }))}>
-                  <SelectTrigger className="h-9 text-xs rounded-xl">
+                  <SelectTrigger className="min-h-11 sm:min-h-10 w-full text-xs rounded-[14px]">
                     <SelectValue placeholder={t('common.all')} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                     <SelectItem value="all">{t('reports.allStatuses')}</SelectItem>
                     <SelectItem value="completed">{t('invoices.completed')}</SelectItem>
                     <SelectItem value="pending">{t('invoices.pending')}</SelectItem>
@@ -2606,7 +2607,7 @@ function ReportsContent() {
 
         {/* Dynamic Executive Metrics Cards Grid - adapts to activeReport */}
         {SUMMARY_CARD_REPORTS.has(activeReport) && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {summaryCards.map((card, idx) => {
             const Icon = card.icon;
             // النقر على البطاقة يفتح القسم المصدر بالفلاتر نفسها (الفواتير بنفس الفترة، المصاريف، العملاء، المنتجات)
@@ -2635,16 +2636,16 @@ function ReportsContent() {
                   </div>
                 </div>
                 <div className="my-1">
-                  <p className={cn("text-xl sm:text-2xl font-black tracking-tight truncate tabular-nums", idx === 0 ? "text-primary" : "text-foreground")} title={String(card.value)}>
-                    {card.value}
+                  <p className={cn("text-xl sm:text-2xl font-bold tracking-tight truncate", idx === 0 ? "text-primary" : "text-foreground")} title={String(card.value)}>
+                    <span dir="ltr" className="inline-block tabular-nums">{card.value}</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-1 text-[11px] sm:text-xs font-medium text-muted-foreground truncate">
                   {idx === 0 && activeReport === 'sales' && (
                     salesTrend.isUp ? (
-                      <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <ArrowUpRight className="w-3.5 h-3.5 text-success shrink-0" />
                     ) : (
-                      <ArrowDownRight className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                      <ArrowDownRight className="w-3.5 h-3.5 text-destructive shrink-0" />
                     )
                   )}
                   {card.subtext && <span className="truncate" title={card.subtext}>{card.subtext}</span>}
@@ -2715,9 +2716,9 @@ function ReportsContent() {
                   setActiveReport('sales');
                   setViewTab('summary');
                 }}
-                className="h-8 px-3 rounded-xl border-primary/30 bg-background text-primary font-bold text-xs gap-1.5 shadow-sm"
+                className="px-3 rounded-xl border-primary/30 bg-background text-primary font-semibold text-xs gap-1.5 shadow-sm"
               >
-                <ArrowRight className="w-3.5 h-3.5 rtl:rotate-0 ltr:rotate-180 text-primary" />
+                <ArrowLeft className="w-4 h-4 rtl:rotate-180 text-primary" />
                 <span>{t('reports.backToSummary')}</span>
               </Button>
               <span className="text-xs font-black text-foreground">
@@ -2781,7 +2782,7 @@ function ReportsContent() {
                           <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/20 border border-border/30">
                             <span className="text-xs font-bold text-foreground">{cust.name}</span>
                             <div className="text-end">
-                              <span className="text-xs font-black text-primary">{formatReportAmount(cust.total)}</span>
+                              <span dir="ltr" className="inline-block tabular-nums text-xs font-bold text-primary">{formatReportAmount(cust.total)}</span>
                               <span className="text-[11px] text-muted-foreground ms-2">({cust.orders} {t('reports.orders')})</span>
                             </div>
                           </div>
@@ -2789,26 +2790,26 @@ function ReportsContent() {
                       </div>
                     ) : (
                       <div className="overflow-x-auto rounded-xl border border-border/60">
-                        <table className="w-full text-xs sm:text-sm">
-                          <thead className="bg-muted/70 text-muted-foreground">
-                            <tr>
-                              <th scope="col" className="p-2.5 text-center font-semibold w-12">#</th>
-                              <th scope="col" className="p-2.5 text-start font-semibold">{t('reports.customers')}</th>
-                              <th scope="col" className="p-2.5 text-end font-semibold">{t('reports.orders')}</th>
-                              <th scope="col" className="p-2.5 text-end font-semibold">{t('common.total')}</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border/60">
+                        <Table className="text-xs sm:text-sm">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-center w-12">#</TableHead>
+                              <TableHead className="text-start">{t('reports.customers')}</TableHead>
+                              <TableHead className="text-end">{t('reports.orders')}</TableHead>
+                              <TableHead className="text-end">{t('common.total')}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {reportData.topCustomers.map((cust, idx) => (
-                              <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                                <td className="p-2.5 text-center font-bold text-muted-foreground">{idx + 1}</td>
-                                <td className="p-2.5 text-start font-medium text-foreground">{cust.name}</td>
-                                <td className="p-2.5 text-end tabular-nums text-muted-foreground">{cust.orders}</td>
-                                <td className="p-2.5 text-end tabular-nums font-black text-primary">{formatReportAmount(cust.total)}</td>
-                              </tr>
+                              <TableRow key={idx}>
+                                <TableCell className="text-center font-bold text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{idx + 1}</span></TableCell>
+                                <TableCell className="text-start font-medium text-foreground">{cust.name}</TableCell>
+                                <TableCell className="text-end text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{cust.orders}</span></TableCell>
+                                <TableCell className="text-end font-bold text-primary"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(cust.total)}</span></TableCell>
+                              </TableRow>
                             ))}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       </div>
                     )}
                   </div>
@@ -2827,10 +2828,10 @@ function ReportsContent() {
                           <h3 className="text-sm font-bold text-foreground">{isEn ? "Daily Sales" : "المبيعات اليومية"}</h3>
                         </div>
                         <div className="bg-muted text-foreground border border-border/70 text-xs font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
-                          <span className="text-primary font-black">{formatReportAmount(activeChartDay.sales)}</span>
-                          <span className="text-muted-foreground/50">|</span>
-                          <span className="text-emerald-600 font-bold">{isEn ? "Profit:" : "ربح:"} {formatReportAmount(activeChartDay.profit)}</span>
-                          <span className="text-muted-foreground/50">|</span>
+                          <span dir="ltr" className="inline-block tabular-nums text-primary font-bold">{formatReportAmount(activeChartDay.sales)}</span>
+                          <span aria-hidden="true" className="text-muted-foreground/50">|</span>
+                          <span className="text-success font-bold">{isEn ? "Profit:" : "ربح:"} <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(activeChartDay.profit)}</span></span>
+                          <span aria-hidden="true" className="text-muted-foreground/50">|</span>
                           <span className="text-muted-foreground text-[11px]">{activeChartDay.orders} {isEn ? "orders" : "طلب"}</span>
                         </div>
                       </div>
@@ -2885,7 +2886,7 @@ function ReportsContent() {
                       {/* Chart Footer */}
                       <div className="flex items-center justify-between pt-2 text-xs">
                         {activeChartDay.sales > 0 && activeChartDay.date === topChartDay.date ? (
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <span className="text-success font-bold flex items-center gap-1">
                             <Sparkles className="w-3.5 h-3.5" />
                             {isEn ? `Top Weekly Sales (${formatReportAmount(activeChartDay.sales)})` : `أعلى مبيعات للأسبوع (${formatReportAmount(activeChartDay.sales)})`}
                           </span>
@@ -2906,44 +2907,44 @@ function ReportsContent() {
                             <h3 className="text-sm font-bold text-foreground">{t('reports.salesDailySummary')}</h3>
                           </div>
                           <div className="bg-muted text-foreground border border-border/70 text-xs font-bold px-2.5 py-1 rounded-xl flex items-center gap-1.5 shadow-sm">
-                            <span className="text-primary font-black">{formatReportAmount(activeChartDay.sales)}</span>
-                            <span className="text-muted-foreground/50">|</span>
-                            <span className="text-emerald-600 font-bold">{t('reports.profit')}: {formatReportAmount(activeChartDay.profit)}</span>
-                            <span className="text-muted-foreground/50">|</span>
+                            <span dir="ltr" className="inline-block tabular-nums text-primary font-bold">{formatReportAmount(activeChartDay.sales)}</span>
+                            <span aria-hidden="true" className="text-muted-foreground/50">|</span>
+                            <span className="text-success font-bold">{t('reports.profit')}: <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(activeChartDay.profit)}</span></span>
+                            <span aria-hidden="true" className="text-muted-foreground/50">|</span>
                             <span className="text-muted-foreground text-[11px]">{activeChartDay.orders} {t('reports.orders')}</span>
                           </div>
                         </div>
 
                         <div className="overflow-x-auto rounded-xl border border-border/60">
-                          <table className="w-full min-w-[520px] text-xs sm:text-sm">
-                            <thead className="bg-muted/70 text-muted-foreground sticky top-0">
-                              <tr>
-                                <th scope="col" className="p-3 text-start font-semibold">{t('reports.date')}</th>
-                                <th scope="col" className="p-3 text-end font-semibold">{t('reports.sales')}</th>
-                                <th scope="col" className="p-3 text-end font-semibold">{t('reports.profit')}</th>
-                                <th scope="col" className="p-3 text-end font-semibold">{t('reports.orders')}</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/60">
+                          <Table className="min-w-[520px] text-xs sm:text-sm">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-start">{t('reports.date')}</TableHead>
+                                <TableHead className="text-end">{t('reports.sales')}</TableHead>
+                                <TableHead className="text-end">{t('reports.profit')}</TableHead>
+                                <TableHead className="text-end">{t('reports.orders')}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
                               {chartDays.map(day => (
-                                <tr
+                                <TableRow
                                   key={day.date}
                                   onClick={() => setSelectedDayDate(day.date)}
                                   className={cn(
-                                    "hover:bg-muted/30 transition-colors cursor-pointer",
+                                    "cursor-pointer",
                                     day.date === activeChartDay.date && "bg-primary/5 font-semibold"
                                   )}
                                 >
-                                  <td className="p-3 text-start font-medium text-foreground">{day.date}</td>
-                                  <td className="p-3 text-end tabular-nums text-foreground font-medium">{formatReportAmount(day.sales)}</td>
-                                  <td className="p-3 text-end tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
-                                    {formatReportAmount(day.profit)}
-                                  </td>
-                                  <td className="p-3 text-end tabular-nums text-muted-foreground">{day.orders}</td>
-                                </tr>
+                                  <TableCell className="text-start font-medium text-foreground"><span dir="ltr" className="inline-block tabular-nums">{day.date}</span></TableCell>
+                                  <TableCell className="text-end text-foreground font-medium"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(day.sales)}</span></TableCell>
+                                  <TableCell className="text-end font-semibold text-success">
+                                    <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(day.profit)}</span>
+                                  </TableCell>
+                                  <TableCell className="text-end text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{day.orders}</span></TableCell>
+                                </TableRow>
                               ))}
-                            </tbody>
-                          </table>
+                            </TableBody>
+                          </Table>
                         </div>
                         <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
                           <span>{t('reports.displayedRowsCount')} {chartDays.length}</span>
@@ -2957,7 +2958,7 @@ function ReportsContent() {
                       <div className="bg-card rounded-2xl border border-border/70 p-4 space-y-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-warning shrink-0" />
                             <h3 className="text-sm font-bold text-foreground">{t('reports.topProducts')}</h3>
                           </div>
                           <span className="text-xs text-muted-foreground font-medium">
@@ -2977,8 +2978,8 @@ function ReportsContent() {
                                     className={cn(
                                       "w-7 h-7 rounded-xl text-xs font-black flex items-center justify-center shrink-0 shadow-sm",
                                       idx === 0 
-                                        ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/40" 
-                                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/50 dark:border-slate-700"
+                                        ? "bg-warning/15 text-warning border border-warning/30" 
+                                        : "bg-muted text-muted-foreground border border-border/60"
                                     )}
                                   >
                                     {idx + 1}
@@ -2989,9 +2990,9 @@ function ReportsContent() {
                                   </div>
                                 </div>
                                 <div className="text-end">
-                                  <p className="text-xs sm:text-sm font-black text-foreground">{formatReportAmount(product.revenue)}</p>
-                                  <p className="text-[11px] font-semibold text-emerald-600 mt-0.5">
-                                    {t('reports.profit')}: {formatReportAmount(product.profit)}
+                                  <p className="text-xs sm:text-sm font-bold text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.revenue)}</span></p>
+                                  <p className="text-xs font-semibold text-success mt-0.5">
+                                    {t('reports.profit')}: <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.profit)}</span>
                                   </p>
                                 </div>
                               </div>
@@ -2999,30 +3000,30 @@ function ReportsContent() {
                           </div>
                         ) : (
                           <div className="overflow-x-auto rounded-xl border border-border/60">
-                            <table className="w-full min-w-[500px] text-xs sm:text-sm">
-                              <thead className="bg-muted/70 text-muted-foreground sticky top-0">
-                                <tr>
-                                  <th scope="col" className="p-2.5 text-center font-semibold w-12">#</th>
-                                  <th scope="col" className="p-2.5 text-start font-semibold">{t('products.productName') || 'المنتج'}</th>
-                                  <th scope="col" className="p-2.5 text-end font-semibold">{t('reports.salesQuantity')}</th>
-                                  <th scope="col" className="p-2.5 text-end font-semibold">{t('reports.revenueLabel') || 'الإيراد'}</th>
-                                  <th scope="col" className="p-2.5 text-end font-semibold">{t('reports.profit')}</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-border/60">
+                            <Table className="min-w-[500px] text-xs sm:text-sm">
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-center w-12">#</TableHead>
+                                  <TableHead className="text-start">{t('products.productName') || 'المنتج'}</TableHead>
+                                  <TableHead className="text-end">{t('reports.salesQuantity')}</TableHead>
+                                  <TableHead className="text-end">{t('reports.revenueLabel') || 'الإيراد'}</TableHead>
+                                  <TableHead className="text-end">{t('reports.profit')}</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
                                 {reportData.topProducts.map((product, idx) => (
-                                  <tr key={idx} className="hover:bg-muted/30 transition-colors">
-                                    <td className="p-2.5 text-center font-bold text-muted-foreground">{idx + 1}</td>
-                                    <td className="p-2.5 text-start font-medium text-foreground">{product.name}</td>
-                                    <td className="p-2.5 text-end tabular-nums text-muted-foreground">{product.sales}</td>
-                                    <td className="p-2.5 text-end tabular-nums font-semibold text-foreground">{formatReportAmount(product.revenue)}</td>
-                                    <td className="p-2.5 text-end tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
-                                      {formatReportAmount(product.profit)}
-                                    </td>
-                                  </tr>
+                                  <TableRow key={idx}>
+                                    <TableCell className="text-center font-bold text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{idx + 1}</span></TableCell>
+                                    <TableCell className="text-start font-medium text-foreground">{product.name}</TableCell>
+                                    <TableCell className="text-end text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{product.sales}</span></TableCell>
+                                    <TableCell className="text-end font-semibold text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.revenue)}</span></TableCell>
+                                    <TableCell className="text-end font-bold text-success">
+                                      <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.profit)}</span>
+                                    </TableCell>
+                                  </TableRow>
                                 ))}
-                              </tbody>
-                            </table>
+                              </TableBody>
+                            </Table>
                           </div>
                         )}
 
@@ -3047,112 +3048,86 @@ function ReportsContent() {
           </div>
         )}
 
-        {/* Bottom Sheet Modal: جميع أقسام وتقارير النظام (Screenshot 2) */}
-        {isAllReportsModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div
-              className="fixed inset-0 bg-black/70 transition-opacity"
-              onClick={() => setIsAllReportsModalOpen(false)}
-            />
-            <div className="relative w-full max-w-lg bg-card rounded-t-[2.5rem] sm:rounded-3xl border border-border shadow-2xl z-10 max-h-[88vh] overflow-y-auto p-5 pb-8 space-y-5 animate-in slide-in-from-bottom duration-300">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-border/50">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsAllReportsModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-muted/60 hover:bg-muted text-muted-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-                <div className="text-center flex-1 pr-8">
-                  <h2 className="text-base sm:text-lg font-black text-foreground">{t('reports.allSectionsAndReports')}</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t('reports.chooseSectionDesc')}</p>
-                </div>
-              </div>
+        {/* All Reports Dialog */}
+        <Dialog open={isAllReportsModalOpen} onOpenChange={setIsAllReportsModalOpen}>
+          <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+            <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+              <DialogTitle>{t('reports.allSectionsAndReports')}</DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">{t('reports.chooseSectionDesc')}</p>
+            </DialogHeader>
+            <DialogBody className="space-y-4">
+              {ALL_REPORT_SECTIONS.map((section, sIdx) => (
+                <div key={sIdx} className="space-y-2">
+                  <h3 className="text-xs font-semibold text-muted-foreground px-1">
+                    {section.category}
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const isCurrentActive = activeReport === item.id;
 
-              {/* Categorized Sections */}
-              <div className="space-y-4">
-                {ALL_REPORT_SECTIONS.map((section, sIdx) => (
-                  <div key={sIdx} className="space-y-2">
-                    <h3 className="text-xs font-bold text-muted-foreground px-1">
-                      {section.category}
-                    </h3>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      {section.items.map((item) => {
-                        const Icon = item.icon;
-                        const isCurrentActive = activeReport === item.id;
-
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => handleSelectReportFromModal(item.id, item.name)}
-                            className={cn(
-                              "p-3 rounded-2xl border transition-[transform,colors] flex items-center justify-between cursor-pointer active:scale-95 group",
-                              isCurrentActive
-                                ? "bg-primary/10 border-primary ring-1 ring-primary/20 shadow-sm"
-                                : "bg-muted/30 hover:bg-muted/60 border-border/50"
-                            )}
-                          >
-                            <span className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                              {item.name}
-                            </span>
-                            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", item.bg)}>
-                              <Icon className="w-4 h-4" />
-                            </div>
+                      return (
+                        <button
+                          type="button"
+                          key={item.id}
+                          onClick={() => handleSelectReportFromModal(item.id, item.name)}
+                          className={cn(
+                            "p-3 rounded-2xl border transition-[transform,color,background-color,border-color] duration-150 flex items-center justify-between cursor-pointer active:scale-[0.97] group text-start",
+                            isCurrentActive
+                              ? "bg-primary/10 border-primary ring-1 ring-primary/20 shadow-sm"
+                              : "bg-muted/30 hover:bg-muted/60 border-border/50"
+                          )}
+                        >
+                          <span className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {item.name}
+                          </span>
+                          <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", item.bg)}>
+                            <Icon className="w-4 h-4" />
                           </div>
-                        );
-                      })}
-                    </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+                </div>
+              ))}
+            </DialogBody>
+          </DialogContent>
+        </Dialog>
 
-        {/* Custom Date Modal */}
-        {showCustomDateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/70" onClick={() => setShowCustomDateModal(false)} />
-            <div className="relative bg-card rounded-3xl border border-border p-5 max-w-sm w-full space-y-4 shadow-2xl z-10 animate-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between pb-2 border-b border-border/50">
-                <h3 className="font-bold text-sm text-foreground">{t('reports.selectTimePeriod')}</h3>
-                <Button variant="ghost" size="icon" className="w-7 h-7 rounded-full" onClick={() => setShowCustomDateModal(false)}>
-                  <X className="w-4 h-4" />
-                </Button>
+        {/* Custom Date Dialog */}
+        <Dialog open={showCustomDateModal} onOpenChange={setShowCustomDateModal}>
+          <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+            <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+              <DialogTitle>{t('reports.selectTimePeriod')}</DialogTitle>
+            </DialogHeader>
+            <DialogBody className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium block">{t('reports.fromDate')}</label>
+                <Input
+                  type="date"
+                  value={filters.dateRange.from}
+                  onChange={e => setFilters(prev => ({ ...prev, dateRange: { ...prev.dateRange, from: e.target.value } }))}
+                />
               </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs text-muted-foreground font-medium block mb-1">{t('reports.fromDate')}</label>
-                  <input
-                    type="date"
-                    value={filters.dateRange.from}
-                    onChange={e => setFilters(prev => ({ ...prev, dateRange: { ...prev.dateRange, from: e.target.value } }))}
-                    className="w-full h-10 px-3 text-xs rounded-xl bg-background border border-border text-foreground"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground font-medium block mb-1">{t('reports.toDate')}</label>
-                  <input
-                    type="date"
-                    value={filters.dateRange.to}
-                    onChange={e => setFilters(prev => ({ ...prev, dateRange: { ...prev.dateRange, to: e.target.value } }))}
-                    className="w-full h-10 px-3 text-xs rounded-xl bg-background border border-border text-foreground"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground font-medium block">{t('reports.toDate')}</label>
+                <Input
+                  type="date"
+                  value={filters.dateRange.to}
+                  onChange={e => setFilters(prev => ({ ...prev, dateRange: { ...prev.dateRange, to: e.target.value } }))}
+                />
               </div>
-              <Button
-                className="w-full rounded-xl text-xs font-bold h-10"
-                onClick={() => {
-                  setShowCustomDateModal(false);
-                }}
-              >
+            </DialogBody>
+            <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+              <Button variant="outline" onClick={() => setShowCustomDateModal(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button onClick={() => setShowCustomDateModal(false)}>
                 {t('reports.applyPeriod')}
               </Button>
-            </div>
-          </div>
-        )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Sales Detailed direct fallback */}
         {activeReport === 'sales-detailed' && (
@@ -3200,14 +3175,14 @@ function ReportsContent() {
                         <span className="font-medium text-sm">{product.name}</span>
                       </div>
                       <div className="text-end">
-                        <p className="font-bold text-sm text-foreground">{formatReportAmount(product.revenue)}</p>
+                        <p className="font-bold text-sm text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.revenue)}</span></p>
                         <p className="text-[11px] text-muted-foreground">{product.sales} {t('reports.pieces')}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-4">{t('reports.noProductsSold')}</p>
+                <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20"><Package className="w-12 h-12 text-muted-foreground/50 mb-3" /><p className="text-sm sm:text-base font-semibold text-foreground">{t('reports.noProductsSold')}</p></div>
               )}
             </div>
           </div>
@@ -3219,20 +3194,20 @@ function ReportsContent() {
             <h3 className="text-lg font-semibold mb-4">{isEn ? "Inventory Report" : "تقرير المخزون"}</h3>
             {cloudProducts.length > 0 ? (
               <div className="w-full max-w-full overflow-x-auto rounded-2xl border border-border bg-card">
-                <table className="min-w-[620px] w-full text-xs">
-                  <thead className="bg-muted">
-                    <tr>
-                      <th className="p-2 text-start">#</th>
-                      <th className="p-2 text-start">{isEn ? "Name" : "الاسم"}</th>
-                      <th className="p-2 text-center">{isEn ? "Barcode" : "الباركود"}</th>
-                      <th className="p-2 text-center">{isEn ? "Category" : "التصنيف"}</th>
-                      <th className="p-2 text-center">{isEn ? "Qty" : "الكمية"}</th>
-                      <th className="p-2 text-center">{isEn ? "Purchase Price" : "سعر الشراء"}</th>
-                      <th className="p-2 text-center">{isEn ? "Sale Price" : "سعر البيع"}</th>
-                      <th className="p-2 text-center">{isEn ? "Total" : "الإجمالي"}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="min-w-[620px] text-xs">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-center">#</TableHead>
+                      <TableHead className="text-start">{isEn ? "Name" : "الاسم"}</TableHead>
+                      <TableHead className="text-start">{isEn ? "Barcode" : "الباركود"}</TableHead>
+                      <TableHead className="text-start">{isEn ? "Category" : "التصنيف"}</TableHead>
+                      <TableHead className="text-end">{isEn ? "Qty" : "الكمية"}</TableHead>
+                      <TableHead className="text-end">{isEn ? "Purchase Price" : "سعر الشراء"}</TableHead>
+                      <TableHead className="text-end">{isEn ? "Sale Price" : "سعر البيع"}</TableHead>
+                      <TableHead className="text-end">{isEn ? "Total" : "الإجمالي"}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {cloudProducts
                       .filter(p => {
                         if (filters.category !== 'all' && (p.category || '') !== filters.category) return false;
@@ -3240,22 +3215,22 @@ function ReportsContent() {
                         return true;
                       })
                       .map((p, i) => (
-                        <tr key={p.id} className="border-t hover:bg-muted/30">
-                          <td className="p-2 text-muted-foreground">{i + 1}</td>
-                          <td className="p-2 font-medium">{p.name}</td>
-                          <td className="p-2 text-center font-mono text-xs">{p.barcode || '-'}</td>
-                          <td className="p-2 text-center text-xs">{p.category || '-'}</td>
-                          <td className="p-2 text-center">{p.quantity}</td>
-                          <td className="p-2 text-center">{formatReportAmount(p.costPrice || 0)}</td>
-                          <td className="p-2 text-center">{formatReportAmount(p.salePrice || 0)}</td>
-                          <td className="p-2 text-center font-medium">{formatReportAmount((p.salePrice || 0) * (p.quantity || 0))}</td>
-                        </tr>
+                        <TableRow key={p.id}>
+                          <TableCell className="text-center text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{i + 1}</span></TableCell>
+                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="font-mono text-xs"><span dir="ltr" className="inline-block tabular-nums">{p.barcode || '-'}</span></TableCell>
+                          <TableCell className="text-xs">{p.category || '-'}</TableCell>
+                          <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{p.quantity}</span></TableCell>
+                          <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(p.costPrice || 0)}</span></TableCell>
+                          <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(p.salePrice || 0)}</span></TableCell>
+                          <TableCell className="text-end font-medium"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount((p.salePrice || 0) * (p.quantity || 0))}</span></TableCell>
+                        </TableRow>
                       ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             ) : (
-              <p className="text-muted-foreground text-center py-4">{isEn ? "No products found" : "لا توجد منتجات"}</p>
+              <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20"><Package className="w-12 h-12 text-muted-foreground/50 mb-3" /><p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? "No products found" : "لا توجد منتجات"}</p></div>
             )}
           </div>
         )}
@@ -3392,14 +3367,14 @@ function ReportsContent() {
                         <span className="font-medium text-sm">{customer.name}</span>
                       </div>
                       <div className="text-end">
-                        <p className="font-bold text-sm text-foreground">{formatReportAmount(customer.total)}</p>
+                        <p className="font-bold text-sm text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(customer.total)}</span></p>
                         <p className="text-[11px] text-muted-foreground">{customer.orders} {t('reports.order')}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-4">{t('reports.noCustomers')}</p>
+                <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20"><Users className="w-12 h-12 text-muted-foreground/50 mb-3" /><p className="text-sm sm:text-base font-semibold text-foreground">{t('reports.noCustomers')}</p></div>
               )}
             </div>
           </div>
@@ -3424,9 +3399,9 @@ function ReportsContent() {
             </div>
 
             {!partnerReportData.hasData && partnerReportData.allPartners.length === 0 ? (
-              <div className="bg-card rounded-2xl border border-border p-8 text-center">
-                <UsersRound className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">{isEn ? "No registered partners" : "لا يوجد شركاء مسجلين"}</p>
+              <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                <UsersRound className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                <p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? "No registered partners" : "لا يوجد شركاء مسجلين"}</p>
               </div>
             ) : (
               <>
@@ -3443,7 +3418,7 @@ function ReportsContent() {
                               <div className="h-full bg-gradient-to-l from-primary to-primary/60 rounded-lg transition-[width] duration-500" style={{ width: `${(cat.amount / maxCatProfit) * 100}%` }} />
                             </div>
                             <div className="text-end w-28">
-                              <p className="text-sm font-semibold">{formatReportAmount(cat.amount)}</p>
+                              <p className="text-sm font-semibold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(cat.amount)}</span></p>
                               <p className="text-xs text-muted-foreground">{cat.count} {isEn ? "txns" : "عملية"}</p>
                             </div>
                           </div>
@@ -3466,7 +3441,7 @@ function ReportsContent() {
                         </div>
                       </div>
                       <div className="text-end">
-                        <p className="text-lg font-bold text-green-600">{formatReportAmount(partner.totalProfitInPeriod)}</p>
+                        <p className="text-lg font-bold text-success"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(partner.totalProfitInPeriod)}</span></p>
                         <p className="text-xs text-muted-foreground">{isEn ? "Period Profit" : "أرباح الفترة"}</p>
                       </div>
                     </div>
@@ -3474,19 +3449,19 @@ function ReportsContent() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                       <div className="bg-muted rounded-lg p-3">
                         <p className="text-xs text-muted-foreground">{isEn ? "Available Balance" : "الرصيد المتاح"}</p>
-                        <p className="text-lg font-bold text-foreground">{formatReportAmount(partner.currentBalance)}</p>
+                        <p className="text-lg font-bold text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(partner.currentBalance)}</span></p>
                       </div>
                       <div className="bg-muted rounded-lg p-3">
                         <p className="text-xs text-muted-foreground">{isEn ? "Capital" : "رأس المال"}</p>
-                        <p className="text-lg font-bold text-foreground">{formatReportAmount(partner.currentCapital)}</p>
+                        <p className="text-lg font-bold text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(partner.currentCapital)}</span></p>
                       </div>
                       <div className="bg-muted rounded-lg p-3">
                         <p className="text-xs text-muted-foreground">{isEn ? "Pending Profits" : "أرباح معلقة"}</p>
-                        <p className="text-lg font-bold text-amber-600">{formatReportAmount(partner.pendingProfit)}</p>
+                        <p className="text-lg font-bold text-warning"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(partner.pendingProfit)}</span></p>
                       </div>
                       <div className="bg-muted rounded-lg p-3">
                         <p className="text-xs text-muted-foreground">{isEn ? "Withdrawn in Period" : "المسحوب في الفترة"}</p>
-                        <p className="text-lg font-bold text-foreground">{formatReportAmount(partner.totalWithdrawnInPeriod)}</p>
+                        <p className="text-lg font-bold text-foreground"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(partner.totalWithdrawnInPeriod)}</span></p>
                       </div>
                     </div>
 
@@ -3513,9 +3488,9 @@ function ReportsContent() {
                               <div key={idx} className="flex items-center gap-3">
                                 <span className="text-xs text-muted-foreground w-20">{day.date}</span>
                                 <div className="flex-1 h-6 bg-muted rounded overflow-hidden">
-                                  <div className="h-full bg-green-500/70 rounded transition-[width] duration-500" style={{ width: `${(day.amount / maxDayProfit) * 100}%` }} />
+                                  <div className="h-full bg-success/70 rounded transition-[width] duration-500" style={{ width: `${(day.amount / maxDayProfit) * 100}%` }} />
                                 </div>
-                                <span className="text-xs font-semibold w-20 text-end">{formatReportAmount(day.amount)}</span>
+                                <span dir="ltr" className="inline-block tabular-nums text-xs font-semibold w-20 text-end">{formatReportAmount(day.amount)}</span>
                               </div>
                             );
                           })}
@@ -3570,14 +3545,14 @@ function ReportsContent() {
             const Icon = matched.icon;
             return (
               <div className="bg-card rounded-2xl border border-dashed border-border/80 p-6 sm:p-8 text-center space-y-4 shadow-sm animate-in fade-in duration-200">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 mx-auto flex items-center justify-center">
+                <div className="w-12 h-12 rounded-2xl bg-warning/10 text-warning mx-auto flex items-center justify-center">
                   <Icon className="w-6 h-6" />
                 </div>
                 <div className="max-w-md mx-auto space-y-2">
                   <h3 className="text-base sm:text-lg font-bold text-foreground">
                     {matched.label}
                   </h3>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-warning/15 text-warning text-xs font-semibold">
                     <Clock className="w-3.5 h-3.5" />
                     <span>{t('reports.reportComingSoon')} — {t('reports.reportNeedsData')}</span>
                   </div>
@@ -3595,9 +3570,9 @@ function ReportsContent() {
         {activeReport === 'expenses' && (
           <div className="space-y-6">
             {!expenseReportData.hasData ? (
-              <div className="bg-card rounded-2xl border border-border p-8 text-center">
-                <Receipt className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">{isEn ? "No expenses in the selected period" : "لا توجد مصاريف في الفترة المحددة"}</p>
+              <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                <Receipt className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                <p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? "No expenses in the selected period" : "لا توجد مصاريف في الفترة المحددة"}</p>
               </div>
             ) : (
               <>
@@ -3613,7 +3588,7 @@ function ReportsContent() {
                             <div className="h-full bg-gradient-to-l from-destructive to-destructive/60 rounded-lg transition-[width] duration-500" style={{ width: `${(type.amount / maxAmount) * 100}%` }} />
                           </div>
                           <div className="text-end w-28">
-                            <p className="text-sm font-semibold">{formatReportAmount(type.amount)}</p>
+                            <p className="text-sm font-semibold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(type.amount)}</span></p>
                             <p className="text-xs text-muted-foreground">{type.count} {isEn ? "expenses" : "مصروف"}</p>
                           </div>
                         </div>
@@ -3636,8 +3611,8 @@ function ReportsContent() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <p className="text-lg font-bold text-destructive">{formatReportAmount(partner.amount)}</p>
-                            <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700" onClick={() => handleShareExpenseReport(partner.name)}>
+                            <p className="text-lg font-bold text-destructive"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(partner.amount)}</span></p>
+                            <Button variant="ghost" size="icon" className="text-success hover:text-success/80" aria-label={isEn ? "Share expense report" : "مشاركة تقرير المصاريف"} onClick={() => handleShareExpenseReport(partner.name)}>
                               <MessageCircle className="w-5 h-5" />
                             </Button>
                           </div>
@@ -3662,7 +3637,7 @@ function ReportsContent() {
                             <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
                               <div className="h-full bg-destructive/60 rounded-lg transition-[width] duration-500" style={{ width: `${(day.amount / maxDaily) * 100}%` }} />
                             </div>
-                            <span className="text-sm font-semibold w-24 text-end">{formatReportAmount(day.amount)}</span>
+                            <span dir="ltr" className="inline-block tabular-nums text-sm font-semibold w-24 text-end">{formatReportAmount(day.amount)}</span>
                           </div>
                         );
                       })}
@@ -3685,7 +3660,7 @@ function ReportsContent() {
                           </div>
                         </div>
                         <div className="text-end">
-                          <p className="font-bold text-destructive">-{formatReportAmount(expense.amount)}</p>
+                          <p className="font-bold text-destructive"><span dir="ltr" className="inline-block tabular-nums">-{formatReportAmount(expense.amount)}</span></p>
                           <p className="text-xs text-muted-foreground">{expense.distributions.length} {isEn ? "partners" : "شريك"}</p>
                         </div>
                       </div>
@@ -3699,12 +3674,10 @@ function ReportsContent() {
 
         {/* No Data for sales-based reports */}
         {!isLoading && !reportData.hasData && ['sales', 'profits', 'products', 'customers'].includes(activeReport) && (
-          <div className="bg-card rounded-2xl border border-dashed border-border p-8 text-center">
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
-              <ShoppingCart className="w-8 h-8 text-muted-foreground/50" />
-            </div>
-            <p className="text-muted-foreground font-medium">{t('reports.noData')}</p>
-            <p className="text-sm text-muted-foreground mt-1">{t('reports.tryChangeDateRange')}</p>
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <ShoppingCart className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm sm:text-base font-semibold text-foreground">{t('reports.noData')}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('reports.tryChangeDateRange')}</p>
           </div>
         )}
       </div>

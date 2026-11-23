@@ -1292,6 +1292,7 @@ const ar = {
   // POS
   'pos.title': 'نقطة البيع',
   'pos.cart': 'السلة',
+  'pos.changeView': 'تبديل طريقة العرض',
   'pos.cartCurrency': 'عملة السلة',
   'pos.itemPriceCurrency': 'عملة سعر الصنف',
   'pos.invoiceCurrency': 'عملة الفاتورة',

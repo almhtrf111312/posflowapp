@@ -274,15 +274,11 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
           "bg-sidebar pt-[var(--app-safe-top,0px)]",
           isMobile 
             ? cn(
-                "top-0 h-[100dvh] w-72 max-w-[85vw]",
-                isRTL 
-                  ? "right-0 left-auto border-l border-sidebar-border" 
-                  : "left-0 right-auto border-r border-sidebar-border",
+                "top-0 start-0 h-[100dvh] w-72 max-w-[85vw] border-e border-sidebar-border",
                 isOpen ? "translate-x-0 pointer-events-auto visible" : isRTL ? "translate-x-full pointer-events-none" : "-translate-x-full pointer-events-none"
               )
             : cn(
-                "top-2 rounded-2xl shadow-xl border border-sidebar-border/50 h-[calc(100vh-16px)]",
-                isRTL ? "right-2 left-auto" : "left-2 right-auto",
+                "top-2 start-2 rounded-2xl shadow-xl border border-sidebar-border/50 h-[calc(100dvh-16px)]",
                 effectiveCollapsed ? "w-[5.14rem]" : "w-56"
               )
         )}
@@ -322,7 +318,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                   />
                   <div className="min-w-0">
                     <StoreTypeBadge storeType={storeType} t={t} />
-                    <h1 className="font-bold text-sm text-foreground leading-tight tracking-tight">PosFlow</h1>
+                    <span className="block font-bold text-sm text-foreground leading-tight tracking-tight">PosFlow</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -337,7 +333,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                     <button
                       type="button"
                       onClick={onToggle}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       aria-label={t('common.close') || 'إغلاق القائمة'}
                     >
                       <X className="h-5 w-5" aria-hidden="true" />
@@ -352,12 +348,13 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
         {/* Collapse toggle - desktop only */}
         {!isMobile && (
           <button
+            type="button"
             onClick={() => setCollapsed(!collapsed)}
+            aria-label={effectiveCollapsed ? (isRTL ? 'توسيع القائمة' : 'Expand sidebar') : (isRTL ? 'طي القائمة' : 'Collapse sidebar')}
             className={cn(
-              "absolute top-16 z-10 w-6 h-6 rounded-full bg-sidebar-accent border border-sidebar-border flex items-center justify-center",
+              "absolute top-16 -end-3.5 z-10 size-7 rounded-full bg-sidebar-accent border border-sidebar-border flex items-center justify-center",
               "hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200 shadow-sm",
-              "text-muted-foreground",
-              isRTL ? "-left-3" : "-right-3"
+              "text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             )}
           >
             {effectiveCollapsed 
@@ -409,7 +406,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                       WebkitTouchCallout: 'none',
                     }}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl transition-all duration-200 group relative select-none pointer-events-auto",
+                      "flex items-center gap-3 rounded-xl transition-all duration-200 group relative select-none pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       effectiveCollapsed && !isMobile ? "justify-center p-2.5 mx-auto" : "px-3 py-2.5",
                       isActive 
                         ? "bg-gradient-primary text-primary-foreground font-semibold shadow-md shadow-primary/25" 
@@ -421,10 +418,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                   >
                     {/* Active indicator bar */}
                     {isActive && (
-                      <div className={cn(
-                        "absolute top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-primary transition-all",
-                        isRTL ? "-right-0.5" : "-left-0.5"
-                      )} />
+                      <div className="absolute top-1/2 -translate-y-1/2 -start-0.5 w-[3px] h-5 rounded-full bg-primary transition-all" />
                     )}
                     
                     <div className="relative flex items-center justify-center">
@@ -461,8 +455,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                       <div className={cn(
                         "absolute px-3 py-2 bg-popover text-popover-foreground rounded-xl shadow-lg z-50 select-none",
                         "opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200",
-                        "border border-border min-w-44 max-w-60",
-                        isRTL ? "right-full mr-2" : "left-full ml-2"
+                        "border border-border min-w-44 max-w-60 start-full ms-2"
                       )}>
                         <p className="text-xs font-semibold text-foreground select-none">{item.labelOverride || t(item.translationKey)}</p>
                         {item.tooltipKey && (
@@ -497,8 +490,9 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                 <span className="text-primary-foreground font-bold text-xs">{userInitial}</span>
               </div>
               <button 
+                type="button"
                 onClick={handleLogout}
-                className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
+                className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title={t('auth.logout')}
               >
                 <LogOut className="w-4 h-4" />
@@ -515,8 +509,9 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                 <p className="text-[10px] text-muted-foreground truncate">{displayEmail}</p>
               </div>
               <button 
+                type="button"
                 onClick={handleLogout}
-                className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive flex-shrink-0"
+                className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title={t('auth.logout')}
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -539,16 +534,16 @@ export function MobileMenuTrigger({ onClick }: { onClick: () => void }) {
   
   return (
     <button
+      type="button"
       data-tour="mobile-menu-trigger"
+      aria-label={isRTL ? 'فتح القائمة' : 'Open menu'}
       onClick={onClick}
       className={cn(
-        "fixed top-[calc(0.75rem+var(--app-safe-top,0px))] z-40 md:hidden",
-        "w-11 h-11 bg-background",
+        "fixed top-[calc(0.75rem+var(--app-safe-top,0px))] start-0 z-40 md:hidden",
+        "w-11 h-11 bg-background rounded-e-xl border-y border-e border-border",
         "text-foreground flex items-center justify-center shadow-sm",
-        "hover:bg-muted active:scale-95 transition-[transform,colors] duration-150",
-        isRTL 
-          ? "right-0 left-auto rounded-l-xl border-y border-l border-border" 
-          : "left-0 right-auto rounded-r-xl border-y border-r border-border"
+        "hover:bg-muted active:scale-95 transition-[transform,color,background-color,border-color] duration-150",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       )}
     >
       <Menu className="w-5 h-5" />

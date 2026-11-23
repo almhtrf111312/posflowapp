@@ -226,7 +226,7 @@ export const ProductGrid = memo(function ProductGrid({
       <div data-tour="search-bar" className="px-3 py-3 md:px-5 md:py-5 flex flex-col gap-3 md:gap-4 bg-transparent shrink-0">
         <div className="flex gap-2.5 items-center">
           <div className="flex-1 relative flex items-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] rounded-full">
-            <Search className="absolute rtl:right-4 ltr:left-4 w-5 h-5 text-muted-foreground/50 pointer-events-none" />
+            <Search className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               type="text"
               placeholder={tDynamic('productSearch')}
@@ -241,7 +241,7 @@ export const ProductGrid = memo(function ProductGrid({
                   }
                 }
               }}
-              className="rtl:pr-12 ltr:pl-12 h-12 md:h-14 rounded-full bg-card border border-border/50 text-sm md:text-base shadow-none w-full focus-visible:ring-2 focus-visible:ring-primary/30 transition-[box-shadow,border-color] font-medium"
+              className="ps-12 pe-4 h-12 md:h-14 rounded-full bg-card border border-border/50 text-sm md:text-base shadow-none w-full focus-visible:ring-2 focus-visible:ring-primary/30 transition-[box-shadow,border-color] font-medium"
             />
           </div>
 
@@ -249,7 +249,8 @@ export const ProductGrid = memo(function ProductGrid({
             <Button
               variant="outline"
               size="icon"
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-primary hover:bg-primary/5 active:scale-95 transition-[transform,colors]"
+              aria-label={t('pos.scanBarcode') || 'Scan barcode'}
+              className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-primary hover:bg-primary/5 active:scale-[0.97] transition-[transform,color,background-color,border-color] duration-150"
               onClick={() => setScannerOpen(true)}
             >
               <Barcode className="w-5 h-5 md:w-6 md:h-6" />
@@ -260,7 +261,8 @@ export const ProductGrid = memo(function ProductGrid({
           <button
             type="button"
             onClick={cycleViewMode}
-            className="flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-foreground hover:bg-accent/10 active:scale-95 transition-[transform,colors]"
+            aria-label={t('pos.changeView') || 'Toggle view mode'}
+            className="flex items-center justify-center h-12 w-12 md:h-14 md:w-14 rounded-full bg-card border border-border/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.2)] shrink-0 text-foreground hover:bg-accent/10 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-[transform,color,background-color,border-color] duration-150"
           >
             {viewMode === 'grid' && <LayoutGrid className="w-5 h-5" />}
             {viewMode === 'dense' && <Grid3x3 className="w-5 h-5" />}
@@ -274,9 +276,10 @@ export const ProductGrid = memo(function ProductGrid({
           {categories.map((category, index) => (
             <button
               key={category + index}
+              type="button"
               onClick={() => onCategoryChange(category)}
               className={cn(
-                "category-pill px-4 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-[transform,colors,box-shadow] duration-200 flex-shrink-0 active:scale-95",
+                "category-pill min-h-11 md:min-h-10 px-4 py-2 rounded-full text-xs md:text-sm font-bold whitespace-nowrap transition-[transform,color,background-color,border-color,box-shadow] duration-150 flex-shrink-0 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 selectedCategory === category
                   ? "active bg-primary text-primary-foreground shadow-md scale-105 ring-2 ring-primary/20"
                   : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted/80 shadow-sm border border-border/60"
@@ -295,8 +298,9 @@ export const ProductGrid = memo(function ProductGrid({
             {visibleProducts.map(product => (
               <button
                 key={product.id}
+                type="button"
                 {...pressHandlers(product)}
-                className="pos-item text-start fade-in group bg-card hover:bg-card/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,background-color] duration-200 border border-border/60 flex flex-col"
+                className="pos-item text-start fade-in group bg-card hover:bg-card/90 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[transform,box-shadow,background-color] duration-200 border border-border/60 flex flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="w-full aspect-square bg-muted/20 relative overflow-hidden shrink-0 flex items-center justify-center">
                   <ProductImage
@@ -316,7 +320,7 @@ export const ProductGrid = memo(function ProductGrid({
                   <div className="w-full pt-1.5 border-t border-border/30 mt-auto flex items-center justify-between gap-1.5">
                     {renderDisplayPrice(product.price, 'text-sm')}
                     <span className="inline-flex h-7 min-w-[2.25rem] shrink-0 items-center justify-center rounded-lg border border-primary bg-primary px-1.5 text-[0.875rem] font-black leading-none tabular-nums text-primary-foreground shadow-sm">
-                      {product.quantity} <span className="hidden sm:inline ms-0.5">{t('pos.piece') || 'قطعة'}</span>
+                      <span dir="ltr" className="inline-block tabular-nums">{product.quantity}</span> <span className="hidden sm:inline ms-0.5">{t('pos.piece') || 'قطعة'}</span>
                     </span>
                   </div>
                 </div>
@@ -331,8 +335,9 @@ export const ProductGrid = memo(function ProductGrid({
             {visibleProducts.map(product => (
               <button
                 key={product.id}
+                type="button"
                 {...pressHandlers(product)}
-                className="pos-item text-start fade-in group bg-card rounded-xl p-1.5 sm:p-2 shadow-xs hover:shadow-sm border border-border/50 flex flex-col justify-between transition-[box-shadow,border-color] duration-200 active:scale-95 transition-transform"
+                className="pos-item text-start fade-in group bg-card rounded-xl p-1.5 sm:p-2 shadow-xs hover:shadow-sm border border-border/50 flex flex-col justify-between transition-[transform,box-shadow,border-color] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {/* صورة المنتج بنسبة 4:3 مع شارة كمية عائمة في الزاوية العلوية */}
                 <div className="w-full aspect-[4/3] bg-muted/20 rounded-lg overflow-hidden mb-1 sm:mb-1.5 relative flex items-center justify-center shrink-0">
@@ -343,7 +348,7 @@ export const ProductGrid = memo(function ProductGrid({
                     iconClassName="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground/30"
                   />
                   {/* شارة الكمية العائمة - تحرر 100% من عرض السعر السفلي */}
-                  <span className="absolute top-1 end-1 z-10 inline-flex h-4 min-w-[1.25rem] px-1 items-center justify-center rounded-md bg-background/90 dark:bg-card/90 backdrop-blur-xs border border-border/60 text-[9px] font-black leading-none tabular-nums text-foreground shadow-xs">
+                  <span dir="ltr" className="absolute top-1 end-1 z-10 inline-flex h-4 min-w-[1.25rem] px-1 items-center justify-center rounded-md bg-background/95 dark:bg-card/95 border border-border/60 text-[10px] font-black leading-none tabular-nums text-foreground shadow-xs">
                     {product.quantity}
                   </span>
                 </div>
@@ -368,8 +373,9 @@ export const ProductGrid = memo(function ProductGrid({
             {visibleProducts.map(product => (
               <button
                 key={product.id}
+                type="button"
                 {...pressHandlers(product)}
-                className="pos-item text-start fade-in group flex items-center bg-card rounded-[20px] p-2 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200 border border-border/50"
+                className="pos-item text-start fade-in group flex items-center bg-card rounded-[20px] p-2 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-[transform,box-shadow,border-color] duration-200 border border-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-muted/40 flex-shrink-0 overflow-hidden relative">
                   <ProductImage
@@ -401,14 +407,15 @@ export const ProductGrid = memo(function ProductGrid({
             {visibleProducts.map(product => (
               <button
                 key={product.id}
+                type="button"
                 {...pressHandlers(product)}
-                className="pos-item text-start fade-in group flex items-center justify-between bg-card rounded-xl p-3 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 border border-border/50"
+                className="pos-item text-start fade-in group flex items-center justify-between min-h-11 bg-card rounded-xl p-3 shadow-sm hover:shadow-md transition-[box-shadow,border-color] duration-200 border border-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex-1 min-w-0 pe-2 overflow-hidden text-start">
                   <h3 className="font-bold text-xs text-foreground truncate" title={product.name}>{product.name}</h3>
                   {renderDisplayPrice(product.price, 'text-xs mt-0.5')}
                 </div>
-                <div className="text-[10px] bg-muted/50 rounded-lg px-2 py-1 shrink-0 font-medium">
+                <div className="text-xs bg-muted/50 rounded-lg px-2 py-1 shrink-0 font-medium">
                   <DualUnitDisplayCompact
                     totalPieces={product.quantity}
                     conversionFactor={product.conversionFactor || 1}
@@ -423,11 +430,11 @@ export const ProductGrid = memo(function ProductGrid({
 
         {lastPage > 0 && (
           <nav aria-label={isRTL ? 'صفحات المنتجات' : 'Product pages'} className="flex items-center justify-center gap-3 py-4">
-            <Button size="sm" variant="outline" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
+            <Button size="sm" variant="outline" className="min-h-11 sm:min-h-9" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
               {isRTL ? 'السابق' : 'Previous'}
             </Button>
             <span dir="ltr" className="text-sm tabular-nums">{currentPage + 1} / {lastPage + 1}</span>
-            <Button size="sm" variant="outline" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>
+            <Button size="sm" variant="outline" className="min-h-11 sm:min-h-9" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>
               {isRTL ? 'التالي' : 'Next'}
             </Button>
           </nav>
@@ -451,9 +458,9 @@ export const ProductGrid = memo(function ProductGrid({
         )}
 
         {filteredProducts.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground fade-in">
-            <Package className="w-12 h-12 mb-3 opacity-20" />
-            <p className="font-medium text-sm">{t('common.all')}</p>
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 text-muted-foreground fade-in">
+            <Package className="w-12 h-12 mb-3 text-muted-foreground/50" />
+            <p className="font-semibold text-sm sm:text-base text-foreground">{t('common.all')}</p>
           </div>
         )}
       </div>

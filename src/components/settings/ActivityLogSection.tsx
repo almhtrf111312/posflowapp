@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogBody } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { loadActivityLogs, clearActivityLogs, ActivityLog, ActivityType, activityTypeLabels, getActivityTypeLabel } from '@/lib/activity-log';
 import { cn, formatMoney } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
@@ -211,7 +212,7 @@ export function ActivityLogSection() {
               <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-foreground">
+              <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
                 {t('activity.headerTitle' as any)}
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -236,13 +237,13 @@ export function ActivityLogSection() {
         </div>
 
         {/* Search Bar */}
-        <div className="relative">
-          <Search className={cn("w-4 h-4 text-muted-foreground absolute top-1/2 -translate-y-1/2 pointer-events-none", isRTL ? "right-3" : "left-3")} />
+        <div className="relative flex-1 min-w-0">
+          <Search className="w-4 h-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('activity.searchPlaceholder' as any)}
-            className={cn("text-xs h-9 bg-muted/40 border-border", isRTL ? "pr-9" : "pl-9")}
+            className="ps-9 pe-3 bg-muted/40 border-border"
           />
         </div>
 
@@ -298,12 +299,12 @@ export function ActivityLogSection() {
       {/* 3. Activity Cards Feed */}
       <div className="space-y-2.5">
         {filteredLogs.length === 0 ? (
-          <div className="p-8 text-center bg-card rounded-2xl border border-border">
-            <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
-            <p className="text-xs font-bold text-muted-foreground ">
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <Activity className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm sm:text-base font-semibold text-foreground">
               {t('activity.emptyTitle' as any)}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {t('activity.emptyHint' as any)}
             </p>
           </div>
@@ -324,23 +325,21 @@ export function ActivityLogSection() {
 
       {/* 4. Clear Confirmation Modal */}
       <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
-        <DialogContent className="max-w-sm rounded-2xl" dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto text-lg mt-2">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <DialogHeader className="text-center pt-1">
-            <DialogTitle className="text-base font-bold text-foreground">
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]" dir={isRTL ? 'rtl' : 'ltr'}>
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
               {t('activity.clearConfirmTitle' as any)}
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
+            <DialogDescription>
               {t('activity.clearConfirmDesc' as any)}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="grid grid-cols-2 gap-2 mt-4 sm:space-x-0">
-            <Button variant="outline" size="sm" onClick={() => setClearDialogOpen(false)} className="w-full text-xs">
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleClearLogs} className="w-full text-xs">
+            <Button variant="destructive" onClick={handleClearLogs}>
               {t('activity.clearConfirmBtn' as any)}
             </Button>
           </DialogFooter>
@@ -349,17 +348,18 @@ export function ActivityLogSection() {
 
       {/* 5. Custom Filter Selection Modal */}
       <Dialog open={customFilterOpen} onOpenChange={setCustomFilterOpen}>
-        <DialogContent className="max-w-md rounded-2xl max-h-[85vh] overflow-y-auto" dir={isRTL ? 'rtl' : 'ltr'}>
-          <DialogHeader>
-            <DialogTitle className="text-sm font-bold">
+        <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]" dir={isRTL ? 'rtl' : 'ltr'}>
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <DialogTitle>
               {t('activity.selectTypeTitle' as any)}
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogDescription>
               {t('activity.selectTypeDesc' as any)}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-1.5 py-2">
+          <DialogBody>
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => { setSpecificFilter(null); setCustomFilterOpen(false); }}
               className={cn(
@@ -386,6 +386,7 @@ export function ActivityLogSection() {
               );
             })}
           </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
     </div>
@@ -509,22 +510,22 @@ function ActivityCard({ log, isRTL, language: propLanguage, timeText, isExpanded
 
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold border", badgeClass)}>
+              <Badge variant="outline" className={badgeClass}>
                 {badgeLabel}
-              </span>
-              <span className="text-[10px] text-muted-foreground font-mono">
+              </Badge>
+              <span className="text-xs text-muted-foreground font-mono tabular-nums">
                 {timeText}
               </span>
             </div>
 
-            <h3 className="text-xs font-bold text-foreground mt-1 leading-snug">
+            <h3 className="text-sm font-semibold text-foreground mt-1 leading-snug">
               {cardTitle}
             </h3>
           </div>
         </div>
 
         {/* User Identity or Top Amount */}
-        <div className={cn("shrink-0", isRTL ? "text-left" : "text-right")}>
+        <div className="shrink-0 text-end">
           {leftAmount ? (
             <div>
               <span className={cn("text-xs font-black font-mono numeric-tabular block", leftClass)}>
@@ -623,40 +624,40 @@ function PriceComparisonTable({ changes }: { changes: Record<string, unknown> })
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground shrink-0" />
             <span>{t('activity.price.cost' as any)}</span>
           </div>
-          <div className="font-mono text-muted-foreground line-through numeric-tabular">
-            {oldCost !== null ? formatMoney(oldCost) : '—'}
+          <div className="font-mono text-muted-foreground line-through">
+            <span dir="ltr" className="inline-block tabular-nums">{oldCost !== null ? formatMoney(oldCost) : '—'}</span>
           </div>
-          <div className="font-mono font-bold text-foreground numeric-tabular flex items-center justify-center gap-1 text-emerald-700 dark:text-emerald-400">
-            <span>{formatMoney(newCost)}</span>
+          <div className="font-mono font-bold text-success flex items-center justify-center gap-1">
+            <span dir="ltr" className="inline-block tabular-nums">{formatMoney(newCost)}</span>
             {costDiff !== 0 && (
-              <span className="text-[10px] text-muted-foreground font-normal">
+              <span dir="ltr" className="inline-block tabular-nums text-xs text-muted-foreground font-normal">
                 ({costDiff > 0 ? `+${formatMoney(costDiff)}` : `-${formatMoney(Math.abs(costDiff))}`})
               </span>
             )}
           </div>
         </div>
 
-        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-blue-50/30 dark:bg-blue-950/20">
-          <div className="text-start font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
+        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border/60 bg-info/10">
+          <div className="text-start font-bold text-info flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0" />
             <span>{t('activity.price.sale' as any)}</span>
           </div>
-          <div className="font-mono text-muted-foreground line-through numeric-tabular">
-            {oldSale !== null ? formatMoney(oldSale) : '—'}
+          <div className="font-mono text-muted-foreground line-through">
+            <span dir="ltr" className="inline-block tabular-nums">{oldSale !== null ? formatMoney(oldSale) : '—'}</span>
           </div>
-          <div className="font-mono font-black text-blue-700 dark:text-blue-400 numeric-tabular flex items-center justify-center gap-1">
-            <span>{formatMoney(newSale)}</span>
+          <div className="font-mono font-bold text-info flex items-center justify-center gap-1">
+            <span dir="ltr" className="inline-block tabular-nums">{formatMoney(newSale)}</span>
             {saleDiff !== 0 && (
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+              <span dir="ltr" className="inline-block tabular-nums text-xs text-success font-bold">
                 ({saleDiff > 0 ? `+${formatMoney(saleDiff)} ↗` : `-${formatMoney(Math.abs(saleDiff))} ↘`})
               </span>
             )}
           </div>
         </div>
 
-        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-emerald-50/30 dark:bg-emerald-950/20">
-          <div className="text-start font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+        <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border/60 bg-success/10">
+          <div className="text-start font-bold text-success flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
             <span>{t('activity.price.margin' as any)}</span>
           </div>
           <div className="font-mono text-muted-foreground numeric-tabular">

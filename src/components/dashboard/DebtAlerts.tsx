@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Clock, CheckCircle, Phone, FileX, Loader2 } from 'lucide-react';
 import { cn, formatNumber } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { loadDebtsCloud } from '@/lib/cloud/debts-cloud';
 import { useLanguage } from '@/hooks/use-language';
 import { EVENTS } from '@/lib/events';
@@ -108,7 +109,7 @@ export function DebtAlerts() {
   return (
     <div className="glass rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground">{t('debtAlerts.title')}</h3>
+        <h3 className="text-sm sm:text-base font-semibold text-foreground">{t('debtAlerts.title')}</h3>
         {overdueCount > 0 && (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium badge-danger">
             {overdueCount} {t('debtAlerts.overdue')}
@@ -117,9 +118,9 @@ export function DebtAlerts() {
       </div>
 
       {debts.length === 0 ? (
-        <div className="py-8 text-center">
-          <FileX className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-          <p className="text-muted-foreground">{t('debtAlerts.noDebts')}</p>
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+          <FileX className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <p className="text-sm sm:text-base font-semibold text-foreground">{t('debtAlerts.noDebts')}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -156,13 +157,13 @@ export function DebtAlerts() {
                       {debt.phone && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                           <Phone className="w-3 h-3" />
-                          {debt.phone}
+                          <span dir="ltr" className="inline-block tabular-nums">{debt.phone}</span>
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="text-left">
-                    <p className="font-bold text-lg text-foreground">${formatNumber(debt.amount)}</p>
+                  <div className="text-end">
+                    <p className="font-bold text-lg text-foreground"><span dir="ltr" className="inline-block tabular-nums">${formatNumber(debt.amount)}</span></p>
                     <p className={cn("text-xs font-medium", config.textColor)}>{t(config.labelKey)}</p>
                   </div>
                 </div>
@@ -172,12 +173,13 @@ export function DebtAlerts() {
         </div>
       )}
 
-      <button
+      <Button
+        variant="ghost"
         onClick={handleViewAllDebts}
-        className="w-full mt-4 py-3 text-center text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+        className="w-full mt-4 text-primary hover:text-primary/80"
       >
         {t('debtAlerts.viewAllDebts')}
-      </button>
+      </Button>
     </div>
   );
 }

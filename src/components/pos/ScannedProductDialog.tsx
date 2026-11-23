@@ -2,7 +2,9 @@ import { Package, Plus, X, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -61,16 +63,16 @@ export function ScannedProductDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md overflow-hidden rounded-2xl bg-background border-border/50 shadow-2xl p-0">
-        <DialogHeader className="p-5 border-b border-border/40 bg-muted/30">
+      <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] bg-background border-border/50 shadow-2xl">
+        <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 bg-muted/30 text-start pe-12">
           <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-primary" />
+            <Package className="w-5 h-5 text-primary shrink-0" />
             {t('scannedProduct.productFound')}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="p-5">
-          <div className="flex items-center gap-4 mb-4">
+        <DialogBody className="py-4 space-y-4">
+          <div className="flex items-center gap-4">
             <div className="w-24 h-24 rounded-2xl bg-muted/50 border border-border/40 shadow-sm flex items-center justify-center flex-shrink-0">
               {product.image ? (
                 <img 
@@ -87,51 +89,54 @@ export function ScannedProductDialog({
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-lg text-foreground mb-1 line-clamp-2 break-words" title={product.name}>{product.name}</h3>
               <p className="text-sm text-muted-foreground mb-2 truncate">{product.category}</p>
-              <p className="text-2xl font-bold text-primary tabular-nums">${product.price}</p>
+              <p dir="ltr" className="inline-block text-2xl font-bold text-primary tabular-nums">${product.price}</p>
             </div>
           </div>
 
-          <div className="bg-muted/40 border border-border/40 rounded-xl p-4 mb-5 space-y-2">
+          <div className="bg-muted/40 border border-border/40 rounded-xl p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t('scannedProduct.availableStock')}:</span>
               <span className="font-semibold text-foreground">
-                {product.quantity} {getLocalizedUnit(product.smallUnit, false, language)}
+                <span dir="ltr" className="inline-block tabular-nums">{product.quantity}</span> {getLocalizedUnit(product.smallUnit, false, language)}
               </span>
             </div>
             {product.barcode && (
               <div className="flex justify-between text-sm mt-1">
                 <span className="text-muted-foreground">{t('scannedProduct.barcode')}:</span>
-                <span className="font-mono text-foreground">{product.barcode}</span>
+                <span dir="ltr" className="inline-block font-mono tabular-nums text-foreground">{product.barcode}</span>
               </div>
             )}
           </div>
+        </DialogBody>
 
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 h-12 rounded-xl text-sm font-bold shadow-sm active:scale-95 transition-[transform,colors]" onClick={onClose}>
-              <X className="w-4 h-4" />
-              {t('scannedProduct.close')}
-            </Button>
-            {isBookstore && onLoan && (
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={handleLoan}
-                disabled={product.quantity === 0}
-              >
-                <BookOpen className="w-4 h-4" />
-                إعارة
-              </Button>
-            )}
-            <Button 
-              className="flex-1 h-12 rounded-xl text-sm font-bold shadow-md hover:shadow-lg bg-gradient-primary text-primary-foreground active:scale-95 transition-[transform,box-shadow]" 
-              onClick={handleAdd}
+        <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+          <Button variant="outline" size="default" className="flex-1" onClick={onClose}>
+            <X className="w-4 h-4 shrink-0" />
+            {t('scannedProduct.close')}
+          </Button>
+          {isBookstore && onLoan && (
+            <Button
+              variant="secondary"
+              size="default"
+              className="flex-1"
+              onClick={handleLoan}
               disabled={product.quantity === 0}
             >
-              <Plus className="w-4 h-4" />
-              {t('scannedProduct.addToCart')}
+              <BookOpen className="w-4 h-4 shrink-0" />
+              إعارة
             </Button>
-          </div>
-        </div>
+          )}
+          <Button 
+            variant="default"
+            size="default"
+            className="flex-1" 
+            onClick={handleAdd}
+            disabled={product.quantity === 0}
+          >
+            <Plus className="w-4 h-4 shrink-0" />
+            {t('scannedProduct.addToCart')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

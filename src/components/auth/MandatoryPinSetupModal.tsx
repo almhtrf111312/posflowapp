@@ -6,7 +6,7 @@ import { ShieldAlert, KeyRound, Eye, EyeOff, Loader2, LogOut, CheckCircle2 } fro
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
+import { toast } from '@/lib/sonner-bridge';
 
 export function MandatoryPinSetupModal() {
   const { requiresPinSetup, completePinSetup } = useAppLock();
@@ -66,10 +66,10 @@ export function MandatoryPinSetupModal() {
       <div className="bg-card border border-border/80 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
         {/* رأس البطاقة الترحيبي والأمني */}
         <div className="flex flex-col items-center text-center space-y-2">
-          <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-500 shadow-inner">
+          <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-warning/10 border border-warning/30 text-warning shadow-inner">
             <ShieldAlert className="w-8 h-8 animate-pulse" />
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
-              <KeyRound className="w-3 h-3 text-white" />
+            <div className="absolute -bottom-1 -end-1 w-5 h-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
+              <KeyRound className="w-3 h-3 text-primary-foreground" />
             </div>
           </div>
 
@@ -100,17 +100,20 @@ export function MandatoryPinSetupModal() {
                   setNewPin(e.target.value.replace(/[^0-9]/g, ''));
                 }}
                 placeholder="••••"
-                className="pe-10 font-mono tracking-widest text-center text-lg h-12 rounded-xl"
+                className="pe-12 font-mono tracking-widest text-center text-lg h-12 rounded-xl"
                 dir="ltr"
                 autoFocus
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t('pinSetup.newPinLabel')}
                 onClick={() => setShowPin(!showPin)}
-                className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground hover:text-foreground"
+                className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground"
               >
                 {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              </Button>
             </div>
           </div>
 

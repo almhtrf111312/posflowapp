@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, ShieldAlert } from 'lucide-react';
+import { useLanguage } from '@/hooks/use-language';
 
 interface Props {
   open: boolean;
@@ -19,6 +20,7 @@ const SECONDS = 10;
 
 /** تحذير الاستعادة: يظهر مرة واحدة وزر الموافقة يتفعّل بعد عدّاد 10 ثوانٍ */
 export function RestoreWarningDialog({ open, fileName, summary, busy, onConfirm, onCancel }: Props) {
+  const { direction } = useLanguage();
   const [left, setLeft] = useState(SECONDS);
 
   useEffect(() => {
@@ -30,12 +32,12 @@ export function RestoreWarningDialog({ open, fileName, summary, busy, onConfirm,
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent dir="rtl">
+      <AlertDialogContent dir={direction}>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-destructive">
             <ShieldAlert className="w-5 h-5" /> تحذير قبل الاستعادة
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2 text-right leading-relaxed">
+          <AlertDialogDescription className="space-y-2 text-start leading-relaxed">
             <span className="block">الملف: <b>{fileName}</b></span>
             {summary && <span className="block text-xs">{summary}</span>}
             <span className="block">

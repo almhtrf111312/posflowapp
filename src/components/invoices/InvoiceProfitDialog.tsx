@@ -5,10 +5,14 @@ import { fromUsd, getCurrencyDef, roundForCurrency } from '@/lib/money-engine';
 import { calculateInvoiceProfitMetrics } from '@/lib/invoice-profit';
 import type { Invoice } from '@/lib/cloud/invoices-cloud';
 import { formatCurrency } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -115,59 +119,59 @@ export function InvoiceProfitDialog({
 
   return (
     <Dialog open={open && (isBoss || isAdmin)} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b border-border/60 bg-muted/30 p-4 pe-12">
+      <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col gap-0 overflow-hidden p-0 rounded-[24px]">
+        <DialogHeader className="shrink-0 border-b border-border/60 bg-muted/30 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 text-start pe-12">
           <div className="flex items-center gap-2">
             <div className="rounded-xl bg-primary/10 p-2 text-primary" aria-hidden="true">
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-base font-bold">{copy.title} #{invoice.id}</DialogTitle>
+              <DialogTitle>{copy.title} <span dir="ltr" className="inline-block tabular-nums">#{invoice.id}</span></DialogTitle>
               <DialogDescription className="mt-1 text-xs">{copy.description}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 space-y-4 overflow-y-auto p-4">
-          <section className="grid grid-cols-2 gap-2.5" aria-label={copy.title}>
-            <div className="col-span-2 flex items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+        <DialogBody className="space-y-4">
+          <section className="grid grid-cols-2 gap-3" aria-label={copy.title}>
+            <div className="col-span-2 flex items-center justify-between gap-3 rounded-xl border border-success/30 bg-success/10 p-3.5">
               <div>
-                <span className="block text-xs font-medium text-emerald-700 dark:text-emerald-300">{copy.netProfit}</span>
-                <span className="text-xl font-black text-emerald-700 dark:text-emerald-300">
+                <span className="block text-xs font-medium text-success">{copy.netProfit}</span>
+                <span dir="ltr" className="inline-block tabular-nums text-xl font-bold text-success">
                   {formatUsd(netProfitUsd)}
                 </span>
                 {code !== 'USD' && (
-                  <span className="block font-mono text-[11px] text-muted-foreground" dir="ltr">
+                  <span className="block font-mono tabular-nums text-xs text-muted-foreground" dir="ltr">
                     ≈ ${netProfitUsd.toFixed(2)} USD
                   </span>
                 )}
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white">
+              <Badge className="bg-success text-success-foreground border-success/30 gap-1">
                 <Percent className="h-3 w-3" aria-hidden="true" />
-                {metrics.profitMarginPercent.toFixed(1)}% {copy.margin}
-              </span>
+                <span dir="ltr" className="inline-block tabular-nums">{metrics.profitMarginPercent.toFixed(1)}%</span> {copy.margin}
+              </Badge>
             </div>
 
             <div className="rounded-xl border border-border/60 bg-background p-3">
               <span className="mb-1 block text-xs text-muted-foreground">{copy.netRevenue}</span>
-              <span className="text-sm font-bold text-foreground">{formatUsd(metrics.netRevenueUsd)}</span>
+              <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-foreground">{formatUsd(metrics.netRevenueUsd)}</span>
             </div>
             <div className="rounded-xl border border-border/60 bg-background p-3">
               <span className="mb-1 block text-xs text-muted-foreground">{copy.cogs}</span>
-              <span className="text-sm font-bold text-foreground">{formatUsd(metrics.totalCostUsd)}</span>
+              <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-foreground">{formatUsd(metrics.totalCostUsd)}</span>
             </div>
           </section>
 
           {invoice.paymentType === 'debt' && (
-            <section className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3" aria-label={copy.debt}>
+            <section className="space-y-2 rounded-xl border border-warning/30 bg-warning/10 p-3" aria-label={copy.debt}>
               <div className="flex items-center justify-between gap-2 text-xs font-semibold">
-                <span className="flex items-center gap-1.5 text-amber-800 dark:text-amber-200">
+                <span className="flex items-center gap-1.5 text-warning">
                   {metrics.collectionRatio >= 1
                     ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
                     : <AlertCircle className="h-4 w-4" aria-hidden="true" />}
                   {copy.debt}
                 </span>
-                <span>{copy.collection}: {Math.round(metrics.collectionRatio * 100)}%</span>
+                <span>{copy.collection}: <span dir="ltr" className="inline-block tabular-nums">{Math.round(metrics.collectionRatio * 100)}%</span></span>
               </div>
               <div
                 className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
@@ -178,21 +182,21 @@ export function InvoiceProfitDialog({
                 aria-valuenow={Math.round(metrics.collectionRatio * 100)}
               >
                 <div
-                  className="h-full rounded-full bg-amber-500 transition-[width] duration-200"
+                  className="h-full rounded-full bg-warning transition-[width] duration-200"
                   style={{ width: `${metrics.collectionRatio * 100}%` }}
                 />
               </div>
-              <div className="flex flex-col justify-between gap-1 pt-1 text-[11px] text-muted-foreground sm:flex-row">
-                <span>{copy.collected}: <strong className="text-foreground">{formatUsd(metrics.collectedProfitUsd)}</strong></span>
-                <span>{copy.pending}: <strong className="text-foreground">{formatUsd(metrics.pendingProfitUsd)}</strong></span>
+              <div className="flex flex-col justify-between gap-1 pt-1 text-xs text-muted-foreground sm:flex-row">
+                <span>{copy.collected}: <strong dir="ltr" className="inline-block tabular-nums text-foreground">{formatUsd(metrics.collectedProfitUsd)}</strong></span>
+                <span>{copy.pending}: <strong dir="ltr" className="inline-block tabular-nums text-foreground">{formatUsd(metrics.pendingProfitUsd)}</strong></span>
               </div>
             </section>
           )}
 
           {hasCompleteItemCosts && (
             <section className="space-y-2">
-              <h3 className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                <Package className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              <h3 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-foreground">
+                <Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 {copy.items}
               </h3>
               <div className="divide-y divide-border/40 overflow-hidden rounded-xl border border-border/50">
@@ -208,12 +212,12 @@ export function InvoiceProfitDialog({
                     <div key={`${item.id}-${index}`} className="flex items-center justify-between gap-3 bg-background/50 p-2.5">
                       <div className="min-w-0">
                         <div className="truncate text-xs font-semibold text-foreground">{item.name}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {copy.quantity}: {quantity} × {copy.price}: {formatUsd(unitPriceUsd)} · {copy.cost}: {formatUsd(unitCostUsd)}
+                        <div className="text-xs text-muted-foreground">
+                          {copy.quantity}: <span dir="ltr" className="inline-block tabular-nums">{quantity}</span> × {copy.price}: <span dir="ltr" className="inline-block tabular-nums">{formatUsd(unitPriceUsd)}</span> · {copy.cost}: <span dir="ltr" className="inline-block tabular-nums">{formatUsd(unitCostUsd)}</span>
                         </div>
                       </div>
-                      <div className="shrink-0 text-left font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                        {formatUsd(itemProfitUsd)}
+                      <div className="shrink-0 text-end font-mono text-xs font-bold text-success">
+                        <span dir="ltr" className="inline-block tabular-nums">{formatUsd(itemProfitUsd)}</span>
                       </div>
                     </div>
                   );
@@ -223,14 +227,19 @@ export function InvoiceProfitDialog({
           )}
 
           {code !== 'USD' && (
-            <div className="flex items-center justify-between gap-2 border-t border-border/40 pt-2 text-[11px] text-muted-foreground">
+            <div className="flex items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs text-muted-foreground">
               <span>{copy.usd}:</span>
-              <span className="text-end font-mono font-bold text-foreground" dir="ltr">
+              <span className="text-end font-mono tabular-nums font-bold text-foreground" dir="ltr">
                 ${netProfitUsd.toFixed(2)} USD <span className="font-normal text-muted-foreground">({rate} {financials.symbol} / $)</span>
               </span>
             </div>
           )}
-        </div>
+        </DialogBody>
+        <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+          <Button variant="outline" size="default" onClick={() => onOpenChange(false)}>
+            {language === 'en' ? 'Close' : language === 'tr' ? 'Kapat' : 'إغلاق'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

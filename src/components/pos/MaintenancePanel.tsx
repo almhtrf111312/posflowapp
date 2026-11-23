@@ -25,8 +25,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn, formatNumber, formatCurrency, formatMoney } from '@/lib/utils';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -416,7 +418,7 @@ ${footer}`;
     <>
       <div className={cn(
         "bg-background flex flex-col h-full shadow-2xl",
-        isMobile ? "rounded-t-2xl" : fullWidth ? "" : "border-r border-border"
+        isMobile ? "rounded-t-2xl" : fullWidth ? "" : "border-e border-border"
       )}>
         {/* Header */}
         <div className="p-4 md:p-5 border-b border-border/40 bg-card/50">
@@ -426,7 +428,7 @@ ${footer}`;
               <h2 className="font-bold text-base md:text-lg">{t('maintenance.quickService')}</h2>
             </div>
             {isMobile && onClose && (
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+              <Button variant="ghost" size="icon" onClick={onClose} aria-label={t('common.close') || 'إغلاق'}>
                 <X className="w-4 h-4" />
               </Button>
             )}
@@ -447,16 +449,16 @@ ${footer}`;
             <div className="space-y-4">
               {/* Customer Info */}
               <div className="space-y-3">
-                <h3 className="font-medium text-sm text-muted-foreground">{t('maintenance.customerInfo')}</h3>
+                <h3 className="text-sm sm:text-base font-semibold text-foreground">{t('maintenance.customerInfo')}</h3>
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">{t('maintenance.customerName')}</label>
                   <div className="relative">
-                    <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <User className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder={t('maintenance.customerName')}
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      className="pr-10 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm"
+                      className="ps-10 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-[14px] transition-colors shadow-sm"
                     />
                   </div>
                 </div>
@@ -464,7 +466,7 @@ ${footer}`;
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">{t('maintenance.phoneNumber')}</label>
                   <div className="relative">
-                    <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Phone className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="tel"
                       inputMode="tel"
@@ -472,7 +474,7 @@ ${footer}`;
                       placeholder="+963 xxx xxx xxx"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d+]/g, ''))}
-                      className="pr-10 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm text-left"
+                      className="ps-10 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-[14px] transition-colors shadow-sm text-start tabular-nums"
                     />
                   </div>
                 </div>
@@ -480,16 +482,16 @@ ${footer}`;
 
               {/* Service Details */}
               <div className="space-y-3 pt-3 border-t border-border">
-                <h3 className="font-medium text-sm text-muted-foreground">{t('maintenance.serviceDetails')}</h3>
+                <h3 className="text-sm sm:text-base font-semibold text-foreground">{t('maintenance.serviceDetails')}</h3>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">{t('maintenance.serviceType')}</label>
                     <Select value={serviceType} onValueChange={setServiceType}>
-                      <SelectTrigger className="h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm">
+                      <SelectTrigger className="h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-[14px] transition-colors shadow-sm">
                         <SelectValue placeholder={t('maintenance.select')} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                         {serviceTypes.map(type => (
                           <SelectItem key={type.value} value={type.value}>
                             {type.label}
@@ -502,10 +504,10 @@ ${footer}`;
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">{t('maintenance.deviceType')}</label>
                     <Select value={productType} onValueChange={setProductType}>
-                      <SelectTrigger className="h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm">
+                      <SelectTrigger className="h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-[14px] transition-colors shadow-sm">
                         <SelectValue placeholder={t('maintenance.select')} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                         {productTypes.map(type => (
                           <SelectItem key={type.value} value={type.value}>
                             <div className="flex items-center gap-2">
@@ -534,18 +536,19 @@ ${footer}`;
             {/* Right Column - Pricing */}
             <div className="space-y-4">
               <div className="space-y-3 pt-3 border-t border-border md:border-t-0 md:pt-0">
-                <h3 className="font-medium text-sm text-muted-foreground">تفاصيل السعر</h3>
+                <h3 className="text-sm sm:text-base font-semibold text-foreground">تفاصيل السعر</h3>
 
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">سعر الخدمة (دولار)</label>
                   <div className="relative">
-                    <Banknote className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Banknote className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="number"
+                      dir="ltr"
                       placeholder="0"
                       value={servicePrice || ''}
                       onChange={(e) => setServicePrice(Number(e.target.value))}
-                      className="pr-10 h-12 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm text-lg font-bold"
+                      className="ps-10 h-12 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-[14px] transition-colors shadow-sm text-lg font-bold tabular-nums"
                     />
                   </div>
                 </div>
@@ -553,13 +556,14 @@ ${footer}`;
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">تكلفة القطع (دولار)</label>
                   <div className="relative">
-                    <Calculator className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Calculator className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="number"
+                      dir="ltr"
                       placeholder="0"
                       value={partsCost || ''}
                       onChange={(e) => setPartsCost(Number(e.target.value))}
-                      className="pr-10 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-xl transition-colors shadow-sm"
+                      className="ps-10 h-11 bg-background/90 border border-border/50 focus-visible:ring-2 focus-visible:ring-primary/20 rounded-[14px] transition-colors shadow-sm tabular-nums"
                     />
                   </div>
                 </div>
@@ -567,13 +571,13 @@ ${footer}`;
                 {/* Profit Display */}
                 <div className={cn(
                   "p-3 rounded-lg",
-                  profit >= 0 ? "bg-green-500/10" : "bg-red-500/10"
+                  profit >= 0 ? "bg-success/10" : "bg-destructive/10"
                 )}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">{t('maintenance.netProfit')}</span>
-                    <span className={cn(
-                      "text-lg font-bold",
-                      profit >= 0 ? "text-green-500" : "text-red-500"
+                    <span dir="ltr" className={cn(
+                      "inline-block text-lg font-bold tabular-nums",
+                      profit >= 0 ? "text-success" : "text-destructive"
                     )}>
                       {formatMoney(profit)}
                     </span>
@@ -591,10 +595,10 @@ ${footer}`;
                         if (currency) onCurrencyChange(currency);
                       }}
                     >
-                      <SelectTrigger className="w-auto h-7 text-xs bg-background">
+                      <SelectTrigger className="w-auto min-h-11 sm:min-h-9 rounded-[14px] text-xs bg-background">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                         {currencies.map(c => (
                           <SelectItem key={c.code} value={c.code}>
                             {c.symbol} {c.name}
@@ -603,7 +607,7 @@ ${footer}`;
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="text-xl font-bold">
+                  <div dir="ltr" className="inline-block text-xl font-bold tabular-nums">
                     {effectiveCurrencySymbol}{formatNumber(servicePriceInCurrency)}
                   </div>
                 </div>
@@ -617,7 +621,7 @@ ${footer}`;
           <div className="grid grid-cols-2 gap-2">
             <Button
               onClick={handleCashSale}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-success hover:bg-success/90 text-success-foreground"
               disabled={isSaving}
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Banknote className="w-4 h-4" />}
@@ -626,7 +630,7 @@ ${footer}`;
             <Button
               onClick={handleDebtSale}
               variant="outline"
-              className="border-orange-500 text-orange-500 hover:bg-orange-500/10"
+              className="border-warning text-warning hover:bg-warning/10"
               disabled={isSaving}
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
@@ -648,54 +652,57 @@ ${footer}`;
 
       {/* Cash Confirmation Dialog */}
       <Dialog open={showCashDialog} onOpenChange={setShowCashDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-green-500" />
+              <Banknote className="w-5 h-5 text-success shrink-0" />
               تأكيد الدفع النقدي
             </DialogTitle>
             <DialogDescription>
               {`سيتم تسجيل مبلغ ${effectiveCurrencySymbol}${formatNumber(servicePriceInCurrency)} كدفع نقدي`}
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('maintenance.customer')}</span>
-              <span className="font-medium">{customerName}</span>
+          <DialogBody className="py-4">
+            <div className="bg-muted p-3 rounded-xl space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('maintenance.customer')}</span>
+                <span className="font-medium">{customerName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">الخدمة</span>
+                <span className="font-medium">{getServiceLabel() || 'غير محدد'}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-2 mt-2">
+                <span className="text-muted-foreground">{t('maintenance.netProfit')}</span>
+                <span dir="ltr" className={cn("inline-block font-bold tabular-nums", profit >= 0 ? "text-success" : "text-destructive")}>
+                  ${formatNumber(profit)}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">الخدمة</span>
-              <span className="font-medium">{getServiceLabel() || 'غير محدد'}</span>
-            </div>
-            <div className="flex justify-between border-t pt-2 mt-2">
-              <span className="text-muted-foreground">{t('maintenance.netProfit')}</span>
-              <span className={cn("font-bold", profit >= 0 ? "text-green-500" : "text-red-500")}>
-                ${formatNumber(profit)}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowCashDialog(false)} className="flex-1 h-12 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-[colors,transform] active:scale-95" disabled={isSaving}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowCashDialog(false)} disabled={isSaving}>
               {t('common.cancel')}
             </Button>
             <Button
+              size="default"
               onClick={() => confirmSale('cash')}
-              className="flex-1 bg-green-600 hover:bg-green-700"
+              className="bg-success hover:bg-success/90 text-success-foreground"
               disabled={isSaving}
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Check className="w-4 h-4 shrink-0" />}
               {t('common.confirm')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Debt Confirmation Dialog */}
       <Dialog open={showDebtDialog} onOpenChange={setShowDebtDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-orange-500" />
+              <CreditCard className="w-5 h-5 text-warning shrink-0" />
               تأكيد تسجيل الدين
             </DialogTitle>
             <DialogDescription>
@@ -705,35 +712,38 @@ ${footer}`;
               }
             </DialogDescription>
           </DialogHeader>
-          <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('maintenance.customer')}</span>
-              <span className="font-medium">{customerName}</span>
-            </div>
-            {customerPhone && (
+          <DialogBody className="py-4">
+            <div className="bg-muted p-3 rounded-xl space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">الهاتف</span>
-                <span className="font-medium">{customerPhone}</span>
+                <span className="text-muted-foreground">{t('maintenance.customer')}</span>
+                <span className="font-medium">{customerName}</span>
               </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('maintenance.debtAmount')}</span>
-              <span className="font-bold text-orange-500">{formatMoney(servicePrice)}</span>
+              {customerPhone && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">الهاتف</span>
+                  <span dir="ltr" className="inline-block font-medium tabular-nums">{customerPhone}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('maintenance.debtAmount')}</span>
+                <span dir="ltr" className="inline-block font-bold text-warning tabular-nums">{formatMoney(servicePrice)}</span>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowDebtDialog(false)} className="flex-1 h-12 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-[colors,transform] active:scale-95" disabled={isSaving}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowDebtDialog(false)} disabled={isSaving}>
               {t('common.cancel')}
             </Button>
             <Button
+              size="default"
               onClick={() => confirmSale('debt')}
-              className="flex-1 bg-orange-500 hover:bg-orange-600"
+              className="bg-warning hover:bg-warning/90 text-warning-foreground"
               disabled={isSaving}
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin shrink-0" /> : <Check className="w-4 h-4 shrink-0" />}
               تسجيل الدين
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

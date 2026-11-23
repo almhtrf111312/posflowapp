@@ -9,7 +9,7 @@ import { ChatMessages, InputBar } from './SupportChat';
 
 export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
-  const { language } = useLanguage();
+  const { language, direction } = useLanguage();
   const isEn = language === 'en';
   const [conversationId, setConversationId] = useState<string | null>(null);
 
@@ -51,7 +51,7 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
         'animate-in zoom-in-95 fade-in duration-200',
         'h-[35.7rem] overflow-hidden'
       )}
-      dir="rtl"
+      dir={direction}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border shrink-0">
@@ -67,10 +67,11 @@ export function InlineSupportChatPanel({ onClose }: { onClose: () => void }) {
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-destructive/10"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground hover:bg-destructive/10"
             onClick={onClose}
             title={isEn ? "Close Chat" : "إغلاق المحادثة"}
+            aria-label={isEn ? "Close Chat" : "إغلاق المحادثة"}
           >
             <X className="h-4 w-4" />
           </Button>

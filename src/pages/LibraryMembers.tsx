@@ -1,14 +1,16 @@
-import { capsuleOuter, capsuleOuterScroll, capsuleTrigger, capsuleItem, capsuleActive, capsuleIdle } from '@/components/ui/SegmentedCapsule';
+import { capsuleOuter, capsuleTrigger } from '@/components/ui/SegmentedCapsule';
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Users, Plus, Search, Edit, Trash2, BookOpen, X, Save,
-  UserCheck, UserX, Clock, AlertTriangle, RotateCcw, Ban
+  Users, Plus, Search, Edit, Trash2, BookOpen, Save,
+  AlertTriangle, RotateCcw, Loader2
 } from 'lucide-react';
 import { cn, formatNumber } from '@/lib/utils';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle
+  Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -20,21 +22,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
-import { DatePicker } from '@/components/ui/date-picker';
 import {
   loadMembersCloud, addMemberCloud, updateMemberCloud, deleteMemberCloud,
-  loadLoansCloud, addLoanCloud, returnLoanCloud, markLoanLostCloud, deleteLoanCloud,
+  loadLoansCloud, addLoanCloud, returnLoanCloud, markLoanLostCloud,
   LibraryMember, BookLoan
 } from '@/lib/cloud/library-cloud';
 import { loadProductsCloud, Product } from '@/lib/cloud/products-cloud';
 
 export default function LibraryMembers() {
-  const { t, isRTL, language } = useLanguage();
+  const { language } = useLanguage();
   const isEn = language === 'en';
   const [members, setMembers] = useState<LibraryMember[]>([]);
   const [loans, setLoans] = useState<BookLoan[]>([]);
   const [books, setBooks] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('members');
 
@@ -73,38 +75,53 @@ export default function LibraryMembers() {
   // Member CRUD
   const handleAddMember = async () => {
     if (!memberForm.name.trim()) { toast.error(isEn ? 'Name is required' : 'الاسم مطلوب'); return; }
-    const result = await addMemberCloud(memberForm);
-    if (result) {
-      toast.success(isEn ? 'Member added successfully' : 'تم إضافة العضو بنجاح');
-      setShowAddMember(false);
-      setMemberForm({ name: '', phone: '', email: '', notes: '' });
-      loadData();
-    } else {
-      toast.error(isEn ? 'Failed to add member' : 'فشل في إضافة العضو');
+    setIsSaving(true);
+    try {
+      const result = await addMemberCloud(memberForm);
+      if (result) {
+        toast.success(isEn ? 'Member added successfully' : 'تم إضافة العضو بنجاح');
+        setShowAddMember(false);
+        setMemberForm({ name: '', phone: '', email: '', notes: '' });
+        loadData();
+      } else {
+        toast.error(isEn ? 'Failed to add member' : 'فشل في إضافة العضو');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleEditMember = async () => {
     if (!selectedMember) return;
-    const ok = await updateMemberCloud(selectedMember.id, memberForm);
-    if (ok) {
-      toast.success(isEn ? 'Member updated' : 'تم تحديث العضو');
-      setShowEditMember(false);
-      loadData();
-    } else {
-      toast.error(isEn ? 'Failed to update member' : 'فشل في التحديث');
+    setIsSaving(true);
+    try {
+      const ok = await updateMemberCloud(selectedMember.id, memberForm);
+      if (ok) {
+        toast.success(isEn ? 'Member updated' : 'تم تحديث العضو');
+        setShowEditMember(false);
+        loadData();
+      } else {
+        toast.error(isEn ? 'Failed to update member' : 'فشل في التحديث');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDeleteMember = async () => {
     if (!selectedMember) return;
-    const ok = await deleteMemberCloud(selectedMember.id);
-    if (ok) {
-      toast.success(isEn ? 'Member deleted' : 'تم حذف العضو');
-      setShowDeleteMember(false);
-      loadData();
-    } else {
-      toast.error(isEn ? 'Failed to delete member' : 'فشل في الحذف');
+    setIsSaving(true);
+    try {
+      const ok = await deleteMemberCloud(selectedMember.id);
+      if (ok) {
+        toast.success(isEn ? 'Member deleted' : 'تم حذف العضو');
+        setShowDeleteMember(false);
+        loadData();
+      } else {
+        toast.error(isEn ? 'Failed to delete member' : 'فشل في الحذف');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -114,27 +131,37 @@ export default function LibraryMembers() {
       toast.error(isEn ? 'Please fill in all required fields' : 'يرجى ملء جميع الحقول المطلوبة');
       return;
     }
-    const result = await addLoanCloud(loanForm);
-    if (result) {
-      toast.success(isEn ? 'Loan recorded successfully' : 'تم تسجيل الإعارة بنجاح');
-      setShowAddLoan(false);
-      setLoanForm({ productId: '', memberId: '', dueDate: '', notes: '' });
-      loadData();
-    } else {
-      toast.error(isEn ? 'Failed to record loan' : 'فشل في تسجيل الإعارة');
+    setIsSaving(true);
+    try {
+      const result = await addLoanCloud(loanForm);
+      if (result) {
+        toast.success(isEn ? 'Loan recorded successfully' : 'تم تسجيل الإعارة بنجاح');
+        setShowAddLoan(false);
+        setLoanForm({ productId: '', memberId: '', dueDate: '', notes: '' });
+        loadData();
+      } else {
+        toast.error(isEn ? 'Failed to record loan' : 'فشل في تسجيل الإعارة');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleReturnLoan = async () => {
     if (!selectedLoan) return;
-    const ok = await returnLoanCloud(selectedLoan.id, returnLateFee);
-    if (ok) {
-      toast.success(isEn ? 'Book returned' : 'تم إرجاع الكتاب');
-      setShowReturnDialog(false);
-      setReturnLateFee(0);
-      loadData();
-    } else {
-      toast.error(isEn ? 'Failed to record return' : 'فشل في تسجيل الإرجاع');
+    setIsSaving(true);
+    try {
+      const ok = await returnLoanCloud(selectedLoan.id, returnLateFee);
+      if (ok) {
+        toast.success(isEn ? 'Book returned' : 'تم إرجاع الكتاب');
+        setShowReturnDialog(false);
+        setReturnLateFee(0);
+        loadData();
+      } else {
+        toast.error(isEn ? 'Failed to record return' : 'فشل في تسجيل الإرجاع');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -167,72 +194,33 @@ export default function LibraryMembers() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">{isEn ? 'Active' : 'نشط'}</span>;
-      case 'returned': return <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">{isEn ? 'Returned' : 'مُرجع'}</span>;
-      case 'overdue': return <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">{isEn ? 'Overdue' : 'متأخر'}</span>;
-      case 'lost': return <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{isEn ? 'Lost' : 'مفقود'}</span>;
-      default: return null;
+      case 'active':
+        return <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30">{isEn ? 'Active' : 'نشط'}</Badge>;
+      case 'returned':
+        return <Badge variant="outline" className="bg-success/15 text-success border-success/30">{isEn ? 'Returned' : 'مُرجع'}</Badge>;
+      case 'overdue':
+        return <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30">{isEn ? 'Overdue' : 'متأخر'}</Badge>;
+      case 'lost':
+        return <Badge variant="secondary">{isEn ? 'Lost' : 'مفقود'}</Badge>;
+      default:
+        return null;
     }
   };
 
   const isOverdue = (loan: BookLoan) => loan.status === 'active' && new Date(loan.dueDate) < new Date();
 
+  const isMemberFormDirty = Boolean(memberForm.name.trim() || memberForm.phone.trim() || memberForm.email.trim() || memberForm.notes.trim());
+  const isLoanFormDirty = Boolean(loanForm.productId || loanForm.memberId || loanForm.dueDate || loanForm.notes.trim());
+
   return (
-    <div className="p-2.5 sm:p-4 md:p-6 pt-2 sm:pt-3 space-y-3">
-      {/* Top Tabs with smart mobile clearance */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-3">
-        <div className="flex items-center justify-between gap-2 rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
-          <TabsList className={capsuleOuter}>
-              <TabsTrigger
-                value="members"
-                className={capsuleTrigger}
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>{isEn ? 'Members' : 'الأعضاء'}</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="loans"
-                className={capsuleTrigger}
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>{isEn ? 'Loans' : 'الإعارات'}</span>
-              </TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Compact Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 text-center select-none">
-          <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-            <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{isEn ? "Members" : "الأعضاء"}</span>
-            <span className="text-sm font-black text-foreground tabular-nums">{members.length}</span>
-          </div>
-          <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-            <span className="text-[9.5px] text-primary font-medium block truncate">{isEn ? "Active Loans" : "إعارات نشطة"}</span>
-            <span className="text-sm font-black text-primary tabular-nums">{loans.filter(l => l.status === 'active').length}</span>
-          </div>
-          <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-            <span className="text-[9.5px] text-destructive font-medium block truncate">{isEn ? "Overdue" : "متأخرة"}</span>
-            <span className="text-sm font-black text-destructive tabular-nums">{overdueLoans.length}</span>
-          </div>
-          <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-            <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{isEn ? "Lost" : "مفقودة"}</span>
-            <span className="text-sm font-black text-muted-foreground tabular-nums">{loans.filter(l => l.status === 'lost').length}</span>
-          </div>
-        </div>
-
-        {/* Search + Add */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder={isEn ? "Search by name or phone..." : "بحث بالاسم أو الهاتف..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 ps-9 pe-4 text-xs rounded-xl bg-card border-border shadow-2xs"
-            />
-          </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+      <PageHeader
+        title={activeTab === 'members' ? (isEn ? 'Members' : 'الأعضاء') : (isEn ? 'Loans' : 'الإعارات')}
+        icon={activeTab === 'members' ? <Users className="w-5 h-5" /> : <BookOpen className="w-5 h-5" />}
+        actions={
           <Button
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 px-4 rounded-xl shadow-xs text-xs gap-1.5 shrink-0 transition-all cursor-pointer"
+            variant="default"
+            size="default"
             onClick={() => {
               if (activeTab === 'members') {
                 setMemberForm({ name: '', phone: '', email: '', notes: '' });
@@ -243,9 +231,58 @@ export default function LibraryMembers() {
               }
             }}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>{activeTab === 'members' ? (isEn ? 'New Member' : 'عضو جديد') : (isEn ? 'New Loan' : 'إعارة جديدة')}</span>
           </Button>
+        }
+      />
+
+      {/* Top Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <TabsList className={capsuleOuter}>
+            <TabsTrigger value="members" className={capsuleTrigger}>
+              <Users className="w-3.5 h-3.5" />
+              <span>{isEn ? 'Members' : 'الأعضاء'}</span>
+            </TabsTrigger>
+            <TabsTrigger value="loans" className={capsuleTrigger}>
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>{isEn ? 'Loans' : 'الإعارات'}</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Compact Stats Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center select-none">
+          <div className="bg-card py-3 px-2 rounded-xl border border-border shadow-xs">
+            <span className="text-xs text-muted-foreground font-medium block truncate">{isEn ? "Members" : "الأعضاء"}</span>
+            <span dir="ltr" className="inline-block text-base font-bold text-foreground tabular-nums mt-0.5">{members.length}</span>
+          </div>
+          <div className="bg-card py-3 px-2 rounded-xl border border-border shadow-xs">
+            <span className="text-xs text-primary font-medium block truncate">{isEn ? "Active Loans" : "إعارات نشطة"}</span>
+            <span dir="ltr" className="inline-block text-base font-bold text-primary tabular-nums mt-0.5">{loans.filter(l => l.status === 'active').length}</span>
+          </div>
+          <div className="bg-card py-3 px-2 rounded-xl border border-border shadow-xs">
+            <span className="text-xs text-destructive font-medium block truncate">{isEn ? "Overdue" : "متأخرة"}</span>
+            <span dir="ltr" className="inline-block text-base font-bold text-destructive tabular-nums mt-0.5">{overdueLoans.length}</span>
+          </div>
+          <div className="bg-card py-3 px-2 rounded-xl border border-border shadow-xs">
+            <span className="text-xs text-muted-foreground font-medium block truncate">{isEn ? "Lost" : "مفقودة"}</span>
+            <span dir="ltr" className="inline-block text-base font-bold text-muted-foreground tabular-nums mt-0.5">{loans.filter(l => l.status === 'lost').length}</span>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder={isEn ? "Search by name or phone..." : "بحث بالاسم أو الهاتف..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="ps-9 pe-3"
+            />
+          </div>
         </div>
 
         {/* Members Tab */}
@@ -253,40 +290,60 @@ export default function LibraryMembers() {
           {isLoading ? (
             <div className="flex justify-center py-12"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>
           ) : filteredMembers.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">{isEn ? "No members yet" : "لا يوجد أعضاء بعد"}</div>
+            <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+              <Users className="w-12 h-12 text-muted-foreground/50 mb-3" />
+              <p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? "No members yet" : "لا يوجد أعضاء بعد"}</p>
+            </div>
           ) : (
             filteredMembers.map(member => (
-              <div key={member.id} className="bg-card rounded-xl border p-4 flex items-center justify-between">
+              <div key={member.id} className="bg-card rounded-xl border border-border p-4 flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-foreground truncate">{member.name}</p>
                     {member.membershipStatus === 'active' ? (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/10 text-success">{isEn ? "Active" : "نشط"}</span>
+                      <Badge variant="outline" className="bg-success/15 text-success border-success/30">{isEn ? "Active" : "نشط"}</Badge>
                     ) : (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">{isEn ? "Suspended" : "معلّق"}</span>
+                      <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30">{isEn ? "Suspended" : "معلّق"}</Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    {member.phone && <span>{member.phone}</span>}
-                    <span>{isEn ? "Active loans:" : "إعارات نشطة:"} {activeLoansByMember(member.id)}</span>
+                  <div className="flex items-center flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
+                    {member.phone && <span dir="ltr" className="inline-block tabular-nums">{member.phone}</span>}
+                    <span>
+                      {isEn ? "Active loans:" : "إعارات نشطة:"}{' '}
+                      <span dir="ltr" className="inline-block tabular-nums">{activeLoansByMember(member.id)}</span>
+                    </span>
                     {member.lateFees > 0 && (
-                      <span className="text-destructive">{isEn ? "Fines:" : "غرامات:"} {formatNumber(member.lateFees)}</span>
+                      <span className="text-destructive">
+                        {isEn ? "Fines:" : "غرامات:"}{' '}
+                        <span dir="ltr" className="inline-block tabular-nums">{formatNumber(member.lateFees)}</span>
+                      </span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                    setSelectedMember(member);
-                    setMemberForm({ name: member.name, phone: member.phone, email: member.email, notes: member.notes });
-                    setShowEditMember(true);
-                  }}>
-                    <Edit className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={isEn ? "Edit Member" : "تعديل العضو"}
+                    onClick={() => {
+                      setSelectedMember(member);
+                      setMemberForm({ name: member.name, phone: member.phone, email: member.email, notes: member.notes });
+                      setShowEditMember(true);
+                    }}
+                  >
+                    <Edit className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => {
-                    setSelectedMember(member);
-                    setShowDeleteMember(true);
-                  }}>
-                    <Trash2 className="w-3.5 h-3.5" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    aria-label={isEn ? "Delete Member" : "حذف العضو"}
+                    onClick={() => {
+                      setSelectedMember(member);
+                      setShowDeleteMember(true);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -299,40 +356,60 @@ export default function LibraryMembers() {
           {isLoading ? (
             <div className="flex justify-center py-12"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div>
           ) : filteredLoans.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">{isEn ? "No loans yet" : "لا يوجد إعارات بعد"}</div>
+            <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+              <BookOpen className="w-12 h-12 text-muted-foreground/50 mb-3" />
+              <p className="text-sm sm:text-base font-semibold text-foreground">{isEn ? "No loans yet" : "لا يوجد إعارات بعد"}</p>
+            </div>
           ) : (
             filteredLoans.map(loan => (
               <div key={loan.id} className={cn(
-                "bg-card rounded-xl border p-4",
+                "bg-card rounded-xl border border-border p-4",
                 isOverdue(loan) && "border-destructive/50"
               )}>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-foreground truncate">{loan.bookName}</p>
                       {getStatusBadge(isOverdue(loan) ? 'overdue' : loan.status)}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
                       <span>{isEn ? "Member:" : "العضو:"} {loan.memberName}</span>
-                      <span>{isEn ? "Loaned:" : "الإعارة:"} {loan.loanDate}</span>
+                      <span>
+                        {isEn ? "Loaned:" : "الإعارة:"}{' '}
+                        <span dir="ltr" className="inline-block tabular-nums">{loan.loanDate}</span>
+                      </span>
                       <span className={cn(isOverdue(loan) && "text-destructive font-medium")}>
-                        {isEn ? "Due:" : "الاسترداد:"} {loan.dueDate}
+                        {isEn ? "Due:" : "الاسترداد:"}{' '}
+                        <span dir="ltr" className="inline-block tabular-nums">{loan.dueDate}</span>
                       </span>
                     </div>
                     {loan.returnDate && (
-                      <p className="text-xs text-success mt-0.5">{isEn ? "Returned:" : "تم الإرجاع:"} {loan.returnDate}</p>
+                      <p className="text-xs text-success mt-0.5">
+                        {isEn ? "Returned:" : "تم الإرجاع:"}{' '}
+                        <span dir="ltr" className="inline-block tabular-nums">{loan.returnDate}</span>
+                      </p>
                     )}
                   </div>
                   {loan.status === 'active' && (
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => {
-                        setSelectedLoan(loan);
-                        setReturnLateFee(0);
-                        setShowReturnDialog(true);
-                      }}>
-                        <RotateCcw className="w-3 h-3" /> {isEn ? "Return" : "إرجاع"}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-10 sm:min-h-9"
+                        onClick={() => {
+                          setSelectedLoan(loan);
+                          setReturnLateFee(0);
+                          setShowReturnDialog(true);
+                        }}
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> {isEn ? "Return" : "إرجاع"}
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => handleMarkLost(loan)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-10 sm:min-h-9 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleMarkLost(loan)}
+                      >
                         {isEn ? "Lost" : "مفقود"}
                       </Button>
                     </div>
@@ -346,121 +423,164 @@ export default function LibraryMembers() {
 
       {/* Add/Edit Member Dialog */}
       <Dialog open={showAddMember || showEditMember} onOpenChange={(open) => {
-        if (!open) { setShowAddMember(false); setShowEditMember(false); }
+        if (!open && !isSaving) { setShowAddMember(false); setShowEditMember(false); }
       }}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-4 sm:p-6 overflow-y-auto rounded-2xl">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (isSaving || isMemberFormDirty) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSaving || isMemberFormDirty) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{showEditMember ? (isEn ? 'Edit Member' : 'تعديل العضو') : (isEn ? 'New Member' : 'عضو جديد')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Member Name *" : "اسم العضو *"}</label>
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Member Name *" : "اسم العضو *"}</label>
               <Input value={memberForm.name} onChange={(e) => setMemberForm(p => ({ ...p, name: e.target.value }))} />
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Phone Number" : "رقم الهاتف"}</label>
-              <Input value={memberForm.phone} onChange={(e) => setMemberForm(p => ({ ...p, phone: e.target.value }))} />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Phone Number" : "رقم الهاتف"}</label>
+              <Input dir="ltr" className="tabular-nums" value={memberForm.phone} onChange={(e) => setMemberForm(p => ({ ...p, phone: e.target.value }))} />
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Email" : "البريد الإلكتروني"}</label>
-              <Input value={memberForm.email} onChange={(e) => setMemberForm(p => ({ ...p, email: e.target.value }))} />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Email" : "البريد الإلكتروني"}</label>
+              <Input dir="ltr" value={memberForm.email} onChange={(e) => setMemberForm(p => ({ ...p, email: e.target.value }))} />
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Notes" : "ملاحظات"}</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Notes" : "ملاحظات"}</label>
               <Input value={memberForm.notes} onChange={(e) => setMemberForm(p => ({ ...p, notes: e.target.value }))} />
             </div>
-            <Button className="w-full" onClick={showEditMember ? handleEditMember : handleAddMember}>
-              <Save className="w-4 h-4" />
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button
+              variant="outline"
+              size="default"
+              disabled={isSaving}
+              onClick={() => { setShowAddMember(false); setShowEditMember(false); }}
+            >
+              {isEn ? "Cancel" : "إلغاء"}
+            </Button>
+            <Button
+              variant="default"
+              size="default"
+              disabled={isSaving}
+              onClick={showEditMember ? handleEditMember : handleAddMember}
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {showEditMember ? (isEn ? 'Update' : 'تحديث') : (isEn ? 'Add' : 'إضافة')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add Loan Dialog */}
-      <Dialog open={showAddLoan} onOpenChange={setShowAddLoan}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+      <Dialog open={showAddLoan} onOpenChange={(open) => { if (!open && !isSaving) setShowAddLoan(false); }}>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (isSaving || isLoanFormDirty) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSaving || isLoanFormDirty) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{isEn ? "Loan Book" : "إعارة كتاب"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Book *" : "الكتاب *"}</label>
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Book *" : "الكتاب *"}</label>
               <Select value={loanForm.productId} onValueChange={(v) => setLoanForm(p => ({ ...p, productId: v }))}>
-                <SelectTrigger><SelectValue placeholder={isEn ? "Select a book" : "اختر كتاب"} /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]"><SelectValue placeholder={isEn ? "Select a book" : "اختر كتاب"} /></SelectTrigger>
+                <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                   {books.map(b => (
                     <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Member *" : "العضو *"}</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Member *" : "العضو *"}</label>
               <Select value={loanForm.memberId} onValueChange={(v) => setLoanForm(p => ({ ...p, memberId: v }))}>
-                <SelectTrigger><SelectValue placeholder={isEn ? "Select a member" : "اختر عضو"} /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]"><SelectValue placeholder={isEn ? "Select a member" : "اختر عضو"} /></SelectTrigger>
+                <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
                   {members.filter(m => m.membershipStatus === 'active').map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Due Date *" : "تاريخ الاسترداد *"}</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Due Date *" : "تاريخ الاسترداد *"}</label>
               <Input
                 type="date"
+                dir="ltr"
+                className="tabular-nums"
                 value={loanForm.dueDate}
                 onChange={(e) => setLoanForm(p => ({ ...p, dueDate: e.target.value }))}
               />
             </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Notes" : "ملاحظات"}</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Notes" : "ملاحظات"}</label>
               <Input value={loanForm.notes} onChange={(e) => setLoanForm(p => ({ ...p, notes: e.target.value }))} />
             </div>
-            <Button className="w-full" onClick={handleAddLoan}>
-              <BookOpen className="w-4 h-4" /> {isEn ? "Record Loan" : "تسجيل الإعارة"}
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" disabled={isSaving} onClick={() => setShowAddLoan(false)}>
+              {isEn ? "Cancel" : "إلغاء"}
             </Button>
-          </div>
+            <Button variant="default" size="default" disabled={isSaving} onClick={handleAddLoan}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
+              {isEn ? "Record Loan" : "تسجيل الإعارة"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Return Loan Dialog */}
-      <Dialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),24rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-4 sm:p-6 overflow-y-auto rounded-2xl">
-          <DialogHeader>
+      <Dialog open={showReturnDialog} onOpenChange={(open) => { if (!open && !isSaving) setShowReturnDialog(false); }}>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (isSaving || returnLateFee > 0) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSaving || returnLateFee > 0) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{isEn ? "Return Book" : "إرجاع كتاب"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <DialogBody className="space-y-4">
             <p className="text-sm text-muted-foreground">
               {isEn ? "Book:" : "الكتاب:"} <strong>{selectedLoan?.bookName}</strong>
               <br />
               {isEn ? "Member:" : "العضو:"} <strong>{selectedLoan?.memberName}</strong>
             </p>
             {selectedLoan && isOverdue(selectedLoan) && (
-              <div className="bg-destructive/10 rounded-lg p-3 text-sm text-destructive">
+              <div className="bg-destructive/10 rounded-xl p-3 text-sm text-destructive">
                 <AlertTriangle className="w-4 h-4 inline me-1" />
                 {isEn ? "This book is overdue!" : "هذا الكتاب متأخر عن موعد الاسترداد!"}
               </div>
             )}
-            <div>
-              <label className="text-sm font-medium mb-1 block">{isEn ? "Late Fee" : "غرامة التأخير"}</label>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium block">{isEn ? "Late Fee" : "غرامة التأخير"}</label>
               <Input
                 type="number"
+                dir="ltr"
+                className="tabular-nums"
                 value={returnLateFee}
                 onChange={(e) => setReturnLateFee(Number(e.target.value))}
                 min={0}
               />
             </div>
-            <Button className="w-full" onClick={handleReturnLoan}>
-              <RotateCcw className="w-4 h-4" /> {isEn ? "Confirm Return" : "تأكيد الإرجاع"}
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" disabled={isSaving} onClick={() => setShowReturnDialog(false)}>
+              {isEn ? "Cancel" : "إلغاء"}
             </Button>
-          </div>
+            <Button variant="default" size="default" disabled={isSaving} onClick={handleReturnLoan}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+              {isEn ? "Confirm Return" : "تأكيد الإرجاع"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Member Confirm */}
-      <AlertDialog open={showDeleteMember} onOpenChange={setShowDeleteMember}>
+      <AlertDialog open={showDeleteMember} onOpenChange={(open) => { if (!open && !isSaving) setShowDeleteMember(false); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{isEn ? "Delete Member" : "حذف العضو"}</AlertDialogTitle>
@@ -469,8 +589,15 @@ export default function LibraryMembers() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{isEn ? "Cancel" : "إلغاء"}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive text-destructive-foreground">{isEn ? "Delete" : "حذف"}</AlertDialogAction>
+            <AlertDialogCancel disabled={isSaving}>{isEn ? "Cancel" : "إلغاء"}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteMember}
+              disabled={isSaving}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isEn ? "Delete" : "حذف"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

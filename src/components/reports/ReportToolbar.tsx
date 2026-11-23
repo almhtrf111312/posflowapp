@@ -14,11 +14,11 @@ export function ReportToolbar({ onExportPDF, onExportExcel, disabled, extraActio
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button variant="outline" size="sm" onClick={onExportPDF} disabled={disabled} className="h-8 text-xs rounded-lg gap-1">
+      <Button variant="outline" size="sm" onClick={onExportPDF} disabled={disabled} className="min-h-11 sm:min-h-10 text-xs rounded-xl gap-1.5">
         <FileText className="w-3.5 h-3.5" />
         {t('reports.exportPDF') || 'PDF'}
       </Button>
-      <Button variant="outline" size="sm" onClick={onExportExcel} disabled={disabled} className="h-8 text-xs rounded-lg gap-1">
+      <Button variant="outline" size="sm" onClick={onExportExcel} disabled={disabled} className="min-h-11 sm:min-h-10 text-xs rounded-xl gap-1.5">
         <Download className="w-3.5 h-3.5" />
         {t('reports.exportExcel') || 'Excel'}
       </Button>

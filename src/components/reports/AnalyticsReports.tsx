@@ -110,8 +110,8 @@ export function ProductProfitReport({ invoices, products, dateRange }: { invoice
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <Stat label="الإيراد" value={formatReportAmount(totals.revenue)} />
         <Stat label="التكلفة" value={formatReportAmount(totals.cost)} />
-        <Stat label="الربح" value={formatReportAmount(totals.profit)} tone={totals.profit >= 0 ? 'text-emerald-600' : 'text-red-600'} />
-        <Stat label="أصناف بخسارة" value={formatNumber(totals.losing)} tone={totals.losing > 0 ? 'text-red-600' : undefined} />
+        <Stat label="الربح" value={formatReportAmount(totals.profit)} tone={totals.profit >= 0 ? 'text-success' : 'text-destructive'} />
+        <Stat label="أصناف بخسارة" value={formatNumber(totals.losing)} tone={totals.losing > 0 ? 'text-destructive' : undefined} />
       </div>
       {rows.length === 0 ? <Empty icon={<Package />} text="لا توجد مبيعات في هذه الفترة" /> : (
         <Card><CardContent className="p-0 divide-y divide-border/40">
@@ -119,13 +119,13 @@ export function ProductProfitReport({ invoices, products, dateRange }: { invoice
             <div key={r.id} className="flex items-center gap-2 p-2.5">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate">{r.name}</p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {r.category} • كمية {formatNumber(r.qty)} • إيراد {formatReportAmount(r.revenue)} • تكلفة {formatReportAmount(r.cost)}
                 </p>
               </div>
-              <div className="text-left shrink-0">
-                <p className={cn('text-xs font-bold', r.profit >= 0 ? 'text-emerald-600' : 'text-red-600')}>{formatReportAmount(r.profit)}</p>
-                <p className="text-[10px] text-muted-foreground">{r.margin.toFixed(1)}%</p>
+              <div className="text-end shrink-0">
+                <p className={cn('text-xs font-bold', r.profit >= 0 ? 'text-success' : 'text-destructive')}><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.profit)}</span></p>
+                <p className="text-xs text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{r.margin.toFixed(1)}%</span></p>
               </div>
             </div>
           ))}
@@ -205,7 +205,7 @@ export function ReceivablesAgingReport({ debts }: { debts: Debt[] }) {
         {byBucket.map(b => (
           <div key={b.id}>
             <Stat label={`${b.label} (${b.count})`} value={formatReportAmount(b.amount)}
-              tone={b.id === 'd90p' && b.amount > 0 ? 'text-red-600' : undefined} />
+              tone={b.id === 'd90p' && b.amount > 0 ? 'text-destructive' : undefined} />
           </div>
         ))}
       </div>
@@ -216,11 +216,11 @@ export function ReceivablesAgingReport({ debts }: { debts: Debt[] }) {
               onClick={() => navigate(invoicesLink({ payment: 'debt', q: r.customer }))}>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate">{r.customer}</p>
-                <p className="text-[10px] text-muted-foreground">استحقاق {r.dueDay} • {r.bucketLabel}</p>
+                <p className="text-xs text-muted-foreground">استحقاق {r.dueDay} • {r.bucketLabel}</p>
               </div>
-              <div className="text-left shrink-0">
-                <p className="text-xs font-bold">{formatReportAmount(r.remaining)}</p>
-                {r.overdueDays > 0 && <p className="text-[10px] text-red-600">{formatNumber(r.overdueDays)} يوم</p>}
+              <div className="text-end shrink-0">
+                <p className="text-xs font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.remaining)}</span></p>
+                {r.overdueDays > 0 && <p className="text-xs text-destructive">{formatNumber(r.overdueDays)} يوم</p>}
               </div>
             </div>
           ))}
@@ -302,14 +302,14 @@ export function ReturnsDiscountsReport({ invoices, dateRange }: { invoices: Invo
       exportDisabled={list.length === 0}
       filters={
         <div className="flex gap-1.5">
-          <Button size="sm" variant={view === 'returns' ? 'default' : 'outline'} className="h-8 text-[11px] rounded-xl flex-1" onClick={() => setView('returns')}>المرتجعات ({returns.length})</Button>
-          <Button size="sm" variant={view === 'discounts' ? 'default' : 'outline'} className="h-8 text-[11px] rounded-xl flex-1" onClick={() => setView('discounts')}>الخصومات ({discounts.length})</Button>
+          <Button size="sm" variant={view === 'returns' ? 'default' : 'outline'} className="text-xs rounded-xl flex-1" onClick={() => setView('returns')}>المرتجعات (<span dir="ltr" className="inline-block tabular-nums">{returns.length}</span>)</Button>
+          <Button size="sm" variant={view === 'discounts' ? 'default' : 'outline'} className="text-xs rounded-xl flex-1" onClick={() => setView('discounts')}>الخصومات (<span dir="ltr" className="inline-block tabular-nums">{discounts.length}</span>)</Button>
         </div>
       }
     >
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <Stat label="قيمة المرتجعات" value={formatReportAmount(totalReturns)} tone="text-red-600" />
-        <Stat label="قيمة الخصومات" value={formatReportAmount(totalDiscounts)} tone="text-amber-600" />
+        <Stat label="قيمة المرتجعات" value={formatReportAmount(totalReturns)} tone="text-destructive" />
+        <Stat label="قيمة الخصومات" value={formatReportAmount(totalDiscounts)} tone="text-warning" />
       </div>
       {list.length === 0 ? <Empty icon={<Undo2 />} text={view === 'returns' ? 'لا توجد مرتجعات في هذه الفترة' : 'لا توجد خصومات في هذه الفترة'} /> : (
         <Card><CardContent className="p-0 divide-y divide-border/40">
@@ -318,9 +318,9 @@ export function ReturnsDiscountsReport({ invoices, dateRange }: { invoices: Invo
               onClick={() => navigate(invoicesLink({ invoice: r.id, refunded: view === 'returns' }))}>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate">{r.customer}</p>
-                <p className="text-[10px] text-muted-foreground">#{r.id} • {r.day} • {r.cashier}</p>
+                <p className="text-xs text-muted-foreground">#{r.id} • {r.day} • {r.cashier}</p>
               </div>
-              <p className="text-xs font-bold shrink-0">{formatReportAmount(r.amount)}</p>
+              <p className="text-xs font-bold shrink-0"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.amount)}</span></p>
             </div>
           ))}
         </CardContent></Card>
@@ -482,7 +482,7 @@ export function SlowMovingStockReport({ invoices, products, dateRange }: { invoi
       exportDisabled={rows.length === 0}
     >
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <Stat label="أصناف راكدة" value={formatNumber(rows.length)} tone={rows.length > 0 ? 'text-amber-600' : undefined} />
+        <Stat label="أصناف راكدة" value={formatNumber(rows.length)} tone={rows.length > 0 ? 'text-warning' : undefined} />
         <Stat label="قيمة المخزون الراكد" value={formatReportAmount(totalValue)} />
       </div>
       {rows.length === 0 ? <Empty icon={<Package />} text="كل الأصناف التي لديها رصيد بيع منها خلال الفترة" /> : (
@@ -491,7 +491,7 @@ export function SlowMovingStockReport({ invoices, products, dateRange }: { invoi
             <div key={r.id} className="flex items-center gap-2 p-2.5">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold truncate">{r.name}</p>
-                <p className="text-[10px] text-muted-foreground">{r.category} • رصيد {formatNumber(r.quantity)} • آخر بيع: {r.lastSale}</p>
+                <p className="text-xs text-muted-foreground">{r.category} • رصيد {formatNumber(r.quantity)} • آخر بيع: {r.lastSale}</p>
               </div>
               <p className="text-xs font-bold shrink-0">{formatReportAmount(r.value)}</p>
             </div>

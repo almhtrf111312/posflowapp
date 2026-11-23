@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Package, ArrowLeft } from 'lucide-react';
+import { AlertTriangle, Package, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,9 +37,9 @@ export function LowStockAlerts() {
             )}
           </CardTitle>
           <Link to="/products">
-            <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs">
+            <Button variant="ghost" size="sm" className="gap-1 text-xs">
               {t('lowStock.viewAll')}
-              <ArrowLeft className="w-3 h-3" />
+              <ArrowRight className="w-4 h-4 rtl:rotate-180" />
             </Button>
           </Link>
         </div>
@@ -81,7 +81,7 @@ export function LowStockAlerts() {
                     {product.name}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {t('lowStock.minLevel')}: {product.minStockLevel || 5}
+                    {t('lowStock.minLevel')}: <span dir="ltr" className="inline-block tabular-nums">{product.minStockLevel || 5}</span>
                   </p>
                 </div>
               </div>
@@ -92,7 +92,7 @@ export function LowStockAlerts() {
                     isVeryLow && !isCritical ? 'border-warning text-warning' : ''
                   }`}
                 >
-                  {product.quantity} {t('lowStock.remaining')}
+                  <span dir="ltr" className="inline-block tabular-nums">{product.quantity}</span> {t('lowStock.remaining')}
                 </Badge>
               </div>
             </div>
@@ -101,7 +101,7 @@ export function LowStockAlerts() {
         
         {lowStockProducts.length > 0 && (
           <p className="text-xs text-muted-foreground text-center pt-2">
-            {t('lowStock.totalLowStock')}: {getLowStockProducts().length}
+            {t('lowStock.totalLowStock')}: <span dir="ltr" className="inline-block tabular-nums">{getLowStockProducts().length}</span>
           </p>
         )}
       </CardContent>

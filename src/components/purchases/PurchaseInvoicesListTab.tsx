@@ -109,7 +109,7 @@ export function PurchaseInvoicesListTab() {
   return (
     <div className="space-y-6">
       {/* Stats Cards for Purchases */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -118,7 +118,7 @@ export function PurchaseInvoicesListTab() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">عدد فواتير الشراء</p>
-                <p className="text-xl font-bold">{stats.totalCount}</p>
+                <p className="text-xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{stats.totalCount}</span></p>
               </div>
             </div>
           </CardContent>
@@ -126,13 +126,13 @@ export function PurchaseInvoicesListTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <DollarSign className="w-5 h-5 text-success" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">إجمالي المشتريات</p>
-                <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(stats.totalAmount)}
+                <p className="text-xl font-bold text-success">
+                  <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(stats.totalAmount)}</span>
                 </p>
               </div>
             </div>
@@ -141,12 +141,12 @@ export function PurchaseInvoicesListTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <ShoppingBag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 rounded-lg bg-info/10">
+                <ShoppingBag className="w-5 h-5 text-info" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">مؤكدة بالمخزون</p>
-                <p className="text-xl font-bold">{stats.finalizedCount}</p>
+                <p className="text-xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{stats.finalizedCount}</span></p>
               </div>
             </div>
           </CardContent>
@@ -154,12 +154,12 @@ export function PurchaseInvoicesListTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <RotateCcw className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <div className="p-2 rounded-lg bg-warning/10">
+                <RotateCcw className="w-5 h-5 text-warning" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">مسودات</p>
-                <p className="text-xl font-bold">{stats.draftCount}</p>
+                <p className="text-xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{stats.draftCount}</span></p>
               </div>
             </div>
           </CardContent>
@@ -168,14 +168,14 @@ export function PurchaseInvoicesListTab() {
 
       {/* Filters & Action */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="flex flex-1 flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="flex flex-1 flex-col sm:flex-row gap-3 min-w-0">
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="بحث برقم الفاتورة، اسم المورد، أو اسم الشركة..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="ps-10 pe-3"
+              className="ps-9 pe-3"
             />
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 sm:w-48">
@@ -190,7 +190,8 @@ export function PurchaseInvoicesListTab() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 flex-shrink-0"
+                className="shrink-0"
+                aria-label="مسح التاريخ"
                 onClick={() => setDateFilter('')}
               >
                 <X className="w-4 h-4" />
@@ -200,10 +201,12 @@ export function PurchaseInvoicesListTab() {
         </div>
 
         <Button
-          className="bg-primary hover:bg-primary/90 gap-1.5 h-10 shrink-0 shadow-sm"
+          variant="default"
+          size="default"
+          className="shrink-0"
           onClick={() => setShowAddDialog(true)}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 shrink-0" />
           <span>إضافة فاتورة مشتريات</span>
         </Button>
       </div>
@@ -228,22 +231,20 @@ export function PurchaseInvoicesListTab() {
             </Card>
           ))
         ) : filteredInvoices.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Truck className="w-12 h-12 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-base font-medium text-foreground mb-1">
-                لا توجد فواتير مشتريات مسجلة
-              </p>
-              <p className="text-xs text-muted-foreground mb-4">
-                يمكنك إضافة وتوثيق فواتير المشتريات لتسجيل البضاعة الموردة، أسعار التكلفة، وإدخالها
-                للمخزون فوراً.
-              </p>
-              <Button onClick={() => setShowAddDialog(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                إضافة فاتورة مشتريات جديدة
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <Truck className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm sm:text-base font-semibold text-foreground">
+              لا توجد فواتير مشتريات مسجلة
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 mb-4 max-w-sm">
+              يمكنك إضافة وتوثيق فواتير المشتريات لتسجيل البضاعة الموردة، أسعار التكلفة، وإدخالها
+              للمخزون فوراً.
+            </p>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="w-4 h-4 shrink-0" />
+              إضافة فاتورة مشتريات جديدة
+            </Button>
+          </div>
         ) : (
           filteredInvoices.map((inv) => (
             <Card
@@ -271,12 +272,10 @@ export function PurchaseInvoicesListTab() {
                           </span>
                         )}
                         <Badge
-                          variant={inv.status === 'finalized' ? 'default' : inv.status === 'cancelled' ? 'destructive' : 'secondary'}
+                          variant={inv.status === 'finalized' ? 'outline' : inv.status === 'cancelled' ? 'destructive' : 'secondary'}
                           className={
                             inv.status === 'finalized'
-                              ? 'bg-emerald-600 hover:bg-emerald-700'
-                              : inv.status === 'cancelled'
-                              ? 'bg-destructive/80 hover:bg-destructive text-destructive-foreground'
+                              ? 'bg-success/15 text-success border-success/30'
                               : ''
                           }
                         >
@@ -288,7 +287,7 @@ export function PurchaseInvoicesListTab() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
-                        <span className="font-mono font-medium">#{inv.invoice_number}</span>
+                        <span dir="ltr" className="inline-block font-mono font-medium tabular-nums">#{inv.invoice_number}</span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
@@ -307,16 +306,16 @@ export function PurchaseInvoicesListTab() {
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0">
-                    <div className="text-right sm:text-left">
+                    <div className="text-start sm:text-end">
                       <p className="text-xs text-muted-foreground">إجمالي الفاتورة</p>
-                      <p className="font-bold text-base sm:text-lg text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(inv.actual_grand_total || inv.expected_grand_total || 0)}
+                      <p className="font-bold text-base sm:text-lg text-success">
+                        <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(inv.actual_grand_total || inv.expected_grand_total || 0)}</span>
                       </p>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-1.5 h-9 text-xs"
+                      className="gap-1.5 text-xs"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedInvoiceId(inv.id);

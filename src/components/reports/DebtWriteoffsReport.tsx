@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FileX2 } from 'lucide-react';
 import { formatReportAmount } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toLocalDateString } from '@/lib/date-utils';
 import { useLanguage } from '@/hooks/use-language';
 import {
@@ -52,7 +53,7 @@ export function DebtWriteoffsReport({ dateRange }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: tr('المبالغ المشطوبة', 'Written-off amounts'), value: totals.amount, tone: '' },
           { label: tr('خسارة الديون المعدومة', 'Bad-debt loss'), value: totals.loss, tone: 'text-destructive' },
@@ -60,7 +61,7 @@ export function DebtWriteoffsReport({ dateRange }: Props) {
           { label: tr('تحمّلها المالك', 'Carried by the owner'), value: totals.owner, tone: '' },
         ].map(card => (
           <div key={card.label} className="rounded-xl border border-border bg-card p-3">
-            <p className={`text-lg font-bold ${card.tone}`}>{formatReportAmount(card.value)}</p>
+            <p className={`text-lg font-bold ${card.tone}`}><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(card.value)}</span></p>
             <p className="text-xs text-muted-foreground">{card.label}</p>
           </div>
         ))}
@@ -68,62 +69,64 @@ export function DebtWriteoffsReport({ dateRange }: Props) {
 
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         {rows.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
-            <FileX2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            {loading
-              ? tr('جاري التحميل...', 'Loading...')
-              : tr('لا توجد ديون مشطوبة في هذه الفترة', 'No written-off debts in this period')}
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <FileX2 className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm sm:text-base font-semibold text-foreground">
+              {loading
+                ? tr('جاري التحميل...', 'Loading...')
+                : tr('لا توجد ديون مشطوبة في هذه الفترة', 'No written-off debts in this period')}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="p-2 text-start font-semibold">{tr('التاريخ', 'Date')}</th>
-                  <th className="p-2 text-start font-semibold">{tr('العميل', 'Customer')}</th>
-                  <th className="p-2 text-start font-semibold">{tr('الفاتورة', 'Invoice')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('المبلغ المشطوب', 'Written off')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('ربح معلّق أُلغي', 'Pending profit cancelled')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('الخسارة', 'Loss')}</th>
-                  <th className="p-2 text-start font-semibold">{tr('على الشركاء', 'On partners')}</th>
-                  <th className="p-2 text-center font-semibold">{tr('على المالك', 'On the owner')}</th>
-                  <th className="p-2 text-start font-semibold">{tr('السبب', 'Reason')}</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="text-xs">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-start">{tr('التاريخ', 'Date')}</TableHead>
+                  <TableHead className="text-start">{tr('العميل', 'Customer')}</TableHead>
+                  <TableHead className="text-start">{tr('الفاتورة', 'Invoice')}</TableHead>
+                  <TableHead className="text-end">{tr('المبلغ المشطوب', 'Written off')}</TableHead>
+                  <TableHead className="text-end">{tr('ربح معلّق أُلغي', 'Pending profit cancelled')}</TableHead>
+                  <TableHead className="text-end">{tr('الخسارة', 'Loss')}</TableHead>
+                  <TableHead className="text-start">{tr('على الشركاء', 'On partners')}</TableHead>
+                  <TableHead className="text-end">{tr('على المالك', 'On the owner')}</TableHead>
+                  <TableHead className="text-start">{tr('السبب', 'Reason')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map(r => (
-                  <tr key={r.id} className="border-t border-border align-top">
-                    <td className="p-2 whitespace-nowrap">{toLocalDateString(r.writtenOffAt)}</td>
-                    <td className="p-2">{r.customerName || dash}</td>
-                    <td className="p-2 whitespace-nowrap">{r.invoiceId || tr('دين نقدي', 'Cash loan')}</td>
-                    <td className="p-2 text-center">{formatReportAmount(r.amount)}</td>
-                    <td className="p-2 text-center">{money(r.pendingProfitCancelled)}</td>
-                    <td className="p-2 text-center text-destructive font-medium">{money(r.lossAmount)}</td>
-                    <td className="p-2">
+                  <TableRow key={r.id} className="align-top">
+                    <TableCell className="whitespace-nowrap"><span dir="ltr" className="inline-block tabular-nums">{toLocalDateString(r.writtenOffAt)}</span></TableCell>
+                    <TableCell>{r.customerName || dash}</TableCell>
+                    <TableCell className="whitespace-nowrap"><span dir="ltr" className="inline-block tabular-nums">{r.invoiceId || tr('دين نقدي', 'Cash loan')}</span></TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(r.amount)}</span></TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{money(r.pendingProfitCancelled)}</span></TableCell>
+                    <TableCell className="text-end text-destructive font-medium"><span dir="ltr" className="inline-block tabular-nums">{money(r.lossAmount)}</span></TableCell>
+                    <TableCell>
                       {r.partners.length === 0 ? dash : r.partners.map((p, i) => (
                         <div key={`${r.id}-${i}`} className="whitespace-nowrap">
-                          {p.partnerName}: {formatReportAmount(p.amount)}
+                          {p.partnerName}: <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(p.amount)}</span>
                           {p.category ? <span className="text-muted-foreground"> ({p.category})</span> : null}
                         </div>
                       ))}
-                    </td>
-                    <td className="p-2 text-center">{money(r.ownerLoss)}</td>
-                    <td className="p-2 text-muted-foreground">{r.reason || dash}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{money(r.ownerLoss)}</span></TableCell>
+                    <TableCell className="text-muted-foreground">{r.reason || dash}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-              <tfoot className="bg-muted/30 font-bold">
-                <tr className="border-t border-border">
-                  <td className="p-2" colSpan={3}>{tr('الإجمالي', 'Total')}</td>
-                  <td className="p-2 text-center">{formatReportAmount(totals.amount)}</td>
-                  <td className="p-2 text-center">{formatReportAmount(totals.cancelled)}</td>
-                  <td className="p-2 text-center text-destructive">{formatReportAmount(totals.loss)}</td>
-                  <td className="p-2">{formatReportAmount(totals.partners)}</td>
-                  <td className="p-2 text-center">{formatReportAmount(totals.owner)}</td>
-                  <td className="p-2" />
-                </tr>
-              </tfoot>
-            </table>
+              </TableBody>
+              <TableFooter>
+                <TableRow className="font-bold">
+                  <TableCell colSpan={3}>{tr('الإجمالي', 'Total')}</TableCell>
+                  <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(totals.amount)}</span></TableCell>
+                  <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(totals.cancelled)}</span></TableCell>
+                  <TableCell className="text-end text-destructive"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(totals.loss)}</span></TableCell>
+                  <TableCell><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(totals.partners)}</span></TableCell>
+                  <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(totals.owner)}</span></TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            </Table>
           </div>
         )}
       </div>

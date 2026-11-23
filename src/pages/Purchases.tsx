@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
-import { capsuleOuter, capsuleOuterScroll, capsuleItem, capsuleActive, capsuleIdle } from '@/components/ui/SegmentedCapsule';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Badge } from '@/components/ui/badge';
 import { useState, useEffect, useCallback } from 'react';
 import { FileText, Plus, Truck, Calendar, DollarSign, Loader2, ShoppingBag, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -61,73 +62,81 @@ export default function Purchases() {
   }, 0);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Lifted Actions Bar with Smart Mobile Clearance */}
-      <div className="flex-shrink-0 p-2.5 sm:p-3 md:p-6 md:pt-4 pb-2 md:pb-3">
-        <div className="rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0"><div className={capsuleOuter}>
-          <button
-            type="button"
-            className={cn(capsuleItem, capsuleActive)}
-            data-testid="purchase-new"
-            onClick={() => setShowDialog(true)}
-          >
-            <Plus className="w-4 h-4 shrink-0" />
-            <span>{t('purchases.addNew')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowQuickDialog(true)}
-            className={cn(capsuleItem, capsuleIdle)}
-          >
-            <ShoppingBag className="w-4 h-4 shrink-0 text-primary" />
-            <span>{t('purchases.quickAdd')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowSuppliers(true)}
-            className={cn(capsuleItem, capsuleIdle)}
-          >
-            <Truck className="w-4 h-4 shrink-0 text-primary" />
-            <span>{isEn ? "Suppliers" : "الموردون"}</span>
-          </button>
-        </div></div>
-      </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+      <PageHeader
+        title={isEn ? "Purchases" : "المشتريات"}
+        icon={<ShoppingBag className="w-5 h-5" />}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="default"
+              size="default"
+              data-testid="purchase-new"
+              onClick={() => setShowDialog(true)}
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>{t('purchases.addNew')}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="default"
+              onClick={() => setShowQuickDialog(true)}
+            >
+              <ShoppingBag className="w-4 h-4 shrink-0 text-primary" />
+              <span>{t('purchases.quickAdd')}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="default"
+              onClick={() => setShowSuppliers(true)}
+            >
+              <Truck className="w-4 h-4 shrink-0 text-primary" />
+              <span>{isEn ? "Suppliers" : "الموردون"}</span>
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats */}
-      <div className="flex-shrink-0 px-2.5 sm:px-3 md:px-6 pb-2 md:pb-3">
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          <div className="bg-card rounded-xl border border-border p-2.5 sm:p-3 flex items-center justify-between shadow-2xs">
-            <div>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <FileText className="w-3.5 h-3.5 text-primary" />
-                <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">{t('purchases.totalInvoices')}</span>
-              </div>
-              <p className="text-base sm:text-xl font-black text-foreground">{invoices.length}</p>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="bg-card rounded-xl border border-border p-3 sm:p-4 flex items-center justify-between shadow-2xs">
+          <div>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <FileText className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs text-muted-foreground font-medium">{t('purchases.totalInvoices')}</span>
             </div>
+            <p className="text-base sm:text-xl font-bold text-foreground">
+              <span dir="ltr" className="inline-block tabular-nums">{invoices.length}</span>
+            </p>
           </div>
-          <div className="bg-card rounded-xl border border-border p-2.5 sm:p-3 flex items-center justify-between shadow-2xs">
-            <div>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-[11px] sm:text-xs text-muted-foreground font-medium">{t('purchases.totalAmount')}</span>
-              </div>
-              <p className="text-base sm:text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">{m.fmt(totalPurchases)}</p>
+        </div>
+        <div className="bg-card rounded-xl border border-border p-3 sm:p-4 flex items-center justify-between shadow-2xs">
+          <div>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <DollarSign className="w-3.5 h-3.5 text-success" />
+              <span className="text-xs text-muted-foreground font-medium">{t('purchases.totalAmount')}</span>
             </div>
+            <p className="text-base sm:text-xl font-bold text-success font-mono">
+              <span dir="ltr" className="inline-block tabular-nums">{m.fmt(totalPurchases)}</span>
+            </p>
           </div>
         </div>
       </div>
 
       {/* Invoices List */}
-      <div className="flex-1 overflow-y-auto px-3 md:px-6 pb-24">
+      <div className="pb-10">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : invoices.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Truck className="w-16 h-16 text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-1">{t('purchases.noInvoices')}</h3>
-            <p className="text-sm text-muted-foreground">{t('purchases.noInvoicesDesc')}</p>
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <Truck className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <h3 className="text-sm sm:text-base font-semibold text-foreground">{t('purchases.noInvoices')}</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-sm">{t('purchases.noInvoicesDesc')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -140,38 +149,38 @@ export default function Purchases() {
                 }}
                 className="bg-card rounded-xl border border-border p-4 hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer group"
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors">
                         {invoice.supplier_name}
                       </h3>
-                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Badge variant="secondary" className="gap-1">
                         <Eye className="w-3 h-3" />
                         {isEn ? "View Details" : "عرض التفاصيل"}
-                      </span>
+                      </Badge>
                     </div>
                     {invoice.supplier_company && (
                       <p className="text-xs text-muted-foreground">{invoice.supplier_company}</p>
                     )}
                   </div>
-                  <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground font-mono">
-                    #{invoice.invoice_number}
-                  </span>
+                  <Badge variant="outline" className="font-mono">
+                    <span dir="ltr" className="inline-block tabular-nums">#{invoice.invoice_number}</span>
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>{format(new Date(invoice.invoice_date), 'dd MMM yyyy', { locale: dateLocale })}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <DollarSign className="w-3.5 h-3.5" />
-                    <span className="font-semibold text-foreground">
+                    <span dir="ltr" className="inline-block font-semibold text-foreground tabular-nums">
                       {m.fmtDoc(invoice.actual_grand_total || invoice.expected_grand_total, invoice as any)}
                     </span>
                   </div>
                   <span className="text-xs">
-                    {invoice.actual_items_count || invoice.expected_items_count} {t('purchases.items')}
+                    <span dir="ltr" className="inline-block tabular-nums">{invoice.actual_items_count || invoice.expected_items_count}</span> {t('purchases.items')}
                   </span>
                 </div>
               </div>

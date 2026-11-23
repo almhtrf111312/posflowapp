@@ -91,7 +91,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4 relative" dir={direction}>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background px-4 pt-[calc(1rem+var(--app-safe-top,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] relative" dir={direction}>
       <Card className="w-full max-w-md shadow-2xl border-border/50 bg-card">
         <CardHeader className="text-center space-y-4">
           <img 
@@ -107,7 +107,7 @@ export default function Signup() {
         
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="fullName">{t('auth.fullName')}</Label>
               <Input
                 id="fullName"
@@ -121,13 +121,13 @@ export default function Signup() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="phone">{t('auth.phone')}</Label>
               <PhoneInput id="phone" value={phone} onChange={setPhone} disabled={isLoading} />
               <p className="text-[11px] text-muted-foreground mt-1">اختر الدولة ثم اكتب رقمك بدون رمز الدولة</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="email">{t('auth.email')}</Label>
               <Input
                 id="email"
@@ -138,10 +138,11 @@ export default function Signup() {
                 required
                 disabled={isLoading}
                 className="h-11"
+                dir="ltr"
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="password">{t('auth.password')}</Label>
               <div className="relative">
                 <Input
@@ -152,21 +153,25 @@ export default function Signup() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="h-11 pe-10"
+                  className="h-11 pe-12"
                   minLength={6}
+                  dir="ltr"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute top-1/2 -translate-y-1/2 end-3 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={t('auth.password')}
+                  className="absolute top-1/2 -translate-y-1/2 end-1 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                </Button>
               </div>
               <p className="text-[11px] text-muted-foreground mt-1">6 خانات على الأقل (يُفضل استخدام أرقام ورموز مثل @ # $)</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
               <Input
                 id="confirmPassword"

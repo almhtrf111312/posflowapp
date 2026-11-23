@@ -10,7 +10,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `AnalyticsReports.tsx` | Analytics reports: product profit, receivables aging, returns/discounts, tax summary, slow stock. | ProductProfitReport, ReceivablesAgingReport, ReturnsDiscountsReport, TaxSummaryReport, SlowMovingStockReport | ReportShell, lib/date-utils, lib/report-links, lib/report-metrics, lib/reports/dataset-builder, ui/* | — |
 | `CashierPerformanceReport.tsx` | Cashier performance report. | CashierPerformanceReport | hooks/use-language, lib/cloud/invoices-cloud, lib/date-utils, lib/excel-export, lib/pdf-export, lib/profit-engine, lib/report-metrics, lib/sonner-bridge (+1) | — |
 | `DailyClosingReport.tsx` | Daily closing report. | DailyClosingReport | ReportCurrencyBanner, hooks/use-language, lib/cloud/debts-cloud, lib/cloud/expenses-cloud, lib/cloud/invoices-cloud, lib/date-utils, lib/excel-export, lib/pdf-export (+3) | — |
-| `DebtWriteoffsReport.tsx` | Debt write-offs report. | DebtWriteoffsReport | hooks/use-language, lib/cloud/accounting-admin-cloud, lib/date-utils | — |
+| `DebtWriteoffsReport.tsx` | Debt write-offs report. | DebtWriteoffsReport | hooks/use-language, lib/cloud/accounting-admin-cloud, lib/date-utils, ui/* | — |
 | `DebtsReport.tsx` | Debts report. | DebtsReport | hooks/use-currency, hooks/use-language, lib/cloud/debts-cloud, lib/date-utils, lib/excel-export, lib/pdf-export, lib/report-links, lib/sonner-bridge (+1) | — |
 | `DistributorCustodyValueReport.tsx` | Distributor custody value report. | DistributorCustodyValueReport | hooks/use-language, lib/cloud/products-cloud, lib/cloud/warehouses-cloud, lib/sonner-bridge, lib/excel-export*, ui/* | — |
 | `DistributorInventoryReport.tsx` | Distributor inventory report. | DistributorInventoryReport | hooks/use-language, lib/cloud/products-cloud, lib/cloud/warehouses-cloud, lib/sonner-bridge, ui/* | tbl: invoices |
@@ -28,6 +28,6 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `ReportFiltersBar.tsx` | Report filters bar. | ReportFiltersBar · 1 types | hooks/use-language, lib/date-utils, ui/* | — |
 | `ReportShell.tsx` | Common report layout shell. | ReportShell | hooks/use-language, ui/* | — |
 | `ReportToolbar.tsx` | Report export/print toolbar. | ReportToolbar | hooks/use-language, ui/* | — |
-| `SalesDetailedReport.tsx` | Detailed sales report. | SalesDetailedReport | EntityPicker, ReportCurrencyBanner, ReportShell, hooks/use-language, lib/cloud/invoices-cloud, lib/date-utils, lib/profit-engine, lib/report-links (+2) | — |
+| `SalesDetailedReport.tsx` | Detailed sales report. | SalesDetailedReport | EntityPicker, ReportCurrencyBanner, ReportShell, hooks/use-language, lib/cloud/invoices-cloud, lib/date-utils, lib/profit-engine, lib/report-links (+3) | — |
 | `StockDiscrepancyReport.tsx` | Stock discrepancy report. | StockDiscrepancyReport | ReportCurrencyBanner, ReportShell, hooks/use-language, lib/cloud/stock-discrepancies-cloud, lib/reports/dataset-builder, lib/sonner-bridge, ui/* | — |
 | `TopProductsReport.tsx` | Top products report. | TopProductsReport | ReportShell, hooks/use-language, lib/cloud/invoices-cloud, lib/cloud/products-cloud, lib/report-metrics, lib/reports/dataset-builder, ui/* | — |

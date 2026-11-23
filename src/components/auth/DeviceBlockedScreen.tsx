@@ -26,7 +26,7 @@ export function DeviceBlockedScreen() {
           <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
             <Shield className="w-8 h-8 text-destructive" />
           </div>
-          <CardTitle className="text-xl text-destructive flex items-center justify-center gap-2">
+          <CardTitle className="text-base sm:text-lg font-semibold text-destructive flex items-center justify-center gap-2">
             <AlertTriangle className="w-5 h-5" />
             {t('deviceBlocked.title')}
           </CardTitle>

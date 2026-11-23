@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LanguageSection } from '@/components/settings/LanguageSection';
 import { useLanguage } from '@/hooks/use-language';
 import { getDefaultFieldsByStoreType, StoreType } from '@/lib/product-fields-config';
@@ -43,7 +44,7 @@ export function StoreInfoSection({
 
   return (
     <div>
-      <h2 className="text-lg md:text-xl font-bold text-foreground mb-3">{t('settings.storeInfo')}</h2>
+      <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight mb-3">{t('settings.storeInfo')}</h2>
 
       {/* Setup Wizard Quick Launcher */}
       <div className="p-3 mb-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-center justify-between gap-3">
@@ -73,12 +74,12 @@ export function StoreInfoSection({
         {/* Store Name */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.storeName')}</label>
-          <div className="relative flex-1">
-            <Store className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative flex-1 min-w-0">
+            <Store className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={storeSettings.name}
               onChange={(e) => setStoreSettings({ ...storeSettings, name: e.target.value })}
-              className="pr-10 bg-muted border-0 h-9"
+              className="ps-10 bg-muted border-0"
             />
           </div>
         </div>
@@ -86,10 +87,9 @@ export function StoreInfoSection({
         {/* Store Type */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.storeType')}</label>
-          <select
+          <Select
             value={storeSettings.type}
-            onChange={(e) => {
-              const newType = e.target.value;
+            onValueChange={(newType) => {
               setStoreSettings({ ...storeSettings, type: newType });
               if (newType !== 'phones' && newType !== 'repair') {
                 setHideMaintenanceSection(true);
@@ -102,25 +102,29 @@ export function StoreInfoSection({
               setPendingStoreType(newType);
               setStoreTypeConfirmOpen(true);
             }}
-            className="flex-1 h-9 px-3 rounded-md bg-muted border-0 text-foreground text-sm"
           >
-            <option value="phones">{t('settings.storeTypes.phones')}</option>
-            <option value="grocery">{t('settings.storeTypes.grocery')}</option>
-            <option value="pharmacy">{t('settings.storeTypes.pharmacy')}</option>
-            <option value="clothing">{t('settings.storeTypes.clothing')}</option>
-            <option value="restaurant">{t('settings.storeTypes.restaurant')}</option>
-            <option value="bakery">{t('settings.storeTypes.bakery')}</option>
-            <option value="repair">{t('settings.storeTypes.repair')}</option>
-            <option value="bookstore">{t('settings.storeTypes.bookstore')}</option>
-            <option value="general">{t('settings.storeTypes.general')}</option>
-          </select>
+            <SelectTrigger className="flex-1 min-h-11 sm:min-h-10 rounded-[14px] bg-muted border-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
+              <SelectItem value="phones">{t('settings.storeTypes.phones')}</SelectItem>
+              <SelectItem value="grocery">{t('settings.storeTypes.grocery')}</SelectItem>
+              <SelectItem value="pharmacy">{t('settings.storeTypes.pharmacy')}</SelectItem>
+              <SelectItem value="clothing">{t('settings.storeTypes.clothing')}</SelectItem>
+              <SelectItem value="restaurant">{t('settings.storeTypes.restaurant')}</SelectItem>
+              <SelectItem value="bakery">{t('settings.storeTypes.bakery')}</SelectItem>
+              <SelectItem value="repair">{t('settings.storeTypes.repair')}</SelectItem>
+              <SelectItem value="bookstore">{t('settings.storeTypes.bookstore')}</SelectItem>
+              <SelectItem value="general">{t('settings.storeTypes.general')}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Phone */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('common.phone')}</label>
-          <div className="relative flex-1">
-            <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative flex-1 min-w-0">
+            <Phone className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={storeSettings.phone}
               onChange={(e) => {
@@ -128,7 +132,8 @@ export function StoreInfoSection({
                 setStoreSettings({ ...storeSettings, phone: val });
               }}
               inputMode="tel"
-              className="pr-10 bg-muted border-0 h-9"
+              dir="ltr"
+              className="ps-10 bg-muted border-0 tabular-nums"
             />
           </div>
         </div>
@@ -136,12 +141,13 @@ export function StoreInfoSection({
         {/* Email */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('common.email')}</label>
-          <div className="relative flex-1">
-            <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative flex-1 min-w-0">
+            <Mail className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={storeSettings.email}
               onChange={(e) => setStoreSettings({ ...storeSettings, email: e.target.value })}
-              className="pr-10 bg-muted border-0 h-9"
+              dir="ltr"
+              className="ps-10 bg-muted border-0"
             />
           </div>
         </div>
@@ -149,12 +155,12 @@ export function StoreInfoSection({
         {/* Address */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-foreground w-24 shrink-0">{t('settings.address')}</label>
-          <div className="relative flex-1">
-            <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative flex-1 min-w-0">
+            <MapPin className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={storeSettings.address}
               onChange={(e) => setStoreSettings({ ...storeSettings, address: e.target.value })}
-              className="pr-10 bg-muted border-0 h-9"
+              className="ps-10 bg-muted border-0"
             />
           </div>
         </div>
@@ -172,10 +178,11 @@ export function StoreInfoSection({
             <Button
               variant="destructive"
               size="icon"
-              className="absolute -top-2 -left-2 h-5 w-5"
+              aria-label={t('common.delete')}
+              className="absolute -top-2 -end-2 size-8 after:content-[''] after:absolute after:-inset-1.5"
               onClick={handleRemoveLogo}
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </Button>
           </div>
         ) : (

@@ -27,7 +27,7 @@ export function DataEncryptedScreen() {
           <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-10 h-10 text-destructive" />
           </div>
-          <CardTitle className="text-xl">
+          <CardTitle className="text-base sm:text-lg font-semibold">
             {t('offlineProtection.encryptedTitle')}
           </CardTitle>
           <CardDescription className="text-base mt-2">

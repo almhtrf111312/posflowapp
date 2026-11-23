@@ -26,7 +26,7 @@ const sparklineColors: Record<string, string> = {
   warning: 'hsl(var(--warning))',
   danger: 'hsl(var(--destructive))',
   info: 'hsl(var(--info))',
-  purple: 'hsl(271, 81%, 56%)',
+  purple: 'hsl(var(--accent))',
 };
 
 const variantStyles = {
@@ -36,7 +36,7 @@ const variantStyles = {
   warning: 'bg-warning/10 border border-warning/20 dark:bg-warning/15 dark:border-warning/25',
   danger: 'bg-destructive/10 border border-destructive/20 dark:bg-destructive/15 dark:border-destructive/25',
   info: 'bg-info/10 border border-info/20 dark:bg-info/15 dark:border-info/25',
-  purple: 'bg-[hsl(271,81%,56%)]/10 border border-[hsl(271,81%,56%)]/20 dark:bg-[hsl(271,81%,56%)]/15 dark:border-[hsl(271,81%,56%)]/25',
+  purple: 'bg-accent/10 border border-accent/20 dark:bg-accent/15 dark:border-accent/25',
 };
 
 const iconBgStyles = {
@@ -46,7 +46,7 @@ const iconBgStyles = {
   warning: 'bg-warning/20 dark:bg-warning/30',
   danger: 'bg-destructive/20 dark:bg-destructive/30',
   info: 'bg-info/20 dark:bg-info/30',
-  purple: 'bg-[hsl(271,81%,56%)]/20 dark:bg-[hsl(271,81%,56%)]/30',
+  purple: 'bg-accent/20 dark:bg-accent/30',
 };
 
 const iconColorStyles = {
@@ -56,7 +56,7 @@ const iconColorStyles = {
   warning: 'text-warning',
   danger: 'text-destructive',
   info: 'text-info',
-  purple: 'text-[hsl(271,81%,56%)]',
+  purple: 'text-accent',
 };
 
 function extractNumber(value: string | number): { num: number; prefix: string; suffix: string } {
@@ -108,19 +108,20 @@ export function StatCard({ title, value, subtitle, icon, trend, variant = 'defau
         "group rounded-xl p-2.5 md:p-3 transition-[transform,box-shadow,border-color] duration-200",
         "hover:translate-y-[-2px] hover:shadow-xl hover:shadow-primary/5 hover:border-primary/30 dark:hover:shadow-lg dark:hover:shadow-primary/10",
         variantStyles[variant],
-        linkTo && "cursor-pointer hover:ring-2 hover:ring-primary/50 hover:bg-card/90"
+        linkTo && "cursor-pointer hover:ring-2 hover:ring-primary/50 hover:bg-card/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       )}
       onClick={handleClick}
+      onKeyDown={linkTo ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } } : undefined}
       role={linkTo ? "button" : undefined}
       tabIndex={linkTo ? 0 : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1.5 min-w-0 flex-1">
-          <p className="text-[10px] md:text-xs font-medium text-muted-foreground line-clamp-2 leading-tight">{title}</p>
+          <p className="text-xs font-medium text-muted-foreground line-clamp-2 leading-tight">{title}</p>
           <div className="space-y-0.5 min-w-0">
-            <p className="text-sm md:text-xl font-bold text-foreground truncate">{displayValue}</p>
+            <p className="text-sm md:text-xl font-bold text-foreground truncate"><span dir="ltr" className="inline-block tabular-nums">{displayValue}</span></p>
             {subtitle && (
-              <p className="text-[10px] md:text-xs text-muted-foreground truncate">{subtitle}</p>
+              <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
             )}
           </div>
           {sparklineData && sparklineData.length > 1 && (
@@ -129,7 +130,7 @@ export function StatCard({ title, value, subtitle, icon, trend, variant = 'defau
           {trend && (
             <div className={cn("flex items-center gap-1 text-xs font-medium", getTrendColor())}>
               {getTrendIcon()}
-              <span>{Math.abs(trend.value)}%</span>
+              <span dir="ltr" className="inline-block tabular-nums">{Math.abs(trend.value)}%</span>
               <span className="text-muted-foreground font-normal">{trend.label}</span>
             </div>
           )}

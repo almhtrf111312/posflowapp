@@ -3,7 +3,7 @@ import { Type, Check } from 'lucide-react';
 import { useAppFont } from '@/hooks/use-app-font';
 import { useLanguage } from '@/hooks/use-language';
 import { AppFontId } from '@/lib/app-font-config';
-import { showToast } from '@/lib/toast-config';
+import { toast as showToast } from '@/lib/sonner-bridge';
 import { cn } from '@/lib/utils';
 import { saveUnifiedStoreSettings } from '@/lib/store-settings-sync';
 
@@ -97,7 +97,7 @@ export const FontSelector: React.FC<FontSelectorProps> = ({
 
                   {font.badgeAr && (
                     <span className={cn(
-                      "text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap transition-colors",
+                      "text-xs font-semibold px-2.5 py-0.5 rounded-full border whitespace-nowrap transition-colors",
                       isSelected
                         ? "bg-primary/20 text-primary border-primary/30"
                         : "bg-muted/60 text-muted-foreground border-border/40"

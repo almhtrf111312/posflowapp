@@ -204,78 +204,78 @@ export function DistributorCustodyValueReport() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Truck className="w-4 h-4" />
               عدد الموزعين
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.totalDistributors}</div>
+            <div className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{summary.totalDistributors}</span></div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Package className="w-4 h-4" />
               إجمالي المنتجات
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.totalProducts}</div>
+            <div className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{summary.totalProducts}</span></div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Package className="w-4 h-4" />
               إجمالي الكميات
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.totalQuantity}</div>
+            <div className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{summary.totalQuantity}</span></div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-amber-500" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-warning" />
               قيمة التكلفة
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {formatReportAmount(summary.totalCostValue)}
+            <div className="text-2xl font-bold text-warning">
+              <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(summary.totalCostValue)}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-primary" />
               قيمة البيع
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {formatReportAmount(summary.totalSaleValue)}
+              <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(summary.totalSaleValue)}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-success" />
               الربح المتوقع
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatReportAmount(summary.totalPotentialProfit)}
+            <div className="text-2xl font-bold text-success">
+              <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(summary.totalPotentialProfit)}</span>
             </div>
           </CardContent>
         </Card>
@@ -294,12 +294,12 @@ export function DistributorCustodyValueReport() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">الموزع</TableHead>
-                  <TableHead className="text-center">عدد المنتجات</TableHead>
-                  <TableHead className="text-center">إجمالي الكميات</TableHead>
-                  <TableHead className="text-center">قيمة التكلفة</TableHead>
-                  <TableHead className="text-center">قيمة البيع</TableHead>
-                  <TableHead className="text-center">الربح المتوقع</TableHead>
+                  <TableHead className="text-start">الموزع</TableHead>
+                  <TableHead className="text-end">عدد المنتجات</TableHead>
+                  <TableHead className="text-end">إجمالي الكميات</TableHead>
+                  <TableHead className="text-end">قيمة التكلفة</TableHead>
+                  <TableHead className="text-end">قيمة البيع</TableHead>
+                  <TableHead className="text-end">الربح المتوقع</TableHead>
                   <TableHead className="text-center">التفاصيل</TableHead>
                 </TableRow>
               </TableHeader>
@@ -313,16 +313,16 @@ export function DistributorCustodyValueReport() {
                           {distributor.warehouseName}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">{distributor.totalProducts}</TableCell>
-                      <TableCell className="text-center">{distributor.totalQuantity}</TableCell>
-                      <TableCell className="text-center text-amber-600 font-medium">
-                        {formatReportAmount(distributor.totalCostValue)}
+                      <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{distributor.totalProducts}</span></TableCell>
+                      <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{distributor.totalQuantity}</span></TableCell>
+                      <TableCell className="text-end text-warning font-medium">
+                        <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(distributor.totalCostValue)}</span>
                       </TableCell>
-                      <TableCell className="text-center text-primary font-semibold">
-                        {formatReportAmount(distributor.totalSaleValue)}
+                      <TableCell className="text-end text-primary font-semibold">
+                        <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(distributor.totalSaleValue)}</span>
                       </TableCell>
-                      <TableCell className="text-center text-green-600 font-semibold">
-                        {formatReportAmount(distributor.potentialProfit)}
+                      <TableCell className="text-end text-success font-semibold">
+                        <span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(distributor.potentialProfit)}</span>
                       </TableCell>
                       <TableCell className="text-center">
                         <Button
@@ -344,13 +344,13 @@ export function DistributorCustodyValueReport() {
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead className="text-right">المنتج</TableHead>
+                                  <TableHead className="text-start">المنتج</TableHead>
                                   <TableHead className="text-center">الوحدة</TableHead>
-                                  <TableHead className="text-center">الكمية</TableHead>
-                                  <TableHead className="text-center">سعر التكلفة</TableHead>
-                                  <TableHead className="text-center">سعر البيع</TableHead>
-                                  <TableHead className="text-center">قيمة التكلفة</TableHead>
-                                  <TableHead className="text-center">قيمة البيع</TableHead>
+                                  <TableHead className="text-end">الكمية</TableHead>
+                                  <TableHead className="text-end">سعر التكلفة</TableHead>
+                                  <TableHead className="text-end">سعر البيع</TableHead>
+                                  <TableHead className="text-end">قيمة التكلفة</TableHead>
+                                  <TableHead className="text-end">قيمة البيع</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -358,11 +358,11 @@ export function DistributorCustodyValueReport() {
                                   <TableRow key={product.productId}>
                                     <TableCell className="font-medium">{product.productName}</TableCell>
                                     <TableCell className="text-center text-muted-foreground">{product.unit}</TableCell>
-                                    <TableCell className="text-center">{product.quantity}</TableCell>
-                                    <TableCell className="text-center">{formatReportAmount(product.costPrice)}</TableCell>
-                                    <TableCell className="text-center">{formatReportAmount(product.salePrice)}</TableCell>
-                                    <TableCell className="text-center text-amber-600">{formatReportAmount(product.costValue)}</TableCell>
-                                    <TableCell className="text-center text-primary">{formatReportAmount(product.saleValue)}</TableCell>
+                                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{product.quantity}</span></TableCell>
+                                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.costPrice)}</span></TableCell>
+                                    <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.salePrice)}</span></TableCell>
+                                    <TableCell className="text-end text-warning"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.costValue)}</span></TableCell>
+                                    <TableCell className="text-end text-primary"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(product.saleValue)}</span></TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>

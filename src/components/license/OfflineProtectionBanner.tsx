@@ -17,14 +17,14 @@ export function OfflineProtectionBanner() {
 
   // Color based on urgency
   const getBannerStyle = () => {
-    if (offlineDays >= 25) return 'bg-red-500/90 text-white';
-    if (offlineDays >= 20) return 'bg-orange-500/90 text-white';
-    return 'bg-yellow-500/90 text-black';
+    if (offlineDays >= 25) return 'bg-destructive/90 text-destructive-foreground';
+    if (offlineDays >= 20) return 'bg-warning/90 text-warning-foreground';
+    return 'bg-warning/80 text-warning-foreground';
   };
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-[9999] px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium ${getBannerStyle()}`}
+      className={`fixed top-0 inset-x-0 z-[9999] px-4 pb-2 pt-[calc(0.5rem+var(--app-safe-top,0px))] flex items-center justify-center gap-2 text-sm font-medium ${getBannerStyle()}`}
       dir={direction}
     >
       <AlertTriangle className="w-4 h-4 shrink-0" />

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { EVENTS } from '@/lib/events';
 import { cn, formatCurrency } from '@/lib/utils';
 import { CloudSyncContext } from '@/providers/CloudSyncProvider';
@@ -57,8 +58,8 @@ const stateMeta: Record<TrackedInvoice['state'], { label: string; className: str
   syncing: { label: 'جاري الرفع', className: 'bg-primary/10 text-primary border-primary/30' },
   stuck: { label: 'عالقة', className: 'bg-destructive/10 text-destructive border-destructive/30' },
   synced: { label: 'مكتملة ومزامنة', className: 'bg-success/10 text-success border-success/30' },
-  local_cancelled: { label: 'إلغاء محلي بانتظار المطابقة', className: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
-  refunded: { label: 'استرداد مكتمل', className: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
+  local_cancelled: { label: 'إلغاء محلي بانتظار المطابقة', className: 'bg-warning/15 text-warning border-warning/30' },
+  refunded: { label: 'استرداد مكتمل', className: 'bg-info/15 text-info border-info/30' },
   needs_attention: { label: 'فشل التعويض ويحتاج معالجة', className: 'bg-destructive/10 text-destructive border-destructive/30' },
 };
 
@@ -263,38 +264,35 @@ export default function InvoiceTracking() {
   };
 
   return (
-    <div className="p-4 space-y-4" dir="rtl">
-      <header className="space-y-1 rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <Receipt className="h-5 w-5 text-primary" />
-          تتبع الفواتير
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          تفاصيل كل فاتورة، تقدّم المزامنة، وحالة كل بند فيها.
-        </p>
-      </header>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+      <PageHeader
+        title="تتبع الفواتير"
+        subtitle="تفاصيل كل فاتورة، تقدّم المزامنة، وحالة كل بند فيها."
+        icon={<Receipt className="h-5 w-5" />}
+      />
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         <Card><CardContent className="p-3 text-center">
           <p className="text-xs text-muted-foreground">قيد المزامنة</p>
-          <p className="text-lg font-bold">{liveCount - stuckCount}</p>
+          <p className="text-lg font-bold"><span dir="ltr" className="inline-block tabular-nums">{liveCount - stuckCount}</span></p>
         </CardContent></Card>
         <Card><CardContent className="p-3 text-center">
           <p className="text-xs text-muted-foreground">عالقة</p>
-          <p className="text-lg font-bold text-destructive">{stuckCount}</p>
+          <p className="text-lg font-bold text-destructive"><span dir="ltr" className="inline-block tabular-nums">{stuckCount}</span></p>
         </CardContent></Card>
         <Card><CardContent className="p-3 text-center">
           <p className="text-xs text-muted-foreground">مكتملة</p>
-          <p className="text-lg font-bold text-success">{cloudInvoices.length}</p>
+          <p className="text-lg font-bold text-success"><span dir="ltr" className="inline-block tabular-nums">{cloudInvoices.length}</span></p>
         </CardContent></Card>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-16rem)] pl-1">
+      <ScrollArea className="h-[calc(100dvh-16rem)] pe-1">
         <div className="space-y-3">
           {tracked.length === 0 && (
-            <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">
-              لا توجد فواتير لعرضها حالياً.
-            </CardContent></Card>
+            <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+              <Receipt className="w-12 h-12 text-muted-foreground/50 mb-3" />
+              <p className="text-sm sm:text-base font-semibold text-foreground">لا توجد فواتير لعرضها حالياً.</p>
+            </div>
           )}
 
           {tracked.map(entry => {
@@ -315,9 +313,9 @@ export default function InvoiceTracking() {
                 <CardContent className="p-3 pt-0 space-y-2.5">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground text-xs">
-                      {new Date(entry.createdAt).toLocaleString('ar-EG', { numberingSystem: 'latn' })}
+                      <span dir="ltr" className="inline-block tabular-nums">{new Date(entry.createdAt).toLocaleString('ar-EG', { numberingSystem: 'latn' })}</span>
                     </span>
-                    <span className="font-semibold" dir="ltr">
+                    <span className="inline-block tabular-nums font-semibold" dir="ltr">
                       {(() => {
                         const hasSnapshot = entry.currency && entry.currency !== 'USD';
                         const rate = entry.exchangeRate && entry.exchangeRate > 0 ? entry.exchangeRate : 1;
@@ -341,7 +339,7 @@ export default function InvoiceTracking() {
                         <div key={`${entry.key}-${item.productId}-${index}`} className="flex items-center gap-2 text-xs">
                           <Icon className={`h-3.5 w-3.5 shrink-0 ${im.className}`} />
                           <span className="flex-1 truncate">{item.name}</span>
-                          <span className="text-muted-foreground">×{item.quantity}</span>
+                          <span dir="ltr" className="inline-block tabular-nums text-muted-foreground">×{item.quantity}</span>
                           <span className={im.className}>{im.label}</span>
                         </div>
                       );
@@ -357,23 +355,23 @@ export default function InvoiceTracking() {
                   {entry.queueId && (
                     <div className="flex gap-2 pt-1">
                       <Button
-                        size="sm"
+                        size="default"
                         variant="outline"
-                        className="h-8 text-xs flex-1 gap-1"
+                        className="flex-1 gap-1.5"
                         disabled={busyId === entry.queueId}
                         onClick={() => handleRetry(entry.queueId!)}
                       >
-                        <RefreshCw className={cn("h-3.5 w-3.5", busyId === entry.queueId && "animate-spin text-primary")} />
+                        <RefreshCw className={cn("h-4 w-4", busyId === entry.queueId && "animate-spin text-primary")} />
                         {busyId === entry.queueId ? 'جاري الرفع...' : 'إعادة المحاولة'}
                       </Button>
                       <Button
-                        size="sm"
+                        size="default"
                         variant="outline"
-                        className="h-8 text-xs flex-1 text-destructive"
+                        className="flex-1 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                         disabled={busyId === entry.queueId}
                         onClick={() => handleDiscard(entry.queueId!)}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
                         إلغاء
                       </Button>
                     </div>

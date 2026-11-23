@@ -39,12 +39,12 @@ export function TelegramLinkCard({ className }: { className?: string }) {
       dir={direction}
       className={cn(
         'rounded-2xl border p-3.5 space-y-2.5',
-        linked ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-amber-500/50 bg-amber-500/10',
+        linked ? 'border-success/40 bg-success/10' : 'border-warning/40 bg-warning/10',
         className,
       )}
     >
       <div className="flex items-start gap-2.5">
-        {linked ? <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" /> : <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />}
+        {linked ? <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" /> : <ShieldAlert className="w-5 h-5 text-warning shrink-0 mt-0.5" />}
         <div className="space-y-0.5">
           <p className="text-sm font-bold text-foreground">
             {linked === null ? t('telegram.linkTitle') : linked ? t('telegram.verified') : t('telegram.notVerified')}

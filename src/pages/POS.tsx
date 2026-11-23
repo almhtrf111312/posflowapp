@@ -2257,7 +2257,7 @@ export default function POS() {
 
   return (
 
-    <div className="flex h-screen bg-slate-50/50 dark:bg-zinc-950/50">
+    <div className="flex h-[100dvh] bg-background">
 
       {/* Sidebar - Always visible, collapsed by default on non-mobile */}
 
@@ -2277,11 +2277,7 @@ export default function POS() {
 
       <div className={cn(
 
-        "flex-1 flex flex-col overflow-hidden transition-all duration-300",
-
-        // Account for collapsed sidebar width based on RTL
-
-        !isMobile && (isRTL ? "md:mr-20 md:ml-0" : "md:ml-20 md:mr-0")
+        "flex-1 flex flex-col overflow-hidden ms-0 md:ms-[calc(var(--sidebar-offset,5.64rem)+0.75rem)] me-0 transition-[margin] duration-300 ease-in-out"
 
       )}>
 
@@ -2317,7 +2313,7 @@ export default function POS() {
 
             "flex-1 flex flex-col h-full overflow-hidden",
 
-            !isMobile && (isRTL ? "border-l border-border" : "border-r border-border")
+            !isMobile && "md:border-e md:border-border"
 
           )}>
 
@@ -2359,7 +2355,7 @@ export default function POS() {
 
               "w-80 lg:w-96 flex-shrink-0 p-2 md:p-3 flex flex-col h-full",
 
-              isRTL ? "pl-0" : "pr-0"
+              "pe-0"
 
             )} data-tour="cart-panel">
 
@@ -2591,6 +2587,8 @@ export default function POS() {
 
           data-tour="cart-fab"
 
+          aria-label={t('pos.cart')}
+
           onClick={() => handleSetCartOpen(true)}
 
           className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 
@@ -2603,9 +2601,11 @@ export default function POS() {
 
                      flex items-center justify-center
 
-                     hover:scale-105 active:scale-95
+                     hover:scale-105 active:scale-[0.97]
 
-                     transition-all duration-200"
+                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+
+                     transition-[transform,box-shadow,opacity] duration-150"
 
           size="icon"
 
@@ -2615,13 +2615,17 @@ export default function POS() {
 
           {cartItemsCount > 0 && (
 
-            <span className="absolute -top-1 -right-1 
+            <span
+
+              dir="ltr"
+
+              className="absolute -top-1 -end-1 
 
                            w-6 h-6 rounded-full 
 
                            bg-destructive text-destructive-foreground 
 
-                           text-sm font-bold 
+                           text-sm font-bold tabular-nums
 
                            flex items-center justify-center
 

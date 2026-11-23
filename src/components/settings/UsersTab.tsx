@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
 import { useLanguage } from '@/hooks/use-language';
-import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from '@/lib/sonner-bridge';
 import { useLicense } from '@/hooks/use-license';
 import { useUsersManagement, UserData } from '@/hooks/use-users-management';
 import { isGuestDemoMode } from '@/lib/demo-data';
@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogBody,
 } from '@/components/ui/dialog';
 import {
   Plus,
@@ -34,7 +35,10 @@ export function UsersTab() {
   const { t, isRTL } = useLanguage();
   const { user: currentUser } = useAuth();
   const { isBoss } = useUserRole();
-  const { toast } = useToast();
+  const toast = ({ title, description, variant }: { title?: string; description?: string; variant?: 'destructive' | 'default' }) => {
+    if (variant === 'destructive') sonnerToast.error(title || description || '', title && description ? { description } : undefined);
+    else sonnerToast.success(title || description || '', title && description ? { description } : undefined);
+  };
   const license = useLicense();
   const licenseState = (license as any)?.licenseState || license;
   const { users, isLoading: usersLoading, addUser, updateUserProfile, deleteUser, setUserRefundPermission } = useUsersManagement();
@@ -295,8 +299,8 @@ export function UsersTab() {
             </span>
           )}
         </div>
-        <Button onClick={handleAddUser} className="w-full sm:w-auto h-9">
-          <Plus className="w-4 h-4" />
+        <Button onClick={handleAddUser} className="w-full sm:w-auto">
+          <Plus className="w-4 h-4 shrink-0" />
           {t('settings.addUser')}
         </Button>
       </div>
@@ -393,12 +397,16 @@ export function UsersTab() {
 
       {/* User Form Dialog */}
       <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-        <DialogContent className="max-w-md w-[95vw] rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+          onPointerDownOutside={(e) => { if (isSavingUser || userForm.name.trim()) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSavingUser || userForm.name.trim()) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{selectedUser ? t('settings.editUser') : t('settings.addUser')}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium">{t('settings.username' as any)}</label>
               <Input
                 ref={userNameInputRef}
@@ -409,7 +417,7 @@ export function UsersTab() {
             </div>
             {!selectedUser && (
               <>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-sm font-medium">{t('common.email')}</label>
                   <Input
                     ref={userEmailInputRef}
@@ -421,13 +429,13 @@ export function UsersTab() {
                       if (emailError) setEmailError('');
                     }}
                     placeholder="email@example.com"
-                    className={`text-left placeholder:text-right ${emailError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                    className={`text-start placeholder:text-start ${emailError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   />
                   {emailError && (
                     <p className="text-xs text-destructive font-medium">{emailError}</p>
                   )}
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <label className="text-sm font-medium">{t('auth.password')}</label>
                   <div className="relative">
                     <Input
@@ -440,16 +448,18 @@ export function UsersTab() {
                         if (passwordError) setPasswordError('');
                       }}
                       placeholder={t('auth.password')}
-                      className={`text-left placeholder:text-right pr-10 ${passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                      className={`text-start placeholder:text-start pe-12 ${passwordError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
+                      aria-label={t('auth.password')}
+                      className="absolute end-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    </Button>
                   </div>
                   {passwordError && (
                     <p className="text-xs text-destructive font-medium">{passwordError}</p>
@@ -457,7 +467,7 @@ export function UsersTab() {
                 </div>
               </>
             )}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium">{t('settings.phoneOptional')}</label>
               <Input
                 type="tel"
@@ -465,10 +475,10 @@ export function UsersTab() {
                 onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
                 placeholder="09XXXXXXXX / +963... / +90..."
                 dir="ltr"
-                className="font-mono text-left"
+                className="font-mono text-start tabular-nums"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="text-sm font-medium">{t('settings.userTypeLabel')}</label>
               <select
                 value={userForm.userType}
@@ -548,8 +558,8 @@ export function UsersTab() {
                 </div>
               )}
             </div>
-          </div>
-          <DialogFooter>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button variant="outline" onClick={() => setUserDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleSaveUser} disabled={isSavingUser}>
               {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -561,12 +571,14 @@ export function UsersTab() {
 
       {/* Delete User Dialog */}
       <Dialog open={deleteUserDialogOpen} onOpenChange={setDeleteUserDialogOpen}>
-        <DialogContent className="max-w-sm w-[95vw] rounded-2xl">
-          <DialogHeader>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>{t('common.confirmDelete')}</DialogTitle>
           </DialogHeader>
-          <p className="py-4">{t('settings.confirmDeleteUser')} "{selectedUser?.name}"?</p>
-          <DialogFooter>
+          <DialogBody>
+            <p className="text-sm text-muted-foreground">{t('settings.confirmDeleteUser')} "{selectedUser?.name}"?</p>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
             <Button variant="outline" onClick={() => setDeleteUserDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button variant="destructive" onClick={confirmDeleteUser} disabled={isSavingUser}>
               {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

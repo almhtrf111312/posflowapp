@@ -1,5 +1,5 @@
 import { capsuleOuter, capsuleOuterScroll, capsuleTrigger, capsuleItem, capsuleActive, capsuleIdle } from '@/components/ui/SegmentedCapsule';
-import { SmartFab } from '@/components/ui/SmartFab';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { CardsGridSkeleton } from '@/components/ui/page-skeleton';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -43,8 +43,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -406,10 +408,35 @@ export default function Customers() {
   };
 
   return (
-    <div className="p-2.5 sm:p-4 md:p-6 pt-2 sm:pt-3 space-y-3">
-      {/* Top Navigation Tabs - lifted with smart mobile clearance */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-3">
-        <div className="flex items-center justify-between gap-2 rtl:pr-14 ltr:pl-14 md:rtl:pr-0 md:ltr:pl-0">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+      <PageHeader
+        title={activeTab === 'debts' ? (t('customers.tabDebts' as any) || 'الديون') : (t('customers.tabCustomers' as any) || 'العملاء')}
+        icon={activeTab === 'debts' ? <CreditCard className="w-5 h-5" /> : <User className="w-5 h-5" />}
+        actions={
+          activeTab === 'debts' ? (
+            <Button variant="default" size="default" onClick={() => setShowEmbeddedAddDebt(true)}>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>{t('debts.addCashDebt')}</span>
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              size="default"
+              onClick={() => {
+                setFormData({ name: '', phone: '', email: '', address: '' });
+                setShowAddDialog(true);
+              }}
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>{t('customers.addCustomer')}</span>
+            </Button>
+          )
+        }
+      />
+
+      {/* Top Navigation Tabs */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-4">
+        <div className="flex items-center justify-between gap-2">
           <TabsList className={capsuleOuter}>
               <TabsTrigger
                 value="customers"
@@ -428,55 +455,53 @@ export default function Customers() {
           </TabsList>
         </div>
 
-        <TabsContent value="customers" className="space-y-3 m-0">
-          <SmartFab label={t('customers.addCustomer')} onClick={() => { setFormData({ name: '', phone: '', email: '', address: '' }); setShowAddDialog(true); }} />
-          
-          {/* Compact Stats Strip (Compressed 4-Metric Grid saving significant vertical space) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center select-none">
-            <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-              <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{t('customers.total')}</span>
-              <span className="text-sm font-black text-foreground tabular-nums">{stats.total}</span>
+        <TabsContent value="customers" className="space-y-4 m-0">
+          {/* Compact Stats Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center select-none">
+            <div className="bg-card py-2.5 px-2 rounded-xl border border-border shadow-xs">
+              <span className="text-xs text-muted-foreground font-medium block truncate">{t('customers.total')}</span>
+              <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-foreground">{stats.total}</span>
             </div>
-            <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-              <span className="text-[9.5px] text-orange-600 dark:text-orange-400 font-medium block truncate">{t('customers.debtors')}</span>
-              <span className="text-sm font-black text-orange-600 dark:text-orange-400 tabular-nums">{stats.withDebt}</span>
+            <div className="bg-card py-2.5 px-2 rounded-xl border border-border shadow-xs">
+              <span className="text-xs text-warning font-medium block truncate">{t('customers.debtors')}</span>
+              <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-warning">{stats.withDebt}</span>
             </div>
-            <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-              <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{t('customers.debts')}</span>
-              <span className="text-xs font-black text-destructive font-mono whitespace-nowrap">{formatCurrency(stats.totalDebt)}</span>
+            <div className="bg-card py-2.5 px-2 rounded-xl border border-border shadow-xs">
+              <span className="text-xs text-muted-foreground font-medium block truncate">{t('customers.debts')}</span>
+              <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-destructive font-mono whitespace-nowrap">{formatCurrency(stats.totalDebt)}</span>
             </div>
-            <div className="bg-card py-2 px-1 rounded-xl border border-border shadow-xs">
-              <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{t('customers.purchases')}</span>
-              <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono whitespace-nowrap">{formatCurrency(stats.totalPurchases)}</span>
+            <div className="bg-card py-2.5 px-2 rounded-xl border border-border shadow-xs">
+              <span className="text-xs text-muted-foreground font-medium block truncate">{t('customers.purchases')}</span>
+              <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-success font-mono whitespace-nowrap">{formatCurrency(stats.totalPurchases)}</span>
             </div>
           </div>
 
           {/* Search & Counter */}
-          <div className="space-y-1.5">
-            <div className="relative">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <div className="space-y-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={t('customers.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 ps-9 pe-3 text-xs bg-card border-border rounded-xl font-medium shadow-xs focus-visible:ring-1 focus-visible:ring-primary"
+                className="ps-9 pe-3 bg-card border-border shadow-xs"
               />
             </div>
-            <div className="flex items-center justify-between text-muted-foreground text-[10.5px] px-1 font-semibold">
+            <div className="flex items-center justify-between text-muted-foreground text-xs px-1 font-semibold">
               <span>قائمة العملاء</span>
-              <span className="font-mono">{filteredCustomers.length} عملاء</span>
+              <span className="font-mono"><span dir="ltr" className="inline-block tabular-nums">{filteredCustomers.length}</span> عملاء</span>
             </div>
           </div>
 
           {/* Customers Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {isLoading && customers.length === 0 ? (
               <CardsGridSkeleton count={6} className="col-span-full" />
             ) : filteredCustomers.length === 0 ? (
-              <div className="col-span-full bg-card rounded-2xl border border-border p-8 text-center">
-                <User className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-sm text-muted-foreground">لا يوجد عملاء مطابقين للبحث</p>
+              <div className="col-span-full flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                <User className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                <p className="text-sm sm:text-base font-semibold text-foreground">لا يوجد عملاء مطابقين للبحث</p>
               </div>
             ) : (
               filteredCustomers.map((customer) => (
@@ -485,13 +510,13 @@ export default function Customers() {
                   onClick={() => openViewDialog(customer)}
                   className="bg-card rounded-2xl p-3 border border-border shadow-xs relative hover:border-primary/40 active:scale-[0.99] transition-[border-color,transform] cursor-pointer select-none"
                 >
-                  {/* Top-Left Options Menu */}
-                  <div className="absolute left-2.5 top-2.5 z-10" onClick={(e) => e.stopPropagation()}>
+                  {/* Top-End Options Menu */}
+                  <div className="absolute end-2 top-2 z-10" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted active:scale-90 transition-transform">
+                        <Button variant="ghost" size="icon" aria-label={t('common.actions') || 'خيارات'}>
                           <MoreVertical className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-48 text-xs font-bold">
                         <DropdownMenuItem onClick={() => openViewDialog(customer)} className="justify-between cursor-pointer">
@@ -522,35 +547,35 @@ export default function Customers() {
                   </div>
 
                   {/* Header Row: Customer Name & Status Badges */}
-                  <div className="flex items-center gap-2 pr-0 pl-8 flex-wrap min-w-0">
-                    <span className="font-black text-foreground text-sm truncate max-w-full" title={customer.name}>{customer.name}</span>
+                  <div className="flex items-center gap-2 pe-12 flex-wrap min-w-0">
+                    <span className="font-bold text-foreground text-sm truncate max-w-full" title={customer.name}>{customer.name}</span>
                     {customer.totalDebt > 0 ? (
-                      <span className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30">
                         {t('customers.debtor')}
-                      </span>
+                      </Badge>
                     ) : (
-                      <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      <Badge variant="outline" className="bg-success/15 text-success border-success/30">
                         خالص
-                      </span>
+                      </Badge>
                     )}
                     {isOwner && customer.cashierName && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-bold">
+                      <Badge variant="secondary">
                         👤 {customer.cashierName}
-                      </span>
+                      </Badge>
                     )}
                   </div>
 
                   {/* Contact Meta Row */}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10.5px]">
-                    <span className="bg-muted text-muted-foreground font-mono px-1.5 py-0.5 rounded font-bold" dir="ltr">
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-xs">
+                    <span className="bg-muted text-muted-foreground font-mono px-1.5 py-0.5 rounded font-semibold inline-block tabular-nums" dir="ltr">
                       📞 {customer.phone}
                     </span>
-                    <span className="text-muted-foreground text-[10px] flex items-center gap-1 font-medium">
+                    <span className="text-muted-foreground text-xs flex items-center gap-1 font-medium">
                       <span>🛒</span>
-                      <span>{customer.invoiceCount} {t('customers.invoices')}</span>
+                      <span><span dir="ltr" className="inline-block tabular-nums">{customer.invoiceCount}</span> {t('customers.invoices')}</span>
                     </span>
                     {customer.address && (
-                      <span className="text-muted-foreground text-[10px] truncate max-w-[9.3rem]">
+                      <span className="text-muted-foreground text-xs truncate max-w-[9.3rem]">
                         📍 {customer.address}
                       </span>
                     )}
@@ -558,26 +583,29 @@ export default function Customers() {
 
                   {/* Financial Summary Box */}
                   <div className="mt-2.5 pt-2 border-t border-dashed border-border flex items-end justify-between">
-                    <div className="text-[10px] text-muted-foreground space-y-0.5 min-w-0">
+                    <div className="text-xs text-muted-foreground space-y-0.5 min-w-0">
                       <div className="font-medium text-muted-foreground">
-                        {t('customers.purchases')}: <span className="font-mono font-bold text-foreground whitespace-nowrap">${Number(customer.totalPurchases || 0).toFixed(2)}</span>
+                        {t('customers.purchases')}: <span dir="ltr" className="inline-block tabular-nums font-mono font-bold text-foreground whitespace-nowrap">${Number(customer.totalPurchases || 0).toFixed(2)}</span>
                       </div>
                     </div>
-                    <div className="text-left whitespace-nowrap shrink-0">
-                      <span className="text-[9.5px] text-muted-foreground block font-sans">{t('customers.debts')}</span>
+                    <div className="text-end whitespace-nowrap shrink-0">
+                      <span className="text-xs text-muted-foreground block font-sans">{t('customers.debts')}</span>
                       <div className="flex flex-col items-end gap-0.5">
                         {/* القيمة الأساسية الثابتة بالدولار */}
-                        <span className={cn(
-                          "text-sm font-black font-mono whitespace-nowrap",
-                          customer.totalDebt > 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
-                        )}>
+                        <span
+                          dir="ltr"
+                          className={cn(
+                            "inline-block tabular-nums text-sm font-bold font-mono whitespace-nowrap",
+                            customer.totalDebt > 0 ? "text-destructive" : "text-success"
+                          )}
+                        >
                           ${Number(customer.totalDebt || 0).toFixed(2)}
                         </span>
                         {/* العملات الموازية المفعلة */}
                         {customer.totalDebt > 0 && (
                           <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-end">
                             {getEquivalentCurrencies(customer.totalDebt).equivalents.map(eq => (
-                              <span key={eq.code} className="text-[9px] font-mono px-1 py-0.2 bg-muted/80 text-muted-foreground rounded font-bold">
+                              <span key={eq.code} dir="ltr" className="inline-block tabular-nums text-[11px] font-mono px-1.5 py-0.5 bg-muted/80 text-muted-foreground rounded font-semibold">
                                 ≈ {eq.formatted}
                               </span>
                             ))}
@@ -592,18 +620,7 @@ export default function Customers() {
           </div>
         </TabsContent>
 
-        <TabsContent value="debts" className="m-0 space-y-3">
-          {/* Add Cash Debt Action directly under Debts tab */}
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              className="bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground font-bold h-9 px-4 rounded-xl shadow-sm text-xs gap-1.5 transition-[colors,transform] cursor-pointer"
-              onClick={() => setShowEmbeddedAddDebt(true)}
-            >
-              <Plus className="w-4 h-4" />
-              <span>{t('debts.addCashDebt')}</span>
-            </Button>
-          </div>
-
+        <TabsContent value="debts" className="m-0 space-y-4">
           <Debts embedded onAddDebt={showEmbeddedAddDebt} onAddDebtChange={setShowEmbeddedAddDebt} />
         </TabsContent>
       </Tabs>
@@ -611,43 +628,28 @@ export default function Customers() {
       {/* Add Customer Dialog */}
       <CustomerCreditDialog customer={creditCustomer} isOwner={isOwner} onOpenChange={(o) => { if (!o) setCreditCustomer(null); }} />
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="w-[95vw] max-w-lg sm:max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl border border-border bg-card shadow-2xl">
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-border bg-card/80 backdrop-blur-md shrink-0">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setShowAddDialog(false)}
-                className="rounded-full h-8 w-8 sm:hidden"
-              >
-                <ArrowRight className="w-4 h-4 rtl:rotate-0 ltr:rotate-180" />
-              </Button>
-              <DialogTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
-                <Plus className="w-4 h-4 text-primary" />
-                <span>{t('customers.addCustomer')}</span>
-              </DialogTitle>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowAddDialog(false)}
-              className="text-xs text-muted-foreground"
-            >
-              {t('common.cancel')}
-            </Button>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-4 pb-28 sm:pb-4">
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.name')} *</label>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] gap-0 bg-card border border-border shadow-2xl"
+          onPointerDownOutside={(e) => { if (isSaving || formData.name || formData.phone || formData.email || formData.address) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSaving || formData.name || formData.phone || formData.email || formData.address) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="w-4 h-4 text-primary shrink-0" />
+              <span>{t('customers.addCustomer')}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.name')} *</label>
               <Input
                 placeholder={t('customers.name')}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-10 text-xs rounded-xl bg-background border-border"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.phone')} *</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.phone')} *</label>
               <Input
                 type="tel"
                 inputMode="tel"
@@ -655,78 +657,64 @@ export default function Customers() {
                 placeholder="+963 xxx xxx xxx"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/[^\d+]/g, '') })}
-                className="h-10 text-xs rounded-xl bg-background border-border text-left font-mono"
+                className="text-start font-mono tabular-nums"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.email')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.email')}</label>
               <Input
+                type="email"
+                dir="ltr"
                 placeholder="email@example.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-10 text-xs rounded-xl bg-background border-border"
+                className="text-start"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.address')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.address')}</label>
               <Input
                 placeholder={t('customers.address')}
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="h-10 text-xs rounded-xl bg-background border-border"
               />
             </div>
-          </div>
-          <div className="sticky bottom-0 p-3 sm:p-4 bg-card/95 backdrop-blur-md border-t border-border flex items-center gap-2 shrink-0 shadow-lg">
-            <Button variant="outline" className="flex-1 h-11 text-xs rounded-xl font-bold" onClick={() => setShowAddDialog(false)}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowAddDialog(false)} disabled={isSaving}>
               {t('common.cancel')}
             </Button>
-            <Button className="flex-[2] h-11 text-xs rounded-xl bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground font-bold shadow-sm" onClick={handleAddCustomer} disabled={isSaving}>
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <Save className="w-4 h-4 ml-1" />}
+            <Button variant="default" size="default" onClick={handleAddCustomer} disabled={isSaving}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span>{isSaving ? 'جاري الحفظ...' : t('common.save')}</span>
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Customer Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="w-[95vw] max-w-lg sm:max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl border border-border bg-card shadow-2xl">
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-border bg-card/80 backdrop-blur-md shrink-0">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setShowEditDialog(false)}
-                className="rounded-full h-8 w-8 sm:hidden"
-              >
-                <ArrowRight className="w-4 h-4 rtl:rotate-0 ltr:rotate-180" />
-              </Button>
-              <DialogTitle className="flex items-center gap-2 text-sm sm:text-base font-bold text-foreground">
-                <Edit className="w-4 h-4 text-primary" />
-                <span>{t('customers.editCustomer')}</span>
-              </DialogTitle>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setShowEditDialog(false)}
-              className="text-xs text-muted-foreground"
-            >
-              {t('common.cancel')}
-            </Button>
-          </div>
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-4 pb-28 sm:pb-4">
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.name')} *</label>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] gap-0 bg-card border border-border shadow-2xl"
+          onPointerDownOutside={(e) => { if (isSaving) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSaving) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="w-4 h-4 text-primary shrink-0" />
+              <span>{t('customers.editCustomer')}</span>
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.name')} *</label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-10 text-xs rounded-xl bg-background border-border"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.phone')} *</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.phone')} *</label>
               <Input
                 type="tel"
                 inputMode="tel"
@@ -734,58 +722,50 @@ export default function Customers() {
                 placeholder="+963 xxx xxx xxx"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/[^\d+]/g, '') })}
-                className="h-10 text-xs rounded-xl bg-background border-border text-left font-mono"
+                className="text-start font-mono tabular-nums"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.email')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.email')}</label>
               <Input
+                type="email"
+                dir="ltr"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-10 text-xs rounded-xl bg-background border-border"
+                className="text-start"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold mb-1.5 block text-foreground">{t('customers.address')}</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold block text-foreground">{t('customers.address')}</label>
               <Input
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="h-10 text-xs rounded-xl bg-background border-border"
               />
             </div>
-          </div>
-          <div className="sticky bottom-0 p-3 sm:p-4 bg-card/95 backdrop-blur-md border-t border-border flex items-center gap-2 shrink-0 shadow-lg">
-            <Button variant="outline" className="flex-1 h-11 text-xs rounded-xl font-bold" onClick={() => setShowEditDialog(false)}>
+          </DialogBody>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowEditDialog(false)} disabled={isSaving}>
               {t('common.cancel')}
             </Button>
-            <Button className="flex-[2] h-11 text-xs rounded-xl bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground font-bold shadow-sm" onClick={handleEditCustomer}>
-              <Save className="w-4 h-4 ml-1" />
+            <Button variant="default" size="default" onClick={handleEditCustomer} disabled={isSaving}>
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span>{t('common.save')}</span>
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* View Customer Dialog - كشف حساب تفصيلي */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),42rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl">
-          <DialogHeader className="shrink-0 p-4 pb-3 border-b border-border/50 text-start bg-muted/30 flex flex-row items-center justify-between">
-            <DialogTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
-              <User className="w-4 h-4 text-primary" />
+        <DialogContent className="w-[min(calc(100vw-1.5rem),42rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] gap-0 border border-border bg-card text-card-foreground shadow-2xl">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12 bg-muted/30">
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-4 h-4 text-primary shrink-0" />
               <span>كشف حساب: {selectedCustomer?.name}</span>
             </DialogTitle>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-primary/40 text-primary hover:bg-primary/10 gap-1.5 h-8 text-xs rounded-xl"
-              onClick={handleShareStatementImage}
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span>مشاركة كصورة</span>
-            </Button>
           </DialogHeader>
           {selectedCustomer && (
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 p-4 sm:p-6">
+            <DialogBody className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
                   <span className="text-xl font-bold text-primary-foreground">
@@ -793,11 +773,11 @@ export default function Customers() {
                   </span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">{selectedCustomer.name}</h3>
-                  <div className="flex items-center gap-3 text-xs md:text-sm text-muted-foreground mt-0.5">
+                  <h3 className="text-sm sm:text-base font-semibold text-foreground">{selectedCustomer.name}</h3>
+                  <div className="flex items-center gap-3 text-xs md:text-sm text-muted-foreground mt-0.5 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Phone className="w-3.5 h-3.5" />
-                      {selectedCustomer.phone}
+                      <span dir="ltr" className="inline-block tabular-nums">{selectedCustomer.phone}</span>
                     </span>
                     {selectedCustomer.address && (
                       <span className="flex items-center gap-1">
@@ -817,26 +797,26 @@ export default function Customers() {
                 const totalPaid = Math.max(0, totalPurchases - totalDebt);
 
                 return (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div className="bg-muted rounded-xl p-3 text-center">
-                      <p className="text-[11px] md:text-xs text-muted-foreground">إجمالي المشتريات</p>
+                      <p className="text-xs text-muted-foreground">إجمالي المشتريات</p>
                       <p className="text-base md:text-xl font-bold text-primary">
-                        {formatCurrency(totalPurchases)}
+                        <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(totalPurchases)}</span>
                       </p>
                     </div>
                     <div className="bg-muted rounded-xl p-3 text-center">
-                      <p className="text-[11px] md:text-xs text-muted-foreground">إجمالي المسدد</p>
+                      <p className="text-xs text-muted-foreground">إجمالي المسدد</p>
                       <p className="text-base md:text-xl font-bold text-success">
-                        {formatCurrency(totalPaid)}
+                        <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(totalPaid)}</span>
                       </p>
                     </div>
                     <div className="bg-muted rounded-xl p-3 text-center">
-                      <p className="text-[11px] md:text-xs text-muted-foreground">الديون المستحقة</p>
+                      <p className="text-xs text-muted-foreground">الديون المستحقة</p>
                       <p className={cn(
                         "text-base md:text-xl font-bold",
                         totalDebt > 0 ? "text-destructive" : "text-success"
                       )}>
-                        {formatCurrency(totalDebt)}
+                        <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(totalDebt)}</span>
                       </p>
                     </div>
                   </div>
@@ -884,9 +864,10 @@ export default function Customers() {
 
                   if (!loadingInvoices && statementItems.length === 0) {
                     return (
-                      <p className="text-sm text-muted-foreground text-center py-6 bg-muted rounded-xl">
-                        لا توجد حركات مسجلة لهذا العميل
-                      </p>
+                      <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                        <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                        <p className="text-sm sm:text-base font-semibold text-foreground">لا توجد حركات مسجلة لهذا العميل</p>
+                      </div>
                     );
                   }
 
@@ -904,53 +885,52 @@ export default function Customers() {
                               className={cn("flex items-center justify-between select-none", hasItems && "cursor-pointer")}
                               onClick={() => hasItems && toggleInvoiceExpand(item.id)}
                             >
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-foreground">{item.id}</span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span dir="ltr" className="inline-block tabular-nums font-mono font-bold text-foreground">{item.id}</span>
                                 <Badge
                                   variant={item.paymentType === 'cash' ? 'default' : 'destructive'}
-                                  className="text-[10px] px-1.5 py-0"
                                 >
                                   {item.type}
                                 </Badge>
                                 {hasItems && (
-                                  <span className="text-[10px] text-primary flex items-center gap-0.5 font-medium">
+                                  <span className="text-xs text-primary flex items-center gap-0.5 font-medium">
                                     {(item as any).items.length} أصناف
                                     {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                   </span>
                                 )}
                               </div>
-                              <span className="text-muted-foreground" dir="ltr">
+                              <span className="inline-block tabular-nums text-muted-foreground" dir="ltr">
                                 {formatDateTime(new Date(item.date))}
                               </span>
                             </div>
 
                             <div className="grid grid-cols-3 gap-2 pt-1 text-center bg-muted/50 rounded-lg p-1.5">
                               <div>
-                                <span className="text-[10px] text-muted-foreground block">الإجمالي</span>
-                                <span className="font-bold text-foreground">{formatInCurrency(item.total, itemCode, itemRate).formatted}</span>
-                                {itemIsNonUsd && <span className="text-[9.5px] text-muted-foreground font-mono block">{formatInCurrency(item.total, itemCode, itemRate).usdEquivalent}</span>}
+                                <span className="text-xs text-muted-foreground block">الإجمالي</span>
+                                <span dir="ltr" className="inline-block tabular-nums font-bold text-foreground">{formatInCurrency(item.total, itemCode, itemRate).formatted}</span>
+                                {itemIsNonUsd && <span dir="ltr" className="inline-block tabular-nums text-[11px] text-muted-foreground font-mono block">{formatInCurrency(item.total, itemCode, itemRate).usdEquivalent}</span>}
                               </div>
                               <div>
-                                <span className="text-[10px] text-muted-foreground block">المدفوع</span>
-                                <span className="font-bold text-success">{formatInCurrency(item.paid, itemCode, itemRate).formatted}</span>
-                                {itemIsNonUsd && <span className="text-[9.5px] text-muted-foreground font-mono block">{formatInCurrency(item.paid, itemCode, itemRate).usdEquivalent}</span>}
+                                <span className="text-xs text-muted-foreground block">المدفوع</span>
+                                <span dir="ltr" className="inline-block tabular-nums font-bold text-success">{formatInCurrency(item.paid, itemCode, itemRate).formatted}</span>
+                                {itemIsNonUsd && <span dir="ltr" className="inline-block tabular-nums text-[11px] text-muted-foreground font-mono block">{formatInCurrency(item.paid, itemCode, itemRate).usdEquivalent}</span>}
                               </div>
                               <div>
-                                <span className="text-[10px] text-muted-foreground block">المتبقي</span>
-                                <span className={cn(
-                                  "font-bold",
+                                <span className="text-xs text-muted-foreground block">المتبقي</span>
+                                <span dir="ltr" className={cn(
+                                  "inline-block tabular-nums font-bold",
                                   item.remaining > 0 ? "text-destructive" : "text-success"
                                 )}>
                                   {formatInCurrency(item.remaining, itemCode, itemRate).formatted}
                                 </span>
-                                {itemIsNonUsd && <span className="text-[9.5px] text-muted-foreground font-mono block">{formatInCurrency(item.remaining, itemCode, itemRate).usdEquivalent}</span>}
+                                {itemIsNonUsd && <span dir="ltr" className="inline-block tabular-nums text-[11px] text-muted-foreground font-mono block">{formatInCurrency(item.remaining, itemCode, itemRate).usdEquivalent}</span>}
                               </div>
                             </div>
 
                             {/* Accordion content: Items breakdown */}
                             {isExpanded && hasItems && (
                               <div className="mt-2 pt-2 border-t border-border/50 space-y-1.5 bg-muted/30 p-2.5 rounded-lg animate-in fade-in-50 duration-200">
-                                <div className="text-[10px] font-semibold text-muted-foreground flex justify-between border-b border-border/40 pb-1">
+                                <div className="text-xs font-semibold text-muted-foreground flex justify-between border-b border-border/40 pb-1">
                                   <span>الصنف</span>
                                   <div className="flex gap-4">
                                     <span>الكمية × السعر</span>
@@ -958,11 +938,11 @@ export default function Customers() {
                                   </div>
                                 </div>
                                 {(item as any).items.map((prod: any, pIdx: number) => (
-                                  <div key={pIdx} className="text-[11px] flex items-center justify-between py-0.5">
+                                  <div key={pIdx} className="text-xs flex items-center justify-between py-0.5">
                                     <span className="font-medium text-foreground">{prod.name}</span>
-                                    <div className="flex items-center gap-4 font-mono text-[10.5px]">
-                                      <span className="text-muted-foreground">{prod.quantity} × {formatInCurrency(prod.price, itemCode, itemRate).formatted}</span>
-                                      <span className="font-bold text-foreground">{formatInCurrency((prod.quantity || 1) * (prod.price || 0), itemCode, itemRate).formatted}</span>
+                                    <div className="flex items-center gap-4 font-mono text-xs">
+                                      <span dir="ltr" className="inline-block tabular-nums text-muted-foreground">{prod.quantity} × {formatInCurrency(prod.price, itemCode, itemRate).formatted}</span>
+                                      <span dir="ltr" className="inline-block tabular-nums font-bold text-foreground">{formatInCurrency((prod.quantity || 1) * (prod.price || 0), itemCode, itemRate).formatted}</span>
                                     </div>
                                   </div>
                                 ))}
@@ -978,11 +958,20 @@ export default function Customers() {
 
               {selectedCustomer.lastPurchase && (
                 <div className="text-xs text-muted-foreground text-center pt-1">
-                  آخر عملية شراء: {selectedCustomer.lastPurchase}
+                  آخر عملية شراء: <span dir="ltr" className="inline-block tabular-nums">{selectedCustomer.lastPurchase}</span>
                 </div>
               )}
-            </div>
+            </DialogBody>
           )}
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button variant="outline" size="default" onClick={() => setShowViewDialog(false)}>
+              {t('common.close') || 'إغلاق'}
+            </Button>
+            <Button variant="default" size="default" onClick={handleShareStatementImage}>
+              <Share2 className="w-4 h-4" />
+              <span>مشاركة كصورة</span>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -995,9 +984,14 @@ export default function Customers() {
               هل أنت متأكد من حذف العميل "{selectedCustomer?.name}"؟ لا يمكن التراجع عن هذا الإجراء.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row-reverse gap-2">
-            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteCustomer} className="bg-destructive hover:bg-destructive/90">
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSaving}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCustomer}
+              disabled={isSaving}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>

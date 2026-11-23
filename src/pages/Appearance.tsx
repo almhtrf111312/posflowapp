@@ -10,7 +10,7 @@ import { FloatingSaveBar } from '@/components/ui/FloatingSaveBar';
 import { useTheme } from '@/hooks/use-theme';
 import { useAppFont } from '@/hooks/use-app-font';
 import { useUIScale } from '@/hooks/use-ui-scale';
-import { toast } from '@/hooks/use-toast';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { showSmartToast } from '@/hooks/use-smart-toast';
 import { applyAppFontToDOM, AppFontId } from '@/lib/app-font-config';
 import { applyUIScaleToDOM, UIScaleId } from '@/lib/ui-scale-config';
@@ -161,7 +161,11 @@ export default function Appearance() {
   ];
 
   return (
-    <div className="p-3 md:p-6 max-w-2xl mx-auto pb-32 pt-14 md:pt-4 space-y-5">
+    <div className="p-3 sm:p-4 md:p-6 max-w-2xl mx-auto pb-32 space-y-4 md:space-y-6">
+      <PageHeader
+        title={isRTL ? 'المظهر العام' : 'Appearance & Theme'}
+        icon={<Palette className="w-5 h-5" />}
+      />
       {/* شريط تبويبات الإعدادات (المظهر والثيم، الخطوط، حجم الواجهة، والتخطيط) — كبسولة موحدة */}
       <div className={capsuleOuter + " sm:w-full"}>
         {tabs.map((tab) => {

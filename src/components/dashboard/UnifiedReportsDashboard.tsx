@@ -43,6 +43,7 @@ import {
 import { formatCurrency, cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { exportToExcel } from '@/lib/excel-export';
 import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
@@ -94,10 +95,10 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
 
   // Financial summary data for bar chart
   const financialDistributionData = useMemo(() => [
-    { name: t('reports.sales'), amount: stats.todaySales || 1, color: 'var(--emerald-500)' },
-    { name: t('dashboard.cogs'), amount: stats.todayCOGS || 1, color: '#6366f1' },
-    { name: t('dashboard.todayExpenses'), amount: stats.todayExpenses || 1, color: '#f59e0b' },
-    { name: t('dashboard.netProfit'), amount: Math.max(stats.todayProfit || 0, 0), color: '#06b6d4' }
+    { name: t('reports.sales'), amount: stats.todaySales || 1, color: 'hsl(var(--success))' },
+    { name: t('dashboard.cogs'), amount: stats.todayCOGS || 1, color: 'hsl(var(--primary))' },
+    { name: t('dashboard.todayExpenses'), amount: stats.todayExpenses || 1, color: 'hsl(var(--warning))' },
+    { name: t('dashboard.netProfit'), amount: Math.max(stats.todayProfit || 0, 0), color: 'hsl(var(--info))' }
   ], [stats, t]);
 
   const handleExportExcel = async () => {
@@ -155,115 +156,103 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
   });
 
   return (
-    <div className={cn("space-y-6 pb-20 pt-2 animate-fade-in", isRTL ? "text-right" : "text-left")} dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* 1. Header Bar matching prototype */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-4 rounded-2xl border border-border/60 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-            <IconBarChart3 className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">
-              {t('dashboard.unifiedTitle')}
-            </h1>
-            <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-2 mt-0.5">
-              <IconCalendar className="w-3.5 h-3.5" />
-              <span>{currentDateFormatted}</span>
-              <span className="inline-block w-1 h-1 rounded-full bg-border" />
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-                <IconCheckCircle2 className="w-3 h-3" /> {t('dashboard.syncedOffline')}
-              </span>
-            </p>
-          </div>
-        </div>
+    <div className="space-y-4 md:space-y-6 pb-20 animate-fade-in text-start" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* 1. Header Bar */}
+      <PageHeader
+        title={t('dashboard.unifiedTitle')}
+        subtitle={`${currentDateFormatted} • ${t('dashboard.syncedOffline')}`}
+        icon={<IconBarChart3 className="w-5 h-5" />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-xl bg-muted/60 p-1 border border-border/50 text-xs">
+              <button
+                type="button"
+                onClick={() => setDateFilter('today')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg font-medium transition-[background-color,color,box-shadow]",
+                  dateFilter === 'today' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t('dashboard.filterToday')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter('week')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg font-medium transition-[background-color,color,box-shadow]",
+                  dateFilter === 'week' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t('dashboard.filterWeek')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDateFilter('month')}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg font-medium transition-[background-color,color,box-shadow]",
+                  dateFilter === 'month' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t('dashboard.filterMonth')}
+              </button>
+            </div>
 
-        {/* Filters & Export Toolbar */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-xl bg-muted/60 p-1 border border-border/50 text-xs">
-            <button
-              onClick={() => setDateFilter('today')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg font-medium transition-[background-color,color,box-shadow]",
-                dateFilter === 'today' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="rounded-xl gap-1.5 border-border/70"
             >
-              {t('dashboard.filterToday')}
-            </button>
-            <button
-              onClick={() => setDateFilter('week')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg font-medium transition-[background-color,color,box-shadow]",
-                dateFilter === 'week' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
+              <IconRefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+              <span className="hidden sm:inline">{t('common.refresh') || (isRTL ? 'تحديث' : 'Refresh')}</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className="rounded-xl gap-1.5 border-success/40 text-success hover:bg-success/10 hover:text-success"
             >
-              {t('dashboard.filterWeek')}
-            </button>
-            <button
-              onClick={() => setDateFilter('month')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg font-medium transition-[background-color,color,box-shadow]",
-                dateFilter === 'month' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
+              <IconFileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Excel</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="rounded-xl gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
-              {t('dashboard.filterMonth')}
-            </button>
+              <IconDownload className="w-4 h-4" />
+              <span className="hidden sm:inline">PDF</span>
+            </Button>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="rounded-xl h-9 gap-1.5 border-border/70"
-          >
-            <IconRefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
-            <span className="hidden sm:inline">{t('common.refresh') || (isRTL ? 'تحديث' : 'Refresh')}</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportExcel}
-            disabled={isExporting}
-            className="rounded-xl h-9 gap-1.5 border-border/70 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-          >
-            <IconFileSpreadsheet className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Excel</span>
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportPDF}
-            disabled={isExporting}
-            className="rounded-xl h-9 gap-1.5 border-border/70 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-          >
-            <IconDownload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">PDF</span>
-          </Button>
-        </div>
-      </header>
+        }
+      />
 
       {/* 2. Primary 4 KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* KPI 1: Sales */}
-        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs font-medium text-muted-foreground">
               {dateFilter === 'today' ? t('dashboard.todaySales') : dateFilter === 'month' ? t('dashboard.monthSales') : t('dashboard.totalSales')}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
               <IconTrendingUp className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-foreground font-mono">
-              {formatCurrency(displaySales)}
+            <div className="text-2xl font-bold tracking-tight text-foreground">
+              <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(displaySales)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center">
+              <span className="text-success font-semibold flex items-center">
                 <IconArrowUpRight className="w-3 h-3" />
-                {stats.todayCount || 0}
+                <span dir="ltr" className="inline-block tabular-nums">{stats.todayCount || 0}</span>
               </span>
               <span>{t('dashboard.completedInvoices')}</span>
             </div>
@@ -271,22 +260,22 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
         </div>
 
         {/* KPI 2: Net Profit */}
-        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs font-medium text-muted-foreground">
               {t('dashboard.netProfit')}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-info/10 text-info flex items-center justify-center">
               <IconDollarSign className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-foreground font-mono">
-              {formatCurrency(displayProfit)}
+            <div className="text-2xl font-bold tracking-tight text-foreground">
+              <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(displayProfit)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
               <span>{t('dashboard.profitMargin')}:</span>
-              <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+              <span dir="ltr" className="inline-block tabular-nums font-semibold text-info">
                 {stats.profitMargin ? `${stats.profitMargin.toFixed(1)}%` : '0%'}
               </span>
             </div>
@@ -294,45 +283,45 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
         </div>
 
         {/* KPI 3: Outstanding Debts */}
-        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs font-medium text-muted-foreground">
               {t('dashboard.dueDebts')}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center">
               <IconReceipt className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-foreground font-mono">
-              {formatCurrency(stats.totalDebtAmount || 0)}
+            <div className="text-2xl font-bold tracking-tight text-foreground">
+              <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(stats.totalDebtAmount || 0)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
               <span>{t('dashboard.debtCustomers')}</span>
-              <span className="font-semibold text-rose-600 dark:text-rose-400">
-                {stats.debtCustomers || 0} {t('dashboard.debtCustomersCount')}
+              <span className="font-semibold text-destructive">
+                <span dir="ltr" className="inline-block tabular-nums">{stats.debtCustomers || 0}</span> {t('dashboard.debtCustomersCount')}
               </span>
             </div>
           </div>
         </div>
 
         {/* KPI 4: Inventory & Stock Value */}
-        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-5 shadow-sm hover:shadow-md transition-shadow">
+        <div className="relative overflow-hidden rounded-2xl bg-card border border-border/60 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-xs font-medium text-muted-foreground">
               {t('dashboard.inventoryAtCost')}
             </span>
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
               <IconPackage className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-foreground font-mono">
-              {formatCurrency(stats.inventoryValue || 0)}
+            <div className="text-2xl font-bold tracking-tight text-foreground">
+              <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(stats.inventoryValue || 0)}</span>
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
               <span>{t('dashboard.totalPurchases')}:</span>
-              <span className="font-semibold text-violet-600 dark:text-violet-400 font-mono">
+              <span dir="ltr" className="inline-block tabular-nums font-semibold text-primary">
                 {formatCurrency(stats.totalPurchases || 0)}
               </span>
             </div>
@@ -346,15 +335,15 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
         <div className="lg:col-span-2 rounded-2xl bg-card border border-border/60 p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-bold text-foreground">{t('dashboard.salesProfitTrend')}</h2>
+              <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">{t('dashboard.salesProfitTrend')}</h2>
               <p className="text-xs text-muted-foreground">{t('dashboard.salesProfitDesc')}</p>
             </div>
             <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5 text-emerald-600 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> {t('reports.sales')}
+              <span className="flex items-center gap-1.5 text-success font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-success" /> {t('reports.sales')}
               </span>
-              <span className="flex items-center gap-1.5 text-cyan-600 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" /> {t('invoices.profits')}
+              <span className="flex items-center gap-1.5 text-info font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-info" /> {t('invoices.profits')}
               </span>
             </div>
           </div>
@@ -364,17 +353,17 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
               <AreaChart data={salesTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--emerald-500)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="var(--emerald-500)" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="hsl(var(--info))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--info))" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#888888' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#888888' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'hsl(var(--popover) / 0.95)',
@@ -382,12 +371,12 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                     border: '1px solid hsl(var(--border))',
                     color: 'hsl(var(--popover-foreground))',
                     direction: isRTL ? 'rtl' : 'ltr',
-                    textAlign: isRTL ? 'right' : 'left'
+                    textAlign: 'start'
                   }}
                   formatter={(value: any) => [formatCurrency(Number(value)), '']}
                 />
-                <Area type="monotone" dataKey="sales" name={t('reports.sales')} stroke="var(--emerald-500)" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" />
-                <Area type="monotone" dataKey="profit" name={t('invoices.profits')} stroke="#06b6d4" strokeWidth={2} fillOpacity={1} fill="url(#profitGrad)" />
+                <Area type="monotone" dataKey="sales" name={t('reports.sales')} stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" />
+                <Area type="monotone" dataKey="profit" name={t('invoices.profits')} stroke="hsl(var(--info))" strokeWidth={2} fillOpacity={1} fill="url(#profitGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -398,7 +387,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-base font-bold text-foreground">{t('dashboard.financialFlowDist')}</h2>
+                <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">{t('dashboard.financialFlowDist')}</h2>
                 <p className="text-xs text-muted-foreground">{t('dashboard.financialFlowDesc')}</p>
               </div>
               <IconPieChart className="w-5 h-5 text-muted-foreground" />
@@ -408,7 +397,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={financialDistributionData} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                   <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#888888' }} axisLine={false} tickLine={false} width={80} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} width={80} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: 'hsl(var(--popover) / 0.95)',
@@ -416,7 +405,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                       border: '1px solid hsl(var(--border))',
                       color: 'hsl(var(--popover-foreground))',
                       direction: isRTL ? 'rtl' : 'ltr',
-                      textAlign: isRTL ? 'right' : 'left'
+                      textAlign: 'start'
                     }}
                     formatter={(val: any) => [formatCurrency(Number(val)), '']}
                   />
@@ -438,7 +427,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/reports?tab=sales')}
-                className="justify-start text-xs h-8 rounded-lg"
+                className="justify-start text-xs rounded-xl"
               >
                 {t('dashboard.salesReportBtn')}
               </Button>
@@ -446,7 +435,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/reports?tab=inventory')}
-                className="justify-start text-xs h-8 rounded-lg"
+                className="justify-start text-xs rounded-xl"
               >
                 {t('dashboard.stockAuditBtn')}
               </Button>
@@ -454,7 +443,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/reports?tab=debts')}
-                className="justify-start text-xs h-8 rounded-lg"
+                className="justify-start text-xs rounded-xl"
               >
                 {t('dashboard.customerDebtsBtn')}
               </Button>
@@ -462,7 +451,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/reports?tab=expenses')}
-                className="justify-start text-xs h-8 rounded-lg"
+                className="justify-start text-xs rounded-xl"
               >
                 {t('dashboard.expensesLogBtn')}
               </Button>

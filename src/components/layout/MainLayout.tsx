@@ -156,7 +156,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             opacity: isRefreshing ? 1 : Math.min(pullDistance / 35, 1),
             transition: isPulling ? 'none' : 'transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.25s ease-out',
           }}
-          className="fixed top-2 left-1/2 -translate-x-1/2 z-[80] pointer-events-none flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/95 dark:bg-zinc-800/95 shadow-xl border border-zinc-200/80 dark:border-zinc-700/80 backdrop-blur-md"
+          className="fixed top-[calc(0.5rem+var(--app-safe-top,0px))] left-1/2 -translate-x-1/2 z-[80] pointer-events-none flex items-center gap-2 px-3.5 py-2 rounded-full bg-popover/95 shadow-xl border border-border/80 backdrop-blur-md"
         >
           <RefreshCw
             className={cn(
@@ -167,7 +167,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               transform: isRefreshing ? undefined : `rotate(${pullDistance * 3}deg)`,
             }}
           />
-          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 select-none whitespace-nowrap">
+          <span className="text-xs font-bold text-popover-foreground select-none whitespace-nowrap">
             {isRefreshing
               ? (t('refreshingData') || 'جاري المزامنة وتحديث البيانات...')
               : pullDistance >= 65
@@ -183,12 +183,8 @@ export function MainLayout({ children }: MainLayoutProps) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         className={cn(
-          "min-h-screen overflow-x-hidden max-w-full pt-4 pb-[env(safe-area-inset-bottom,0px)]",
-          isMobile 
-            ? "m-0" 
-            : isTablet 
-              ? (isRTL ? "mr-[calc(72px+16px)] ml-0" : "ml-[calc(72px+16px)] mr-0") 
-              : (isRTL ? "mr-[calc(14rem+16px)] ml-0" : "ml-[calc(14rem+16px)] mr-0")
+          "min-h-screen overflow-x-hidden max-w-full pt-[calc(1rem+var(--app-safe-top,0px))] pb-[env(safe-area-inset-bottom,0px)]",
+          "ms-0 md:ms-[calc(var(--sidebar-offset,0px)+0.75rem)] me-0 transition-[margin] duration-300 ease-in-out"
         )}
       >
         {children ?? <Outlet />}

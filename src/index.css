@@ -18,6 +18,10 @@ input, textarea {
   html {
     font-feature-settings: "lnum" 1, "tnum" 1;
   }
+
+  button:focus-visible {
+    @apply outline-none ring-2 ring-ring;
+  }
 }
 
 @layer base {
@@ -1869,7 +1873,7 @@ html.barcode-scanner-active .product-details-dialog * {
   min-height: 20px !important;
   max-height: 20px !important;
   border-radius: 9999px !important;
-  background-color: #ffffff !important;
+  background-color: hsl(var(--card)) !important;
   display: block !important;
   pointer-events: none !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25) !important;
@@ -2149,7 +2153,7 @@ html {
 /* 3. Laser Lead Line (Dynamic Scene Primary Token) */
 .laser-lead-line {
   background: linear-gradient(90deg, transparent 0%, hsl(var(--primary)) 50%, transparent 100%);
-  box-shadow: 0 0 10px hsl(var(--primary) / 0.8), 0 0 3px #ffffff;
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.8), 0 0 3px hsl(var(--primary-foreground));
   animation: laserSweep 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform-origin: center;
 }

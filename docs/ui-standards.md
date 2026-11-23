@@ -23,3 +23,16 @@
 * دعم الأداء الذكي (`auto | full | lite` عبر `performance-mode.ts`).
 * إيقاف التمويه الخلفي (`backdrop-filter`) والحركات اللانهائية المستنزفة لوحدة الرسوميات على الأجهزة الضعيفة والمتوسطة.
 * تجزئة رسم شبكة المنتجات الضخمة تزايدياً لمنع تجمّد الواجهة.
+
+### 4. معيار توحيد الواجهة المعتمد (Unified UI Standard — 2026-11-23)
+* **تباعد الشريط الجانبي والصفحة (`MainLayout` & `PageHeader`):**
+  * يعتمد `<main>` على هامش منطقي ديناميكي متزامن مع `--sidebar-offset`: `ms-0 md:ms-[calc(var(--sidebar-offset,0px)+0.75rem)] me-0 transition-[margin] duration-300 ease-in-out` مع حشوة علوية وسفلية تراعي المناطق الآمنة (`pt-[calc(1rem+var(--app-safe-top,0px))] pb-[env(safe-area-inset-bottom,0px)]`).
+  * حاوية الصفحات القياسية: `p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6` بدون `pt-12`/`pt-14` يدوية، مع استخدام `<PageHeader>` في جميع الصفحات غير المخصصة لنقطة البيع (وعنوان `<h1>` واحد فقط في كل صفحة).
+* **أزرار الإضافة والإجراءات والحوارات:**
+  * زر الإضافة الأساسي يوضع داخل `<PageHeader actions={...}>` بالنمط `<Button variant="default" size="default">` مع أيقونة `<Plus className="w-4 h-4 shrink-0" />` دون أزرار FAB مكررة خارج POS.
+  * ترتيب أزرار تذييل الحوار (`<DialogFooter>` / `<AlertDialogFooter>`): **إلغاء (`variant="outline"`) أولاً ← حفظ/تأكيد (`variant="default"`) أو حذف (`variant="destructive"`) ثانياً**، دون تجاوز `flex-col-reverse sm:flex-row sm:justify-end gap-2`.
+  * ترويسة الحوار تستخدم `pe-12` ومحتوى التمرير يستخدم `<DialogBody>` وأبعاد الشرائح القياسية (`28rem` للتأكيد، `32rem` للنماذج، `42rem` للنماذج العريضة) دون تثبيت `dir="rtl"` يدوياً.
+* **أهداف اللمس، الجداول، الشارات، والتنبيهات:**
+  * أزرار الأيقونات تعتمد `size="icon"` (`size-11 sm:size-10` أو `size-11 sm:size-9` في الصفوف الكثيفة) مع `aria-label` مترجم.
+  * ترويسة الجداول القياسية `<TableHeader>` مثبتة افتراضياً (`sticky top-0 z-10 bg-muted/60`) مع محاذاة منطقية `text-start` للنصوص و`text-end` للأرقام.
+  * الشارات بحد أدنى `text-xs font-semibold rounded-full` وبألوان دلالية (`success`/`warning`/`info`/`destructive`)، والتنبيهات القياسية عبر `@/lib/sonner-bridge`.

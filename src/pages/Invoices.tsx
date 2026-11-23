@@ -53,12 +53,22 @@ import {
 } from "@/components/ui/sheet";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -2046,41 +2056,33 @@ export default function Invoices() {
   };
 
   return (
-    <div className="p-3 md:p-6 space-y-3.5">
-      {/* Top Bar: Header pill with safe offset for mobile menu trigger */}
-      <div className={cn(
-        "flex items-center justify-between gap-2 select-none",
-        isRTL ? "pr-14 md:pr-0" : "pl-14 md:pl-0"
-      )}>
-        <div className="inline-flex items-center gap-2 px-3.5 py-2 sm:py-2.5 rounded-2xl bg-gradient-primary text-primary-foreground shadow-xs border border-primary/20 select-none">
-          <ShoppingCart className="w-4 h-4 shrink-0" />
-          <span className="text-xs sm:text-sm font-bold whitespace-nowrap leading-relaxed pt-0.5">
-            {tx('invoices.salesInvoices', 'فواتير المبيعات')}
-          </span>
-        </div>
-      </div>
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+      <PageHeader
+        title={tx('invoices.salesInvoices', 'فواتير المبيعات')}
+        icon={<ShoppingCart className="w-5 h-5" />}
+      />
 
       <Tabs value={activeMainTab} onValueChange={(val: any) => setActiveMainTab(val)} className="w-full space-y-4">
-        <TabsContent value="sales" className="space-y-3 m-0">
+        <TabsContent value="sales" className="space-y-4 m-0">
 
           {/* 1. Sleek Sales Snapshot Card (بطاقة مبيعات موحدة + خيار المزيد) */}
-          <div className="bg-gradient-to-r from-card via-card to-primary/5 p-3 sm:p-3.5 rounded-2xl border border-border shadow-md">
+          <div className="bg-gradient-to-r from-card via-card to-primary/5 p-3 sm:p-4 rounded-2xl border border-border shadow-md">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 font-black text-sm">
+                <div className="w-10 h-10 rounded-xl bg-success/15 border border-success/30 flex items-center justify-center text-success shrink-0 font-bold text-sm">
                   {statCurrencySymbol || '$'}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs font-black text-foreground">
+                    <span className="text-xs font-bold text-foreground">
                       {tx('invoices.salesPeriodTitle', `مبيعات ${currentPeriodTitle}:`)}
                     </span>
-                    <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono whitespace-nowrap">
+                    <span dir="ltr" className="inline-block tabular-nums text-xs sm:text-sm font-bold text-success font-mono whitespace-nowrap">
                       {formatCurrency(currentPeriodSales.total, statCurrencySymbol, statDecimals)}
                     </span>
                   </div>
-                  <div className="text-[10px] text-muted-foreground font-semibold truncate mt-0.5">
-                    {currentPeriodSales.count} {tx('invoices.displayedInvoices', 'فاتورة')} • {stats.pendingDebts} {tx('invoices.pendingDeferred', 'مؤجلة')}
+                  <div className="text-xs text-muted-foreground font-medium truncate mt-0.5">
+                    <span dir="ltr" className="inline-block tabular-nums">{currentPeriodSales.count}</span> {tx('invoices.displayedInvoices', 'فاتورة')} • <span dir="ltr" className="inline-block tabular-nums">{stats.pendingDebts}</span> {tx('invoices.pendingDeferred', 'مؤجلة')}
                   </div>
                 </div>
               </div>
@@ -2089,16 +2091,18 @@ export default function Invoices() {
               <div className="flex items-center gap-1 shrink-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
+                    <Button
                       type="button"
-                      className="px-2.5 py-1.5 rounded-xl bg-background border border-border text-[11px] font-bold text-foreground hover:bg-muted flex items-center gap-1 active:scale-95 transition-[colors,transform] shadow-2xs cursor-pointer"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl gap-1"
                     >
                       <span>{tx('common.more', 'المزيد')}</span>
-                      <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                    </button>
+                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="rounded-2xl p-1.5 text-xs font-bold w-48 shadow-xl">
-                    <div className="px-2 py-1 text-[10px] text-muted-foreground font-black border-b border-border/50 mb-1">
+                    <div className="px-2 py-1 text-xs text-muted-foreground font-bold border-b border-border/50 mb-1">
                       {tx('invoices.selectPeriod', 'فترة العرض:')}
                     </div>
                     <DropdownMenuItem onClick={() => handleSetPeriod('today')} className="rounded-xl flex items-center justify-between cursor-pointer">
@@ -2123,64 +2127,66 @@ export default function Invoices() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="my-1" />
                     <DropdownMenuItem onClick={() => setShowDetailedStats(prev => !prev)} className="rounded-xl text-primary font-bold cursor-pointer">
-                      <Layers className="w-3.5 h-3.5 ml-1.5" />
+                      <Layers className="w-3.5 h-3.5 me-1.5" />
                       <span>{showDetailedStats ? tx('invoices.hideStats', 'إخفاء الإحصائيات') : tx('invoices.showStats', 'عرض تفاصيل الإحصائيات')}</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setShowDetailedStats(prev => !prev)}
+                  aria-label={showDetailedStats ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
                   title={showDetailedStats ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
-                  className="p-1.5 rounded-xl border border-border bg-background hover:bg-muted text-muted-foreground active:scale-90 transition-[colors,transform] cursor-pointer"
                 >
-                  {showDetailedStats ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
+                  {showDetailedStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
               </div>
             </div>
 
             {/* Collapsible Detailed Stats (تظهر عند النقر على خيار التفاصيل من زر المزيد) */}
             {showDetailedStats && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center select-none pt-3 mt-3 border-t border-dashed border-border/80">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center select-none pt-3 mt-3 border-t border-dashed border-border/80">
                 <button
                   type="button"
                   onClick={handleKpiTotal}
                   className={cn(
-                    "min-w-[130px] py-2 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer",
+                    "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     activeKpi === 'total'
                       ? "bg-primary/10 border-primary ring-2 ring-primary/40 shadow-xs"
                       : "bg-background/80 border-border hover:border-primary/40 shadow-xs"
                   )}
                 >
-                  <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{tx('invoices.totalInvoices', 'إجمالي الفواتير')}</span>
-                  <span className="text-xs sm:text-sm font-black text-foreground tabular-nums">{stats.total}</span>
+                  <span className="text-xs text-muted-foreground font-medium block truncate">{tx('invoices.totalInvoices', 'إجمالي الفواتير')}</span>
+                  <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-foreground">{stats.total}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleKpiDebt}
                   className={cn(
-                    "min-w-[130px] py-2 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer",
+                    "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     activeKpi === 'debt'
-                      ? "bg-orange-500/10 border-orange-500 ring-2 ring-orange-500/40 shadow-xs"
-                      : "bg-background/80 border-border hover:border-orange-500/40 shadow-xs"
+                      ? "bg-warning/15 border-warning ring-2 ring-warning/40 shadow-xs"
+                      : "bg-background/80 border-border hover:border-warning/40 shadow-xs"
                   )}
                 >
-                  <span className="text-[9.5px] text-orange-600 dark:text-orange-400 font-medium block truncate">{tx('invoices.pendingDeferred', 'مؤجلة معلقة')}</span>
-                  <span className="text-xs sm:text-sm font-black text-orange-600 dark:text-orange-400 tabular-nums">{stats.pendingDebts}</span>
+                  <span className="text-xs text-warning font-medium block truncate">{tx('invoices.pendingDeferred', 'مؤجلة معلقة')}</span>
+                  <span dir="ltr" className="inline-block tabular-nums text-sm font-bold text-warning">{stats.pendingDebts}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleKpiToday}
                   className={cn(
-                    "min-w-[130px] py-2 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer",
+                    "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     activeKpi === 'today'
-                      ? "bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/40 shadow-xs"
-                      : "bg-background/80 border-border hover:border-emerald-500/40 shadow-xs"
+                      ? "bg-success/15 border-success ring-2 ring-success/40 shadow-xs"
+                      : "bg-background/80 border-border hover:border-success/40 shadow-xs"
                   )}
                 >
-                  <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{tx('invoices.todaySales', 'مبيعات اليوم')}</span>
-                  <span className="text-[10px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono tabular-nums whitespace-nowrap">
+                  <span className="text-xs text-muted-foreground font-medium block truncate">{tx('invoices.todaySales', 'مبيعات اليوم')}</span>
+                  <span dir="ltr" className="inline-block tabular-nums text-xs sm:text-sm font-bold text-success font-mono whitespace-nowrap">
                     {formatCurrency(todaySalesDisplay, statCurrencySymbol, statDecimals)}
                   </span>
                 </button>
@@ -2189,14 +2195,14 @@ export default function Invoices() {
                     type="button"
                     onClick={handleKpiProfit}
                     className={cn(
-                      "min-w-[130px] py-2 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer",
+                      "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       activeKpi === 'profit'
                         ? "bg-primary/10 border-primary ring-2 ring-primary/40 shadow-xs"
                         : "bg-background/80 border-border hover:border-primary/40 shadow-xs"
                     )}
                   >
-                    <span className="text-[9.5px] text-muted-foreground font-medium block truncate">{tx('invoices.totalProfits', 'إجمالي الأرباح')}</span>
-                    <span className="text-[10px] sm:text-xs font-black text-primary font-mono tabular-nums whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground font-medium block truncate">{tx('invoices.totalProfits', 'إجمالي الأرباح')}</span>
+                    <span dir="ltr" className="inline-block tabular-nums text-xs sm:text-sm font-bold text-primary font-mono whitespace-nowrap">
                       {formatCurrency(totalProfitDisplay, statCurrencySymbol, statDecimals)}
                     </span>
                   </button>
@@ -2207,22 +2213,25 @@ export default function Invoices() {
 
           {/* 2. Unified Search + «التصفية» Button Bar */}
           <div className="flex items-center gap-2">
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder={tx('invoices.searchPlaceholder', 'بحث برقم الفاتورة، العميل، الهاتف...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 ps-9 pe-8 text-xs bg-card border-border rounded-2xl font-medium shadow-2xs focus-visible:ring-1 focus-visible:ring-primary"
+                className="ps-9 pe-9 bg-card border-border shadow-2xs"
               />
               {searchQuery && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setSearchQuery('')}
-                  className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full cursor-pointer"
+                  aria-label={tx('common.clear', 'إلغاء')}
+                  className="absolute end-1 top-1/2 -translate-y-1/2 size-9 text-muted-foreground hover:text-foreground"
                 >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                  <X className="w-4 h-4" />
+                </Button>
               )}
             </div>
 
@@ -2231,8 +2240,9 @@ export default function Invoices() {
               type="button"
               onClick={() => setIsFilterSheetOpen(true)}
               variant="outline"
+              size="default"
               className={cn(
-                "h-10 px-3.5 rounded-2xl flex items-center gap-1.5 text-xs font-black transition-[colors,transform] shrink-0 border shadow-2xs active:scale-95 cursor-pointer",
+                "shrink-0 gap-1.5",
                 activeFiltersCount > 0
                   ? "bg-primary/10 border-primary text-primary hover:bg-primary/15"
                   : "bg-card border-border hover:bg-muted/60 text-foreground"
@@ -2241,7 +2251,7 @@ export default function Invoices() {
               <Filter className="w-4 h-4 text-primary shrink-0" />
               <span>{tx('common.filter', 'التصفية')}</span>
               {activeFiltersCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-gradient-primary text-primary-foreground font-mono text-[10px] flex items-center justify-center font-bold">
+                <span dir="ltr" className="w-5 h-5 rounded-full bg-gradient-primary text-primary-foreground font-mono tabular-nums text-xs flex items-center justify-center font-bold">
                   {activeFiltersCount}
                 </span>
               )}
@@ -2259,7 +2269,8 @@ export default function Invoices() {
                   <button
                     type="button"
                     onClick={() => setFilterPayment('all')}
-                    className="text-muted-foreground hover:text-foreground font-mono text-xs cursor-pointer ml-0.5"
+                    className="text-muted-foreground hover:text-foreground font-mono text-xs cursor-pointer ms-0.5 p-1"
+                    aria-label={tx('common.clear', 'إلغاء')}
                     title={tx('common.clear', 'إلغاء')}
                   >
                     ✕
@@ -2274,7 +2285,8 @@ export default function Invoices() {
                   <button
                     type="button"
                     onClick={() => setFilterType('all')}
-                    className="text-muted-foreground hover:text-foreground font-mono text-xs cursor-pointer ml-0.5"
+                    className="text-muted-foreground hover:text-foreground font-mono text-xs cursor-pointer ms-0.5 p-1"
+                    aria-label={tx('common.clear', 'إلغاء')}
                     title={tx('common.clear', 'إلغاء')}
                   >
                     ✕
@@ -2287,7 +2299,8 @@ export default function Invoices() {
                   <button
                     type="button"
                     onClick={() => setDisplayCurrencyFilter('stored')}
-                    className="text-muted-foreground hover:text-foreground font-mono text-xs cursor-pointer ml-0.5"
+                    className="text-muted-foreground hover:text-foreground font-mono text-xs cursor-pointer ms-0.5 p-1"
+                    aria-label={tx('common.clear', 'إلغاء')}
                     title={tx('common.clear', 'إلغاء')}
                   >
                     ✕
@@ -2295,12 +2308,13 @@ export default function Invoices() {
                 </div>
               )}
               {showRefunded && (
-                <div className="bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 px-3 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0 whitespace-nowrap shadow-xs">
+                <div className="bg-destructive/15 border border-destructive/30 text-destructive px-3 py-1.5 rounded-xl flex items-center gap-1.5 shrink-0 whitespace-nowrap shadow-xs">
                   <span>↩️ {tx('invoices.refundedInvoices', 'المسترجعة')}</span>
                   <button
                     type="button"
                     onClick={() => setShowRefunded(false)}
-                    className="text-rose-500 hover:text-rose-700 font-mono text-xs cursor-pointer ml-0.5"
+                    className="text-destructive hover:text-destructive/80 font-mono text-xs cursor-pointer ms-0.5 p-1"
+                    aria-label={tx('common.clear', 'إلغاء')}
                     title={tx('common.clear', 'إلغاء')}
                   >
                     ✕
@@ -2341,13 +2355,9 @@ export default function Invoices() {
                 </Card>
               ))
             ) : filteredInvoices.length === 0 ? (
-              <div className="col-span-full">
-                <Card className="rounded-2xl border-border bg-card">
-                  <CardContent className="p-8 text-center">
-                    <FileText className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-                    <p className="text-muted-foreground">{t('invoices.noInvoices')}</p>
-                  </CardContent>
-                </Card>
+              <div className="col-span-full flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+                <FileText className="w-12 h-12 text-muted-foreground/50 mb-3" />
+                <p className="text-sm sm:text-base font-semibold text-foreground">{t('invoices.noInvoices')}</p>
               </div>
             ) : (
               displayedInvoices.map((invoice) => {
@@ -2368,20 +2378,20 @@ export default function Invoices() {
                     data-invoice-id={invoice.id}
                     onClick={() => handleView(invoice)}
                     className={cn(
-                      "invoice-card rounded-xl p-3 border shadow-xs relative active:scale-[0.99] transition-[colors,transform] cursor-pointer select-none",
+                      "invoice-card rounded-xl p-3 border shadow-xs relative active:scale-[0.99] transition-[transform,color,background-color,border-color] duration-150 cursor-pointer select-none",
                       focusedInvoiceId === invoice.id && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                       isFullyRefunded
-                        ? "border-rose-500/40 bg-rose-500/5 hover:border-rose-500/60"
+                        ? "border-destructive/40 bg-destructive/5 hover:border-destructive/60"
                         : "border-border/80 bg-card text-card-foreground hover:border-primary/40"
                     )}
                   >
-                    {/* زر الخيارات ثلاثي النقاط - أعلى اليسار بمعيار لمس 44px */}
-                    <div className="absolute left-1.5 top-1.5 z-10" onClick={(e) => e.stopPropagation()}>
+                    {/* زر الخيارات ثلاثي النقاط - أعلى النهاية بمعيار لمس 44px */}
+                    <div className="absolute end-1.5 top-1.5 z-10" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="w-10 h-10 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 flex items-center justify-center active:scale-90 transition-transform cursor-pointer">
+                          <Button variant="ghost" size="icon" aria-label={t('common.actions') || 'خيارات'}>
                             <MoreVertical className="w-4 h-4" />
-                          </button>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-44 text-xs font-bold">
                           <DropdownMenuItem onClick={() => handleView(invoice)} className="justify-between cursor-pointer">
@@ -2419,93 +2429,93 @@ export default function Invoices() {
                     </div>
 
                     {/* السطر الأول: اسم العميل والشارات الأساسية */}
-                    <div className="flex items-center flex-wrap gap-1.5 pr-0 pl-12 leading-tight min-w-0">
+                    <div className="flex items-center flex-wrap gap-1.5 pe-12 leading-tight min-w-0">
                       <span className="font-bold text-foreground text-xs truncate max-w-full" title={invoice.customerName}>{invoice.customerName}</span>
                       
                       {/* طريقة الدفع */}
                       {invoice.paymentType === 'cash' ? (
-                        <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[9.5px] font-bold px-1.5 py-0.5 rounded">
+                        <Badge variant="outline" className="bg-success/15 text-success border-success/30">
                           {t('invoices.cash') || 'نقدي'}
-                        </span>
+                        </Badge>
                       ) : (
-                        <span className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[9.5px] font-bold px-1.5 py-0.5 rounded">
+                        <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30">
                           {t('invoices.credit') || 'بيع مؤجل'}
-                        </span>
+                        </Badge>
                       )}
 
                       {/* حالة الدفع للديون فقط (لا تظهر للفواتير النقدية لمنع التكرار) */}
                       {invoice.paymentType === 'debt' && (
                         invoice.status === 'paid' ? (
-                          <span className="bg-emerald-600 text-white text-[8.5px] font-bold px-1.5 py-0.5 rounded">
+                          <Badge className="bg-success text-success-foreground border-success/30">
                             {t('invoices.paid') || 'تم السداد'}
-                          </span>
+                          </Badge>
                         ) : (invoice.debtPaid && invoice.debtPaid > 0) ? (
-                          <span className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[8.5px] font-bold px-1.5 py-0.5 rounded">
+                          <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">
                             {t('invoices.partiallyPaid') || 'مدفوع جزئياً'}
-                          </span>
+                          </Badge>
                         ) : (
-                          <span className="bg-destructive/15 text-destructive border border-destructive/30 text-[8.5px] font-bold px-1.5 py-0.5 rounded">
+                          <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30">
                             {t('invoices.unpaid') || 'غير مدفوع'}
-                          </span>
+                          </Badge>
                         )
                       )}
 
                       {/* شارة الاسترداد الكلي */}
                       {isFullyRefunded && (
-                        <span className="bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/40 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow-xs">
-                          <Undo2 className="w-2.5 h-2.5" />
+                        <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30 gap-1">
+                          <Undo2 className="w-3 h-3" />
                           {t('refundedInvoiceBadge') || t('invoices.refundedInvoiceBadge') || 'مستردة بالكامل'}
-                        </span>
+                        </Badge>
                       )}
 
                       {/* شارة الاسترداد الجزئي */}
                       {isPartiallyRefunded && (
-                        <span className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shadow-xs">
-                          <Layers className="w-2.5 h-2.5" />
+                        <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30 gap-1">
+                          <Layers className="w-3 h-3" />
                           {t('partiallyRefundedBadge') || t('invoices.partiallyRefundedBadge') || 'مستردة جزئياً'}
-                        </span>
+                        </Badge>
                       )}
 
                       {/* شارة الإلغاء إن وجدت */}
                       {invoice.status === 'cancelled' && (
-                        <span className="bg-destructive/15 text-destructive border border-destructive/30 text-[8.5px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                          <XCircle className="w-2.5 h-2.5" />
+                        <Badge variant="outline" className="bg-destructive/15 text-destructive border-destructive/30 gap-1">
+                          <XCircle className="w-3 h-3" />
                           {'ملغاة'}
-                        </span>
+                        </Badge>
                       )}
 
                       {/* شارة حالة المزامنة غير المكتملة */}
                       {invoice.pending_sync && (
-                        <span className={cn(
-                          "text-[8.5px] px-1.5 py-0.5 rounded border font-semibold flex items-center gap-1",
+                        <Badge variant="outline" className={cn(
+                          "gap-1",
                           invoice.sync_failed
-                            ? "bg-destructive/10 text-destructive border-destructive/20"
-                            : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                            ? "bg-destructive/15 text-destructive border-destructive/30"
+                            : "bg-warning/15 text-warning border-warning/30"
                         )}>
                           {isSyncPendingSubscription() ? SYNC_PENDING_SUBSCRIPTION_SHORT : invoice.sync_failed ? (t('invoices.syncFailed') || 'فشل الرفع ⚠️') : (t('invoices.syncPending') || 'قيد المزامنة ⏳')}
-                        </span>
+                        </Badge>
                       )}
 
                       {/* شارة الكاشير */}
                       {invoice.cashierName && (
-                        <span className="mr-auto text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 font-bold text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1">
-                          <User className="w-2.5 h-2.5 text-blue-600 dark:text-blue-400" />
+                        <Badge variant="outline" className="ms-auto bg-info/15 text-info border-info/30 gap-1">
+                          <User className="w-3 h-3" />
                           <span>{invoice.cashierName}</span>
-                        </span>
+                        </Badge>
                       )}
                     </div>
 
                     {/* السطر الثاني: البيانات الوصفية (رقم الفاتورة، التاريخ، عدد المنتجات) */}
-                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
-                      <span className="bg-muted text-foreground/90 font-mono px-1.5 py-0.5 rounded font-semibold text-[9.5px]">
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                      <span dir="ltr" className="inline-block tabular-nums bg-muted text-foreground/90 font-mono px-1.5 py-0.5 rounded font-semibold text-xs">
                         #{invoice.id}
                       </span>
-                      <span dir="ltr" className="font-mono text-[9.5px]">
+                      <span dir="ltr" className="inline-block tabular-nums font-mono text-[11px]">
                         {formatDateTime(new Date(invoice.createdAt))}
                       </span>
-                      <span className="flex items-center gap-1 font-medium mr-auto">
+                      <span className="flex items-center gap-1 font-medium ms-auto">
                         <ShoppingCart className="w-3 h-3 text-muted-foreground/70" />
-                        <span>{itemCount} {t('invoices.items') || 'عنصر'}</span>
+                        <span><span dir="ltr" className="inline-block tabular-nums">{itemCount}</span> {t('invoices.items') || 'عنصر'}</span>
                       </span>
                     </div>
 
@@ -2513,17 +2523,17 @@ export default function Invoices() {
                     <div className="mt-2 pt-2 border-t border-border/40 flex items-center justify-between">
                       {/* يمين: إجمالي الفاتورة وقيمتها المعروضة والمقابلة بالدولار */}
                       <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-[10px] text-muted-foreground font-medium">{t('common.total') || 'الإجمالي'}:</span>
+                        <span className="text-xs text-muted-foreground font-medium">{t('common.total') || 'الإجمالي'}:</span>
                         {financials.code === 'USD' ? (
-                          <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono text-[13px] whitespace-nowrap">
+                          <span dir="ltr" className="inline-block tabular-nums font-bold text-success font-mono text-sm whitespace-nowrap">
                             {formatFinancialAmount(invUsdTotal, financials)}
                           </span>
                         ) : (
                           <div className="inline-flex items-baseline gap-1.5 flex-wrap">
-                            <span className="font-black text-foreground font-mono text-[13px] whitespace-nowrap">
+                            <span dir="ltr" className="inline-block tabular-nums font-bold text-foreground font-mono text-sm whitespace-nowrap">
                               {formatFinancialAmount(financials.displayTotal, financials)}
                             </span>
-                            <span className="text-[9.5px] font-mono text-muted-foreground/80 whitespace-nowrap" dir="ltr">
+                            <span className="inline-block tabular-nums text-[11px] font-mono text-muted-foreground whitespace-nowrap" dir="ltr">
                               ({formatCurrency(invUsdTotal, currencySymbols?.USD || '$', invUsdTotal % 1 === 0 ? 0 : 2, 'USD', currencyNames?.USD)})
                             </span>
                           </div>
@@ -2558,13 +2568,11 @@ export default function Invoices() {
 
       {/* View Dialog */}
       <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="w-[min(calc(100vw-1.5rem),38rem)] flex flex-col p-0 overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-2xl">
-          <DialogHeader className="shrink-0 p-4 pb-3 border-b border-border/50 text-start bg-muted/30">
-            <DialogTitle className="flex items-center justify-between text-base font-bold">
-              <div className="flex items-center gap-2 text-foreground">
-                <FileText className="w-5 h-5 text-primary" />
-                <span>{t('invoices.details') || 'تفاصيل الفاتورة'}</span>
-              </div>
+        <DialogContent className="w-[min(calc(100vw-1.5rem),42rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] gap-0 border border-border bg-card text-card-foreground shadow-2xl">
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12 bg-muted/30">
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <FileText className="w-5 h-5 text-primary shrink-0" />
+              <span>{t('invoices.details') || 'تفاصيل الفاتورة'}</span>
             </DialogTitle>
             <DialogDescription className="sr-only">تفاصيل الفاتورة الكاملة</DialogDescription>
           </DialogHeader>
@@ -2575,28 +2583,27 @@ export default function Invoices() {
 
             return (
             <>
-            <div className="flex-1 min-h-0 space-y-4 p-4 sm:p-5 overflow-y-auto">
+            <DialogBody className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">{t('invoices.invoiceNumber')}:</span>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <p className="font-semibold">{selectedInvoice.id}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <p className="font-semibold"><span dir="ltr" className="inline-block tabular-nums">{selectedInvoice.id}</span></p>
                     {selectedInvoice.pending_sync && (
-                      <span className={cn(
-                        "text-[9px] px-1.5 py-0.5 rounded border font-semibold flex items-center gap-1",
+                      <Badge variant="outline" className={cn(
                         selectedInvoice.sync_failed
-                          ? "bg-destructive/10 text-destructive border-destructive/20"
-                          : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                          ? "bg-destructive/15 text-destructive border-destructive/30"
+                          : "bg-warning/15 text-warning border-warning/30"
                       )}>
                         {isSyncPendingSubscription() ? SYNC_PENDING_SUBSCRIPTION_SHORT : selectedInvoice.sync_failed ? (t('invoices.syncFailed') || 'فشل الرفع ⚠️') : (t('invoices.syncPending') || 'قيد المزامنة ⏳')}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{t('invoices.date')}:</span>
-                  <p className="font-semibold" dir="ltr">
-                    {formatDateTime(new Date(selectedInvoice.createdAt))}
+                  <p className="font-semibold">
+                    <span dir="ltr" className="inline-block tabular-nums">{formatDateTime(new Date(selectedInvoice.createdAt))}</span>
                   </p>
                 </div>
                 <div>
@@ -2605,7 +2612,7 @@ export default function Invoices() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">{t('invoices.phone')}:</span>
-                  <p className="font-semibold">{selectedInvoice.customerPhone || '-'}</p>
+                  <p className="font-semibold"><span dir="ltr" className="inline-block tabular-nums">{selectedInvoice.customerPhone || '-'}</span></p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{t('invoices.type')}:</span>
@@ -2625,7 +2632,7 @@ export default function Invoices() {
                     <span>{currencyNames?.[selectedFinancials.code] || resolveInvoiceCurrencyName(selectedFinancials.code, selectedInvoice.currencyName)}</span>
                     {selectedFinancials.code !== 'USD' && (
                       <span className="text-xs text-muted-foreground font-normal">
-                        (1{currencySymbols?.USD || '$'} = {formatNumber(selectedFinancials.rate)} {selectedFinancials.symbol}) | المعادل: {currencySymbols?.USD || '$'}{formatNumber(baseInvTotal, baseInvTotal % 1 === 0 ? 0 : 2)}
+                        (<span dir="ltr" className="inline-block tabular-nums">1{currencySymbols?.USD || '$'} = {formatNumber(selectedFinancials.rate)} {selectedFinancials.symbol}</span>) | المعادل: <span dir="ltr" className="inline-block tabular-nums">{currencySymbols?.USD || '$'}{formatNumber(baseInvTotal, baseInvTotal % 1 === 0 ? 0 : 2)}</span>
                       </span>
                     )}
                   </p>
@@ -2633,17 +2640,17 @@ export default function Invoices() {
               </div>
 
               {selectedInvoice.type === 'maintenance' && (
-                <div className="bg-muted rounded-lg p-3 space-y-2">
+                <div className="bg-muted rounded-xl p-3 space-y-2">
                   <p className="text-sm font-semibold text-muted-foreground">{t('invoices.maintenanceDetails') || 'تفاصيل الصيانة'}:</p>
                   {selectedInvoice.serviceDescription && (
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-sm gap-2">
                       <span className="text-muted-foreground">{t('invoices.descOrFault') || 'الوصف / نوع العطل'}:</span>
-                      <span className="font-medium text-right max-w-[60%]">{selectedInvoice.serviceDescription}</span>
+                      <span className="font-medium text-end max-w-[60%]">{selectedInvoice.serviceDescription}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{t('pos.receivedAmount') || 'المبلغ المقبوض'}:</span>
-                    <span className="font-medium">{formatFinancialAmount(selectedFinancials.displayTotal, selectedFinancials)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-medium">{formatFinancialAmount(selectedFinancials.displayTotal, selectedFinancials)}</span>
                   </div>
                 </div>
               )}
@@ -2651,32 +2658,38 @@ export default function Invoices() {
               {selectedInvoice.items.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-sm text-muted-foreground">{selectedInvoice.type === 'sale' ? t('invoices.products') : t('invoices.items')}:</span>
-                  <div className="border rounded-lg overflow-x-auto">
-                    <table className="w-full text-xs sm:text-sm">
-                      <thead className="bg-muted/50">
-                        <tr>
-                          <th className="px-2 py-2 text-right font-medium text-muted-foreground">{t('invoices.products') || 'المنتج'}</th>
-                          <th className="px-2 py-2 text-center font-medium text-muted-foreground whitespace-nowrap">{t('pos.quantity') || 'الكمية'}</th>
-                          <th className="px-2 py-2 text-center font-medium text-muted-foreground whitespace-nowrap">{t('pos.price') || 'السعر'}</th>
-                          <th className="px-2 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">{t('pos.total') || 'المجموع'}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                  <div className="border rounded-xl overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-start">{t('invoices.products') || 'المنتج'}</TableHead>
+                          <TableHead className="text-center">{t('pos.quantity') || 'الكمية'}</TableHead>
+                          <TableHead className="text-end">{t('pos.price') || 'السعر'}</TableHead>
+                          <TableHead className="text-end">{t('pos.total') || 'المجموع'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {selectedInvoice.items.map((item, idx) => (
-                          <tr key={idx} className={cn("border-t border-muted/50", item.refunded && "opacity-60")}>
-                            <td className="px-2 py-2 text-right whitespace-normal break-words leading-snug" dir="auto">
+                          <TableRow key={idx} className={cn(item.refunded && "opacity-60")}>
+                            <TableCell className="text-start whitespace-normal break-words leading-snug" dir="auto">
                               <span className={cn(item.refunded && "line-through")}>{item.name}</span>
                               {item.refunded && (
-                                <span className="mr-2 inline-block rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">{t('invoices.refunded') || 'مُسترد'}</span>
+                                <Badge variant="outline" className="ms-2 bg-destructive/15 text-destructive border-destructive/30">{t('invoices.refunded') || 'مُسترد'}</Badge>
                               )}
-                            </td>
-                            <td className="px-2 py-2 text-center whitespace-nowrap">{item.quantity}</td>
-                            <td className="px-2 py-2 text-center whitespace-nowrap font-mono sm:font-sans">{formatFinancialAmount(item.price * selectedFinancials.rate, selectedFinancials)}</td>
-                            <td className="px-2 py-2 text-left font-medium whitespace-nowrap font-mono sm:font-sans">{formatFinancialAmount((item.refunded ? 0 : (item.price * item.quantity)) * selectedFinancials.rate, selectedFinancials)}</td>
-                          </tr>
+                            </TableCell>
+                            <TableCell className="text-center whitespace-nowrap">
+                              <span dir="ltr" className="inline-block tabular-nums">{item.quantity}</span>
+                            </TableCell>
+                            <TableCell className="text-end whitespace-nowrap font-mono sm:font-sans">
+                              <span dir="ltr" className="inline-block tabular-nums">{formatFinancialAmount(item.price * selectedFinancials.rate, selectedFinancials)}</span>
+                            </TableCell>
+                            <TableCell className="text-end font-medium whitespace-nowrap font-mono sm:font-sans">
+                              <span dir="ltr" className="inline-block tabular-nums">{formatFinancialAmount((item.refunded ? 0 : (item.price * item.quantity)) * selectedFinancials.rate, selectedFinancials)}</span>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )}
@@ -2685,22 +2698,22 @@ export default function Invoices() {
                 {selectedInvoice.subtotal !== undefined && selectedInvoice.discount > 0 && (
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>{t('invoices.subtotal') || 'المجموع قبل الخصم'}:</span>
-                    <span>{formatFinancialAmount(selectedInvoice.subtotal * selectedFinancials.rate, selectedFinancials)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums">{formatFinancialAmount(selectedInvoice.subtotal * selectedFinancials.rate, selectedFinancials)}</span>
                   </div>
                 )}
                 {selectedInvoice.discount > 0 && (
                   <div className="flex justify-between text-sm">
                     <span>{t('invoices.discount')}{selectedInvoice.discountPercentage ? ` (${selectedInvoice.discountPercentage}%)` : ''}:</span>
-                    <span className="text-destructive">-{formatFinancialAmount(selectedInvoice.discount * selectedFinancials.rate, selectedFinancials)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums text-destructive">-{formatFinancialAmount(selectedInvoice.discount * selectedFinancials.rate, selectedFinancials)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-baseline text-lg font-bold">
                   <span>{t('invoices.total')}:</span>
-                  <div className="text-left">
-                    <span className="text-primary">{formatFinancialAmount(selectedFinancials.displayTotal, selectedFinancials)}</span>
+                  <div className="text-end">
+                    <span dir="ltr" className="inline-block tabular-nums text-primary">{formatFinancialAmount(selectedFinancials.displayTotal, selectedFinancials)}</span>
                     {selectedFinancials.code !== 'USD' && (
-                      <p className="text-xs font-normal text-muted-foreground" dir="ltr">
-                        (ما يعادل بالدولار: {formatFinancialAmount(baseInvTotal, { code: 'USD', symbol: currencySymbols?.USD || '$', decimals: 2, name: currencyNames?.USD || 'دولار أمريكي' })})
+                      <p className="text-xs font-normal text-muted-foreground">
+                        (ما يعادل بالدولار: <span dir="ltr" className="inline-block tabular-nums">{formatFinancialAmount(baseInvTotal, { code: 'USD', symbol: currencySymbols?.USD || '$', decimals: 2, name: currencyNames?.USD || 'دولار أمريكي' })}</span>)
                       </p>
                     )}
                   </div>
@@ -2708,13 +2721,13 @@ export default function Invoices() {
                 {selectedInvoice.paymentType === 'debt' && selectedInvoice.status === 'pending' && selectedInvoice.debtPaid !== undefined && selectedInvoice.debtPaid > 0 && (
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span>{t('invoices.paidCash') || 'المدفوع نقداً'}:</span>
-                    <span className="font-medium text-success">{formatFinancialAmount((selectedInvoice.debtPaid || 0) * selectedFinancials.rate, selectedFinancials)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-medium text-success">{formatFinancialAmount((selectedInvoice.debtPaid || 0) * selectedFinancials.rate, selectedFinancials)}</span>
                   </div>
                 )}
                 {selectedInvoice.paymentType === 'debt' && selectedInvoice.status === 'pending' && (
                   <div className="flex justify-between text-sm text-destructive">
                     <span>{t('invoices.debtRemaining') || 'المتبقي (دين)'}:</span>
-                    <span className="font-semibold">{formatFinancialAmount(((selectedInvoice.debtRemaining !== undefined && selectedInvoice.debtRemaining !== null) ? selectedInvoice.debtRemaining : (selectedInvoice.total - (selectedInvoice.debtPaid || 0))) * selectedFinancials.rate, selectedFinancials)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-semibold">{formatFinancialAmount(((selectedInvoice.debtRemaining !== undefined && selectedInvoice.debtRemaining !== null) ? selectedInvoice.debtRemaining : (selectedInvoice.total - (selectedInvoice.debtPaid || 0))) * selectedFinancials.rate, selectedFinancials)}</span>
                   </div>
                 )}
               </div>
@@ -2799,38 +2812,18 @@ export default function Invoices() {
                 </div>
               </div>
 
-            </div>
+            </DialogBody>
 
-              <div
-                className="shrink-0 flex flex-wrap items-center gap-2 border-t border-border/50 bg-background/95 p-3"
+              <DialogFooter
+                className="shrink-0 flex-wrap border-t border-border/60 bg-background/95 px-4 py-3 sm:px-6"
                 style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
               >
-                <Button
-                  className="min-h-11 flex-1 basis-full bg-primary py-2.5 font-bold text-primary-foreground shadow-md transition-[colors,transform] hover:bg-primary/90 active:scale-98 sm:basis-auto"
-                  onClick={() => handlePrint(selectedInvoice)}
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>{t('common.print') || 'طباعة الفاتورة'}</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "min-h-11 flex-1 px-4 py-2.5 font-bold transition-[colors,transform] active:scale-98 sm:basis-auto",
-                    canViewInvoiceProfit ? "basis-[calc(50%-0.25rem)]" : "basis-full"
-                  )}
-                  onClick={() => {
-                    setShowViewDialog(false);
-                    handleShare(selectedInvoice);
-                  }}
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>{t('common.share') || 'مشاركة'}</span>
-                </Button>
                 {canViewInvoiceProfit && (
                   <Button
                     type="button"
                     variant="outline"
-                    className="min-h-11 flex-1 basis-[calc(50%-0.25rem)] gap-1.5 border-emerald-500/40 px-3.5 font-bold text-emerald-700 transition-[colors,transform] hover:bg-emerald-500/10 active:scale-98 dark:text-emerald-300 sm:basis-auto"
+                    size="default"
+                    className="gap-1.5 border-success/40 text-success hover:bg-success/10 hover:text-success"
                     onClick={() => {
                       if (canViewInvoiceProfit) setShowProfitDialog(true);
                     }}
@@ -2840,7 +2833,26 @@ export default function Invoices() {
                     <span>{language === 'en' ? 'Invoice profit' : language === 'tr' ? 'Fatura kârı' : 'أرباح الفاتورة'}</span>
                   </Button>
                 )}
-              </div>
+                <Button
+                  variant="outline"
+                  size="default"
+                  onClick={() => {
+                    setShowViewDialog(false);
+                    handleShare(selectedInvoice);
+                  }}
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span>{t('common.share') || 'مشاركة'}</span>
+                </Button>
+                <Button
+                  variant="default"
+                  size="default"
+                  onClick={() => handlePrint(selectedInvoice)}
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>{t('common.print') || 'طباعة الفاتورة'}</span>
+                </Button>
+              </DialogFooter>
             </>
             );
           })()}
@@ -2858,18 +2870,18 @@ export default function Invoices() {
 
       {/* Share Bottom Sheet */}
       <Dialog open={showShareSheet} onOpenChange={showShareSheet => setShowShareSheet(showShareSheet)}>
-        <DialogContent className="fixed inset-x-0 bottom-0 top-auto left-0 right-0 max-w-md mx-auto rounded-t-3xl rounded-b-none border-t border-border bg-card text-card-foreground p-0 max-h-[85vh] max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl laser-sheet-content">
+        <DialogContent className="fixed inset-x-0 bottom-0 top-auto max-w-md mx-auto rounded-t-3xl rounded-b-none border-t border-border bg-card text-card-foreground p-0 pb-[max(1rem,env(safe-area-inset-bottom,0px))] max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl laser-sheet-content">
           {/* Laser Lead Line */}
           <div className="laser-lead-line h-[2.5px] w-full" />
 
           {/* Drawer Drag Handle */}
           <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2.5" />
 
-          <DialogHeader className="px-5 pb-3 pt-0 text-right flex flex-row items-center justify-between border-b border-border/40">
+          <DialogHeader className="px-5 pb-3 pt-0 text-start pe-12 flex flex-row items-center justify-between border-b border-border/40">
             <div className="flex items-center gap-2">
-              <Share2 className="w-4 h-4 text-primary" />
-              <DialogTitle className="text-sm font-bold">
-                {t('invoices.shareInvoice') || 'مشاركة الفاتورة'} {invoiceToShare?.id}
+              <Share2 className="w-4 h-4 text-primary shrink-0" />
+              <DialogTitle>
+                {t('invoices.shareInvoice') || 'مشاركة الفاتورة'} <span dir="ltr" className="inline-block tabular-nums">{invoiceToShare?.id}</span>
               </DialogTitle>
             </div>
             <DialogDescription className="sr-only">نافذة مشاركة الفاتورة</DialogDescription>
@@ -2883,26 +2895,26 @@ export default function Invoices() {
                 <div className="bg-muted/40 border border-border/60 rounded-2xl p-3.5 space-y-2 text-xs">
                   <div className="flex justify-between items-center pb-2 border-b border-border/40">
                     <span className="font-bold text-foreground text-sm">{invoiceToShare.customerName}</span>
-                    <Badge variant={invoiceToShare.type === 'sale' ? 'default' : 'secondary'} className="text-[10px]">
+                    <Badge variant={invoiceToShare.type === 'sale' ? 'default' : 'secondary'}>
                       {invoiceToShare.type === 'sale' ? t('invoices.sales') : t('invoices.maintenance')}
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center text-muted-foreground">
                     <span>{t('invoices.invoiceNumber') || 'رقم الفاتورة'}:</span>
-                    <span className="font-mono text-foreground font-semibold">{invoiceToShare.id}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-mono text-foreground font-semibold">{invoiceToShare.id}</span>
                   </div>
                   <div className="flex justify-between items-center text-muted-foreground">
                     <span>{t('invoices.date') || 'التاريخ'}:</span>
-                    <span>{formatDateTime(new Date(invoiceToShare.createdAt))}</span>
+                    <span dir="ltr" className="inline-block tabular-nums">{formatDateTime(new Date(invoiceToShare.createdAt))}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-border/40">
                     <span className="font-semibold text-foreground">{t('common.total')}:</span>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="font-bold text-base text-primary">
+                      <span dir="ltr" className="inline-block tabular-nums font-bold text-base text-primary">
                         {formatCurrency(shareFin.displayTotal, shareFin.symbol, shareFin.decimals)}
                       </span>
                       {shareFin.code !== 'USD' && (
-                        <span className="text-xs text-muted-foreground" dir="ltr">
+                        <span className="inline-block tabular-nums text-xs text-muted-foreground" dir="ltr">
                           ({formatCurrency(invoiceToShare.total || 0, currencySymbols?.USD || '$', (invoiceToShare.total || 0) % 1 === 0 ? 0 : 2, 'USD', currencyNames?.USD)})
                         </span>
                       )}
@@ -2959,18 +2971,22 @@ export default function Invoices() {
 
       {/* Refund Confirmation Dialog (Bottom Sheet) */}
       <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
-        <DialogContent className="fixed inset-x-0 bottom-0 top-auto left-0 right-0 max-w-xl mx-auto rounded-t-3xl rounded-b-none border-t border-border bg-card text-card-foreground p-0 max-h-[92vh] max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl bottom-sheet-content">
+        <DialogContent
+          className="fixed inset-x-0 bottom-0 top-auto max-w-xl mx-auto rounded-t-3xl rounded-b-none border-t border-border bg-card text-card-foreground p-0 pb-[max(1rem,env(safe-area-inset-bottom,0px))] max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl bottom-sheet-content"
+          onPointerDownOutside={(e) => { if (refundGuard.isRunning || partialRefundStats.isValid) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (refundGuard.isRunning || partialRefundStats.isValid) e.preventDefault(); }}
+        >
           {/* Drawer Drag Handle */}
           <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2.5" />
 
-          <DialogHeader className="px-6 pb-3 pt-0 text-right border-b border-border/40">
-            <DialogTitle className="text-orange-600 flex items-center justify-between gap-2 text-base font-bold">
-              <div className="flex items-center gap-2">
-                <Undo2 className="w-5 h-5" />
-                <span>{t('invoices.refundInvoice') || 'استرداد الفاتورة'} {invoiceToRefund?.id}</span>
+          <DialogHeader className="px-6 pb-3 pt-0 text-start pe-12 border-b border-border/40">
+            <DialogTitle className="text-destructive flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Undo2 className="w-5 h-5 shrink-0" />
+                <span className="truncate">{t('invoices.refundInvoice') || 'استرداد الفاتورة'} <span dir="ltr" className="inline-block tabular-nums">{invoiceToRefund?.id}</span></span>
               </div>
               {invoiceToRefund && (
-                <Badge variant={invoiceToRefund.paymentType === 'cash' ? 'default' : 'destructive'} className="text-xs">
+                <Badge variant={invoiceToRefund.paymentType === 'cash' ? 'default' : 'destructive'}>
                   {invoiceToRefund.paymentType === 'cash' ? t('invoices.cash') : t('invoices.debtCredit')}
                 </Badge>
               )}
@@ -3016,19 +3032,19 @@ export default function Invoices() {
           <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
             {/* Debt specific alert */}
             {invoiceToRefund?.paymentType === 'debt' && (
-              <div className="rounded-lg border border-amber-300 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-950/30 p-3.5 space-y-2 text-xs text-amber-900 dark:text-amber-200 text-right">
-                <div className="flex items-center gap-2 font-semibold text-amber-800 dark:text-amber-300">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="rounded-xl border border-warning/30 bg-warning/10 p-3.5 space-y-2 text-xs text-foreground text-start">
+                <div className="flex items-center gap-2 font-semibold text-warning">
+                  <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
                   <span>{t('invoices.debtAlertTitle')}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 py-1 bg-white/70 dark:bg-black/20 rounded p-2 text-xs">
+                <div className="grid grid-cols-2 gap-2 py-1 bg-background/70 rounded-lg p-2 text-xs">
                   <div>
                     <span className="text-muted-foreground">{t('invoices.paidPreviously')} </span>
-                    <span className="font-bold text-success">{formatCurrency((invoiceToRefund.debtPaid || 0) * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-bold text-success">{formatCurrency((invoiceToRefund.debtPaid || 0) * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">{t('invoices.remainingCustomerDebt')} </span>
-                    <span className="font-bold text-destructive">{formatCurrency((invoiceToRefund.debtRemaining ?? (invoiceToRefund.total - (invoiceToRefund.debtPaid || 0))) * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-bold text-destructive">{formatCurrency((invoiceToRefund.debtRemaining ?? (invoiceToRefund.total - (invoiceToRefund.debtPaid || 0))) * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
                   </div>
                 </div>
                 <p className="leading-relaxed">
@@ -3106,19 +3122,19 @@ export default function Invoices() {
             )}
 
             {refundMode === 'full' ? (
-              <div className="space-y-3 py-1 text-right">
-                <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-2 border">
+              <div className="space-y-3 py-1 text-start">
+                <div className="bg-muted/40 rounded-xl p-3 text-sm space-y-2 border">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('invoices.customer') || 'العميل'}:</span>
                     <span className="font-semibold">{invoiceToRefund?.customerName}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('invoices.total') || 'إجمالي الفاتورة'}:</span>
-                    <span className="font-bold">{formatCurrency(refundFinancials ? refundFinancials.displayTotal : 0, refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-bold">{formatCurrency(refundFinancials ? refundFinancials.displayTotal : 0, refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('invoices.itemsAndUnits')}</span>
-                    <span>{invoiceToRefund?.items?.length || 0} {t('invoices.itemsCount')} ({invoiceToRefund?.items?.reduce((s, i) => s + i.quantity, 0) || 0} {t('invoices.piecesCount')})</span>
+                    <span><span dir="ltr" className="inline-block tabular-nums">{invoiceToRefund?.items?.length || 0}</span> {t('invoices.itemsCount')} (<span dir="ltr" className="inline-block tabular-nums">{invoiceToRefund?.items?.reduce((s, i) => s + i.quantity, 0) || 0}</span> {t('invoices.piecesCount')})</span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground text-center">
@@ -3126,64 +3142,66 @@ export default function Invoices() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3 text-right">
-                <div className="flex items-center justify-between text-xs">
+              <div className="space-y-3 text-start">
+                <div className="flex items-center justify-between text-xs gap-2 flex-wrap">
                   <span className="font-medium text-muted-foreground">{t('invoices.selectQuantitiesToReturn')}</span>
                   <div className="flex items-center gap-1.5">
-                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs px-2 text-primary" onClick={setAllPartialQtyMax}>
+                    <Button type="button" variant="ghost" size="sm" className="min-h-10 sm:min-h-8 text-xs px-2.5 text-primary" onClick={setAllPartialQtyMax}>
                       {t('invoices.selectAll') || 'تحديد الكل'}
                     </Button>
-                    <Button type="button" variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground" onClick={resetAllPartialQty}>
+                    <Button type="button" variant="ghost" size="sm" className="min-h-10 sm:min-h-8 text-xs px-2.5 text-muted-foreground" onClick={resetAllPartialQty}>
                       {t('invoices.reset') || 'تصفير'}
                     </Button>
                   </div>
                 </div>
 
-                <div className="border rounded-lg divide-y max-h-56 overflow-y-auto bg-card">
+                <div className="border rounded-xl divide-y max-h-56 overflow-y-auto bg-card">
                   {invoiceToRefund?.items?.filter(i => !i.refunded && i.quantity > 0).map((item) => {
                     const key = refundKey(item);
                     const currentQty = partialRefundQuantities[key] || 0;
                     const isSelected = currentQty > 0;
                     return (
-                      <div key={key} className={cn("p-2.5 flex items-center justify-between gap-3 text-sm transition-colors", isSelected && "bg-orange-50/60 dark:bg-orange-950/20")}>
+                      <div key={key} className={cn("p-2.5 flex items-center justify-between gap-3 text-sm transition-colors", isSelected && "bg-warning/10")}>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">{item.name}</div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                            <span>{formatCurrency(item.price * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)} {t('common.perPiece')}</span>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span><span dir="ltr" className="inline-block tabular-nums">{formatCurrency(item.price * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span> {t('common.perPiece')}</span>
                             <span>•</span>
-                            <span>{t('invoices.qtyInInvoice')} <strong className="text-foreground">{item.quantity}</strong></span>
+                            <span>{t('invoices.qtyInInvoice')} <strong dir="ltr" className="inline-block tabular-nums text-foreground">{item.quantity}</strong></span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <div className="flex items-center border rounded-md overflow-hidden bg-background">
+                          <div className="flex items-center border rounded-xl overflow-hidden bg-background">
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 rounded-none"
+                              aria-label={language === 'en' ? 'Decrease quantity' : 'إنقاص الكمية'}
+                              className="size-11 sm:size-9 rounded-none"
                               onClick={() => updatePartialQty(key, -1, item.quantity)}
                               disabled={currentQty <= 0}
                             >
-                              <Minus className="w-3 h-3" />
+                              <Minus className="w-4 h-4" />
                             </Button>
-                            <span className="w-8 text-center font-bold text-xs">{currentQty}</span>
+                            <span dir="ltr" className="w-8 text-center font-bold text-xs tabular-nums">{currentQty}</span>
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 rounded-none"
+                              aria-label={language === 'en' ? 'Increase quantity' : 'زيادة الكمية'}
+                              className="size-11 sm:size-9 rounded-none"
                               onClick={() => updatePartialQty(key, 1, item.quantity)}
                               disabled={currentQty >= item.quantity}
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="w-4 h-4" />
                             </Button>
                           </div>
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            className={cn("h-7 px-2 text-xs", currentQty === item.quantity && "bg-primary text-primary-foreground")}
+                            className={cn("min-h-11 sm:min-h-9 px-2.5 text-xs rounded-xl", currentQty === item.quantity && "bg-primary text-primary-foreground border-primary")}
                             onClick={() => updatePartialQty(key, item.quantity - currentQty, item.quantity)}
                           >
                             {t('common.all')}
@@ -3195,34 +3213,34 @@ export default function Invoices() {
                 </div>
 
                 {/* Partial summary box */}
-                <div className="bg-muted/50 rounded-lg p-3 space-y-1.5 text-xs border">
+                <div className="bg-muted/50 rounded-xl p-3 space-y-1.5 text-xs border">
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">{t('invoices.selectedItems')}</span>
-                    <span className="font-semibold">{partialRefundStats.itemsCount} {t('invoices.itemsCount')} ({partialRefundStats.unitsCount} {t('invoices.piecesCount')})</span>
+                    <span className="font-semibold"><span dir="ltr" className="inline-block tabular-nums">{partialRefundStats.itemsCount}</span> {t('invoices.itemsCount')} (<span dir="ltr" className="inline-block tabular-nums">{partialRefundStats.unitsCount}</span> {t('invoices.piecesCount')})</span>
                   </div>
                   <div className="flex justify-between items-center text-sm font-bold border-t pt-1.5">
                     <span>{t('invoices.totalRefundValue')}</span>
-                    <span className="text-orange-600">{formatCurrency(partialRefundStats.totalRefundAmount * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums text-warning">{formatCurrency(partialRefundStats.totalRefundAmount * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
                   </div>
                   {invoiceToRefund?.paymentType === 'debt' ? (
                     <>
                       {partialRefundStats.debtReduction > 0 && (
                         <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span>{t('invoices.debtDeduction')}</span>
-                          <span className="font-semibold text-destructive">-{formatCurrency(partialRefundStats.debtReduction * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
+                          <span dir="ltr" className="inline-block tabular-nums font-semibold text-destructive">-{formatCurrency(partialRefundStats.debtReduction * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
                         </div>
                       )}
                       {partialRefundStats.cashToReturn > 0 && (
-                        <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <div className="flex justify-between items-center text-xs text-success font-semibold">
                           <span>{t('invoices.cashReturnToCustomer')}</span>
-                          <span>{formatCurrency(partialRefundStats.cashToReturn * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
+                          <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(partialRefundStats.cashToReturn * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <div className="flex justify-between items-center text-xs text-success font-semibold">
                       <span>{t('invoices.cashReturnToCustomer')}</span>
-                      <span>{formatCurrency(partialRefundStats.cashToReturn * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
+                      <span dir="ltr" className="inline-block tabular-nums">{formatCurrency(partialRefundStats.cashToReturn * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)}</span>
                     </div>
                   )}
                 </div>
@@ -3231,28 +3249,30 @@ export default function Invoices() {
 
           </div>
 
-          <DialogFooter className="p-4 border-t bg-muted/20 gap-2 flex-row justify-end">
-            <Button variant="outline" onClick={() => setShowRefundDialog(false)} disabled={refundGuard.isRunning}>
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60 bg-muted/20">
+            <Button variant="outline" size="default" onClick={() => setShowRefundDialog(false)} disabled={refundGuard.isRunning}>
               {t('common.cancel')}
             </Button>
             {refundMode === 'full' ? (
               <Button
-                className="bg-orange-600 hover:bg-orange-700 text-white"
+                variant="destructive"
+                size="default"
                 onClick={confirmRefund}
                 disabled={refundGuard.isRunning}
                 aria-busy={refundGuard.isRunning}
               >
-                <Undo2 className={cn('w-4 h-4', refundGuard.isRunning && 'animate-spin')} />
+                {refundGuard.isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />}
                 {refundGuard.isRunning ? (t('common.loading') || 'جاري الاسترداد...') : (t('confirmReturnAction') || t('invoices.confirmFullRefund') || 'تأكيد الاسترجاع')}
               </Button>
             ) : (
               <Button
-                className="bg-orange-600 hover:bg-orange-700 text-white"
+                variant="destructive"
+                size="default"
                 onClick={confirmPartialRefund}
                 disabled={refundGuard.isRunning || !partialRefundStats.isValid}
                 aria-busy={refundGuard.isRunning}
               >
-                <Layers className={cn('w-4 h-4', refundGuard.isRunning && 'animate-spin')} />
+                {refundGuard.isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
                 {refundGuard.isRunning
                   ? (t('common.loading') || 'جاري الاسترداد...')
                   : `${t('invoices.confirmPartialRefund') || 'تأكيد الاسترداد الجزئي'} (${formatCurrency(partialRefundStats.totalRefundAmount * (refundFinancials?.rate || 1), refundFinancials?.symbol || '$', refundFinancials?.decimals, refundFinancials?.code || 'USD', refundFinancials?.name)})`}
@@ -3269,10 +3289,14 @@ export default function Invoices() {
           if (!isSubmittingPayment) setShowDebtPaymentDialog(open);
         }}
       >
-        <DialogContent className="w-[min(calc(100vw-1.5rem),30rem)] max-h-[calc(100dvh-2rem)]">
-          <DialogHeader>
+        <DialogContent
+          className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px] gap-0"
+          onPointerDownOutside={(e) => { if (isSubmittingPayment || paymentAmountInput) e.preventDefault(); }}
+          onEscapeKeyDown={(e) => { if (isSubmittingPayment || paymentAmountInput) e.preventDefault(); }}
+        >
+          <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-success" />
+              <Banknote className="w-5 h-5 text-success shrink-0" />
               {t('debts.recordPayment') || 'تسجيل دفعة'}
             </DialogTitle>
             <DialogDescription>
@@ -3280,22 +3304,22 @@ export default function Invoices() {
             </DialogDescription>
           </DialogHeader>
           {selectedDebtForPayment && (
-            <div className="space-y-4 py-4">
+            <DialogBody className="space-y-4">
               <div className="bg-muted rounded-xl p-4">
                 <div className="flex justify-between mb-2">
                   <span className="text-muted-foreground">{t('debts.totalDebt') || 'إجمالي الدين'}</span>
-                  <span className="font-bold">{formatCurrency(selectedDebtForPayment.totalDebt)}</span>
+                  <span dir="ltr" className="inline-block tabular-nums font-bold">{formatCurrency(selectedDebtForPayment.totalDebt)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span className="text-muted-foreground">{t('debts.paidSoFar') || 'المدفوع حتى الآن'}</span>
-                  <span className="font-bold text-success">{formatCurrency(selectedDebtForPayment.totalPaid)}</span>
+                  <span dir="ltr" className="inline-block tabular-nums font-bold text-success">{formatCurrency(selectedDebtForPayment.totalPaid)}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t">
                   <span className="text-muted-foreground">{t('debts.remaining') || 'المتبقي'}</span>
-                  <div className="text-left">
-                    <span className="font-bold text-destructive block">{formatCurrency(selectedDebtForPayment.remainingDebt)}</span>
+                  <div className="text-end">
+                    <span dir="ltr" className="inline-block tabular-nums font-bold text-destructive block">{formatCurrency(selectedDebtForPayment.remainingDebt)}</span>
                     {paymentCurrency !== 'USD' && (
-                      <span className="text-xs text-muted-foreground block font-mono">
+                      <span dir="ltr" className="inline-block tabular-nums text-xs text-muted-foreground block font-mono">
                         ≈ {formatNumber(maxInCurrency)} {resolveInvoiceCurrencySymbol(paymentCurrency, currencySymbols?.[paymentCurrency])}
                       </span>
                     )}
@@ -3304,8 +3328,8 @@ export default function Invoices() {
               </div>
 
               {/* اختيار عملة السداد */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">{t('invoices.receivedCurrency') || 'عملة الدفع المستلمة'}</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground block">{t('invoices.receivedCurrency') || 'عملة الدفع المستلمة'}</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {Object.entries(enabledCurrencies).map(([code, isEnabled]) => {
                     if (!isEnabled) return null;
@@ -3322,7 +3346,7 @@ export default function Invoices() {
                           setPaymentAmountInput('');
                         }}
                         className={cn(
-                          "min-h-[4.3rem] p-2 rounded-lg border transition-colors flex flex-col items-center justify-center gap-1 leading-tight text-center",
+                          "min-h-[4.3rem] p-2 rounded-xl border transition-colors flex flex-col items-center justify-center gap-1 leading-tight text-center",
                           isSubmittingPayment && "opacity-50 cursor-not-allowed",
                           isSelected
                             ? "bg-primary text-primary-foreground border-primary shadow-sm"
@@ -3336,58 +3360,59 @@ export default function Invoices() {
                   })}
                 </div>
                 {paymentCurrency !== 'USD' && (
-                  <p className="text-[11px] text-muted-foreground mt-1.5 px-1 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground pt-1 px-1 flex items-center justify-between">
                     <span>{t('invoices.exchangeRate') || 'سعر الصرف المعتمد'}:</span>
-                    <span className="font-mono font-bold text-foreground">1 $ = {currentRate} {currencySymbols?.[paymentCurrency] || paymentCurrency}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-mono font-bold text-foreground">1 $ = {currentRate} {currencySymbols?.[paymentCurrency] || paymentCurrency}</span>
                   </p>
                 )}
               </div>
 
               {/* حقل إدخال المبلغ */}
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
                   <label className="text-sm font-medium">
                     {t('invoices.paymentAmount')} ({paymentCurrency === 'USD' ? '$' : (resolveInvoiceCurrencySymbol(paymentCurrency, currencySymbols?.[paymentCurrency]))})
                   </label>
                   {paymentCurrency !== 'USD' && amountUSD > 0 && (
-                    <span className="text-xs font-bold text-success font-mono">
+                    <span dir="ltr" className="inline-block tabular-nums text-xs font-bold text-success font-mono">
                       ≈ ${formatNumber(amountUSD)}
                     </span>
                   )}
                 </div>
                 <Input
                   type="number"
+                  dir="ltr"
                   placeholder="0.00"
                   value={paymentAmountInput}
                   onChange={(e) => setPaymentAmountInput(e.target.value)}
                   max={maxInCurrency}
                   step={paymentCurrency === 'USD' ? "0.01" : "1"}
-                  className="text-lg font-bold"
+                  className="text-lg font-bold font-mono tabular-nums"
                   disabled={isSubmittingPayment}
                 />
 
                 {/* المعادل بالدولار إذا كانت العملة أجنبية */}
                 {paymentCurrency !== 'USD' && (
-                  <div className="mt-2 p-2.5 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between text-xs">
+                  <div className="mt-2 p-2.5 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{t('invoices.usdEquivalentDeducted') || 'المبلغ المعادل بالدولار المخصوم من الدين'}:</span>
-                    <span className="font-bold text-primary text-sm font-mono">${formatNumber(amountUSD)}</span>
+                    <span dir="ltr" className="inline-block tabular-nums font-bold text-primary text-sm font-mono">${formatNumber(amountUSD)}</span>
                   </div>
                 )}
 
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-2 pt-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 text-xs"
+                    className="flex-1 min-h-10 text-xs rounded-xl"
                     disabled={isSubmittingPayment}
                     onClick={() => setPaymentAmountInput(String(maxInCurrency))}
                   >
-                    {t('debts.payFull') || 'تسديد كامل'} ({maxInCurrency} {currencySymbols?.[paymentCurrency] || paymentCurrency})
+                    {t('debts.payFull') || 'تسديد كامل'} (<span dir="ltr" className="inline-block tabular-nums">{maxInCurrency} {currencySymbols?.[paymentCurrency] || paymentCurrency}</span>)
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 text-xs"
+                    className="flex-1 min-h-10 text-xs rounded-xl"
                     disabled={isSubmittingPayment}
                     onClick={() => setPaymentAmountInput(String(Math.round((maxInCurrency / 2) * 100) / 100))}
                   >
@@ -3395,36 +3420,36 @@ export default function Invoices() {
                   </Button>
                 </div>
               </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  disabled={isSubmittingPayment}
-                  onClick={() => setShowDebtPaymentDialog(false)}
-                >
-                  {t('common.cancel') || 'إلغاء'}
-                </Button>
-                <Button
-                  className="flex-1 bg-success hover:bg-success/90"
-                  onClick={handleConfirmDebtPayment}
-                  disabled={isSubmittingPayment || amountUSD <= 0}
-                >
-                  {isSubmittingPayment ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{t('invoices.payingDebt') || 'جاري الدفع...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>{t('debts.confirmPayment') || 'تأكيد الدفع'}</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+            </DialogBody>
           )}
+          <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+            <Button
+              variant="outline"
+              size="default"
+              disabled={isSubmittingPayment}
+              onClick={() => setShowDebtPaymentDialog(false)}
+            >
+              {t('common.cancel') || 'إلغاء'}
+            </Button>
+            <Button
+              variant="default"
+              size="default"
+              onClick={handleConfirmDebtPayment}
+              disabled={isSubmittingPayment || amountUSD <= 0}
+            >
+              {isSubmittingPayment ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{t('invoices.payingDebt') || 'جاري الدفع...'}</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>{t('debts.confirmPayment') || 'تأكيد الدفع'}</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -3441,16 +3466,16 @@ export default function Invoices() {
           <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto my-2.5 shrink-0" />
 
           {/* Sheet Header */}
-          <div className="px-5 pb-3 border-b border-border/70 flex items-center justify-between shrink-0">
+          <div className="px-5 pb-3 pe-12 border-b border-border/70 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Filter className="w-4 h-4" />
               </div>
               <div>
-                <SheetTitle className="font-black text-sm text-foreground leading-tight text-right">
+                <SheetTitle className="font-bold text-sm text-foreground leading-tight text-start">
                   {tx('invoices.filterSheetTitle', 'لوحة الفلاتر والتصفية الذكية')}
                 </SheetTitle>
-                <SheetDescription className="text-[10px] text-muted-foreground font-medium text-right">
+                <SheetDescription className="text-xs text-muted-foreground font-medium text-start">
                   {tx('invoices.filterSheetSubtitle', 'حدد المعايير المطلوبة لعرض الفواتير بدقة')}
                 </SheetDescription>
               </div>
@@ -3460,9 +3485,9 @@ export default function Invoices() {
               variant="ghost"
               size="sm"
               onClick={resetAllFilters}
-              className="text-primary hover:text-primary/80 text-xs font-bold px-2 py-1 h-auto rounded-lg cursor-pointer"
+              className="text-primary hover:text-primary/80 text-xs font-bold rounded-xl"
             >
-              <RotateCcw className="w-3.5 h-3.5 ml-1" />
+              <RotateCcw className="w-3.5 h-3.5 me-1" />
               <span>{tx('common.reset', 'إعادة ضبط')}</span>
             </Button>
           </div>
@@ -3471,11 +3496,11 @@ export default function Invoices() {
           <div className="p-4 space-y-4 overflow-y-auto overflow-x-hidden w-full max-w-full box-border text-xs font-bold flex-1">
             {/* 1. Time Period */}
             <div>
-              <label className="text-foreground text-xs block mb-2 font-black flex items-center gap-1.5">
+              <label className="text-foreground text-xs block mb-2 font-bold flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-primary" />
                 <span>{tx('invoices.timePeriod', 'الفترة الزمنية:')}</span>
               </label>
-              <div className="grid grid-cols-5 gap-1 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5 text-center">
                 {[
                   { id: 'today' as const, label: tx('reports.today', 'اليوم') },
                   { id: 'week' as const, label: tx('reports.thisWeek', 'الأسبوع') },
@@ -3561,21 +3586,22 @@ export default function Invoices() {
                         }
                       }}
                       placeholder={tx('common.allDates', 'كل التواريخ')}
-                      className="h-8 px-2 text-[11px] bg-card border-border rounded-xl flex-1"
+                      className="min-h-11 sm:min-h-10 px-2 text-xs bg-card border-border rounded-xl flex-1"
                       highlightedDates={salesInvoiceDates}
                     />
                     {dateFilter && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 shrink-0"
+                        aria-label={tx('common.clear', 'إلغاء')}
+                        className="shrink-0"
                         onClick={() => {
                           setDateFilter('');
                           setDateQuickFilter('all');
                           setActiveKpi('total');
                         }}
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
@@ -3596,12 +3622,12 @@ export default function Invoices() {
                           }
                         }}
                         placeholder={tx('common.fromDate', 'من تاريخ')}
-                        className="h-8 px-2 text-[11px] bg-card border-border rounded-xl w-full"
+                        className="min-h-11 sm:min-h-10 px-2 text-xs bg-card border-border rounded-xl w-full"
                         highlightedDates={salesInvoiceDates}
                       />
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] text-muted-foreground block">{tx('common.to', 'إلى:')}</span>
+                      <span className="text-xs text-muted-foreground block">{tx('common.to', 'إلى:')}</span>
                       <DatePicker
                         value={dateTo}
                         onChange={(val) => {
@@ -3615,8 +3641,7 @@ export default function Invoices() {
                           }
                         }}
                         placeholder={tx('common.toDate', 'إلى تاريخ')}
-                        className="h-8 px-2 text-[11px] bg-card border-border rounded-xl w-full"
-                        highlightedDates={salesInvoiceDates}
+                        className="min-h-11 sm:min-h-10 px-2 text-xs bg-card border-border rounded-xl w-full" 
                       />
                     </div>
                   </div>
@@ -3761,7 +3786,7 @@ export default function Invoices() {
                       )}
                     >
                       <span>{name}</span>
-                      <span className="opacity-80 text-[10px] mr-1">({sym})</span>
+                      <span className="opacity-80 text-xs ms-1">({sym})</span>
                     </Button>
                   );
                 })}
@@ -3769,55 +3794,49 @@ export default function Invoices() {
             </div>
 
             {/* 5. Show Refunded Invoices Switch */}
-            <div className="bg-muted/30 p-3 rounded-2xl border border-border/70 flex items-center justify-between">
+            <div className="bg-muted/30 p-3 rounded-2xl border border-border/70 flex items-center justify-between gap-3">
               <div>
-                <span className="text-foreground font-black block text-xs">
+                <span className="text-foreground font-bold block text-xs">
                   {tx('invoices.refundedInvoices', 'إظهار الفواتير المستردة')}
                 </span>
-                <span className="text-[10px] text-muted-foreground font-semibold">
-                  تضمين {invoices.filter(i => i.status === 'refunded').length} فاتورة مستردة في القائمة
+                <span className="text-xs text-muted-foreground font-medium">
+                  تضمين <span dir="ltr" className="inline-block tabular-nums">{invoices.filter(i => i.status === 'refunded').length}</span> فاتورة مستردة في القائمة
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowRefunded(prev => !prev)}
-                className={cn(
-                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                  showRefunded ? "bg-primary" : "bg-muted"
-                )}
-              >
-                <span
-                  className={cn(
-                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
-                    showRefunded ? (isRTL ? "-translate-x-5" : "translate-x-5") : "translate-x-0"
-                  )}
-                />
-              </button>
+              <Switch
+                checked={showRefunded}
+                onCheckedChange={setShowRefunded}
+                aria-label={tx('invoices.refundedInvoices', 'إظهار الفواتير المستردة')}
+              />
             </div>
           </div>
 
           {/* Sheet Footer */}
-          <div className="p-3 bg-muted/20 border-t border-border flex gap-2 shrink-0">
+          <SheetFooter
+            className="p-3 sm:px-6 bg-muted/20 border-t border-border flex flex-col-reverse gap-2 sm:flex-row sm:justify-end shrink-0"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+          >
             <Button
               type="button"
+              variant="outline"
+              size="default"
+              onClick={() => setIsFilterSheetOpen(false)}
+            >
+              {tx('common.close', 'إغلاق')}
+            </Button>
+            <Button
+              type="button"
+              variant="default"
+              size="default"
               onClick={() => {
                 setIsFilterSheetOpen(false);
                 toast.success(tx('invoices.filterApplied', 'تم تطبيق التصفية بنجاح'), { duration: 1500 });
               }}
-              className="flex-1 bg-gradient-primary hover:brightness-105 active:scale-95 text-primary-foreground font-black py-2.5 rounded-xl shadow-md text-xs flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{tx('common.apply', 'تطبيق التصفية')}</span>
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsFilterSheetOpen(false)}
-              className="px-5 border-border text-foreground font-bold rounded-xl text-xs cursor-pointer"
-            >
-              {tx('common.close', 'إغلاق')}
-            </Button>
-          </div>
+          </SheetFooter>
         </SheetContent>
       </Sheet>
     </div>

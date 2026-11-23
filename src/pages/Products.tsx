@@ -34,16 +34,26 @@ import {
 import { cn, toWesternNumerals, formatNumber, formatMoney } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
 import { useMoney } from '@/hooks/use-money';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { SmartFab } from '@/components/ui/SmartFab';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   AlertDialog,
@@ -129,16 +139,18 @@ export default function Products() {
 
   const formatPrice = (usdPrice: number) => {
     const val = usdPrice || 0;
-    if (m.activeCode === 'USD') return <>${formatNumber(val, 2)}</>;
+    if (m.activeCode === 'USD') {
+      return <span dir="ltr" className="inline-block tabular-nums">${formatNumber(val, 2)}</span>;
+    }
     const localFormatted = m.fmt(val);
     const usdEnabled = m.getCurrencyDef('USD').enabled;
     return (
-      <>
-        {localFormatted}{' '}
+      <span dir="ltr" className="inline-block tabular-nums">
+        {localFormatted}
         {usdEnabled && (
-          <span className="text-[0.8em] opacity-60 ml-1">({formatMoney(val, 'USD', 2)})</span>
+          <span className="text-[0.8em] opacity-60 ms-1">({formatMoney(val, 'USD', 2)})</span>
         )}
-      </>
+      </span>
     );
   };
   
@@ -1541,16 +1553,16 @@ export default function Products() {
           dir={isRTL ? 'rtl' : 'ltr'}
         >
         {/* الهيدر العلوي المطور: بدون أزرار رجوع أو إلغاء علوية مشتتة */}
-        <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-md border-b border-border/80 px-4 py-3 flex items-center justify-between shadow-xs">
+        <div className="sticky top-0 z-40 bg-card border-b border-border/80 px-4 py-3 ps-12 md:ps-6 flex items-center justify-between shadow-xs">
           <div>
-            <h2 className="text-base sm:text-lg font-black text-foreground">
+            <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
               {activeView === 'add'
                 ? (tDynamic('addProduct') || 'إضافة منتج جديد')
                 : (selectedProduct?.archived
                     ? (t('products.restoreAndEditProduct') || 'استرجاع وتعديل المنتج')
                     : (tDynamic('editProduct') ? `${tDynamic('editProduct')}: ${formData.name || ''}` : `${t('common.edit')}: ${formData.name || ''}`))}
             </h2>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {activeView === 'add' ? (isEn ? 'Enter product details, pricing, and inventory' : 'أدخل تفاصيل وبيانات المنتج والمخزون') : (isEn ? 'Update product pricing, stock, and details' : 'تحديث أسعار وكميات وبيانات المنتج')}
             </p>
           </div>
@@ -1573,18 +1585,20 @@ export default function Products() {
                       <label className="text-sm font-medium mb-1.5 block">{t('products.barcode')} 1</label>
                       <div className="flex gap-2">
                         <Input
+                          dir="ltr"
+                          className="tabular-nums"
                           placeholder={t('products.exampleBarcode')}
                           value={formData.barcode}
                           onChange={(e) => setFormData(prev => ({ ...prev, barcode: e.target.value }))}
                         />
-                        <Button variant="outline" size="icon" onClick={() => {
+                        <Button variant="outline" size="icon" aria-label={t('products.barcode')} onClick={() => {
                           setScanTarget('barcode1');
                           setScannerOpen(true);
                         }}>
                           <Barcode className="w-4 h-4" />
                         </Button>
                         {!showBarcode2 && (
-                          <Button variant="ghost" size="icon" onClick={() => setShowBarcode2(true)} title={t('products.addSecondBarcode')}>
+                          <Button variant="ghost" size="icon" onClick={() => setShowBarcode2(true)} title={t('products.addSecondBarcode')} aria-label={t('products.addSecondBarcode')}>
                             <Plus className="w-4 h-4" />
                           </Button>
                         )}
@@ -1596,25 +1610,27 @@ export default function Products() {
                         <label className="text-sm font-medium mb-1.5 block">{t('products.barcode')} 2</label>
                         <div className="flex gap-2">
                           <Input
+                            dir="ltr"
+                            className="tabular-nums"
                             placeholder={t('products.exampleBarcode')}
                             value={formData.barcode2}
                             onChange={(e) => setFormData(prev => ({ ...prev, barcode2: e.target.value }))}
                           />
-                          <Button variant="outline" size="icon" onClick={() => {
+                          <Button variant="outline" size="icon" aria-label={t('products.barcode')} onClick={() => {
                             setScanTarget('barcode2');
                             setScannerOpen(true);
                           }}>
                             <Barcode className="w-4 h-4" />
                           </Button>
                           {!showBarcode3 && (
-                            <Button variant="ghost" size="icon" onClick={() => setShowBarcode3(true)} title={t('products.addThirdBarcode')}>
+                            <Button variant="ghost" size="icon" onClick={() => setShowBarcode3(true)} title={t('products.addThirdBarcode')} aria-label={t('products.addThirdBarcode')}>
                               <Plus className="w-4 h-4" />
                             </Button>
                           )}
-                          <Button variant="ghost" size="icon" onClick={() => {
+                          <Button variant="ghost" size="icon" aria-label={t('common.delete')} onClick={() => {
                             setFormData(prev => ({ ...prev, barcode2: '' }));
                             setShowBarcode2(false);
-                          }} className="text-destructive">
+                          }} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
@@ -1626,20 +1642,22 @@ export default function Products() {
                         <label className="text-sm font-medium mb-1.5 block">{t('products.barcode')} 3</label>
                         <div className="flex gap-2">
                           <Input
+                            dir="ltr"
+                            className="tabular-nums"
                             placeholder={t('products.exampleBarcode')}
                             value={formData.barcode3}
                             onChange={(e) => setFormData(prev => ({ ...prev, barcode3: e.target.value }))}
                           />
-                          <Button variant="outline" size="icon" onClick={() => {
+                          <Button variant="outline" size="icon" aria-label={t('products.barcode')} onClick={() => {
                             setScanTarget('barcode3');
                             setScannerOpen(true);
                           }}>
                             <Barcode className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => {
+                          <Button variant="ghost" size="icon" aria-label={t('common.delete')} onClick={() => {
                             setFormData(prev => ({ ...prev, barcode3: '' }));
                             setShowBarcode3(false);
-                          }} className="text-destructive">
+                          }} className="text-destructive hover:text-destructive hover:bg-destructive/10">
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
@@ -1657,17 +1675,21 @@ export default function Products() {
                     </div>
                   </>
                 )}
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">{t('products.category')}</label>
-                  <select
-                    className="w-full h-10 px-3 rounded-md bg-muted border-0 text-foreground"
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium block">{t('products.category')}</label>
+                  <Select
                     value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, category: val }))}
                   >
-                    {categoryOptions.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="min-h-11 sm:min-h-10 w-full rounded-[14px]">
+                      <SelectValue placeholder={t('products.category')} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
+                      {categoryOptions.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {!noInventory && (
                   <div>
@@ -1676,7 +1698,7 @@ export default function Products() {
                       type="text"
                       inputMode="decimal"
                       dir="ltr"
-                      className="text-right"
+                      className="text-end tabular-nums"
                       placeholder="0"
                       value={formData.quantity ?? ''}
                       onChange={(e) => handleNumericChange('quantity', e.target.value)}
@@ -1692,7 +1714,7 @@ export default function Products() {
                       type="text"
                       inputMode="decimal"
                       dir="ltr"
-                      className="text-right"
+                      className="text-end tabular-nums"
                       placeholder="0"
                       value={formData.costPrice ?? ''}
                       onChange={(e) => handleNumericChange('costPrice', e.target.value)}
@@ -1708,7 +1730,7 @@ export default function Products() {
                       type="text"
                       inputMode="decimal"
                       dir="ltr"
-                      className="text-right"
+                      className="text-end tabular-nums"
                       placeholder="0"
                       value={formData.laborCost ?? ''}
                       onChange={(e) => handleNumericChange('laborCost', e.target.value)}
@@ -1725,7 +1747,7 @@ export default function Products() {
                       type="text"
                       inputMode="decimal"
                       dir="ltr"
-                      className="text-right"
+                      className="text-end tabular-nums"
                       placeholder="0"
                       value={formData.salePrice ?? ''}
                       onChange={(e) => handleNumericChange('salePrice', e.target.value)}
@@ -1813,7 +1835,7 @@ export default function Products() {
                       onChange={(e) => setFormData(prev => ({ ...prev, imei: e.target.value.replace(/[^\d/ ]/g, '').slice(0, 40) }))}
                     />
                     {formData.imei && formData.imei.replace(/\D/g, '').length > 0 && formData.imei.replace(/\D/g, '').length !== 15 && formData.imei.replace(/\D/g, '').length !== 30 && (
-                      <p className="text-[11px] text-amber-600 mt-1">{isRTL ? 'رقم IMEI عادةً 15 رقماً (أو رقمان مفصولان بـ / للهاتف ثنائي الشريحة)' : 'IMEI is usually 15 digits (two separated by / for dual SIM)'}</p>
+                      <p className="text-xs text-warning mt-1">{isRTL ? 'رقم IMEI عادةً 15 رقماً (أو رقمان مفصولان بـ / للهاتف ثنائي الشريحة)' : 'IMEI is usually 15 digits (two separated by / for dual SIM)'}</p>
                     )}
                   </div>
                 )}
@@ -1834,7 +1856,7 @@ export default function Products() {
                       type="text"
                       inputMode="decimal"
                       dir="ltr"
-                      className="text-right"
+                      className="text-end tabular-nums"
                       placeholder="0"
                       value={formData.wholesalePrice ?? ''}
                       onChange={(e) => handleNumericChange('wholesalePrice', e.target.value)}
@@ -1978,7 +2000,7 @@ export default function Products() {
                     <Input
                       type="number"
                       dir="ltr"
-                      className="text-right"
+                      className="text-end tabular-nums"
                       placeholder="5"
                       value={formData.minStockLevel || ''}
                       onChange={(e) => setFormData(prev => ({ ...prev, minStockLevel: Number(e.target.value) }))}
@@ -1992,16 +2014,19 @@ export default function Products() {
                       {field.name} {field.required && '*'}
                     </label>
                     {field.type === 'select' && field.options ? (
-                      <select
-                        className="w-full h-10 px-3 rounded-md bg-muted border-0 text-foreground"
-                        value={customFieldValues[field.id] || ''}
-                        onChange={(e) => setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.value })}
+                      <Select
+                        value={String(customFieldValues[field.id] || '')}
+                        onValueChange={(val) => setCustomFieldValues({ ...customFieldValues, [field.id]: val })}
                       >
-                        <option value="">{t('maintenance.select')}</option>
-                        {field.options.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="min-h-11 sm:min-h-10 w-full rounded-[14px]">
+                          <SelectValue placeholder={t('maintenance.select')} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[min(20rem,60dvh)] overflow-y-auto">
+                          {field.options.map((opt) => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
                       <Input
                         type={field.type === 'number' ? 'number' : 'text'}
@@ -2044,10 +2069,11 @@ export default function Products() {
                         </div>
                         <button
                           type="button"
+                          aria-label={t('common.delete')}
                           onClick={(e) => { e.stopPropagation(); setFormData(prev => ({ ...prev, image: '' })); setImagePreviewBase64(''); setImageLoadError(false); }}
-                          className="absolute top-1 right-1 p-1 bg-destructive/90 rounded-full text-white"
+                          className="absolute top-1 end-1 size-7 flex items-center justify-center bg-destructive/90 rounded-full text-destructive-foreground"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ) : (
@@ -2087,32 +2113,33 @@ export default function Products() {
             </div>
 
         {/* شريط الإجراءات السفلي الثابت للراحة القصوى */}
-        <div className="sticky bottom-0 z-40 bg-card/95 backdrop-blur-md border-t border-border/80 p-3 sm:px-6 flex items-center gap-3 max-w-4xl w-full mx-auto shadow-lg">
+        <div className="sticky bottom-0 z-40 bg-card border-t border-border/80 p-3 sm:px-6 flex items-center gap-3 max-w-4xl w-full mx-auto shadow-lg">
           <Button
             type="button"
             variant="outline"
-            className="flex-1 h-11 rounded-xl font-bold cursor-pointer"
+            size="default"
+            className="flex-1"
             onClick={handleCloseForm}
           >
             {t('common.cancel') || 'إلغاء'}
           </Button>
           <Button
             type="button"
+            variant="default"
+            size="default"
             disabled={isSaving}
             className={cn(
-              "flex-[2] h-11 rounded-xl font-bold shadow-md transition-all cursor-pointer",
-              selectedProduct?.archived && activeView === 'edit'
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/25"
-                : "bg-primary text-primary-foreground hover:opacity-95"
+              "flex-[2]",
+              selectedProduct?.archived && activeView === 'edit' && "bg-success hover:bg-success/90 text-success-foreground bg-none"
             )}
             onClick={handleSaveProductSubmit}
           >
             {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin ml-2" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (selectedProduct?.archived && activeView === 'edit' ? (
-              <RotateCcw className="w-4 h-4 ml-2" />
+              <RotateCcw className="w-4 h-4" />
             ) : (
-              <Save className="w-4 h-4 ml-2" />
+              <Save className="w-4 h-4" />
             ))}
             {activeView === 'add'
               ? (t('products.saveProduct') || 'حفظ وإضافة المنتج')
@@ -2151,8 +2178,8 @@ export default function Products() {
                 هل أنت متأكد من رغبتك في إلغاء التعديلات؟ لن يتم حفظ التغييرات التي قمت بها.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row-reverse gap-2 mt-4">
-              <AlertDialogCancel className="rounded-xl h-10 font-bold">
+            <AlertDialogFooter>
+              <AlertDialogCancel>
                 البقاء ومتابعة التعديل
               </AlertDialogCancel>
               <AlertDialogAction
@@ -2160,7 +2187,7 @@ export default function Products() {
                   setShowCancelConfirmDialog(false);
                   closeFormDirectly();
                 }}
-                className="rounded-xl h-10 font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 نعم، تراجع وخروج
               </AlertDialogAction>
@@ -2171,6 +2198,9 @@ export default function Products() {
         {/* معاينة صورة المنتج داخل النموذج */}
         <Dialog open={!!previewImageUrl} onOpenChange={() => setPreviewImageUrl(null)}>
           <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 sm:p-4 flex flex-col items-center justify-center">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{t('products.viewProductImage')}</DialogTitle>
+            </DialogHeader>
             {previewImageUrl && (
               <img
                 src={previewImageUrl}
@@ -2197,21 +2227,34 @@ export default function Products() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background relative selection:bg-primary/20">
+    <div className="flex flex-col h-[calc(100dvh-1rem-var(--app-safe-top,0px))] overflow-hidden bg-background relative selection:bg-primary/20">
       <SerialsDialog product={serialsProduct} onOpenChange={(o) => { if (!o) setSerialsProduct(null); }} />
 
+      <div className="shrink-0 px-3 md:px-6 pt-3 md:pt-4">
+        <PageHeader
+          className="mb-2 md:mb-3"
+          title={t('products.title') || 'المنتجات'}
+          icon={<Package className="w-5 h-5" />}
+          actions={
+            canAddProducts ? (
+              <Button variant="default" size="default" onClick={handleOpenAddProduct}>
+                <Plus className="w-4 h-4 shrink-0" />
+                <span>{tDynamic('addProduct')}</span>
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
+
       {/* الشريط العلوي المباشر: النشطة (يمين) - التصنيفات (وسط) - الأرشيف (يسار) */}
-      <div className={cn(
-        "flex-shrink-0 px-3 md:px-6 pt-3 md:pt-4 pb-1.5 md:pb-2 max-w-full relative z-10",
-        isRTL ? "pr-14 md:pr-6" : "pl-14 md:pl-6"
-      )}>
+      <div className="flex-shrink-0 px-3 md:px-6 pb-1.5 md:pb-2 max-w-full relative z-10">
         <div className="bg-muted/60 p-1 rounded-2xl grid grid-cols-3 gap-1 w-full sm:w-fit sm:min-w-[24rem] border border-border/40 shadow-xs select-none">
           {/* 1. النشطة (يمين في RTL) */}
           <button
             type="button"
             onClick={() => setMainTab('products')}
             className={cn(
-              "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-200 select-none cursor-pointer",
+              "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-150 select-none cursor-pointer",
               mainTab === 'products'
                 ? "bg-gradient-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/60"
@@ -2226,7 +2269,7 @@ export default function Products() {
             type="button"
             onClick={() => setMainTab('categories')}
             className={cn(
-              "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-200 select-none cursor-pointer",
+              "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-150 select-none cursor-pointer",
               mainTab === 'categories'
                 ? "bg-gradient-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/60"
@@ -2236,29 +2279,26 @@ export default function Products() {
             <span>{t('products.categories') || 'التصنيفات'}</span>
           </button>
 
-          {/* 3. الأرشيف (يسار في RTL) - لون أحمر موحد بالوضع النهاري والليلي */}
+          {/* 3. الأرشيف (يسار في RTL) */}
           <button
             type="button"
             onClick={() => setMainTab('archive')}
             className={cn(
-              "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-all duration-200 select-none cursor-pointer",
+              "rounded-xl p-1.5 sm:px-3.5 sm:py-2 text-[clamp(0.65rem,2.6vw,0.85rem)] font-bold min-w-0 leading-tight whitespace-normal text-center flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-150 select-none cursor-pointer",
               mainTab === 'archive'
-                ? "bg-destructive !bg-red-600 hover:!bg-red-700 !text-white shadow-sm shadow-red-600/30"
-                : "!bg-red-500/12 !text-red-600 dark:!text-red-400 border border-red-500/25 hover:!bg-red-500/20"
+                ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm"
+                : "bg-destructive/10 text-destructive border border-destructive/25 hover:bg-destructive/15"
             )}
           >
-            <Archive className={cn(
-              "w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0",
-              mainTab === 'archive' ? "!text-white" : "!text-red-600 dark:!text-red-400"
-            )} />
+            <Archive className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span className="flex items-center gap-1 justify-center">
               {t('products.archive') || 'الأرشيف'}
               {mergedArchivedProducts.length > 0 && (
-                <span className={cn(
-                  "px-1.5 py-0.2 text-[11px] rounded-full font-bold leading-none shrink-0",
+                <span dir="ltr" className={cn(
+                  "inline-block px-1.5 py-0.5 text-xs rounded-full font-bold leading-none tabular-nums shrink-0",
                   mainTab === 'archive'
-                    ? "bg-white/25 !text-white"
-                    : "bg-red-500/20 !text-red-700 dark:!text-red-300"
+                    ? "bg-destructive-foreground/20 text-destructive-foreground"
+                    : "bg-destructive/15 text-destructive"
                 )}>
                   {mergedArchivedProducts.length}
                 </span>
@@ -2270,7 +2310,7 @@ export default function Products() {
 
       {/* Stats - كبسولات إحصائيات مصغرة بنسبة 50% مع تقليل الارتفاع */}
       {!noInventory && mainTab === 'products' && (
-        <div className={cn("flex-shrink-0 px-3 md:px-6 pb-2 md:pb-2.5", isRTL ? "pr-14 md:pr-6" : "pl-14 md:pl-6")}>
+        <div className="flex-shrink-0 px-3 md:px-6 pb-2 md:pb-2.5">
           <div className="bg-muted/60 p-1 rounded-2xl border border-border/40 shadow-xs sm:w-fit sm:min-w-[24rem]">
           {mainTab === 'products' ? (
             <div className="grid grid-cols-3 gap-1">
@@ -2278,7 +2318,7 @@ export default function Products() {
                 type="button"
                 onClick={() => setStatusFilter('all')}
                 className={cn(
-                  "flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-primary/40",
+                  "flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-primary/40",
                   statusFilter === 'all' ? "border-primary bg-primary/10 ring-1 ring-primary/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
                 )}
               >
@@ -2286,7 +2326,7 @@ export default function Products() {
                   <Package className="w-3.5 h-3.5 text-primary" />
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-foreground leading-none">{stats.total}</span>
+                  <span dir="ltr" className="inline-block text-xs sm:text-base font-bold text-foreground leading-none tabular-nums">{stats.total}</span>
                   <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.total')}</span>
                 </div>
               </button>
@@ -2294,7 +2334,7 @@ export default function Products() {
                 type="button"
                 onClick={() => setStatusFilter('in_stock')}
                 className={cn(
-                  "flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-success/40",
+                  "flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-success/40",
                   statusFilter === 'in_stock' ? "border-success bg-success/10 ring-1 ring-success/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
                 )}
               >
@@ -2302,7 +2342,7 @@ export default function Products() {
                   <CheckCircle className="w-3.5 h-3.5 text-success" />
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-foreground leading-none">{stats.inStock}</span>
+                  <span dir="ltr" className="inline-block text-xs sm:text-base font-bold text-foreground leading-none tabular-nums">{stats.inStock}</span>
                   <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.available')}</span>
                 </div>
               </button>
@@ -2310,7 +2350,7 @@ export default function Products() {
                 type="button"
                 onClick={() => setStatusFilter('low_stock')}
                 className={cn(
-                  "flex items-center gap-1 sm:gap-2 p-1 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-warning/40",
+                  "flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-warning/40",
                   statusFilter === 'low_stock' ? "border-warning bg-warning/10 ring-1 ring-warning/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
                 )}
               >
@@ -2318,7 +2358,7 @@ export default function Products() {
                   <AlertTriangle className="w-3.5 h-3.5 text-warning" />
                 </div>
                 <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span className="text-xs sm:text-base font-bold text-foreground leading-none">{stats.lowStock}</span>
+                  <span dir="ltr" className="inline-block text-xs sm:text-base font-bold text-foreground leading-none tabular-nums">{stats.lowStock}</span>
                   <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.low')}</span>
                 </div>
               </button>
@@ -2332,24 +2372,25 @@ export default function Products() {
       {mainTab !== 'categories' && (
       <div className="flex-shrink-0 px-3 md:px-6 pb-2 md:pb-3">
         <div className="flex flex-col gap-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder={mainTab === 'archive' ? t('products.searchArchivePlaceholder') : t('products.searchPlaceholder')}
                 value={mainTab === 'archive' ? archiveSearchQuery : searchQuery}
                 onChange={(e) => mainTab === 'archive' ? setArchiveSearchQuery(e.target.value) : setSearchQuery(e.target.value)}
-                className="ps-9 md:ps-10 pe-8 bg-muted border-0"
+                className={cn("ps-9 bg-muted border-0", mainTab === 'archive' && archiveSearchQuery ? "pe-9" : "pe-3")}
               />
               {mainTab === 'archive' && archiveSearchQuery && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute end-2 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                  aria-label={t('products.clearSearch')}
+                  className="absolute end-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setArchiveSearchQuery('')}
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </Button>
               )}
             </div>
@@ -2357,7 +2398,8 @@ export default function Products() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 flex-shrink-0"
+                className="flex-shrink-0"
+                aria-label={mainTab === 'archive' ? t('products.scanBarcodeArchive') : t('products.barcode')}
                 onClick={() => {
                   setScanTarget(mainTab === 'archive' ? 'archive' : 'search');
                   try { localStorage.setItem('posflow_scan_target', mainTab === 'archive' ? 'archive' : 'search'); } catch { /* ignore */ }
@@ -2365,70 +2407,66 @@ export default function Products() {
                 }}
                 title={mainTab === 'archive' ? t('products.scanBarcodeArchive') : undefined}
               >
-                <ScanLine className="w-4 h-4 md:w-5 md:h-5" />
+                <ScanLine className="w-4 h-4" />
               </Button>
             )}
             
             {/* View Mode Buttons */}
-            <div className="flex bg-muted rounded-lg p-0.5 shrink-0">
+            <div className="flex items-center bg-muted rounded-xl p-0.5 shrink-0">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
                 size="icon"
-                className="h-8 w-8 sm:h-9 sm:w-9"
+                aria-label={isEn ? 'Grid view' : 'عرض شبكي'}
                 onClick={() => setViewMode('grid')}
               >
-                <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <LayoutGrid className="w-4 h-4" />
               </Button>
               <Button
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size="icon"
-                className="h-8 w-8 sm:h-9 sm:w-9"
+                aria-label={isEn ? 'List view' : 'عرض قائمة'}
                 onClick={() => setViewMode('list')}
               >
-                <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <List className="w-4 h-4" />
               </Button>
               <Button
                 variant={viewMode === 'compact' ? 'default' : 'ghost'}
                 size="icon"
-                className="h-8 w-8 sm:h-9 sm:w-9"
+                aria-label={isEn ? 'Compact view' : 'عرض مدمج'}
                 onClick={() => setViewMode('compact')}
               >
-                <AlignJustify className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <AlignJustify className="w-4 h-4" />
               </Button>
             </div>
           </div>
 
           {mainTab === 'archive' ? null : (
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {categories.map((category) => (
-                <button
+                <Button
                   key={category}
+                  type="button"
+                  size="sm"
+                  variant={selectedCategory === category ? 'default' : 'outline'}
+                  className="rounded-xl shrink-0 whitespace-nowrap"
                   onClick={() => setSelectedCategory(category)}
-                  className={cn(
-                    "px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0",
-                    selectedCategory === category
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  )}
                 >
                   {category}
-                </button>
+                </Button>
               ))}
 
               {/* Unit Filter */}
-              <div className="h-6 w-px bg-border mx-1 self-center" />
-              <button
+              <div className="h-6 w-px bg-border mx-1 self-center shrink-0" />
+              <Button
+                type="button"
+                size="sm"
+                variant={unitFilter === 'multi_unit' ? 'default' : 'outline'}
+                className="rounded-xl shrink-0 whitespace-nowrap"
                 onClick={() => setUnitFilter(unitFilter === 'multi_unit' ? 'all' : 'multi_unit')}
-                className={cn(
-                  "px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 flex items-center gap-1.5",
-                  unitFilter === 'multi_unit'
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
               >
                 <Boxes className="w-3.5 h-3.5" />
-                {t('products.multiUnit')} ({stats.multiUnit})
-              </button>
+                {t('products.multiUnit')} (<span dir="ltr" className="inline-block tabular-nums">{stats.multiUnit}</span>)
+              </Button>
             </div>
           )}
         </div>
@@ -2455,20 +2493,18 @@ export default function Products() {
               <p className="text-sm text-muted-foreground">{t('products.loadingArchive')}</p>
             </div>
           ) : filteredArchivedProducts.length === 0 ? (
-            <div className="bg-card rounded-xl border border-dashed border-border p-10 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
-                <Archive className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-semibold text-foreground">
+            <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+              <Archive className="w-12 h-12 text-muted-foreground/50 mb-3" />
+              <h3 className="text-sm sm:text-base font-semibold text-foreground">
                 {archiveSearchQuery ? t('products.noArchiveResults') : t('products.archiveEmpty')}
               </h3>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-sm">
                 {archiveSearchQuery
                   ? (t('products.tryDifferentSearch') || 'جرب البحث باسم أو باركود آخر')
                   : (t('products.noArchivedOrOutOfStock') || 'لا توجد منتجات مؤرشفة أو منتهية المخزون حالياً.')}
               </p>
               {archiveSearchQuery && (
-                <Button variant="outline" size="sm" onClick={() => setArchiveSearchQuery('')}>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => setArchiveSearchQuery('')}>
                   {t('products.clearSearch')}
                 </Button>
               )}
@@ -2504,19 +2540,22 @@ export default function Products() {
                         <h4 className="font-bold text-sm text-foreground truncate" title={product.name}>
                           {product.name}
                         </h4>
-                        <span className={cn(
-                          "text-[11px] px-1.5 py-0.5 rounded-md font-medium shrink-0",
-                          product.archived
-                            ? "bg-destructive/15 text-destructive"
-                            : "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold"
-                        )}>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0",
+                            product.archived
+                              ? "bg-destructive/15 text-destructive border-destructive/30"
+                              : "bg-warning/15 text-warning border-warning/30"
+                          )}
+                        >
                           {product.archived ? t('products.archived') : t('products.outOfStock')}
-                        </span>
+                        </Badge>
                       </div>
 
                       <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                         {product.category && (
-                          <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-[11px] ml-1">
+                          <span className="inline-block px-1.5 py-0.5 bg-muted rounded text-xs me-1">
                             {product.category}
                           </span>
                         )}
@@ -2548,7 +2587,7 @@ export default function Products() {
                         </div>
                         <div className="bg-muted/40 p-1 rounded">
                           <span className="text-[11px] text-muted-foreground block">{t('products.currentStock')}</span>
-                          <span className={cn("text-xs font-bold", product.quantity <= 0 ? "text-destructive" : "text-muted-foreground")}>
+                          <span dir="ltr" className={cn("inline-block text-xs font-bold tabular-nums", product.quantity <= 0 ? "text-destructive" : "text-muted-foreground")}>
                             {formatNumber(product.quantity)}
                           </span>
                         </div>
@@ -2560,7 +2599,7 @@ export default function Products() {
                   <div className="flex items-center gap-1.5 pt-2 border-t border-border/60">
                     <Button
                       size="sm"
-                      className="flex-1 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                      className="flex-1 min-h-10 sm:h-8 text-xs bg-success hover:bg-success/90 text-success-foreground font-medium"
                       onClick={() => openQuickRestock(product)}
                       title={t('products.restockSubtitle') || 'إعادة تزويد الكمية'}
                     >
@@ -2655,9 +2694,9 @@ export default function Products() {
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="bg-card rounded-2xl p-8 text-center border border-border text-muted-foreground space-y-2">
-            <span className="text-3xl block">🔍</span>
-            <p className="font-bold text-xs">{t('products.noProductsFound') || 'لا توجد منتجات مطابقة للبحث أو التصنيف'}</p>
+          <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+            <Package className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm sm:text-base font-semibold text-foreground">{t('products.noProductsFound') || 'لا توجد منتجات مطابقة للبحث أو التصنيف'}</p>
           </div>
         ) : (
           <div className={cn(
@@ -2681,7 +2720,7 @@ export default function Products() {
                     {/* Line 1: Full Product Name + Action Buttons on Left */}
                     <div className="flex items-center justify-between gap-1.5 min-w-0">
                       <h3
-                        className="font-black text-foreground text-xs leading-tight truncate flex-1 min-w-0 cursor-pointer hover:text-primary transition-colors"
+                        className="font-semibold text-foreground text-sm leading-tight truncate flex-1 min-w-0 cursor-pointer hover:text-primary transition-colors"
                         title={product.name}
                         onClick={() => openEditDialog(product)}
                       >
@@ -2691,22 +2730,28 @@ export default function Products() {
                       {/* Compact Quick Actions */}
                       {canAddProducts && (
                         <div className="flex items-center gap-1 shrink-0">
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 sm:size-9"
                             onClick={() => openEditDialog(product)}
-                            className="w-6 h-6 rounded-md bg-muted text-foreground/75 border border-border/70 hover:bg-muted/80 hover:text-foreground active:scale-90 transition-[colors,transform] flex items-center justify-center shadow-2xs"
                             title={t('common.edit') || 'تعديل'}
+                            aria-label={t('common.edit') || 'تعديل'}
                           >
-                            <Edit className="w-3 h-3 text-foreground/75" />
-                          </button>
-                          <button
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 sm:size-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => openDeleteDialog(product)}
-                            className="w-6 h-6 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 active:scale-90 transition-[colors,transform] flex items-center justify-center shadow-2xs"
                             title={t('common.delete') || 'حذف'}
+                            aria-label={t('common.delete') || 'حذف'}
                           >
-                            <Trash2 className="w-3 h-3 text-rose-600 dark:text-rose-400" />
-                          </button>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -2717,7 +2762,7 @@ export default function Products() {
                       {!noInventory ? (
                         <div className="flex items-center gap-1 text-muted-foreground font-bold shrink-0">
                           <span className="text-muted-foreground/70 text-[11px]">{t('products.stock') || 'المخزون'}:</span>
-                          <span className="font-mono text-foreground font-black text-xs">{product.quantity}</span>
+                          <span dir="ltr" className="inline-block font-mono tabular-nums text-foreground font-bold text-xs">{product.quantity}</span>
                           <span className="text-muted-foreground/70 text-[11px] font-sans">
                             {getLocalizedUnit(product.smallUnit, false)}
                           </span>
@@ -2735,7 +2780,7 @@ export default function Products() {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-0.5 text-[9.5px] text-primary font-medium mr-1 cursor-help">
+                                      <span className="inline-flex items-center gap-0.5 text-xs text-primary font-medium ms-1 cursor-help">
                                         <Truck className="w-2.5 h-2.5" />
                                         {custodyQty} {t('products.custody') || 'عهدة'}
                                       </span>
@@ -2805,23 +2850,26 @@ export default function Products() {
                       <div className="flex-1 min-w-0 flex flex-col justify-between h-[5.14rem] py-0.5">
                         <div className="flex items-start gap-1.5 min-w-0">
                           <h3
-                            className="font-black text-foreground text-xs sm:text-sm leading-tight truncate flex-1 min-w-0 cursor-pointer hover:text-primary transition-colors"
+                            className="font-semibold text-foreground text-sm sm:text-base leading-tight truncate flex-1 min-w-0 cursor-pointer hover:text-primary transition-colors"
                             title={product.name}
                             onClick={() => openEditDialog(product)}
                           >
                             {product.name}
                           </h3>
                           {!noInventory && (
-                            <span className={cn(
-                              "border text-[8px] sm:text-[8.5px] font-black px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap",
-                              product.status === 'out_of_stock'
-                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                                : product.status === 'low_stock'
-                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                            )}>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "shrink-0 whitespace-nowrap",
+                                product.status === 'out_of_stock'
+                                  ? "bg-destructive/15 text-destructive border-destructive/30"
+                                  : product.status === 'low_stock'
+                                  ? "bg-warning/15 text-warning border-warning/30"
+                                  : "bg-success/15 text-success border-success/30"
+                              )}
+                            >
                               {status.label}
-                            </span>
+                            </Badge>
                           )}
                         </div>
 
@@ -2829,8 +2877,8 @@ export default function Products() {
                         {!noInventory ? (
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-bold">
                             <span className="text-muted-foreground/70 text-[11px]">{t('products.stock') || 'المخزون'}:</span>
-                            <span className="font-mono text-foreground font-black text-xs">{product.quantity}</span>
-                            <span className="bg-muted text-muted-foreground text-[11px] px-1 py-0.2 rounded font-bold">
+                            <span dir="ltr" className="inline-block font-mono tabular-nums text-foreground font-bold text-xs">{product.quantity}</span>
+                            <span className="bg-muted text-muted-foreground text-[11px] px-1 py-0.5 rounded font-bold">
                               {getLocalizedUnit(product.smallUnit, false)}
                             </span>
                             {product.conversionFactor && product.conversionFactor > 1 && (
@@ -2847,7 +2895,7 @@ export default function Products() {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <span className="inline-flex items-center gap-0.5 text-[9.5px] text-primary font-medium mr-1 cursor-help">
+                                        <span className="inline-flex items-center gap-0.5 text-xs text-primary font-medium ms-1 cursor-help">
                                           <Truck className="w-2.5 h-2.5" />
                                           {custodyQty} {t('products.custody') || 'عهدة'}
                                         </span>
@@ -2891,25 +2939,31 @@ export default function Products() {
                         </div>
                       </div>
 
-                      {/* Left: Vertically Stacked Actions (Proportional, wider, slightly smaller icons, not elongated) */}
+                      {/* Left: Vertically Stacked Actions */}
                       {canAddProducts && (
-                        <div className="flex flex-col gap-1.5 shrink-0 justify-center h-[5.14rem]">
-                          <button
+                        <div className="flex flex-col gap-1 shrink-0 justify-center">
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 sm:size-9"
                             onClick={() => openEditDialog(product)}
-                            className="size-7 sm:size-8 rounded-lg bg-muted text-foreground/80 hover:bg-muted/80 hover:text-foreground active:scale-90 transition-[colors,transform] shadow-2xs flex items-center justify-center border border-border/80"
                             title={t('common.edit') || 'تعديل'}
+                            aria-label={t('common.edit') || 'تعديل'}
                           >
-                            <Edit className="w-3.5 h-3.5 text-foreground/80" />
-                          </button>
-                          <button
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-11 sm:size-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => openDeleteDialog(product)}
-                            className="w-7 h-7 sm:w-8 sm:h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 active:scale-90 transition-[colors,transform] shadow-2xs flex items-center justify-center border border-rose-500/20"
                             title={t('common.delete') || 'حذف'}
+                            aria-label={t('common.delete') || 'حذف'}
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                          </button>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -2929,7 +2983,7 @@ export default function Products() {
                     <div className="flex-1 min-w-0 space-y-1">
                       {/* Product Name */}
                       <h3
-                        className="font-black text-foreground text-sm leading-tight truncate cursor-pointer hover:text-primary transition-colors"
+                        className="font-semibold text-foreground text-sm sm:text-base leading-tight truncate cursor-pointer hover:text-primary transition-colors"
                         title={product.name}
                         onClick={() => openEditDialog(product)}
                       >
@@ -2959,22 +3013,25 @@ export default function Products() {
                             title={t('products.clickToCopyBarcode') || 'انقر لنسخ الباركود'}
                           >
                             <Copy className="w-3 h-3 text-muted-foreground/70 flex-shrink-0" />
-                            <span className="font-mono text-[11px] font-bold tracking-wider">{product.barcode}</span>
+                            <span dir="ltr" className="inline-block font-mono text-xs font-bold tracking-wider tabular-nums">{product.barcode}</span>
                           </div>
                         )}
 
                         {/* Status Badge next to Barcode */}
                         {!noInventory && (
-                          <span className={cn(
-                            "border text-[9.5px] font-black px-2 py-0.5 rounded-full whitespace-nowrap",
-                            product.status === 'out_of_stock'
-                              ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                              : product.status === 'low_stock'
-                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                          )}>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "whitespace-nowrap",
+                              product.status === 'out_of_stock'
+                                ? "bg-destructive/15 text-destructive border-destructive/30"
+                                : product.status === 'low_stock'
+                                ? "bg-warning/15 text-warning border-warning/30"
+                                : "bg-success/15 text-success border-success/30"
+                            )}
+                          >
                             {status.label}
-                          </span>
+                          </Badge>
                         )}
                       </div>
 
@@ -2982,7 +3039,7 @@ export default function Products() {
                       {!noInventory ? (
                         <div className="flex items-center gap-1.5 text-xs text-foreground/80 font-bold">
                           <span>{t('products.stock') || 'المخزون'}:</span>
-                          <span className="font-mono text-sm text-foreground font-black">{product.quantity}</span>
+                          <span dir="ltr" className="inline-block font-mono tabular-nums text-sm text-foreground font-bold">{product.quantity}</span>
                           <span className="bg-muted text-muted-foreground text-[11px] px-1.5 py-0.5 rounded-md font-bold">
                             {getLocalizedUnit(product.smallUnit, false)}
                           </span>
@@ -3000,7 +3057,7 @@ export default function Products() {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <span className="inline-flex items-center gap-0.5 text-[11px] text-primary font-medium mr-1 cursor-help">
+                                      <span className="inline-flex items-center gap-0.5 text-xs text-primary font-medium ms-1 cursor-help">
                                         <Truck className="w-2.5 h-2.5" />
                                         {custodyQty} {t('products.custody') || 'عهدة'}
                                       </span>
@@ -3047,7 +3104,7 @@ export default function Products() {
                           </div>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
                             <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.laborCost')}</span>
-                            <span className="text-[11px] font-black leading-tight text-foreground font-mono">${formatNumber(product.laborCost || 0, 2)}</span>
+                            <span dir="ltr" className="inline-block text-xs font-bold leading-tight text-foreground font-mono tabular-nums">${formatNumber(product.laborCost || 0, 2)}</span>
                           </div>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
                             <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('common.total')}</span>
@@ -3083,7 +3140,7 @@ export default function Products() {
                       <div className={cn(
                         "px-0.5 py-0.5 rounded-md border min-w-0",
                         profit > 0
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          ? "bg-success/10 text-success border-success/20"
                           : profit < 0
                           ? "bg-destructive/10 text-destructive border-destructive/20"
                           : "bg-card border-border/70 text-muted-foreground"
@@ -3091,7 +3148,7 @@ export default function Products() {
                         <span className="text-[11px] font-bold block leading-tight truncate">
                           {profit >= 0 ? (t('products.profit') || "الربح") : (t('products.loss') || "الخسارة")}
                         </span>
-                        <span className="text-[11px] font-black leading-tight font-mono">
+                        <span dir="ltr" className="inline-block text-[11px] font-bold leading-tight font-mono tabular-nums">
                           {profit > 0 
                             ? `+${m.fmt(profit)}` 
                             : profit < 0 
@@ -3115,23 +3172,29 @@ export default function Products() {
 
                     {/* Left Column: Vertically Stacked Actions (Delete directly below Edit) */}
                     {canAddProducts && (
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <button
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-11 sm:size-9"
                           onClick={() => openEditDialog(product)}
-                          className="w-8 h-8 rounded-xl bg-muted text-foreground/80 hover:bg-muted/80 hover:text-foreground active:scale-90 transition-[colors,transform] shadow-2xs flex items-center justify-center border border-border/80"
                           title={t('common.edit') || 'تعديل'}
+                          aria-label={t('common.edit') || 'تعديل'}
                         >
-                          <Edit className="w-4 h-4 text-foreground/80" />
-                        </button>
-                        <button
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-11 sm:size-9 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => openDeleteDialog(product)}
-                          className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 active:scale-90 transition-[colors,transform] shadow-2xs flex items-center justify-center border border-rose-500/20"
                           title={t('common.delete') || 'حذف'}
+                          aria-label={t('common.delete') || 'حذف'}
                         >
-                          <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                        </button>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -3165,9 +3228,10 @@ export default function Products() {
                 {t('products.deleteConfirm')} "{selectedProduct?.name}"?
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogFooter>
               <AlertDialogCancel disabled={deleteGuard.isRunning}>{t('common.cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteProduct} disabled={deleteGuard.isRunning} className="bg-destructive hover:bg-destructive/90">
+              <AlertDialogAction onClick={handleDeleteProduct} disabled={deleteGuard.isRunning} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleteGuard.isRunning && <Loader2 className="w-4 h-4 animate-spin" />}
                 {deleteGuard.isRunning ? (t('common.deleting') || 'جاري الحذف...') : t('common.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -3196,13 +3260,14 @@ export default function Products() {
                 </p>
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogFooter>
               <AlertDialogCancel disabled={deleteGuard.isRunning}>{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleHardDeleteArchived}
                 disabled={deleteGuard.isRunning}
-                className="bg-destructive hover:bg-destructive/90"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
+                {deleteGuard.isRunning && <Loader2 className="w-4 h-4 animate-spin" />}
                 {deleteGuard.isRunning ? t('products.permanentlyDeleting') : t('products.permanentDeleteButton')}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -3267,11 +3332,15 @@ export default function Products() {
         />
 
         {/* Quick Restock Dialog */}
-        <Dialog open={showRestockDialog} onOpenChange={setShowRestockDialog}>
-          <DialogContent className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[90dvh] flex flex-col p-0 overflow-hidden rounded-2xl border border-border shadow-2xl bg-card">
-            <DialogHeader className="p-4 border-b border-border/60 shrink-0 bg-muted/20">
-              <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
-                <Boxes className="w-5 h-5 text-emerald-600" />
+        <Dialog open={showRestockDialog} onOpenChange={(open) => { if (!open && !isRestocking) setShowRestockDialog(false); }}>
+          <DialogContent
+            className="w-[min(calc(100vw-1.5rem),28rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]"
+            onPointerDownOutside={(e) => { if (isRestocking) e.preventDefault(); }}
+            onEscapeKeyDown={(e) => { if (isRestocking) e.preventDefault(); }}
+          >
+            <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
+              <DialogTitle className="flex items-center gap-2">
+                <Boxes className="w-5 h-5 text-success shrink-0" />
                 {t('products.restockTitle')}
               </DialogTitle>
               <DialogDescription className="text-xs">
@@ -3280,77 +3349,64 @@ export default function Products() {
             </DialogHeader>
 
             {restockProduct && (
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-muted/60 rounded-xl border border-border/60">
-                  {restockProduct.image ? (
-                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                      <ProductImage imageUrl={restockProduct.image} alt={restockProduct.name} className="w-full h-full object-cover" />
-                    </div>
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground border border-border">
-                      <Package className="w-5 h-5" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-foreground truncate">{restockProduct.name}</h4>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                      {restockProduct.category && <span>{restockProduct.category}</span>}
-                      {restockProduct.barcode && <span className="font-mono text-[11px]">{restockProduct.barcode}</span>}
-                    </div>
-                    <div className="text-xs text-destructive font-semibold mt-0.5">
-                      {t('products.currentStock')}: {restockProduct.quantity} ({t('products.outOfStockBadge')})
+              <>
+                <DialogBody className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 bg-muted/60 rounded-xl border border-border/60">
+                    {restockProduct.image ? (
+                      <div className="w-12 h-12 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                        <ProductImage imageUrl={restockProduct.image} alt={restockProduct.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 text-muted-foreground border border-border">
+                        <Package className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm text-foreground truncate">{restockProduct.name}</h4>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        {restockProduct.category && <span>{restockProduct.category}</span>}
+                        {restockProduct.barcode && <span dir="ltr" className="inline-block font-mono text-xs tabular-nums">{restockProduct.barcode}</span>}
+                      </div>
+                      <div className="text-xs text-destructive font-semibold mt-0.5">
+                        {t('products.currentStock')}: <span dir="ltr" className="inline-block tabular-nums">{restockProduct.quantity}</span> ({t('products.outOfStockBadge')})
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">{t('products.newQuantity')} ({restockProduct.smallUnit || t('products.unitPiece')})</label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    dir="ltr"
-                    className="text-center text-lg font-bold h-12 rounded-xl"
-                    value={restockQuantity}
-                    onChange={(e) => setRestockQuantity(e.target.value)}
-                    placeholder="10"
-                    autoFocus
-                  />
-                </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium block">{t('products.newQuantity')} ({restockProduct.smallUnit || t('products.unitPiece')})</label>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      dir="ltr"
+                      className="text-center text-lg font-bold tabular-nums h-12 rounded-[14px]"
+                      value={restockQuantity}
+                      onChange={(e) => setRestockQuantity(e.target.value)}
+                      placeholder="10"
+                      autoFocus
+                    />
+                  </div>
 
-                {/* Quick Add Pills */}
-                <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                  {[1, 5, 10, 20, 50, 100].map((val) => (
-                    <Button
-                      key={val}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs font-bold px-2.5 rounded-lg"
-                      onClick={() => setRestockQuantity(String(val))}
-                    >
-                      +{val}
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="pt-2 flex flex-col gap-2">
-                  <Button
-                    className="w-full h-11 font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"
-                    onClick={handleQuickRestock}
-                    disabled={isRestocking}
-                  >
-                    {isRestocking ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    {t('products.confirmRestock')}
-                  </Button>
+                  {/* Quick Add Pills */}
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                    {[1, 5, 10, 20, 50, 100].map((val) => (
+                      <Button
+                        key={val}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="min-h-10 sm:min-h-9 text-xs font-bold px-3 rounded-xl tabular-nums"
+                        onClick={() => setRestockQuantity(String(val))}
+                      >
+                        <span dir="ltr">+{val}</span>
+                      </Button>
+                    ))}
+                  </div>
 
                   <Button
                     variant="ghost"
                     type="button"
-                    className="w-full text-xs text-muted-foreground hover:text-foreground h-9 rounded-xl"
+                    className="w-full text-xs text-muted-foreground hover:text-foreground rounded-xl"
                     onClick={() => {
                       const p = restockProduct;
                       setShowRestockDialog(false);
@@ -3361,8 +3417,33 @@ export default function Products() {
                     <Edit className="w-3.5 h-3.5" />
                     {t('products.editAllDetailsInstead')}
                   </Button>
-                </div>
-              </div>
+                </DialogBody>
+
+                <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
+                  <Button
+                    variant="outline"
+                    size="default"
+                    type="button"
+                    disabled={isRestocking}
+                    onClick={() => setShowRestockDialog(false)}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="default"
+                    onClick={handleQuickRestock}
+                    disabled={isRestocking}
+                  >
+                    {isRestocking ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {t('products.confirmRestock')}
+                  </Button>
+                </DialogFooter>
+              </>
             )}
           </DialogContent>
         </Dialog>
@@ -3405,13 +3486,7 @@ export default function Products() {
           quality={40}
         />
 
-        {/* Floating Action Button (FAB) لإضافة منتج عبر المكوّن الذكي الموحد */}
-        {canAddProducts && (
-          <SmartFab
-            onClick={handleOpenAddProduct}
-            label={tDynamic('addProduct')}
-          />
-        )}
+
     </div>
   );
 }

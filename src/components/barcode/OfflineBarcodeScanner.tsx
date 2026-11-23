@@ -302,7 +302,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
   return createPortal(
     <div className="scanner-ui-overlay fixed inset-0 z-[99999] bg-black flex flex-col">
       {/* Header — floating over camera */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-4 pt-[calc(max(var(--app-safe-top,0px),1.5rem)+0.5rem)] z-[9999]">
+      <div className="absolute top-0 inset-x-0 flex items-center justify-between px-4 py-4 pt-[calc(max(var(--app-safe-top,0px),1.5rem)+0.5rem)] z-[9999]">
         <div className="flex items-center gap-2 text-white">
           <ScanLine className="w-5 h-5" />
           <span className="text-sm font-semibold">مسح الباركود</span>
@@ -312,7 +312,8 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
             <button
               type="button"
               onClick={toggleTorch}
-              className={`h-11 w-11 rounded-full flex items-center justify-center transition-colors ${torchOn ? 'bg-yellow-400/80 border-yellow-300 text-black' : 'bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md'}`}
+              aria-label="الفلاش"
+              className={`h-11 w-11 rounded-full flex items-center justify-center transition-colors ${torchOn ? 'bg-warning border border-warning text-warning-foreground' : 'bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md'}`}
             >
               <Flashlight className="w-5 h-5" />
             </button>
@@ -323,6 +324,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
               stopCamera();
               onCloseRef.current();
             }}
+            aria-label="إغلاق الماسح"
             className="h-11 w-11 rounded-full flex items-center justify-center bg-black/65 hover:bg-black/80 !text-white [&_svg]:!text-white border border-white/25 shadow-md transition-colors"
           >
             <X className="w-6 h-6" />
@@ -363,13 +365,13 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
         <div className="px-4 pb-4">
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-foreground">
             <p>{errorMessage}</p>
-            <div className="mt-3 flex gap-2">
-              <Button type="button" size="sm" onClick={() => startCamera()} className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 [&_svg]:text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:[&_svg]:text-zinc-100 border border-zinc-300 dark:border-zinc-700">
-                <RotateCcw className="w-3 h-3" />
-                إعادة المحاولة
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => onCloseRef.current()} className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 [&_svg]:text-zinc-900 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 dark:[&_svg]:text-zinc-100 border border-zinc-300 dark:border-zinc-700">
+            <div className="mt-3 flex gap-2 justify-end">
+              <Button type="button" size="sm" variant="outline" onClick={() => onCloseRef.current()}>
                 إغلاق
+              </Button>
+              <Button type="button" size="sm" variant="default" onClick={() => startCamera()}>
+                <RotateCcw className="w-3.5 h-3.5" />
+                إعادة المحاولة
               </Button>
             </div>
           </div>

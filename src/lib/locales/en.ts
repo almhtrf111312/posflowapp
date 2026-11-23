@@ -1176,6 +1176,7 @@ const en: TranslationDict = {
   // POS
   'pos.title': 'Point of Sale',
   'pos.cart': 'Cart',
+  'pos.changeView': 'Toggle view mode',
   'pos.cartCurrency': 'Cart Currency',
   'pos.itemPriceCurrency': 'Item Price Currency',
   'pos.invoiceCurrency': 'Invoice Currency',

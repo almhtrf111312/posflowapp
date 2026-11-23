@@ -63,15 +63,15 @@ export function TopProducts() {
   return (
     <div className="glass rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground">{tDynamic('topProducts')}</h3>
+        <h3 className="text-sm sm:text-base font-semibold text-foreground">{tDynamic('topProducts')}</h3>
         <span className="text-sm text-muted-foreground">{t('topProducts.fromInvoices')}</span>
       </div>
 
       {topProducts.length === 0 ? (
-        <div className="py-8 text-center">
-          <FileX className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
-          <p className="text-muted-foreground">{t('topProducts.noData')}</p>
-          <p className="text-sm text-muted-foreground/70 mt-1">{t('topProducts.willAppear')}</p>
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+          <FileX className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <p className="text-sm sm:text-base font-semibold text-foreground">{t('topProducts.noData')}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{t('topProducts.willAppear')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -89,7 +89,7 @@ export function TopProducts() {
                   <p className="font-medium text-foreground truncate">{product.name}</p>
                   <div className="flex items-center gap-1 text-sm">
                     <TrendingUp className="w-4 h-4 text-success" />
-                    <span className="text-success font-medium">
+                    <span dir="ltr" className="inline-block tabular-nums text-success font-medium">
                       ${formatNumber(product.revenue)}
                     </span>
                   </div>
@@ -102,7 +102,7 @@ export function TopProducts() {
                     />
                   </div>
                   <span className="text-sm text-muted-foreground whitespace-nowrap">
-                    {product.sales} {t('topProducts.sold')}
+                    <span dir="ltr" className="inline-block tabular-nums">{product.sales}</span> {t('topProducts.sold')}
                   </span>
                 </div>
               </div>

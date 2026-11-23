@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FileText, Download, Package, DollarSign, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatReportAmount, formatNumber } from '@/lib/utils';
 import { loadPurchaseInvoicesCloud, PurchaseInvoice } from '@/lib/cloud/purchase-invoices-cloud';
 import { exportToExcel } from '@/lib/excel-export';
@@ -120,77 +122,77 @@ export function PurchaseInvoicesReport({ dateRange, hideInternalExport = false }
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-card rounded-xl border border-border p-4">
           <Package className="w-5 h-5 text-primary mb-2" />
-          <p className="text-2xl font-bold">{stats.count}</p>
+          <p className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{stats.count}</span></p>
           <p className="text-xs text-muted-foreground">{t('reports.purchaseInvoicesCount') || 'عدد الفواتير'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
-          <DollarSign className="w-5 h-5 text-blue-500 mb-2" />
-          <p className="text-2xl font-bold">{formatReportAmount(stats.total)}</p>
+          <DollarSign className="w-5 h-5 text-info mb-2" />
+          <p className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(stats.total)}</span></p>
           <p className="text-xs text-muted-foreground">{t('invoices.total') || 'الإجمالي الفعلي'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
-          <CheckCircle className="w-5 h-5 text-green-500 mb-2" />
-          <p className="text-2xl font-bold">{stats.finalized}</p>
+          <CheckCircle className="w-5 h-5 text-success mb-2" />
+          <p className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{stats.finalized}</span></p>
           <p className="text-xs text-muted-foreground">{t('invoices.confirmed') || 'فواتير مؤكدة'}</p>
         </div>
         <div className="bg-card rounded-xl border border-border p-4">
-          <Clock className="w-5 h-5 text-amber-500 mb-2" />
-          <p className="text-2xl font-bold">{stats.draft}</p>
+          <Clock className="w-5 h-5 text-warning mb-2" />
+          <p className="text-2xl font-bold"><span dir="ltr" className="inline-block tabular-nums">{stats.draft}</span></p>
           <p className="text-xs text-muted-foreground">{t('invoices.draft') || 'مسودات'}</p>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-card rounded-2xl border border-dashed border-border p-8 text-center">
-          <Package className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
-          <p className="text-muted-foreground">{t('reports.noData') || 'لا توجد فواتير مشتريات في الفترة المحددة'}</p>
+        <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
+          <Package className="w-12 h-12 text-muted-foreground/50 mb-3" />
+          <p className="text-sm sm:text-base font-semibold text-foreground">{t('reports.noData') || 'لا توجد فواتير مشتريات في الفترة المحددة'}</p>
         </div>
       ) : (
         <div className="w-full max-w-full overflow-x-auto rounded-2xl border border-border bg-card">
-          <table className="min-w-[620px] w-full text-xs">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="p-3 text-start font-semibold">{t('invoices.invoiceNumber') || 'رقم الفاتورة'}</th>
-                  <th className="p-3 text-start font-semibold">{t('purchaseInvoice.supplierName') || 'المورد'}</th>
-                  <th className="p-3 text-center font-semibold">{t('invoices.date') || 'التاريخ'}</th>
-                  <th className="p-3 text-center font-semibold">{t('reports.itemsInAudit') || 'الأصناف'}</th>
-                  <th className="p-3 text-center font-semibold">{t('pos.qtyCol') || 'الكمية'}</th>
-                  <th className="p-3 text-center font-semibold">{t('pos.totalLabel') || 'الإجمالي'}</th>
-                  <th className="p-3 text-center font-semibold">{t('invoices.status') || 'الحالة'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(inv => (
-                  <tr key={inv.id} className="border-t hover:bg-muted/30">
-                    <td className="p-3 text-start font-mono text-xs">{inv.invoice_number}</td>
-                    <td className="p-3 text-start font-medium">{inv.supplier_name}</td>
-                    <td className="p-3 text-center">{inv.invoice_date}</td>
-                    <td className="p-3 text-center">{inv.actual_items_count}</td>
-                    <td className="p-3 text-center">{inv.actual_total_quantity}</td>
-                    <td className="p-3 text-center font-medium">{formatReportAmount(inv.actual_grand_total || 0)}</td>
-                    <td className="p-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        inv.status === 'finalized' ? 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400' :
-                        inv.status === 'reconciled' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' :
-                        'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
-                      }`}>
-                        {inv.status === 'finalized' ? 'مؤكدة' : inv.status === 'reconciled' ? 'مراجعة' : 'مسودة'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-muted/30 font-bold">
-                <tr>
-                  <td className="p-3" colSpan={5}>الإجمالي</td>
-                  <td className="p-3 text-center">{formatReportAmount(stats.total)}</td>
-                  <td className="p-3"></td>
-                </tr>
-              </tfoot>
-            </table>
+          <Table className="min-w-[620px] text-xs">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-start">{t('invoices.invoiceNumber') || 'رقم الفاتورة'}</TableHead>
+                <TableHead className="text-start">{t('purchaseInvoice.supplierName') || 'المورد'}</TableHead>
+                <TableHead className="text-end">{t('invoices.date') || 'التاريخ'}</TableHead>
+                <TableHead className="text-end">{t('reports.itemsInAudit') || 'الأصناف'}</TableHead>
+                <TableHead className="text-end">{t('pos.qtyCol') || 'الكمية'}</TableHead>
+                <TableHead className="text-end">{t('pos.totalLabel') || 'الإجمالي'}</TableHead>
+                <TableHead className="text-center">{t('invoices.status') || 'الحالة'}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map(inv => (
+                <TableRow key={inv.id}>
+                  <TableCell className="text-start font-mono text-xs"><span dir="ltr" className="inline-block tabular-nums">{inv.invoice_number}</span></TableCell>
+                  <TableCell className="text-start font-medium">{inv.supplier_name}</TableCell>
+                  <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{inv.invoice_date}</span></TableCell>
+                  <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{inv.actual_items_count}</span></TableCell>
+                  <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{inv.actual_total_quantity}</span></TableCell>
+                  <TableCell className="text-end font-medium"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(inv.actual_grand_total || 0)}</span></TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={
+                      inv.status === 'finalized' ? 'bg-success/15 text-success border-success/30' :
+                      inv.status === 'reconciled' ? 'bg-info/15 text-info border-info/30' :
+                      'bg-warning/15 text-warning border-warning/30'
+                    }>
+                      {inv.status === 'finalized' ? 'مؤكدة' : inv.status === 'reconciled' ? 'مراجعة' : 'مسودة'}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+            <TableFooter>
+              <TableRow className="font-bold">
+                <TableCell colSpan={5}>الإجمالي</TableCell>
+                <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatReportAmount(stats.total)}</span></TableCell>
+                <TableCell />
+              </TableRow>
+            </TableFooter>
+          </Table>
         </div>
       )}
     </div>

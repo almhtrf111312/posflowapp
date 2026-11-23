@@ -3,7 +3,7 @@ import { Eye, EyeOff, Loader2, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResponsiveDialog } from '@/components/ui/ResponsiveDialog';
-import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from '@/lib/sonner-bridge';
 import { useLanguage } from '@/hooks/use-language';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
@@ -24,7 +24,10 @@ export function PasswordChangeDialog({
   userName,
   isOwnPassword = false,
 }: PasswordChangeDialogProps) {
-  const { toast } = useToast();
+  const toast = ({ title, description, variant }: { title?: string; description?: string; variant?: 'destructive' | 'default' }) => {
+    if (variant === 'destructive') sonnerToast.error(title || description || '', title && description ? { description } : undefined);
+    else sonnerToast.success(title || description || '', title && description ? { description } : undefined);
+  };
   const { t, isRTL } = useLanguage();
   const { user: currentUser } = useAuth();
   const { isBoss, isAdmin } = useUserRole();
@@ -228,14 +231,14 @@ export function PasswordChangeDialog({
   );
 
   const dialogFooter = (
-    <div className="flex flex-col sm:flex-row gap-2 w-full justify-end">
-      <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto min-h-11" disabled={isLoading}>
+    <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:justify-end">
+      <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto" disabled={isLoading}>
         {t('password.cancel')}
       </Button>
-      <Button onClick={handleSubmit} className="w-full sm:w-auto min-h-11" disabled={isLoading}>
+      <Button onClick={handleSubmit} className="w-full sm:w-auto" disabled={isLoading}>
         {isLoading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin ms-2" />
+            <Loader2 className="w-4 h-4 animate-spin" />
             {t('password.saving')}
           </>
         ) : (
@@ -266,7 +269,7 @@ export function PasswordChangeDialog({
 
       <div className="space-y-4">
         {requireCurrentPassword && (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <label className="text-sm font-medium">
               {t('password.currentPassword')}
             </label>
@@ -276,21 +279,25 @@ export function PasswordChangeDialog({
                 value={form.currentPassword}
                 onChange={(e) => setForm({ ...form, currentPassword: e.target.value })}
                 placeholder="••••••••"
-                className="pe-10"
+                className="pe-12"
+                dir="ltr"
                 disabled={isLoading}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t('password.currentPassword')}
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute end-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">
             {t('password.newPassword')}
           </label>
@@ -300,20 +307,24 @@ export function PasswordChangeDialog({
               value={form.newPassword}
               onChange={(e) => setForm({ ...form, newPassword: e.target.value })}
               placeholder="••••••••"
-              className="pe-10"
+              className="pe-12"
+              dir="ltr"
               disabled={isLoading}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t('password.newPassword')}
               onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute end-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <label className="text-sm font-medium">
             {t('password.confirmPassword')}
           </label>
@@ -323,16 +334,20 @@ export function PasswordChangeDialog({
               value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
               placeholder="••••••••"
-              className="pe-10"
+              className="pe-12"
+              dir="ltr"
               disabled={isLoading}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t('password.confirmPassword')}
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute end-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

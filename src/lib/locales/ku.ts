@@ -1249,6 +1249,7 @@ const ku: TranslationDict = {
   'reports.shareViaWhatsApp': 'هاوبەشکردن لە واتساپ',
   'pos.title': 'خاڵی فرۆشتن',
   'pos.cart': 'سەبەتە',
+  'pos.changeView': 'گۆڕینی شێوازی پیشاندان',
   'pos.cartCurrency': 'دراوی سەبەتە',
   'pos.itemPriceCurrency': 'دراوی نرخی بڕگە',
   'pos.invoiceCurrency': 'دراوی پسوولە',

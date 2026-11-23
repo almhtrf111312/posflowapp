@@ -104,11 +104,13 @@ import {
   settleDebtsByInvoiceIdCloud,
   loadDebtsCloud,
   recordPaymentWithInvoiceSyncCloud,
+  resolveDebtFxPolicyCloud,
   invalidateDebtsCache,
   addDebtFromInvoiceCloud,
   findInvoiceDebtOnServer,
   Debt,
 } from '@/lib/cloud/debts-cloud';
+import { debtCreditUsd, maxPayableInCurrency, type DebtFxPolicy } from '@/lib/debt-fx';
 import { useAuth } from '@/hooks/use-auth';
 import { useUserRole } from '@/hooks/use-user-role';
 import { getOwnRefundPermission } from '@/lib/refund-permission';
@@ -388,11 +390,20 @@ export default function Invoices() {
     return Math.round((val / currentRate) * 100) / 100;
   }, [paymentAmountInput, paymentCurrency, currentRate]);
 
+  // F-27: policy for crediting a foreign-currency payment at the invoice's original rate (null = legacy)
+  const [fxPolicy, setFxPolicy] = useState<DebtFxPolicy | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedDebtForPayment) { setFxPolicy(null); return; }
+    resolveDebtFxPolicyCloud(selectedDebtForPayment, paymentCurrency).then(p => { if (!cancelled) setFxPolicy(p); });
+    return () => { cancelled = true; };
+  }, [selectedDebtForPayment, paymentCurrency]);
+
   const maxInCurrency = useMemo(() => {
     if (!selectedDebtForPayment) return 0;
     if (paymentCurrency === 'USD') return selectedDebtForPayment.remainingDebt;
-    return Math.round(selectedDebtForPayment.remainingDebt * currentRate * 100) / 100;
-  }, [selectedDebtForPayment, paymentCurrency, currentRate]);
+    return Math.round(maxPayableInCurrency(selectedDebtForPayment.remainingDebt, fxPolicy, currentRate) * 100) / 100;
+  }, [selectedDebtForPayment, paymentCurrency, currentRate, fxPolicy]);
 
   const availableFilterCurrencies = useMemo(() => {
     const list: Array<{ code: string; name: string; symbol: string }> = [];
@@ -1483,8 +1494,18 @@ export default function Invoices() {
       const latest = latestList.find(d => d.id === selectedDebtForPayment.id) || selectedDebtForPayment;
       const remainingNow = Math.round(latest.remainingDebt * 100) / 100;
 
+      // F-27: same foreign currency as the invoice -> credit at the invoice rate; cash stays valued at today's rate
+      const policy = await resolveDebtFxPolicyCloud(latest, paymentCurrency);
       let finalPaymentUSD = amountUSD;
-      if (finalPaymentUSD > remainingNow) {
+      let creditUsd: number | undefined;
+      if (policy) {
+        creditUsd = debtCreditUsd(policy, parseFloat(paymentAmountInput) || 0, amountUSD);
+        if (creditUsd > remainingNow + 0.05) {
+          setSelectedDebtForPayment(latest);
+          toast.error('المبلغ المدخل يتجاوز إجمالي الدين المتبقي');
+          return;
+        }
+      } else if (finalPaymentUSD > remainingNow) {
         if (finalPaymentUSD - remainingNow <= 0.05) {
           finalPaymentUSD = remainingNow;
         } else {
@@ -1494,7 +1515,7 @@ export default function Invoices() {
         }
       }
 
-      const paymentRatio = remainingNow > 0 ? finalPaymentUSD / remainingNow : 1;
+      const paymentRatio = remainingNow > 0 ? Math.min(1, (creditUsd ?? finalPaymentUSD) / remainingNow) : 1;
 
       // الوردية المفتوحة + العملة الأصلية وسعر الصرف: الدالة الذرية تسجل حركة الصندوق وتفصل فرق التقريب
       const { getActiveShift } = await import('@/lib/cashbox-store');
@@ -1507,7 +1528,8 @@ export default function Invoices() {
         parseFloat(paymentAmountInput) || finalPaymentUSD,
         currentRate,
         'cash',
-        currentShiftId
+        currentShiftId,
+        creditUsd
       );
       paymentOpIdRef.current = `debtpay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 

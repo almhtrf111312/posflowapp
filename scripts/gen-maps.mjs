@@ -239,9 +239,14 @@ function appRpcNames() {
   walk(SRC);
   return names;
 }
+// Real applied order on the live database (file names after 2026-11-20 do not always match it): scripts/migration-order.json
+const MIGRATION_ORDER = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/migration-order.json'), 'utf8')).applied_version_by_slug;
+const effKey = (fileNoExt) => `${MIGRATION_ORDER[fileNoExt.replace(/^\d{14}_/, '')] ?? fileNoExt.slice(0, 14)}|${fileNoExt}`;
+
 function renderSupabase() {
   const migDir = path.join(ROOT, 'supabase/migrations');
-  const migs = fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort();
+  const migs = fs.readdirSync(migDir).filter((f) => f.endsWith('.sql'))
+    .sort((a, b) => effKey(a.replace(/\.sql$/, '')).localeCompare(effKey(b.replace(/\.sql$/, ''))));
   const sigs = new Map();          // name -> Map(argSig -> {args, file})
   const lastDrop = new Map();      // name -> file
   const CREATE = /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?"?([a-zA-Z0-9_]+)"?\s*\(/gi;
@@ -260,13 +265,13 @@ function renderSupabase() {
       }).filter(Boolean);
       const sig = args.join(', ');
       if (!sigs.has(m[1])) sigs.set(m[1], new Map());
-      sigs.get(m[1]).set(sig, { args: sig, file: f.replace(/\.sql$/, '') });
+      sigs.get(m[1]).set(sig, { args: sig, file: f.replace(/\.sql$/, ''), key: effKey(f.replace(/\.sql$/, '')) });
     }
-    for (const m of text.matchAll(DROP)) lastDrop.set(m[1], f.replace(/\.sql$/, ''));
+    for (const m of text.matchAll(DROP)) lastDrop.set(m[1], effKey(f.replace(/\.sql$/, '')));
   }
   const app = appRpcNames();
   let out = HEADER('supabase', `Derived from the text of \`supabase/migrations/\` (${migs.length} files), NOT from the live database — verify against the live DB before trusting a signature.
-Shows only the signature(s) defined by the NEWEST migration that defines each function. \`arg?\` = has a default.
+Shows only the signature(s) defined by the NEWEST migration (by real applied order, scripts/migration-order.json) that defines each function. \`arg?\` = has a default.
 \`older\` = distinct signatures in earlier migrations (may be replaced or still live as overloads). \`⚠ dropped later\` = a later migration drops this name.
 `);
   const rows = [...app].sort();
@@ -274,8 +279,8 @@ Shows only the signature(s) defined by the NEWEST migration that defines each fu
   for (const n of rows) {
     if (!sigs.has(n)) { out += `| \`${n}\` | — | not found in migrations (live-only?) | — |\n`; continue; }
     const all = [...sigs.get(n).values()];
-    const newest = all.map((x) => x.file).sort().pop();
-    const current = all.filter((x) => x.file === newest);
+    const newest = all.map((x) => x.key).sort().pop();
+    const current = all.filter((x) => x.key === newest);
     const older = all.length - current.length;
     const dropped = lastDrop.has(n) && lastDrop.get(n) > newest ? ' ⚠ dropped later' : '';
     for (const sgn of current) out += `| \`${n}\` | ${sgn.args || '—'} | ${sgn.file}${dropped} | ${older || '—'} |\n`;

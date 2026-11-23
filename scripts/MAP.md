@@ -10,6 +10,8 @@ Build, release, maintenance and test scripts. Role per file.
 | `download-fonts.mjs` | Downloads fonts into public/fonts for offline use. |
 | `e2e/flowpos-e2e.mjs` | Playwright end-to-end check of purchases and sales against the database. |
 | `e2e/flowpos-stress.mjs` | Strict stress test (~1000 interleaved operations) over an open Chrome session. |
+| `finance-check.mjs` | Finance gate G1: runs every registered financial test; fails on any failure or unclassified test. |
+| `finance-sql-check.mjs` | Finance SQL gate (part of G1; npm run finance:sql): builds in-memory Postgres from migrations, runs golden scenarios + reconciliation queries |
 | `gen-maps.mjs` | Generates and checks all MAP.md files (npm run maps / maps:check). |
 | `generate-icons.ps1` | Generates app icons from resources/icon.png (PowerShell). |
 | `telegram-release-notes.cjs` | Builds public Telegram release notes from changelog and version.json. |

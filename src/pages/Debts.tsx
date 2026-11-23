@@ -50,12 +50,14 @@ import {
   loadDebtsCloud,
   addDebtCloud,
   recordPaymentWithInvoiceSyncCloud,
+  resolveDebtFxPolicyCloud,
   getDebtsStatsCloud,
   deleteDebtCloud,
   getNextManualDebtId,
   Debt,
   invalidateDebtsCache,
 } from '@/lib/cloud/debts-cloud';
+import { debtCreditUsd, maxPayableInCurrency, type DebtFxPolicy } from '@/lib/debt-fx';
 import { getInvoiceByIdCloud, InvoiceItem } from '@/lib/cloud/invoices-cloud';
 import { confirmPendingProfit } from '@/lib/partners-store';
 import { updateCustomerStatsCloud } from '@/lib/cloud/customers-cloud';
@@ -129,6 +131,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   const isSavingRef = useRef(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentCurrency, setPaymentCurrency] = useState<string>(() => loadDefaultCurrencyCode());
+  // F-27: policy for crediting a foreign-currency payment at the invoice's original rate (null = legacy)
+  const [fxPolicy, setFxPolicy] = useState<DebtFxPolicy | null>(null);
   const [paymentAmountInput, setPaymentAmountInput] = useState<string>('');
   const enabledCurrencies = useMemo(() => loadEnabledCurrencies(), []);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -310,11 +314,19 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
     return m.toUsd(val, paymentCurrency, currentRate);
   }, [paymentAmountInput, paymentCurrency, currentRate, m]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedDebt) { setFxPolicy(null); return; }
+    resolveDebtFxPolicyCloud(selectedDebt, paymentCurrency).then(p => { if (!cancelled) setFxPolicy(p); });
+    return () => { cancelled = true; };
+  }, [selectedDebt, paymentCurrency]);
+
   const maxInCurrency = useMemo(() => {
     if (!selectedDebt) return 0;
+    if (fxPolicy) return m.roundForCurrency(maxPayableInCurrency(selectedDebt.remainingDebt, fxPolicy, currentRate), paymentCurrency);
     const raw = m.fromUsd(selectedDebt.remainingDebt, paymentCurrency, currentRate);
     return m.roundForCurrency(raw, paymentCurrency);
-  }, [selectedDebt, paymentCurrency, currentRate, m]);
+  }, [selectedDebt, paymentCurrency, currentRate, m, fxPolicy]);
 
   const openPaymentDialog = async (debt: Debt) => {
     if (rejectIfLocked()) return;
@@ -403,8 +415,20 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       const latest = latestList.find(d => d.id === selectedDebt.id) || selectedDebt;
       const remainingNow = Math.round(latest.remainingDebt * 100) / 100;
 
+      // F-27: same foreign currency as the invoice -> credit at the invoice rate; cash stays valued at today's rate
+      const policy = await resolveDebtFxPolicyCloud(latest, paymentCurrency);
+      const foreignPaid = parseFloat(paymentAmountInput) || 0;
       let finalPaymentUSD = amountUSD;
-      if (finalPaymentUSD > remainingNow) {
+      let creditUsd: number | undefined;
+      if (policy) {
+        creditUsd = debtCreditUsd(policy, foreignPaid, amountUSD);
+        if (creditUsd > remainingNow + 0.05) {
+          setDebts(latestList);
+          setSelectedDebt(latest);
+          toast.error(t('debts.amountExceedsRemaining'));
+          return;
+        }
+      } else if (finalPaymentUSD > remainingNow) {
         if (finalPaymentUSD - remainingNow <= 0.05) {
           finalPaymentUSD = remainingNow;
         } else {
@@ -415,7 +439,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
         }
       }
 
-      const paymentRatio = remainingNow > 0 ? finalPaymentUSD / remainingNow : 1;
+      const paymentRatio = remainingNow > 0 ? Math.min(1, (creditUsd ?? finalPaymentUSD) / remainingNow) : 1;
 
       const { getActiveShift } = await import('@/lib/cashbox-store');
       const activeShift = getActiveShift();
@@ -429,7 +453,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
         parseFloat(paymentAmountInput) || finalPaymentUSD,
         currentDef.rate,
         'cash',
-        currentShiftId
+        currentShiftId,
+        creditUsd
       );
       paymentOpIdRef.current = `debtpay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 

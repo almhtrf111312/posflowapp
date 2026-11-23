@@ -12,6 +12,7 @@ Local state: `src/lib/*-store.ts` + IndexedDB + `sync-queue.ts` (+ Capacitor SQL
 - `npm ci` · `npm run dev` · `npm run lint` · `npm run build` (must exit 0 before any commit).
 - Typecheck: `npx tsc --noEmit -p tsconfig.app.json` (bare `npx tsc --noEmit` checks NOTHING — root
   tsconfig has `"files": []`). A few old errors exist; add none.
+- Finance gates: `npm run finance:check` + `npm run finance:sql` (mandatory for financial work, see below).
 - Maps: `npm run maps` (regenerate) · `npm run maps:check` (fails if stale/missing; CI runs it).
 - E2E: `npm run e2e`, `npm run e2e:stress`. No unit-test runner is installed.
 - Version bump is automatic (`scripts/bump-version.js`, CI on main). Never hand-edit version fields.
@@ -48,12 +49,23 @@ files it lists. To "update MAP.md": add/adjust that file's one-line role in `scr
 (delete the entry when a file is deleted), run `npm run maps`, make `npm run maps:check` pass. Never hand-edit a `MAP.md`.
 After reading a map, scoped greps inside the target folder are fine.
 
+## FINANCIAL LOGIC — mandatory (القانون المالي)
+Any task that touches money, profit, tax, debts, drawer/shifts, refunds, partners, expenses or purchases — or any review of them — is bound by
+`docs/FINANCE_LAW.md` (scope in its §0). Read it fully BEFORE starting. It is not optional and no error is tolerated:
+1. The law wins over code/SQL. A difference is a deviation to report; never change financial behaviour without the owner's explicit approval.
+2. Done = gates, not opinion: `npm run finance:check` GREEN + build/types/maps + a production-code test for every rule you changed
+   + the reconciliation queries when SQL or a money data flow changed. Paste the real output.
+3. A reviewer may block only with a violated `F-xx` (or a RED gate) plus evidence; everything else is a non-blocking suggestion. List all
+   blockers in one pass; never reopen verified work in unchanged files.
+4. Fix and retry until every gate is green; the same check failing 3 rounds in a row = stop and report. Never weaken a check or edit an
+   expected value to get green.
+
 ## Project invariants (violating one is a critical regression)
 1. **FROZEN — never read or edit:** `src/pages/Warehouses.tsx`, `src/pages/StockTransfer.tsx`,
    `src/lib/cloud/warehouses-cloud.ts` (`use-warehouse.tsx` stays active; POS depends on it).
 2. **Money:** USD is the only accounting base; other currencies are display/collection via the invoice's
    rate snapshot (`CurrencySnapshot`). Never hardcode `$`/symbols/rates — use `resolveInvoiceCurrencySymbol` /
-   `formatCurrency`. No float approximations: `round8`/`roundCurrency`, 8 decimals internally. Formulas: `docs/financial-rules.md`.
+   `formatCurrency`. No float approximations: `round8`/`roundCurrency`, 8 decimals internally. Law: `docs/FINANCE_LAW.md`.
 3. **Atomic accounting:** sales, refunds, debts, expenses, partners, purchases go through atomic server RPCs
    (row locks, idempotency `operation_id`, WAC recomputed, stock ≥ 0, history kept by status, never hard-deleted).
    No direct table writes on financial columns; no duplicate shift transactions written from the client.
@@ -82,7 +94,8 @@ After reading a map, scoped greps inside the target folder are fine.
 - Git: commit/push only when the owner asks; never push to `main`, merge, or open a PR unless explicitly told; never
   `push --force`, `reset --hard`, `clean -fd` or `--no-verify` unless the owner asks for that exact command.
   **Branch words (apply to every agent/model):** "push" / "on a side, other or another branch" (فرع جانبي/آخر/ثاني) =
-  a side branch YOU choose (the branch the session designates, else a new `ai/<topic>`), never `main`. "main" / "the
+  a side branch YOU choose — reuse the branch already in use for this work (the session's designated one) instead of
+  creating a new branch for every push; only if none exists, create `ai/<topic>`. Never `main`. "main" / "the
   primary" (المين/الرئيسي/الأساسي) = `main`, and only then. If unsure which one was meant, ask.
 - Ask only when a wrong guess risks data loss, a money error, a frozen module or the production DB; otherwise take the
   most conservative reading, say which in one line, and continue.
@@ -90,7 +103,7 @@ After reading a map, scoped greps inside the target folder are fine.
   (build/typecheck/maps) · branch+commit · notes.
 
 ## Read on demand only (never by default)
-`docs/ui-standards.md` · `docs/design.md` · `docs/speed-rules.md` · `docs/financial-rules.md` (+ `FINANCIAL_FORMULAS_AR.md`)
+`docs/ui-standards.md` · `docs/design.md` · `docs/speed-rules.md` · `FINANCIAL_FORMULAS_AR.md` (examples only; the law is mandatory, see above)
 · `docs/lessons-learned.md` (before touching a previously broken area) · `docs/PROJECT_NOTES.md` (offline queue, release
 control, Telegram, DB snapshot) · `SYSTEM_ARCHITECTURE.md` (roles and financial-operations map) · `docs/adr/` ·
 `ELECTRON_BUILD.md` · `GRADLE_TROUBLESHOOTING.md`.

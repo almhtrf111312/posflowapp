@@ -412,13 +412,14 @@ export const recordPaymentCloud = async (
   currencyAmount?: number,
   exchangeRate?: number,
   method: 'cash' | 'transfer' = 'cash',
-  shiftId?: string
+  shiftId?: string,
+  creditUsd?: number
 ): Promise<Debt | null> => {
   if (isGuestDemoMode()) {
     const debts = debtsCache || loadDebtsLocally() || [];
     const target = debts.find(d => d.id === debtId);
     if (!target) throw new Error('الدين غير موجود');
-    const newPaid = Math.min(target.totalDebt, round8((target.totalPaid || 0) + amount));
+    const newPaid = Math.min(target.totalDebt, round8((target.totalPaid || 0) + (creditUsd ?? amount)));
     const newRemaining = Math.max(0, round8(target.totalDebt - newPaid));
     const newStatus: DebtStatus = newRemaining === 0 ? 'fully_paid' : 'partially_paid';
     const updatedDebt: Debt = {
@@ -455,7 +456,8 @@ export const recordPaymentCloud = async (
     // الحالة المحلية فقط؛ الحركة السحابية تُسجَّل عند المزامنة عبر الدالة الذرية
     const list = (debtsCache || loadDebtsLocally() || []).map(d => {
       if (d.id !== debtId) return d;
-      const totalPaid = round8((d.totalPaid || 0) + amt);
+      // F-27: a foreign-currency payment is credited at the invoice rate (creditUsd), not at the cash value
+      const totalPaid = round8((d.totalPaid || 0) + (creditUsd ?? amt));
       const remainingDebt = Math.max(0, round8(d.totalDebt - totalPaid));
       return { ...d, totalPaid, remainingDebt, status: (remainingDebt <= 0 ? 'fully_paid' : 'partially_paid') as DebtStatus };
     });
@@ -514,8 +516,30 @@ export const recordPaymentWithInvoiceSyncCloud = async (
   currencyAmount?: number,
   exchangeRate?: number,
   method: 'cash' | 'transfer' = 'cash',
-  shiftId?: string
-): Promise<Debt | null> => recordPaymentCloud(debtId, amount, operationId, currency, currencyAmount, exchangeRate, method, shiftId);
+  shiftId?: string,
+  creditUsd?: number
+): Promise<Debt | null> => recordPaymentCloud(debtId, amount, operationId, currency, currencyAmount, exchangeRate, method, shiftId, creditUsd);
+
+/**
+ * F-27 / KD-01: the FX policy for paying `debt` in `paymentCurrency`, from its invoice's rate snapshot.
+ * null = legacy behaviour (credit = cash). Never throws: if the invoice cannot be read the legacy path stays in force
+ * and the server (the authority) applies the policy itself.
+ */
+export const resolveDebtFxPolicyCloud = async (
+  debt: Pick<Debt, 'invoiceId' | 'isCashDebt'>,
+  paymentCurrency: string
+): Promise<import('../debt-fx').DebtFxPolicy | null> => {
+  try {
+    if (!debt.invoiceId || debt.isCashDebt || String(paymentCurrency).toUpperCase() === 'USD') return null;
+    const { getInvoiceByIdCloud } = await import('./invoices-cloud');
+    const { resolveDebtFxPolicy } = await import('../debt-fx');
+    const invoice = await getInvoiceByIdCloud(debt.invoiceId);
+    return resolveDebtFxPolicy(invoice ? { currency: invoice.currency, exchangeRate: invoice.exchangeRate } : null, paymentCurrency, false);
+  } catch (err) {
+    console.warn('[debts-cloud] FX policy lookup failed, using legacy crediting:', err);
+    return null;
+  }
+};
 
 const roundMoney = (n: number) => Math.round(n * 100) / 100;
 

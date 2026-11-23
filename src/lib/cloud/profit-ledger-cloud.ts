@@ -18,6 +18,12 @@ const sb = supabase as unknown as LooseSupabase;
 export interface ProfitLedger {
   payments: ProfitPaymentInput[];
   writeoffs: ProfitWriteoffInput[];
+  /**
+   * F-27 / D-06: FX differences of foreign-currency debt payments credited at the invoice rate (USD, > 0 gain, < 0 loss).
+   * Reported on their own line at the bottom of the net result — never part of sales profit, never shared with partners.
+   * Empty until migration 20261123071000 is applied.
+   */
+  fxDifferences: Array<{ date: string; amountUsd: number }>;
   /** When the ledger was last fetched from the server; 0 if never. */
   fetchedAt: number;
 }
@@ -27,7 +33,7 @@ const CACHE_TTL_MS = 20000;
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 50;
 
-const EMPTY_LEDGER: ProfitLedger = { payments: [], writeoffs: [], fetchedAt: 0 };
+const EMPTY_LEDGER: ProfitLedger = { payments: [], writeoffs: [], fxDifferences: [], fetchedAt: 0 };
 
 let memoryLedger: ProfitLedger | null = null;
 let memoryUserId: string | null = null;
@@ -44,7 +50,12 @@ export function loadProfitLedgerLocally(): ProfitLedger {
     const parsed = JSON.parse(raw) as CachedLedger;
     if (!parsed || parsed.userId !== userId) return EMPTY_LEDGER;
     if (!Array.isArray(parsed.payments) || !Array.isArray(parsed.writeoffs)) return EMPTY_LEDGER;
-    return { payments: parsed.payments, writeoffs: parsed.writeoffs, fetchedAt: Number(parsed.fetchedAt) || 0 };
+    return {
+      payments: parsed.payments,
+      writeoffs: parsed.writeoffs,
+      fxDifferences: Array.isArray(parsed.fxDifferences) ? parsed.fxDifferences : [],
+      fetchedAt: Number(parsed.fetchedAt) || 0,
+    };
   } catch {
     return EMPTY_LEDGER;
   }
@@ -81,7 +92,8 @@ async function fetchAllRows(table: string, columns: string): Promise<Record<stri
 async function fetchLedger(userId: string): Promise<ProfitLedger> {
   const [debts, payments, writeoffs] = await Promise.all([
     fetchAllRows('debts', 'id, invoice_id, is_cash_debt'),
-    fetchAllRows('debt_payments', 'debt_id, amount, created_at'),
+    // '*' on purpose: settled_amount / fx_difference_usd exist only after the FX migration is applied.
+    fetchAllRows('debt_payments', '*'),
     // '*' on purpose: loss_amount exists only after the Phase 2 migration is applied.
     fetchAllRows('debt_writeoffs', '*'),
   ]);
@@ -96,7 +108,8 @@ async function fetchLedger(userId: string): Promise<ProfitLedger> {
     payments: payments
       .map(p => ({
         invoiceId: invoiceOfDebt.get(String(p.debt_id)) ?? '',
-        amount: Number(p.amount) || 0,
+        // What the payment removed from the debt (invoice-rate credit); the cash amount for legacy rows.
+        amount: Number(p.settled_amount) > 0 ? Number(p.settled_amount) : (Number(p.amount) || 0),
         date: String(p.created_at ?? ''),
       }))
       .filter(p => p.invoiceId && p.amount > 0 && p.date),
@@ -115,6 +128,9 @@ async function fetchLedger(userId: string): Promise<ProfitLedger> {
         };
       })
       .filter(w => w.amount > 0 && w.date),
+    fxDifferences: payments
+      .map(p => ({ date: String(p.created_at ?? ''), amountUsd: Number(p.fx_difference_usd) || 0 }))
+      .filter(f => f.date && f.amountUsd !== 0),
     fetchedAt: Date.now(),
   };
 

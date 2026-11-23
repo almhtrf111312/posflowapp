@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useLanguage } from '@/hooks/use-language';
 
 interface TrialNoticeDialogProps {
   open: boolean;
@@ -15,32 +16,34 @@ interface TrialNoticeDialogProps {
   onConfirm: () => void;
 }
 
-const TRIAL_NOTICE_POINTS = [
-  'بياناتك تُحفظ محلياً على هذا الجهاز فقط، ولا تُرفع إلى السحابة.',
-  'في حال عدم الاشتراك لن يتم الاحتفاظ بنسخة احتياطية لبياناتك في السحابة.',
-  'تبقى بيانات التجربة 24 ساعة من بدايتها ثم تُمسح تلقائياً.',
-  'المنتجات الموجودة في التجربة نماذج للعرض والتجربة فقط.',
-  'بعد تفعيل الاشتراك تُرفع بياناتك إلى السحابة تلقائياً.',
-];
+const TRIAL_NOTICE_POINT_KEYS = [
+  'license.trialPoint1',
+  'license.trialPoint2',
+  'license.trialPoint3',
+  'license.trialPoint4',
+  'license.trialPoint5',
+] as const;
 
 export function TrialNoticeDialog({ open, onOpenChange, onConfirm }: TrialNoticeDialogProps) {
+  const { t, direction } = useLanguage();
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent dir="rtl" className="max-w-md">
+      <AlertDialogContent dir={direction} className="max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>قبل بدء الفترة التجريبية</AlertDialogTitle>
+          <AlertDialogTitle>{t('license.trialNoticeTitle' as any)}</AlertDialogTitle>
           <AlertDialogDescription>
-            يرجى الاطلاع على الشروط التالية قبل المتابعة:
+            {t('license.trialNoticeDesc' as any)}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ul className="list-disc space-y-2 ps-5 text-sm text-muted-foreground">
-          {TRIAL_NOTICE_POINTS.map((point) => (
-            <li key={point}>{point}</li>
+          {TRIAL_NOTICE_POINT_KEYS.map((key) => (
+            <li key={key}>{t(key as any)}</li>
           ))}
         </ul>
         <AlertDialogFooter>
-          <AlertDialogCancel>إلغاء</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>أفهم، ابدأ التجربة</AlertDialogAction>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{t('license.trialUnderstandStart' as any)}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -12,6 +12,8 @@ import {
   syncProductFieldsFromCloud,
   getDefaultFieldsByStoreType,
   FIELD_LABELS,
+  getLocalizedFieldLabel,
+  getLocalizedFieldDescription,
   StoreType,
 } from '@/lib/product-fields-config';
 import { CustomFieldsManager } from './CustomFieldsManager';
@@ -23,7 +25,7 @@ interface ProductFieldsSectionProps {
 }
 
 export function ProductFieldsSection({ storeType, onConfigChange, pendingConfig }: ProductFieldsSectionProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [showOtherFields, setShowOtherFields] = useState(false);
   const [config, setConfig] = useState<ProductFieldsConfig>(() => {
     if (pendingConfig) return pendingConfig;
@@ -114,8 +116,8 @@ export function ProductFieldsSection({ storeType, onConfigChange, pendingConfig 
                 className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/40 hover:bg-muted/70 border border-border/50 transition-colors cursor-pointer select-none"
               >
                 <div className="flex-1 min-w-0 text-start">
-                  <p className="text-sm font-semibold text-foreground">{FIELD_LABELS[field].name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{FIELD_LABELS[field].description}</p>
+                  <p className="text-sm font-semibold text-foreground">{getLocalizedFieldLabel(field, language)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{getLocalizedFieldDescription(field, language)}</p>
                 </div>
                 <div className="shrink-0 ms-2" onClick={(e) => e.stopPropagation()}>
                   <Switch
@@ -128,7 +130,7 @@ export function ProductFieldsSection({ storeType, onConfigChange, pendingConfig 
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center py-4 bg-muted/20 rounded-xl">
-            لا توجد حقول افتراضية مخصصة لهذا النوع، يمكنك تفعيل الحقول الإضافية أدناه
+            {t('productFields.noDefaultFields' as TranslationKey)}
           </p>
         )}
       </div>
@@ -144,7 +146,9 @@ export function ProductFieldsSection({ storeType, onConfigChange, pendingConfig 
             className="w-full justify-between text-muted-foreground hover:text-foreground border border-dashed border-border py-4"
           >
             <span className="text-xs font-semibold">
-              {showOtherFields ? 'إخفاء الحقول الإضافية' : `إظهار حقول إضافية أخرى (${otherFields.length})`}
+              {showOtherFields
+                ? t('productFields.hideOtherFields' as TranslationKey)
+                : `${t('productFields.showOtherFields' as TranslationKey)} (${otherFields.length})`}
             </span>
             {showOtherFields ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
@@ -158,8 +162,8 @@ export function ProductFieldsSection({ storeType, onConfigChange, pendingConfig 
                   className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/25 hover:bg-muted/50 border border-border/40 transition-colors cursor-pointer select-none"
                 >
                   <div className="flex-1 min-w-0 text-start">
-                    <p className="text-sm font-medium text-foreground">{FIELD_LABELS[field].name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{FIELD_LABELS[field].description}</p>
+                    <p className="text-sm font-medium text-foreground">{getLocalizedFieldLabel(field, language)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{getLocalizedFieldDescription(field, language)}</p>
                   </div>
                   <div className="shrink-0 ms-2" onClick={(e) => e.stopPropagation()}>
                     <Switch
@@ -189,6 +193,7 @@ function getStoreTypeName(type: string, t: (key: TranslationKey) => string): str
     restaurant: t('productFields.storeType.restaurant'),
     repair: t('productFields.storeType.repair'),
     bookstore: t('productFields.storeType.bookstore'),
+    bakery: t('productFields.storeType.bakery' as TranslationKey),
     general: t('productFields.storeType.general'),
     custom: t('productFields.storeType.custom'),
   };

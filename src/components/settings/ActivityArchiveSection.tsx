@@ -3,6 +3,7 @@ import { Activity, Archive, ShieldCheck, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/use-user-role';
 import { isGuestDemoMode } from '@/lib/demo-data';
+import { useLanguage } from '@/hooks/use-language';
 
 const ActivityLogSection = lazy(() => import('./ActivityLogSection').then(m => ({ default: m.ActivityLogSection })));
 const IntegrityCheckSection = lazy(() => import('./IntegrityCheckSection').then(m => ({ default: m.IntegrityCheckSection })));
@@ -10,17 +11,18 @@ const ArchiveSection = lazy(() => import('./ArchiveSection').then(m => ({ defaul
 
 type View = 'activity' | 'archive' | 'integrity';
 
-/** قسم موحّد: سجل النشاط (للمدير العام) + الأرشيف والمحذوفات في صفحة واحدة بتبويبين */
+/** Unified section: Activity Log (Boss) + Archive & Deleted + Data Integrity */
 export function ActivityArchiveSection({ initialView }: { initialView?: View }) {
   const { isBoss } = useUserRole();
+  const { t } = useLanguage();
   const canSeeActivity = isBoss && !isGuestDemoMode();
   const [view, setView] = useState<View>(initialView === 'archive' || !canSeeActivity ? 'archive' : 'activity');
   const active: View = !canSeeActivity ? 'archive' : view;
 
   const tabs: { id: View; label: string; Icon: typeof Activity }[] = [
-    ...(canSeeActivity ? [{ id: 'activity' as View, label: 'سجل النشاط', Icon: Activity }] : []),
-    { id: 'archive', label: 'الأرشيف والمحذوفات', Icon: Archive },
-    ...(canSeeActivity ? [{ id: 'integrity' as View, label: 'فحص البيانات', Icon: ShieldCheck }] : []),
+    ...(canSeeActivity ? [{ id: 'activity' as View, label: t('archive.tabActivity' as any), Icon: Activity }] : []),
+    { id: 'archive', label: t('archive.tabArchive' as any), Icon: Archive },
+    ...(canSeeActivity ? [{ id: 'integrity' as View, label: t('archive.tabIntegrity' as any), Icon: ShieldCheck }] : []),
   ];
 
   return (

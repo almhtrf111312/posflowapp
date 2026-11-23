@@ -17,9 +17,9 @@ import { formatNumber } from '@/lib/utils';
 type GeneralSubTab = 'invoices' | 'debts' | 'products' | 'expenses' | 'purchases' | 'deleted';
 
 export function ArchiveSection() {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const [generalSubTab, setGeneralSubTab] = useState<GeneralSubTab>('invoices');
-  
+
   const [paidDebts, setPaidDebts] = useState<any[]>([]);
   const [writtenOffDebts, setWrittenOffDebts] = useState<any[]>([]);
   const [outOfStockProducts, setOutOfStockProducts] = useState<any[]>([]);
@@ -40,28 +40,28 @@ export function ArchiveSection() {
         loadPurchaseInvoicesCloud().catch(() => []),
       ]);
 
-      // 1. الديون المسددة والديون المشطوبة
+      // 1. Paid and written-off debts
       setPaidDebts((debts || []).filter((d: any) => !(d.isWrittenOff || d.status === 'written_off') && (d.status === 'fully_paid' || Number(d.remaining_debt || d.remainingDebt || 0) <= 0)));
       setWrittenOffDebts((debts || []).filter((d: any) => d.isWrittenOff || d.status === 'written_off' || d.is_written_off));
 
-      // 2. الأصناف نافذة الكمية
+      // 2. Out-of-stock products
       setOutOfStockProducts((products || []).filter((p: any) => Number(p.quantity || 0) <= 0));
 
-      // 3. فواتير المبيعات المستردة كلياً أو جزئياً والملغاة
-      setArchivedInvoices(invoices.filter((i: any) => 
-        i.status === 'refunded' || 
-        i.status === 'cancelled' || 
+      // 3. Refunded (full/partial) and cancelled sales invoices
+      setArchivedInvoices(invoices.filter((i: any) =>
+        i.status === 'refunded' ||
+        i.status === 'cancelled' ||
         (i as any).status === 'partially_refunded' ||
         ((i as any).refundedAmount && (i as any).refundedAmount > 0)
       ));
 
-      // 4. المصروفات المستردة والملغاة
+      // 4. Reversed and cancelled expenses
       setArchivedExpenses(expenses || []);
 
-      // 5. فواتير الشراء الملغاة أو المرتجعة أو المستبدلة
+      // 5. Cancelled, superseded, or refunded purchase invoices
       setArchivedPurchases((purchases || []).filter((p: any) => p.status === 'cancelled' || p.status === 'superseded' || (p as any).status === 'refunded'));
 
-      // 6. سجل الحذف السحابي الشامل (يقرأ من Supabase أولاً مع fallback للمحلي)
+      // 6. Cloud deletion audit log (reads from Supabase first with local fallback)
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: cloudAuditLogs } = await (supabase as any)
@@ -80,7 +80,7 @@ export function ArchiveSection() {
           setDeletedLogs(cloudAuditLogs.map((l: any) => ({
             id: l.id,
             description: l.description,
-            userName: l.actor_name || 'المسؤول',
+            userName: l.actor_name || '',
             timestamp: l.created_at,
             type: l.action_type,
           })));
@@ -106,54 +106,62 @@ export function ArchiveSection() {
 
   const totalGeneralCount = archivedInvoices.length + paidDebts.length + writtenOffDebts.length + outOfStockProducts.length + archivedExpenses.length + archivedPurchases.length + deletedLogs.length;
 
-
   type Row = { id: string; title: string; sub: string; badge: string; badgeClass: string };
-  const fmtDate = (d?: string | Date) => { try { return d ? new Date(d).toLocaleDateString('ar-SA') : ''; } catch { return ''; } };
+  const dateLocale = language === 'ar' ? 'ar-EG' : 'en-US';
+  const fmtDate = (d?: string | Date) => { try { return d ? new Date(d).toLocaleDateString(dateLocale) : ''; } catch { return ''; } };
 
   const sections: { id: GeneralSubTab; label: string; icon: typeof Package; emptyTitle: string; emptyHint: string; rows: Row[] }[] = [
     {
-      id: 'invoices', label: 'فواتير مستردة وملغاة', icon: FileX,
-      emptyTitle: 'لا توجد فواتير مستردة أو ملغاة', emptyHint: 'أي فاتورة تُسترد أو تُلغى تظهر هنا تلقائياً',
+      id: 'invoices', label: t('archive.tabInvoices' as any), icon: FileX,
+      emptyTitle: t('archive.emptyInvoicesTitle' as any), emptyHint: t('archive.emptyInvoicesHint' as any),
       rows: archivedInvoices.map(inv => ({
         id: inv.id,
-        title: `${inv.customerName || 'عميل نقدي'} #${inv.id.slice(-6)}`,
+        title: `${inv.customerName || t('archive.cashCustomer' as any)} #${inv.id.slice(-6)}`,
         sub: `${inv.currencySymbol || '$'}${formatNumber(inv.totalInCurrency ?? inv.total)} • ${fmtDate(inv.createdAt)}`,
-        badge: inv.status === 'refunded' ? 'مستردة بالكامل' : (inv as any).status === 'partially_refunded' ? 'مستردة جزئياً' : 'ملغاة',
+        badge: inv.status === 'refunded'
+          ? t('archive.badgeRefundedFull' as any)
+          : (inv as any).status === 'partially_refunded'
+            ? t('archive.badgeRefundedPartial' as any)
+            : t('archive.badgeCancelled' as any),
         badgeClass: inv.status === 'refunded' ? 'bg-orange-500/15 text-orange-600 border-orange-500/30' : (inv as any).status === 'partially_refunded' ? 'bg-amber-500/15 text-amber-600 border-amber-500/30' : 'bg-destructive/15 text-destructive border-destructive/30',
       })),
     },
     {
-      id: 'debts', label: 'ديون مسددة ومشطوبة', icon: CreditCard,
-      emptyTitle: 'لا توجد ديون مسددة أو مشطوبة', emptyHint: 'الديون المسددة بالكامل أو المشطوبة تظهر هنا',
+      id: 'debts', label: t('archive.tabDebts' as any), icon: CreditCard,
+      emptyTitle: t('archive.emptyDebtsTitle' as any), emptyHint: t('archive.emptyDebtsHint' as any),
       rows: [
-        ...paidDebts.map(d => ({ id: d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • مسدد بالكامل`, badge: 'مسدد', badgeClass: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' })),
-        ...writtenOffDebts.map(d => ({ id: 'wo_' + d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • دين مشطوب / معدوم`, badge: 'مشطوب', badgeClass: 'bg-purple-500/15 text-purple-600 border-purple-500/30' })),
+        ...paidDebts.map(d => ({ id: d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • ${t('archive.debtFullyPaid' as any)}`, badge: t('archive.badgePaid' as any), badgeClass: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' })),
+        ...writtenOffDebts.map(d => ({ id: 'wo_' + d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • ${t('archive.debtWrittenOff' as any)}`, badge: t('archive.badgeWrittenOff' as any), badgeClass: 'bg-purple-500/15 text-purple-600 border-purple-500/30' })),
       ],
     },
     {
-      id: 'products', label: 'أصناف نفذت', icon: Package,
-      emptyTitle: 'لا توجد أصناف نافذة الكمية', emptyHint: 'الأصناف التي وصلت كميتها إلى صفر تظهر هنا',
-      rows: outOfStockProducts.map(p => ({ id: p.id, title: p.name, sub: `${p.category || 'بدون تصنيف'} • الكمية: 0`, badge: 'نفذ', badgeClass: 'bg-destructive/15 text-destructive border-destructive/30' })),
+      id: 'products', label: t('archive.tabProducts' as any), icon: Package,
+      emptyTitle: t('archive.emptyProductsTitle' as any), emptyHint: t('archive.emptyProductsHint' as any),
+      rows: outOfStockProducts.map(p => ({ id: p.id, title: p.name, sub: `${p.category || t('archive.uncategorized' as any)} • ${t('archive.qtyZero' as any)}`, badge: t('archive.badgeOutOfStock' as any), badgeClass: 'bg-destructive/15 text-destructive border-destructive/30' })),
     },
     {
-      id: 'expenses', label: 'مصروفات ملغاة ومستردة', icon: Receipt,
-      emptyTitle: 'لا توجد مصروفات مستردة أو ملغاة', emptyHint: 'المصروفات التي تم التراجع عنها تظهر هنا',
-      rows: archivedExpenses.map(e => ({ id: e.id, title: e.notes || e.typeLabel || e.type || 'مصروف', sub: `$${formatNumber(e.amount)} • ${fmtDate(e.date || e.createdAt)}`, badge: 'مسترد / ملغى', badgeClass: 'bg-rose-500/15 text-rose-600 border-rose-500/30' })),
+      id: 'expenses', label: t('archive.tabExpenses' as any), icon: Receipt,
+      emptyTitle: t('archive.emptyExpensesTitle' as any), emptyHint: t('archive.emptyExpensesHint' as any),
+      rows: archivedExpenses.map(e => ({ id: e.id, title: e.notes || e.typeLabel || e.type || t('archive.expenseFallback' as any), sub: `$${formatNumber(e.amount)} • ${fmtDate(e.date || e.createdAt)}`, badge: t('archive.badgeExpenseReversed' as any), badgeClass: 'bg-rose-500/15 text-rose-600 border-rose-500/30' })),
     },
     {
-      id: 'purchases', label: 'فواتير شراء ملغاة', icon: ShoppingBag,
-      emptyTitle: 'لا توجد فواتير شراء ملغاة أو مستبدلة', emptyHint: 'فواتير الشراء الملغاة أو المستبدلة تظهر هنا',
+      id: 'purchases', label: t('archive.tabPurchases' as any), icon: ShoppingBag,
+      emptyTitle: t('archive.emptyPurchasesTitle' as any), emptyHint: t('archive.emptyPurchasesHint' as any),
       rows: archivedPurchases.map(p => ({
-        id: p.id, title: `${p.supplier_name || 'مورد'} #${p.invoice_number}`,
+        id: p.id, title: `${p.supplier_name || t('archive.supplierFallback' as any)} #${p.invoice_number}`,
         sub: `$${formatNumber(p.actual_grand_total || p.expected_grand_total || 0)} • ${fmtDate(p.invoice_date || p.created_at)}`,
-        badge: p.status === 'cancelled' ? 'ملغاة' : p.status === 'superseded' ? 'مستبدلة' : 'مرتجعة',
+        badge: p.status === 'cancelled'
+          ? t('archive.badgeCancelled' as any)
+          : p.status === 'superseded'
+            ? t('archive.badgeSuperseded' as any)
+            : t('archive.badgeReturned' as any),
         badgeClass: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
       })),
     },
     {
-      id: 'deleted', label: 'سجل الحذف السحابي', icon: Trash2,
-      emptyTitle: 'لا توجد سجلات حذف أو استرداد', emptyHint: 'عمليات الحذف والاسترداد متزامنة سحابياً',
-      rows: deletedLogs.map(l => ({ id: l.id, title: l.description || '—', sub: `بواسطة: ${l.userName || 'المسؤول'} • ${fmtDate(l.timestamp)}`, badge: getActivityTypeLabel(l.type, 'ar') || l.type, badgeClass: 'bg-muted text-muted-foreground border-border' })),
+      id: 'deleted', label: t('archive.tabDeleted' as any), icon: Trash2,
+      emptyTitle: t('archive.emptyDeletedTitle' as any), emptyHint: t('archive.emptyDeletedHint' as any),
+      rows: deletedLogs.map(l => ({ id: l.id, title: l.description || '—', sub: `${t('archive.byActor' as any)} ${l.userName || t('archive.adminFallback' as any)} • ${fmtDate(l.timestamp)}`, badge: getActivityTypeLabel(l.type, language) || l.type, badgeClass: 'bg-muted text-muted-foreground border-border' })),
     },
   ];
   const current = sections.find(s => s.id === generalSubTab) || sections[0];
@@ -162,12 +170,12 @@ export function ArchiveSection() {
     <div className="space-y-3 max-w-4xl mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between gap-3 bg-card p-3 rounded-2xl border border-border shadow-2xs">
         <div className="min-w-0">
-          <h2 className="text-sm sm:text-base font-bold text-foreground">الأرشيف والمحذوفات</h2>
-          <p className="text-xs text-muted-foreground">{totalGeneralCount} سجل</p>
+          <h2 className="text-sm sm:text-base font-bold text-foreground">{t('archive.headerTitle' as any)}</h2>
+          <p className="text-xs text-muted-foreground">{t('archive.recordCount' as any).replace('{count}', String(totalGeneralCount))}</p>
         </div>
         <Button variant="outline" size="sm" onClick={loadGeneralArchive} disabled={isLoading} className="h-8 px-2.5 text-xs shrink-0">
           {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
-          تحديث
+          {t('archive.refresh' as any)}
         </Button>
       </div>
 
@@ -192,7 +200,7 @@ export function ArchiveSection() {
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
           <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin text-primary" />
-          <p className="text-xs">جاري تحميل الأرشيف...</p>
+          <p className="text-xs">{t('archive.loadingArchive' as any)}</p>
         </div>
       ) : current.rows.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground bg-card rounded-2xl border border-border p-4">

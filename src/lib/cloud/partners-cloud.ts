@@ -257,6 +257,23 @@ export const loadPartnersCloud = async (): Promise<Partner[]> => {
   return partnersCache;
 };
 
+/**
+ * Fresh copy of the partners straight from the cloud (used when the Partners screen opens).
+ * Throws on failure so the caller keeps showing its current data instead of an empty list.
+ */
+export const refreshPartnersFromCloud = async (): Promise<Partner[]> => {
+  if (await isCashierUser()) return [];
+  if (isLocalDataMode()) return loadPartnersLocally() || [];
+  const cloudPartners = await fetchFromSupabase<CloudPartner>('partners', {
+    column: 'created_at',
+    ascending: true,
+  });
+  partnersCache = cloudPartners.map(toPartner);
+  cacheTimestamp = Date.now();
+  savePartnersLocally(partnersCache);
+  return partnersCache;
+};
+
 export const invalidatePartnersCache = () => {
   partnersCache = null;
   cacheTimestamp = 0;

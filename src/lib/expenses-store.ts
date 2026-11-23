@@ -109,41 +109,59 @@ export const addExpense = (expenseData: {
     ? expenseData.customType 
     : getExpenseTypeLabel(expenseData.type);
   
-  // Get partners who share expenses
-  const expensePartners = partners.filter(p => p.sharesExpenses);
-  
+  // KD-08 / D-09 (same rule as the server, new expenses only):
+  // 1) category partners (accessAll = false) pay their share of the TOTAL, off the top;
+  // 2) general partners (accessAll = true) pay their share of what REMAINS; the owner keeps the rest.
+  const expensePartners = partners.filter(p => p.sharesExpenses && (p.expenseSharePercentage ?? 0) > 0);
+
+  const payPartner = (partner: (typeof partners)[number], partnerAmount: number, pct: number, pool: 'category' | 'general') => {
+    if (partnerAmount <= 0) return;
+    distributions.push({
+      partnerId: partner.id,
+      partnerName: partner.name,
+      amount: partnerAmount,
+      percentage: pct,
+      pool,
+    } as ExpenseDistribution);
+
+    // Deduct from partner's balance
+    partner.totalExpensesPaid = (partner.totalExpensesPaid || 0) + partnerAmount;
+    partner.currentBalance -= partnerAmount;
+
+    // Add to expense history for tracking
+    const expenseRecord: ExpenseRecord = {
+      expenseId,
+      type: expenseTypeLabel,
+      amount: partnerAmount,
+      date: expenseData.date,
+      notes: expenseData.notes,
+      createdAt: new Date().toISOString(),
+    };
+    partner.expenseHistory = partner.expenseHistory || [];
+    partner.expenseHistory.unshift(expenseRecord);
+  };
+
   if (expensePartners.length > 0) {
-    expensePartners.forEach(partner => {
-      // ✅ حساب الحصة المباشرة من أصل المصروف لتتطابق محاسبياً مع معادلة توزيع الأرباح
-      const partnerExpenseShare = partner.expenseSharePercentage ?? partner.sharePercentage;
-      const partnerAmount = Math.round(((expenseData.amount * partnerExpenseShare) / 100) * 100) / 100;
-      
-      if (partnerAmount > 0) {
-        distributions.push({
-          partnerId: partner.id,
-          partnerName: partner.name,
-          amount: partnerAmount,
-          percentage: partnerExpenseShare,
-        });
-        
-        // Deduct from partner's balance
-        partner.totalExpensesPaid = (partner.totalExpensesPaid || 0) + partnerAmount;
-        partner.currentBalance -= partnerAmount;
-        
-        // Add to expense history for tracking
-        const expenseRecord: ExpenseRecord = {
-          expenseId,
-          type: expenseTypeLabel,
-          amount: partnerAmount,
-          date: expenseData.date,
-          notes: expenseData.notes,
-          createdAt: new Date().toISOString(),
-        };
-        partner.expenseHistory = partner.expenseHistory || [];
-        partner.expenseHistory.unshift(expenseRecord);
+    let categoryTotal = 0;
+    expensePartners.filter(p => !p.accessAll).forEach(partner => {
+      const pct = partner.expenseSharePercentage ?? 0;
+      const amt = Math.round(((expenseData.amount * pct) / 100) * 100) / 100;
+      if (amt > 0) {
+        categoryTotal += amt;
+        payPartner(partner, amt, pct, 'category');
       }
     });
-    
+
+    const remaining = expenseData.amount - categoryTotal;
+    let generalBefore = 0;
+    expensePartners.filter(p => p.accessAll).forEach(partner => {
+      const pct = partner.expenseSharePercentage ?? 0;
+      const amt = Math.round(((remaining * (generalBefore + pct)) / 100) * 100) / 100
+                - Math.round(((remaining * generalBefore) / 100) * 100) / 100;
+      generalBefore += pct;
+      payPartner(partner, amt, pct, 'general');
+    });
+
     savePartners(partners);
   }
   

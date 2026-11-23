@@ -6,7 +6,7 @@
 -- A returned row is a violation of the invariant named in the header comment: report it, never "fix" data
 -- by hand and never edit the query to make it pass (docs/FINANCE_LAW.md §6).
 --
--- Columns used are the stable ones (generated types + migrations). Gates are R-01..R-06; R-07 is information only.
+-- Columns used are the stable ones (generated types + migrations). Gates are R-01..R-06 and R-08; R-07 is information only.
 -- The golden-case harness (npm run finance:sql) runs this very file against a database built from the migrations.
 -- ============================================================================
 
@@ -81,6 +81,16 @@ select id, debt_id, amount, settled_amount, fx_difference_usd, fx_credit_rate
 from public.debt_payments
 where fx_credit_rate is not null
   and abs(fx_difference_usd - (amount - settled_amount)) > 0.0001;
+
+
+-- R-08 [F-21, D-09] An expense never allocates more to partners than the expense itself (reversed expenses excluded).
+-- The owner's share is the remainder and is not stored, so the partner rows must always sum to at most the amount.
+select e.id, e.user_id, e.amount, sum((d->>'amount')::numeric) as allocated
+from public.expenses e
+cross join lateral jsonb_array_elements(coalesce(e.distributions, '[]'::jsonb)) d
+where not coalesce(e.is_reversed, false)
+group by e.id, e.user_id, e.amount
+having sum((d->>'amount')::numeric) > e.amount + 0.01;
 
 
 -- R-07 [F-18] INFORMATION ONLY — NOT a gate (KD-06). cash_shifts.expected_balance is a best-effort cache during an open shift:

@@ -245,3 +245,52 @@ export async function runScenarios(w, k) {
     check('RESET activity logged', (await one(`select count(*)::int c from public.activity_log where user_id=$1 and action_type='store_reset'`, [OWNER])).c >= 1, true);
   }
 }
+
+// ---------- Partner expense rule (D-09, migration 20261123074000) — fresh stores, exact numbers from the owner ----------
+export async function runExpenseShares(k, newWorldFn) {
+  const { check, truthy } = k;
+  const partner = (w, name, expense, all, cs = '[]') => w.one(
+    `insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares)
+     values ($1,$2,0,$3,$4,0,0,0,$5::jsonb) returning id`, [OWNER, name, expense, all, cs]);
+  const bal = async (w, id) => Number((await w.one(`select current_balance::float8 b from public.partners where id=$1`, [id])).b);
+  const expense = (w, amt) => w.one(`select public.add_expense_atomic($1,'ops',$2,'expense','2026-11-23',null,null,'bank','USD',$2,1) r`, [w.op('exp'), amt]);
+
+  // A) Owner's example: expense 100, category partner 5%, general partner 50%. Owner keeps the rest (47.5).
+  {
+    const w = await newWorldFn();
+    const cat = await partner(w, 'شريك صنف', 5, false, '[{"categoryName":"X","enabled":true,"percentage":50}]');
+    const gen = await partner(w, 'شريك عام', 50, true);
+    const r = (await expense(w, 100)).r;
+    check('EXPSHARE-A category pays 5 off the top', await bal(w, cat.id), -5);
+    check('EXPSHARE-A general pays 50% of the remaining 95 = 47.5', await bal(w, gen.id), -47.5);
+    const paid = r.distributions.reduce((s, d) => s + Number(d.amount), 0);
+    check('EXPSHARE-A owner keeps the rest (100 - 52.5 = 47.5)', Math.round((100 - paid) * 100) / 100, 47.5);
+    truthy('EXPSHARE-A category share is taken from the total, not the remainder', r.distributions.find(d => d.pool === 'category').amount === 5);
+    await w.one(`select public.delete_expense_atomic($1,'undo',null) r`, [r.id]);
+    check('EXPSHARE-A reversal restores category balance', await bal(w, cat.id), 0);
+    check('EXPSHARE-A reversal restores general balance', await bal(w, gen.id), 0);
+  }
+
+  // B) Four partners: two category partners (5% expense each), two general partners (33% each), owner 34%.
+  //     Expense 100: category pays 5 + 5 = 10 off the top; remaining 90 -> general 29.70 each; owner 30.60.
+  {
+    const w = await newWorldFn();
+    const c1 = await partner(w, 'صنف 1', 5, false, '[{"categoryName":"A","enabled":true,"percentage":50}]');
+    const c2 = await partner(w, 'صنف 2', 5, false, '[{"categoryName":"B","enabled":true,"percentage":50}]');
+    const g1 = await partner(w, 'عام 1', 33, true);
+    const g2 = await partner(w, 'عام 2', 33, true);
+    const r = (await expense(w, 100)).r;
+    check('EXPSHARE-B category 1 pays 5', await bal(w, c1.id), -5);
+    check('EXPSHARE-B category 2 pays 5', await bal(w, c2.id), -5);
+    check('EXPSHARE-B general 1 pays 33% of 90 = 29.70', await bal(w, g1.id), -29.7);
+    check('EXPSHARE-B general 2 pays 33% of 90 = 29.70', await bal(w, g2.id), -29.7);
+    const paid = r.distributions.reduce((s, d) => s + Number(d.amount), 0);
+    check('EXPSHARE-B owner keeps 34% of 90 = 30.60 (total 100)', Math.round((100 - paid) * 100) / 100, 30.6);
+
+    // Validation: whole numbers only, pools capped at 100.
+    truthy('EXPSHARE-V fractional expense share is refused', (await w.fails(partner(w, 'bad1', 33.3, true))) !== null);
+    truthy('EXPSHARE-V general pool above 100 is refused (33+33+40)', (await w.fails(partner(w, 'bad2', 40, true))) !== null);
+    truthy('EXPSHARE-V category pool above 100 is refused (5+5+96)', (await w.fails(partner(w, 'bad3', 96, false, '[{"categoryName":"C","enabled":true,"percentage":50}]'))) !== null);
+    truthy('EXPSHARE-V fractional profit share is refused', (await w.fails(w.one(`insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares) values ($1,'bad4',0.5,0,true,0,0,0,'[]'::jsonb)`, [OWNER]))) !== null);
+  }
+}

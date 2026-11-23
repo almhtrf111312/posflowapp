@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 // ✅ استخدام الدوال السحابية بدلاً من المحلية
 import {
   loadPartnersCloud,
+  refreshPartnersFromCloud,
   addPartnerCloud,
   updatePartnerCloud,
   deletePartnerCloud,
@@ -79,6 +80,9 @@ interface CategoryShare {
   enabled: boolean;
 }
 
+// KD-08 / D-09: partner percentages are whole numbers only (the owner's share is the remainder, never a fraction)
+const wholePercent = (raw: string): number => Math.min(100, Math.max(0, Math.trunc(Number(raw) || 0)));
+
 export default function Partners() {
   const { t } = useLanguage();
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -103,7 +107,8 @@ export default function Partners() {
   const loadPartnersData = async () => {
     setIsLoading(true);
     try {
-      const cloudPartners = await loadPartnersCloud();
+      // Fresh copy from the cloud first; the local copy is only a fallback (it can be stale)
+      const cloudPartners = await refreshPartnersFromCloud().catch(() => loadPartnersCloud());
       setPartners(cloudPartners);
     } catch (error) {
       console.error('Error loading partners:', error);
@@ -892,7 +897,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.categoryShares[0]?.percentage || ''}
-                    onChange={(e) => handleUniformPercentageChange(Number(e.target.value))}
+                    onChange={(e) => handleUniformPercentageChange(wholePercent(e.target.value))}
                   />
                 </div>
               ) : (
@@ -915,7 +920,7 @@ export default function Partners() {
                           max="100"
                           disabled={!share?.enabled}
                           value={share?.percentage || ''}
-                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', Number(e.target.value))}
+                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', wholePercent(e.target.value))}
                         />
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
@@ -947,7 +952,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.expenseSharePercentage || ''}
-                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: wholePercent(e.target.value) })}
                   />
                 </div>
               )}
@@ -1024,7 +1029,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.categoryShares[0]?.percentage || ''}
-                    onChange={(e) => handleUniformPercentageChange(Number(e.target.value))}
+                    onChange={(e) => handleUniformPercentageChange(wholePercent(e.target.value))}
                   />
                 </div>
               ) : (
@@ -1047,7 +1052,7 @@ export default function Partners() {
                           max="100"
                           disabled={!share?.enabled}
                           value={share?.percentage || ''}
-                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', Number(e.target.value))}
+                          onChange={(e) => updateCategoryShare(cat.id, 'percentage', wholePercent(e.target.value))}
                         />
                         <span className="text-sm text-muted-foreground">%</span>
                       </div>
@@ -1079,7 +1084,7 @@ export default function Partners() {
                     min="0"
                     max="100"
                     value={formData.expenseSharePercentage || ''}
-                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, expenseSharePercentage: wholePercent(e.target.value) })}
                   />
                 </div>
               )}

@@ -1,5 +1,6 @@
 import { capsuleOuter, capsuleOuterScroll, capsuleTrigger, capsuleItem, capsuleActive, capsuleIdle } from '@/components/ui/SegmentedCapsule';
 import { SmartFab } from '@/components/ui/SmartFab';
+import { CardsGridSkeleton } from '@/components/ui/page-skeleton';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -470,7 +471,9 @@ export default function Customers() {
 
           {/* Customers Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {filteredCustomers.length === 0 ? (
+            {isLoading && customers.length === 0 ? (
+              <CardsGridSkeleton count={6} className="col-span-full" />
+            ) : filteredCustomers.length === 0 ? (
               <div className="col-span-full bg-card rounded-2xl border border-border p-8 text-center">
                 <User className="w-10 h-10 mx-auto text-muted-foreground/40 mb-3" />
                 <p className="text-sm text-muted-foreground">لا يوجد عملاء مطابقين للبحث</p>

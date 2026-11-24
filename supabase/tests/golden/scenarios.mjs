@@ -445,5 +445,8 @@ export async function runLawFixes(k, newWorldFn) {
     const shCash = await w.newShift(500);
     await w.one(`select public.process_quick_purchase_atomic($1::uuid, $2::jsonb) r`, [cashId, JSON.stringify({ productName: 'F7 cash', quantity: 1, costPrice: 5, salePrice: 9, paymentMethod: 'cash', shiftId: shCash })]);
     check('F7 cash quick purchase writes no supplier entry', Number((await w.one(`select count(*)::int c from public.supplier_ledger_entries where reference_id=$1`, [cashId])).c), 0);
+    check('F7 cash quick purchase reduces the cached drawer balance by its cost (500 - 5)', await w.expected(shCash), 495);
+    await w.one(`select public.process_quick_purchase_atomic($1::uuid, $2::jsonb) r`, [cashId, JSON.stringify({ productName: 'F7 cash', quantity: 1, costPrice: 5, salePrice: 9, paymentMethod: 'cash', shiftId: shCash })]);
+    check('F7 replayed cash quick purchase does not reduce the drawer balance twice', await w.expected(shCash), 495);
   }
 }

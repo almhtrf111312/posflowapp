@@ -124,6 +124,7 @@ R-03 movement belongs to its owner's shift, not posted after close (F-19/F-20) �
 | 2026-11-24 | `20261124080200` purchase edit: drawer link and supplier credit (D-13) | WRITTEN, NOT APPLIED | golden F8 |
 | 2026-11-24 | `20261124080300` period closing: FX line (F4) | WRITTEN, NOT APPLIED | golden F4 |
 | 2026-11-24 | `20261124080400` quick purchase on credit needs a supplier (F7) | WRITTEN, NOT APPLIED | golden F7 |
+| 2026-11-24 | `20261124080500` cash quick purchase updates the drawer's expected balance cache | APPLIED by owner (SQL editor, "Success. No rows returned") | golden F7 (cache and replay checks) |
 
 Verify a function against the repo with `md5(replace(prosrc, E'\r', ''))` (a paste from Windows adds CRLF, which changes the plain md5 but not behaviour); signature, `SECURITY DEFINER` and `search_path` also matched. First live reconciliation after applying (R-01..R-06): 0 violations, but R-03/R-04/R-05b/R-06 checked 0 rows (no shifts yet) — repeat after the first real shift (open shift → cash sale → refund / debt payment).
 These were not applied through the Supabase migration history table, so `supabase migration list` will not show them; the repository is the reference.

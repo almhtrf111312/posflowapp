@@ -368,6 +368,7 @@
   "supabase/functions/issue-signed-lease/": "Issues an Ed25519-signed offline lease.",
   "supabase/functions/publish-telegram-release/": "Publishes a release post to Telegram.",
   "supabase/functions/remote-activate-user/": "Boss remote activation of a user.",
+  "supabase/functions/project-metrics/": "Boss-only server metrics (CPU, memory, load) read from the project metrics endpoint.",
   "supabase/functions/reset-own-device/": "User resets their own device binding.",
   "supabase/functions/send-boss-push/": "Sends push notifications to Boss devices.",
   "supabase/functions/start-trial/": "Starts a trial for an account.",

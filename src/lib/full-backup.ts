@@ -4,6 +4,7 @@
  * ويُستعاد كاملاً دون فقدان أي عمود. يُغني عن تصدير JSON القديم.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { loadCategoriesLocally } from '@/lib/cloud/categories-cloud';
 
 export const BACKUP_FORMAT = 'posflow-full-backup';
 export const BACKUP_VERSION = 3;
@@ -305,7 +306,10 @@ export function convertLegacyExport(src: { data?: Record<string, unknown> }, uid
       quantity: num(s.quantity), quantity_bulk: Math.round(num(s.quantity_bulk)), last_updated: s.last_updated,
     }));
 
-  const cats = Array.from(new Set(tables.products.map((p) => p.category).filter(Boolean) as string[]));
+  // Categories come from the category list itself (so an empty category is kept), plus any category a product uses
+  const listed = (loadCategoriesLocally() || []).map((c) => String(c.name || '').trim());
+  const usedByProducts = tables.products.map((p) => String(p.category || '').trim());
+  const cats = Array.from(new Set([...listed, ...usedByProducts].filter(Boolean)));
   tables.categories = cats.map((name) => ({ id: crypto.randomUUID(), user_id: uid, name }));
 
   // إزالة المفاتيح ذات القيم غير المعرّفة (undefined) كي لا تتحول إلى null وتكسر القيم الافتراضية

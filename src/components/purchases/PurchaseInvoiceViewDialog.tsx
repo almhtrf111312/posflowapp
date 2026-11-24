@@ -101,7 +101,7 @@ export function PurchaseInvoiceViewDialog({
 
   const invSnap = useMemo(() => {
     if (!invoice) return undefined;
-    const anyInv = invoice as any;
+    const anyInv = invoice as typeof invoice & { currency_code?: string; currency?: string; currency_symbol?: string; currencySymbol?: string; exchange_rate?: number; decimals?: number };
     if (anyInv.currency_code || anyInv.currency) {
       return {
         currency_code: anyInv.currency_code || anyInv.currency || 'USD',
@@ -287,8 +287,8 @@ export function PurchaseInvoiceViewDialog({
       })),
       subtotal: grandTotal,
       total: grandTotal,
-      currencySymbol: invSnap?.currency_symbol || (invoice as any).currency_symbol || (invoice as any).currencySymbol || m.activeSymbol,
-      currency: invSnap?.currency_code || (invoice as any).currency || m.activeCode,
+      currencySymbol: invSnap?.currency_symbol || (invoice as typeof invoice & { currency_code?: string; currency?: string; currency_symbol?: string; currencySymbol?: string; exchange_rate?: number; decimals?: number }).currency_symbol || (invoice as typeof invoice & { currency_code?: string; currency?: string; currency_symbol?: string; currencySymbol?: string; exchange_rate?: number; decimals?: number }).currencySymbol || m.activeSymbol,
+      currency: invSnap?.currency_code || (invoice as typeof invoice & { currency_code?: string; currency?: string; currency_symbol?: string; currencySymbol?: string; exchange_rate?: number; decimals?: number }).currency || m.activeCode,
       paymentType: (invoice.payment_type || 'cash') as InvoiceShareData['paymentType'],
       type: 'purchase',
       notes: invoice.notes,
@@ -490,7 +490,7 @@ export function PurchaseInvoiceViewDialog({
                 <div className="sm:hidden space-y-2">
                   {(isEditing ? editLines : items).map((item, idx) => (
                     <div
-                      key={(item as any).id || idx}
+                      key={item.id || idx}
                       className="p-3 rounded-xl border border-border bg-card/60 space-y-2 break-words"
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -538,7 +538,7 @@ export function PurchaseInvoiceViewDialog({
                           <div className="text-end">
                             <span className="text-muted-foreground block text-[10px]">{isEn ? "Total:" : "الإجمالي:"}</span>
                             <span className="font-bold text-foreground">
-                              {displayMoney((item as any).total_cost || item.quantity * item.cost_price)}
+                              {displayMoney(item.total_cost || item.quantity * item.cost_price)}
                             </span>
                           </div>
                         </div>
@@ -562,7 +562,7 @@ export function PurchaseInvoiceViewDialog({
                       </TableHeader>
                       <TableBody>
                         {(isEditing ? editLines : items).map((item, idx) => (
-                          <TableRow key={(item as any).id || idx}>
+                          <TableRow key={item.id || idx}>
                             <TableCell className="text-center text-muted-foreground"><span dir="ltr" className="inline-block tabular-nums">{idx + 1}</span></TableCell>
                             <TableCell className="font-medium text-start">
                               <div className="text-foreground">{item.product_name}</div>
@@ -601,7 +601,7 @@ export function PurchaseInvoiceViewDialog({
                               )}
                             </TableCell>
                             <TableCell className="text-end font-bold text-foreground">
-                              <span dir="ltr" className="inline-block tabular-nums">{displayMoney((item as any).total_cost || item.quantity * item.cost_price)}</span>
+                              <span dir="ltr" className="inline-block tabular-nums">{displayMoney(item.total_cost || item.quantity * item.cost_price)}</span>
                             </TableCell>
                           </TableRow>
                         ))}

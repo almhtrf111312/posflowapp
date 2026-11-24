@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BrowserMultiFormatReader } from '@zxing/library';
+import { BrowserMultiFormatReader, type Result } from '@zxing/library';
 import { Camera, ScanLine, X, RotateCcw, Flashlight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { playBeep } from '@/lib/sound-utils';
@@ -23,6 +23,15 @@ interface OfflineBarcodeScannerProps {
   onScan: (barcode: string) => void;
 }
 
+/** Browser barcode/camera APIs used here, typed for the members this file calls. */
+type TorchTrack = MediaStreamTrack & { applyConstraints(c: { advanced: Array<{ torch: boolean }> }): Promise<void> };
+type BarcodeDetectorLike = { detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string }>> };
+type BarcodeDetectorCtor = {
+  new (opts: { formats: string[] }): BarcodeDetectorLike;
+  getSupportedFormats: () => Promise<string[]>;
+};
+type ZxingResult = { getText?: () => string; text?: string; textContent?: string };
+
 const SUPPORTED_FORMATS = [
   'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39',
   'data_matrix', 'upc_a', 'upc_e', 'codabar', 'itf',
@@ -33,8 +42,8 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
   const streamRef = useRef<MediaStream | null>(null);
   const intervalRef = useRef<number | null>(null);
   const fallbackTimerRef = useRef<number | null>(null);
-  const detectorRef = useRef<any>(null);
-  const zxingReaderRef = useRef<any>(null);
+  const detectorRef = useRef<BarcodeDetectorLike | null>(null);
+  const zxingReaderRef = useRef<{ reset?: () => void } | null>(null);
   const detectingRef = useRef(false);
   const scannedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -130,7 +139,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
       const track = streamRef.current?.getVideoTracks()[0];
       if (!track) return;
       const newState = !torchOn;
-      await (track as any).applyConstraints({ advanced: [{ torch: newState }] });
+      await (track as TorchTrack).applyConstraints({ advanced: [{ torch: newState }] });
       setTorchOn(newState);
     } catch (e) {
       console.warn('[Offline Scanner] Torch toggle failed:', e);
@@ -154,7 +163,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
         throw new Error('CAMERA_API_NOT_SUPPORTED');
       }
 
-      const BarcodeDetectorClass = (window as any).BarcodeDetector;
+      const BarcodeDetectorClass = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
       if (!videoRef.current) {
         throw new Error('VIDEO_ELEMENT_MISSING');
       }
@@ -172,8 +181,10 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
         await reader.decodeFromConstraints(
           { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
           videoRef.current,
-          (result: any) => {
-            const rawValue = result?.getText?.() || result?.text || result?.textContent;
+          (result?: Result) => {
+            // The library keeps `text` private; the fallback reads it the same way the original code did.
+            const legacy = result as unknown as ZxingResult | undefined;
+            const rawValue = legacy?.getText?.() || legacy?.text || legacy?.textContent;
             if (rawValue && String(rawValue).trim()) handleDetected(String(rawValue).trim());
           },
         );
@@ -211,7 +222,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
 
         try {
           const track = stream.getVideoTracks()[0];
-          const caps = track.getCapabilities?.() as any;
+          const caps = track.getCapabilities?.() as { torch?: boolean } | undefined;
           if (caps?.torch) setHasTorch(true);
         } catch { /* intentionally empty */ }
 

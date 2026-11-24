@@ -1,4 +1,5 @@
 import React from 'react';
+import type { DownloadResult } from '@/lib/file-download';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -14,20 +15,35 @@ import {
 import { useLanguage } from '@/hooks/use-language';
 import { LocalBackupSection } from '@/components/settings/LocalBackupSection';
 
+/** Backup-related settings as the parent screen keeps them. */
+export interface BackupSettingsValue {
+  autoBackup: boolean;
+  interval: string;
+  keepDays: string;
+}
+
+/** One row of the backup list shown by this section. */
+export interface BackupItem {
+  id: string;
+  date: string;
+  size: string;
+  type: 'auto' | 'manual';
+}
+
 export interface BackupSettingsSectionProps {
   handleBackupNow: () => void;
   isBackingUp: boolean;
   handleImportBackup: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isImporting: boolean;
-  lastBackupResult: any;
-  backupSettings: any;
-  setBackupSettings: React.Dispatch<React.SetStateAction<any>>;
-  syncSettings: any;
+  lastBackupResult: DownloadResult | null;
+  backupSettings: BackupSettingsValue;
+  setBackupSettings: React.Dispatch<React.SetStateAction<BackupSettingsValue>>;
+  syncSettings: { lastSync?: string };
   handleSync: () => void;
   isSyncing: boolean;
-  backups: any[];
-  handleRestoreBackup: (backup: any) => void;
-  handleDeleteBackup: (backup: any) => void;
+  backups: BackupItem[];
+  handleRestoreBackup: (backup: BackupItem) => void;
+  handleDeleteBackup: (backup: BackupItem) => void;
   importInputRef: React.RefObject<HTMLInputElement | null>;
 }
 

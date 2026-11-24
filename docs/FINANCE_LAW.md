@@ -119,11 +119,11 @@ R-03 movement belongs to its owner's shift, not posted after close (F-19/F-20) Â
 | 2026-11-23 | `20261123073000` owner store reset fix (KD-08) | owner, pasted in the SQL editor | function present; the owner ran the reset path afterwards |
 | 2026-11-23 | `20261123074000` partner expense rule (D-09) | owner, pasted in the SQL editor | `add_expense_atomic` carries the D-09 rule; `validate_partner_shares` carries the whole-percent and pool checks |
 | 2026-11-23 | `20261123075000` partner withdrawals in any currency (D-10) | owner, pasted in the SQL editor | `partner_withdrawal_atomic` carries the D-10 rule (checked by md5 and marker in the live definition) |
-| 2026-11-24 | `20261124080000` stock policy and free goods (D-14, F-11) | WRITTEN, NOT APPLIED | golden LAW-STOCK and LAW-FREE |
-| 2026-11-24 | `20261124080100` cash sale with drawer, one transaction (D-11) | WRITTEN, NOT APPLIED | golden F1 |
-| 2026-11-24 | `20261124080200` purchase edit: drawer link and supplier credit (D-13) | WRITTEN, NOT APPLIED | golden F8 |
-| 2026-11-24 | `20261124080300` period closing: FX line (F4) | WRITTEN, NOT APPLIED | golden F4 |
-| 2026-11-24 | `20261124080400` quick purchase on credit needs a supplier (F7) | WRITTEN, NOT APPLIED | golden F7 |
+| 2026-11-24 | `20261124080000` stock policy and free goods (D-14, F-11) | APPLIED by owner (SQL editor, no errors) | golden LAW-STOCK and LAW-FREE |
+| 2026-11-24 | `20261124080100` cash sale with drawer, one transaction (D-11) | APPLIED by owner (SQL editor, no errors) | golden F1 |
+| 2026-11-24 | `20261124080200` purchase edit: drawer link and supplier credit (D-13) | APPLIED by owner (SQL editor, no errors) | golden F8 |
+| 2026-11-24 | `20261124080300` period closing: FX line (F4) | APPLIED by owner (SQL editor, no errors) | golden F4 |
+| 2026-11-24 | `20261124080400` quick purchase on credit needs a supplier (F7) | APPLIED by owner (SQL editor, no errors) | golden F7 |
 | 2026-11-24 | `20261124080500` cash quick purchase updates the drawer's expected balance cache | APPLIED by owner (SQL editor, "Success. No rows returned") | golden F7 (cache and replay checks) |
 | 2026-11-24 | `20261124080600` sale date and time = the moment of sale (decision 2026-11-24: original sale time); a sale in a closed period keeps its posting time | APPLIED by owner (SQL editor, no errors) | golden ST |
 

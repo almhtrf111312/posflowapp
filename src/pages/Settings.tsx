@@ -518,10 +518,6 @@ export default function Settings() {
         nextEnabled.USD = true; // ضمان تفعيل الدولار
       }
       setPrimaryCurrency(newPrimary);
-    } else if (primaryCurrency === currency && !enabled) {
-      newPrimary = 'USD';
-      nextEnabled.USD = true;
-      setPrimaryCurrency('USD');
     }
 
     setEnabledCurrencies(nextEnabled);
@@ -1821,9 +1817,7 @@ export default function Settings() {
           </div>
         );
       case 'activity':
-
       case 'archive':
-
         return <ActivityArchiveSection initialView={activeTab === 'archive' ? 'archive' : undefined} />;
       case 'store':
         return (

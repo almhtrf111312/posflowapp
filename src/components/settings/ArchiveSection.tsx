@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { getActivityTypeLabel } from '@/lib/activity-log';
+import { getActivityTypeLabel, type ActivityLog } from '@/lib/activity-log';
 import { loadProductsCloud } from '@/lib/cloud/products-cloud';
 import { loadDebtsCloud } from '@/lib/cloud/debts-cloud';
 import { loadInvoicesCloud, Invoice } from '@/lib/cloud/invoices-cloud';
@@ -15,18 +15,23 @@ import { useLanguage } from '@/hooks/use-language';
 import { formatNumber } from '@/lib/utils';
 
 type GeneralSubTab = 'invoices' | 'debts' | 'products' | 'expenses' | 'purchases' | 'deleted';
+// Row types come from the loaders themselves, so they always match the data the screen receives.
+type DebtRow = Awaited<ReturnType<typeof loadDebtsCloud>>[number];
+type ProductRow = Awaited<ReturnType<typeof loadProductsCloud>>[number];
+// The fields this screen reads; both the cloud audit rows and the local activity log provide them.
+type AuditLogRow = Pick<ActivityLog, 'id' | 'description' | 'timestamp' | 'type'> & { userName?: string };
 
 export function ArchiveSection() {
   const { t, isRTL, language } = useLanguage();
   const [generalSubTab, setGeneralSubTab] = useState<GeneralSubTab>('invoices');
 
-  const [paidDebts, setPaidDebts] = useState<any[]>([]);
-  const [writtenOffDebts, setWrittenOffDebts] = useState<any[]>([]);
-  const [outOfStockProducts, setOutOfStockProducts] = useState<any[]>([]);
+  const [paidDebts, setPaidDebts] = useState<DebtRow[]>([]);
+  const [writtenOffDebts, setWrittenOffDebts] = useState<DebtRow[]>([]);
+  const [outOfStockProducts, setOutOfStockProducts] = useState<ProductRow[]>([]);
   const [archivedInvoices, setArchivedInvoices] = useState<Invoice[]>([]);
   const [archivedExpenses, setArchivedExpenses] = useState<Expense[]>([]);
   const [archivedPurchases, setArchivedPurchases] = useState<PurchaseInvoice[]>([]);
-  const [deletedLogs, setDeletedLogs] = useState<any[]>([]);
+  const [deletedLogs, setDeletedLogs] = useState<AuditLogRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const loadGeneralArchive = useCallback(async () => {
@@ -41,30 +46,29 @@ export function ArchiveSection() {
       ]);
 
       // 1. Paid and written-off debts
-      setPaidDebts((debts || []).filter((d: any) => !(d.isWrittenOff || d.status === 'written_off') && (d.status === 'fully_paid' || Number(d.remaining_debt || d.remainingDebt || 0) <= 0)));
-      setWrittenOffDebts((debts || []).filter((d: any) => d.isWrittenOff || d.status === 'written_off' || d.is_written_off));
+      setPaidDebts((debts || []).filter((d) => !(d.isWrittenOff || d.status === 'written_off') && (d.status === 'fully_paid' || Number(d.remaining_debt || d.remainingDebt || 0) <= 0)));
+      setWrittenOffDebts((debts || []).filter((d) => d.isWrittenOff || d.status === 'written_off' || d.is_written_off));
 
       // 2. Out-of-stock products
-      setOutOfStockProducts((products || []).filter((p: any) => Number(p.quantity || 0) <= 0));
+      setOutOfStockProducts((products || []).filter((p) => Number(p.quantity || 0) <= 0));
 
       // 3. Refunded (full/partial) and cancelled sales invoices
-      setArchivedInvoices(invoices.filter((i: any) =>
+      setArchivedInvoices(invoices.filter((i) =>
         i.status === 'refunded' ||
         i.status === 'cancelled' ||
-        (i as any).status === 'partially_refunded' ||
-        ((i as any).refundedAmount && (i as any).refundedAmount > 0)
+        (i.status as string) === 'partially_refunded' ||
+        ((i as { refundedAmount?: number }).refundedAmount && (i as { refundedAmount?: number }).refundedAmount! > 0)
       ));
 
       // 4. Reversed and cancelled expenses
       setArchivedExpenses(expenses || []);
 
       // 5. Cancelled, superseded, or refunded purchase invoices
-      setArchivedPurchases((purchases || []).filter((p: any) => p.status === 'cancelled' || p.status === 'superseded' || (p as any).status === 'refunded'));
+      setArchivedPurchases((purchases || []).filter((p) => p.status === 'cancelled' || p.status === 'superseded' || (p.status as string) === 'refunded'));
 
       // 6. Cloud deletion audit log (reads from Supabase first with local fallback)
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: cloudAuditLogs } = await (supabase as any)
+        const { data: cloudAuditLogs } = await supabase
           .from('activity_log')
           .select('*')
           .in('action_type', [
@@ -76,13 +80,12 @@ export function ArchiveSection() {
           .limit(100);
 
         if (cloudAuditLogs && cloudAuditLogs.length > 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setDeletedLogs(cloudAuditLogs.map((l: any) => ({
-            id: l.id,
-            description: l.description,
-            userName: l.actor_name || '',
-            timestamp: l.created_at,
-            type: l.action_type,
+          setDeletedLogs(cloudAuditLogs.map((l: Record<string, unknown>): AuditLogRow => ({
+            id: String(l.id ?? ''),
+            description: typeof l.description === 'string' ? l.description : '',
+            userName: typeof l.actor_name === 'string' ? l.actor_name : '',
+            timestamp: String(l.created_at ?? ''),
+            type: l.action_type as ActivityLog['type'],
           })));
         } else {
           const { loadActivityLogs } = await import('@/lib/activity-log');
@@ -120,10 +123,10 @@ export function ArchiveSection() {
         sub: `${inv.currencySymbol || '$'}${formatNumber(inv.totalInCurrency ?? inv.total)} • ${fmtDate(inv.createdAt)}`,
         badge: inv.status === 'refunded'
           ? t('archive.badgeRefundedFull' as Parameters<typeof t>[0])
-          : (inv as any).status === 'partially_refunded'
+          : (inv.status as string) === 'partially_refunded'
             ? t('archive.badgeRefundedPartial' as Parameters<typeof t>[0])
             : t('archive.badgeCancelled' as Parameters<typeof t>[0]),
-        badgeClass: inv.status === 'refunded' ? 'bg-orange-500/15 text-orange-600 border-orange-500/30' : (inv as any).status === 'partially_refunded' ? 'bg-amber-500/15 text-amber-600 border-amber-500/30' : 'bg-destructive/15 text-destructive border-destructive/30',
+        badgeClass: inv.status === 'refunded' ? 'bg-orange-500/15 text-orange-600 border-orange-500/30' : (inv.status as string) === 'partially_refunded' ? 'bg-amber-500/15 text-amber-600 border-amber-500/30' : 'bg-destructive/15 text-destructive border-destructive/30',
       })),
     },
     {

@@ -74,7 +74,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
   );
 };
 
-function formatSonnerDesc(data?: any): string | undefined {
+type ToastOpts = {
+  id?: string | number;
+  description?: unknown;
+  duration?: number;
+  persistent?: boolean;
+  action?: { label?: string; onClick?: () => void };
+};
+type ToastArg = ToastOpts | string | undefined;
+/** Only object options carry fields; a plain string (or nothing) carries none. */
+const asOpts = (data: ToastArg): ToastOpts | undefined => (typeof data === 'object' && data !== null ? data : undefined);
+
+function formatSonnerDesc(data?: ToastArg): string | undefined {
   if (!data) return undefined;
   if (typeof data === 'string') return data;
   if (data.description) return String(data.description);
@@ -86,85 +97,90 @@ function formatSonnerDesc(data?: any): string | undefined {
  * Bridges all Sonner calls to the unified in-app SmartToastCard.
  */
 export const toast = Object.assign(
-  (message: any, data?: any) => {
+  (message: unknown, data?: ToastArg) => {
+    const opts = asOpts(data);
     const msg = typeof message === 'string' ? message : (message ? String(message) : '');
     const desc = formatSonnerDesc(data);
     showSmartToast({
       type: 'info',
       title: msg,
       description: desc,
-      duration: data?.duration || getSavedToastDuration(),
+      duration: opts?.duration || getSavedToastDuration(),
     });
     return String(Date.now());
   },
   sonnerToast,
   {
-    error: (message: any, data?: any) => {
+    error: (message: unknown, data?: ToastArg) => {
+      const opts = asOpts(data);
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
       const desc = formatSonnerDesc(data);
-      const isPersistent = data?.duration === Infinity || data?.persistent === true;
+      const isPersistent = opts?.duration === Infinity || opts?.persistent === true;
       showSmartToast({
-        id: data?.id ? String(data.id) : undefined,
+        id: opts?.id ? String(opts?.id) : undefined,
         type: 'error',
         title: msg,
         description: desc,
-        duration: isPersistent ? Infinity : (data?.duration || 6000),
-        primaryAction: data?.action ? {
-          label: data.action.label,
-          onClick: data.action.onClick,
+        duration: isPersistent ? Infinity : (opts?.duration || 6000),
+        primaryAction: opts?.action ? {
+          label: opts?.action?.label,
+          onClick: opts?.action?.onClick,
         } : undefined,
       });
       return String(Date.now());
     },
-    warning: (message: any, data?: any) => {
+    warning: (message: unknown, data?: ToastArg) => {
+      const opts = asOpts(data);
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
       const desc = formatSonnerDesc(data);
       showSmartToast({
-        id: data?.id ? String(data.id) : undefined,
+        id: opts?.id ? String(opts?.id) : undefined,
         type: 'warning',
         title: msg,
         description: desc,
-        duration: data?.duration || 5000,
-        primaryAction: data?.action ? {
-          label: data.action.label,
-          onClick: data.action.onClick,
+        duration: opts?.duration || 5000,
+        primaryAction: opts?.action ? {
+          label: opts?.action?.label,
+          onClick: opts?.action?.onClick,
         } : undefined,
       });
       return String(Date.now());
     },
-    info: (message: any, data?: any) => {
+    info: (message: unknown, data?: ToastArg) => {
+      const opts = asOpts(data);
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
       const desc = formatSonnerDesc(data);
       showSmartToast({
-        id: data?.id ? String(data.id) : undefined,
+        id: opts?.id ? String(opts?.id) : undefined,
         type: 'info',
         title: msg,
         description: desc,
-        duration: data?.duration || getSavedToastDuration(),
-        primaryAction: data?.action ? {
-          label: data.action.label,
-          onClick: data.action.onClick,
+        duration: opts?.duration || getSavedToastDuration(),
+        primaryAction: opts?.action ? {
+          label: opts?.action?.label,
+          onClick: opts?.action?.onClick,
         } : undefined,
       });
       return String(Date.now());
     },
-    success: (message: any, data?: any) => {
+    success: (message: unknown, data?: ToastArg) => {
+      const opts = asOpts(data);
       const msg = typeof message === 'string' ? message : (message ? String(message) : '');
       const desc = formatSonnerDesc(data);
       showSmartToast({
-        id: data?.id ? String(data.id) : undefined,
+        id: opts?.id ? String(opts?.id) : undefined,
         type: 'success',
         title: msg,
         description: desc,
-        duration: data?.duration || getSavedToastDuration(),
-        primaryAction: data?.action ? {
-          label: data.action.label,
-          onClick: data.action.onClick,
+        duration: opts?.duration || getSavedToastDuration(),
+        primaryAction: opts?.action ? {
+          label: opts?.action?.label,
+          onClick: opts?.action?.onClick,
         } : undefined,
       });
       return String(Date.now());
     },
-    dismiss: (toastId?: any) => {
+    dismiss: (toastId?: string | number) => {
       if (toastId) {
         hideSmartToastById(String(toastId));
       } else {
@@ -180,11 +196,12 @@ export const toast = Object.assign(
 // Monkey-patch sonnerToast instance to unify components that import directly from 'sonner'
 try {
   if (typeof sonnerToast === 'function') {
-    (sonnerToast as any).success = toast.success;
-    (sonnerToast as any).error = toast.error;
-    (sonnerToast as any).warning = toast.warning;
-    (sonnerToast as any).info = toast.info;
-    (sonnerToast as any).dismiss = toast.dismiss;
+    const patch = sonnerToast as unknown as Record<string, unknown>;
+    patch.success = toast.success;
+    patch.error = toast.error;
+    patch.warning = toast.warning;
+    patch.info = toast.info;
+    patch.dismiss = toast.dismiss;
   }
 } catch { /* intentionally empty */ }
 

@@ -38,7 +38,7 @@ export async function fetchTelegramLinked(userId: string): Promise<boolean | nul
   try {
     const { data, error } = await supabase.from('profiles').select('telegram_chat_id').eq('user_id', userId).maybeSingle();
     if (error) return null;
-    return !!String((data as { telegram_chat_id?: string | null } | null)?.telegram_chat_id || '').trim();
+    return !!String((data as unknown as { telegram_chat_id?: string | null } | null)?.telegram_chat_id || '').trim();
   } catch {
     return null;
   }

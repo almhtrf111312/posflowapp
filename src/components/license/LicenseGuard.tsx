@@ -117,11 +117,14 @@ function LicenseChoiceScreen({ onChooseActivation, onChooseTrial, isStartingTria
 }
 
 export function LicenseGuard({ children }: LicenseGuardProps) {
-  // Fast path for isolated guest demo mode
+  // Fast path for isolated guest demo mode (hooks live in the inner component, so they are never conditional)
   if (isGuestDemoMode()) {
     return <>{children}</>;
   }
+  return <LicenseGuardInner>{children}</LicenseGuardInner>;
+}
 
+function LicenseGuardInner({ children }: LicenseGuardProps) {
   const { user, isLoading: authLoading, signOut } = useAuth();
   const { isLoading, isValid, hasLicense, needsActivation, startTrial, isTrial, checkLicense, expiresAt, remainingDays, ownerNeedsActivation, role, dataEncrypted, isRevoked, offlineLeaseBlocked, offlineLeaseReason, deviceMismatch } = useLicense();
   const { isChecking: isCheckingDevice, isDeviceBlocked } = useDeviceBinding();

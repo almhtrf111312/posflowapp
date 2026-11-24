@@ -28,19 +28,24 @@ const routeToPageKey: Record<string, string> = {
   '/settings': 'settings',
 };
 
-export function RoleGuard({ 
-  children, 
-  allowedRoles, 
-  redirectTo = '/', 
-  fallback 
-}: RoleGuardProps) {
+export function RoleGuard(props: RoleGuardProps) {
   // In Guest Demo Mode: grant full browsing access to all standard management pages
   // Only the Boss Panel (/boss) remains strictly restricted to real boss accounts
+  // (hooks live in the inner component, so they are never conditional)
   if (isGuestDemoMode()) {
-    if (allowedRoles.includes('admin') || allowedRoles.includes('cashier')) {
-      return <>{children}</>;
+    if (props.allowedRoles.includes('admin') || props.allowedRoles.includes('cashier')) {
+      return <>{props.children}</>;
     }
   }
+  return <RoleGuardInner {...props} />;
+}
+
+function RoleGuardInner({
+  children,
+  allowedRoles,
+  redirectTo = '/',
+  fallback
+}: RoleGuardProps) {
 
   const { role, isLoading } = useUserRole();
   const { profile } = useAuth();

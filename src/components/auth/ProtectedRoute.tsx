@@ -10,11 +10,14 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  // Fast path for isolated guest demo mode
+  // Fast path for isolated guest demo mode (hooks live in the inner component, so they are never conditional)
   if (isGuestDemoMode()) {
     return <>{children}</>;
   }
+  return <ProtectedRouteInner>{children}</ProtectedRouteInner>;
+}
 
+function ProtectedRouteInner({ children }: ProtectedRouteProps) {
   const { user, isLoading, isAutoLoginChecking, signOut } = useAuth();
   const location = useLocation();
   const [isAccountBlocked, setIsAccountBlocked] = useState(false);

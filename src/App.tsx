@@ -217,7 +217,7 @@ const AppContent = () => {
         } else {
           setSetupComplete(readSetupComplete(user?.id));
         }
-      } catch {}
+      } catch { /* best-effort: a failed setup marker must not block the app */ }
     };
     checkState();
     window.addEventListener(EVENTS.SETTINGS_UPDATED, checkState);
@@ -429,7 +429,7 @@ const AppContent = () => {
         try {
           sessionStorage.removeItem('posflow_just_signed_up');
           markSetupComplete(user?.id);
-        } catch {}
+        } catch { /* best-effort: a failed setup marker must not block the app */ }
       } else if (!setupComplete) {
         // 2c. Store owners (boss/admin) or offline fallback -> display SetupWizard
         return (
@@ -437,7 +437,7 @@ const AppContent = () => {
             try {
               sessionStorage.removeItem('posflow_just_signed_up');
               markSetupComplete(user?.id);
-            } catch {}
+            } catch { /* best-effort: a failed setup marker must not block the app */ }
             setSetupComplete(true);
             setManualShowSetup(false);
           }} />

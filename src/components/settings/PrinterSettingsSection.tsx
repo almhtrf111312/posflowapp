@@ -15,15 +15,34 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
+import type { PrinterConfig } from '@/lib/printer/printer-config';
+
+/** Receipt print toggles as the parent screen keeps them. */
+export type PrintSettingsValue = {
+  autoPrint: boolean;
+  showStoreName: boolean;
+  showLogo: boolean;
+  showAddress: boolean;
+  showPhone: boolean;
+  showEmail: boolean;
+  showInvoiceNumber: boolean;
+  showDateTime: boolean;
+  showCashierName: boolean;
+  showAlternativeCurrencies: boolean;
+  welcomeMessage: string;
+  footer: string;
+  paperSize: string;
+  copies: string;
+};
 
 export interface PrinterSettingsSectionProps {
-  printerConfig: any;
-  handleUpdatePrinterConfig: (patch: any) => void;
+  printerConfig: PrinterConfig;
+  handleUpdatePrinterConfig: (patch: Partial<PrinterConfig>) => void;
   handleTestPrint: () => void;
   handleMainTestPrint: () => void;
   isTestingPrint: boolean;
-  printSettings: any;
-  setPrintSettings: React.Dispatch<React.SetStateAction<any>>;
+  printSettings: PrintSettingsValue;
+  setPrintSettings: React.Dispatch<React.SetStateAction<PrintSettingsValue>>;
   isPrinterConnected: boolean;
   setShowBtDialog: (show: boolean) => void;
   setShowUnpairDialog: (show: boolean) => void;
@@ -267,7 +286,8 @@ export function PrinterSettingsSection({
                   <select
                     value={printerConfig.paperWidth || printSettings.paperSize || '80mm'}
                     onChange={(e) => {
-                      const val = e.target.value as any;
+                      // The options below offer only the paper widths of PrinterConfig.
+                      const val = e.target.value as PrinterConfig['paperWidth'];
                       setPrintSettings({ ...printSettings, paperSize: val });
                       handleUpdatePrinterConfig({ paperWidth: val });
                     }}

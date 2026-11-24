@@ -505,7 +505,7 @@ export const addCapitalWithCashboxCloud = async (
 
   // الصندوق المحلي فقط (حركة الصندوق السحابية سجلتها الدالة الذرية)
   const { updateCashboxBalance } = await import('../cashbox-store');
-  updateCashboxBalance(origAmt, 'deposit', currency as any);
+  updateCashboxBalance(origAmt, 'deposit', currency);
 
   invalidatePartnersCache();
   return true;
@@ -931,9 +931,9 @@ export const distributeDetailedProfitCloud = async (
       const { data, error } = await sb.rpc('distribute_invoice_partner_profits_atomic', {
         _invoice_id: invoiceUuid,
       });
-      if (!error && (data as any)?.success) {
+      if (!error && (data as { success?: boolean; distributions?: ProfitDistribution[] } | null)?.success) {
         invalidatePartnersCache();
-        return ((data as any).distributions || []) as ProfitDistribution[];
+        return ((data as { distributions?: ProfitDistribution[] }).distributions || []) as ProfitDistribution[];
       }
       if (error) {
         console.warn('[distributeDetailedProfitCloud] Server RPC warn:', error.message);
@@ -1042,7 +1042,7 @@ export const confirmPendingProfitCloud = async (invoiceId: string, ratio: number
       _invoice_id: invoiceId,
       _payment_ratio: ratio,
     });
-    if (!error && (data as any)?.success) {
+    if (!error && (data as { success?: boolean } | null)?.success) {
       invalidatePartnersCache();
       emitEvent(EVENTS.PARTNERS_UPDATED, null);
       return;

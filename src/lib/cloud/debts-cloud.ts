@@ -631,7 +631,7 @@ export const deleteDebtCloud = async (debtId: string, reason = 'إلغاء ال�
   }
 
   try {
-    const { error } = await (sb as any).rpc('cancel_debt_atomic', {
+    const { error } = await sb.rpc('cancel_debt_atomic', {
       _debt_id: debtId,
       _reason: reason,
     });
@@ -681,7 +681,7 @@ export const writeOffDebtCloud = async (
 
   try {
     // 1. استدعاء الدالة الذرية السحابية لشطب الدين
-    const { error } = await (sb as any).rpc('writeoff_debt_atomic', {
+    const { error } = await sb.rpc('writeoff_debt_atomic', {
       _debt_id: debtId,
       _reason: reason,
       _operation_id: operationId,
@@ -740,12 +740,15 @@ function mergeSyncQueueDebts(debts) {
   for (const op of pending) {
     if (op.type === 'debt_sale_bundle') {
       const opKey = String(op.data.operationId || op.data.localId || op.data.uniqueKey || op.id);
-      const bInv = (op.data?.bundle as any)?.invoiceNumber || op.data?.invoiceNumber;
+      const bInv = (op.data?.bundle as { invoiceNumber?: string } | undefined)?.invoiceNumber || op.data?.invoiceNumber;
       if (isOperationCancelled(opKey) || (bInv && isOperationCancelled(String(bInv)))) {
         continue;
       }
-      const data = op.data as Record<string, any>;
-      const bundle = (data?.bundle || {}) as Record<string, any>;
+      const data = op.data as Record<string, unknown>;
+      // The queued bundle fields this replay reads; values are passed through as the original code did.
+      const bundle = (data?.bundle || {}) as {
+        total?: number; downPayment?: number; customerId?: string; customerName?: string; customerPhone?: string; dueDate?: string;
+      };
       const remaining = (bundle.total || 0) - (bundle.downPayment || 0);
       if (remaining <= 0) continue;
       queueDebts.push({
@@ -826,7 +829,7 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
       toLocalDateString(l.timestamp) === dateStr
     );
     if (dayLogs.length > 0) {
-      const localTotal = dayLogs.reduce((s, l) => s + Number((l.details as any)?.amount || 0), 0);
+      const localTotal = dayLogs.reduce((s, l) => s + Number((l.details as { amount?: unknown } | undefined)?.amount || 0), 0);
       if (localTotal > 0 && !foundInCloud) {
         return round8(localTotal);
       }

@@ -1,6 +1,7 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 // Supabase Store - Cloud sync utilities for all data stores
 import { supabase } from '@/integrations/supabase/client';
+import type { PostgrestSingleResponse } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { showToast } from './toast-config';
 
@@ -290,7 +291,7 @@ export async function fetchFromSupabase<T = unknown>(
     const res = await withTimeout(
       Promise.resolve(query),
       timeoutMs,
-      { data: null, error: new Error(`Timeout fetching ${tableName}`) } as any
+      { data: null, error: new Error(`Timeout fetching ${tableName}`) } as unknown as PostgrestSingleResponse<never[]>
     );
     const data = res?.data;
     const error = res?.error;
@@ -328,7 +329,7 @@ export async function fetchFromSupabase<T = unknown>(
       const pageRes = await withTimeout(
         Promise.resolve(pageQuery),
         timeoutMs,
-        { data: null, error: new Error(`Timeout fetching page at offset ${offset} for ${tableName}`) } as any
+        { data: null, error: new Error(`Timeout fetching page at offset ${offset} for ${tableName}`) } as unknown as PostgrestSingleResponse<never[]>
       );
 
       if (strict && (pageRes?.error || !pageRes?.data || !Array.isArray(pageRes.data))) {
@@ -678,7 +679,7 @@ export async function fetchIncrementalFromSupabase<T = unknown>(
     const res = await withTimeout(
       Promise.resolve(query),
       timeoutMs,
-      { data: null, error: new Error(`Timeout incremental fetching ${tableName}`) } as any
+      { data: null, error: new Error(`Timeout incremental fetching ${tableName}`) } as unknown as PostgrestSingleResponse<never[]>
     );
     const data = res?.data;
     const error = res?.error;
@@ -739,7 +740,7 @@ export async function fetchStoreSettings(timeoutMs: number = 1500): Promise<Stor
     const res = await withTimeout(
       Promise.resolve(query),
       timeoutMs,
-      { data: null, error: new Error('Timeout fetching store settings') } as any
+      { data: null, error: new Error('Timeout fetching store settings') } as unknown as Awaited<typeof query>
     );
     const data = res?.data;
     const error = res?.error;
@@ -870,7 +871,7 @@ export async function saveStoreSettings(settings: Record<string, unknown>): Prom
 // Delete all user data (for data reset via unified RPC)
 export async function deleteAllUserData(): Promise<boolean> {
   try {
-    const { error } = await (supabase.rpc as any)('reset_user_store_data');
+    const { error } = await supabase.rpc('reset_user_store_data');
     if (error) {
       console.error('[deleteAllUserData] RPC reset_user_store_data error:', error);
       return false;

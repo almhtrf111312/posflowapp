@@ -99,7 +99,7 @@ export function printHTML(rawHtml: string): void {
   // حماية من حقن السكربتات في نصوص الفاتورة (أسماء المنتجات، التذييل...)
   const htmlContent = sanitizePrintHtml(rawHtml);
   // على Capacitor/Android استخدم native-print
-  if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+  if (typeof window !== 'undefined' && (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()) {
     import('./native-print').then(mod => mod.printHTML(htmlContent));
     return;
   }

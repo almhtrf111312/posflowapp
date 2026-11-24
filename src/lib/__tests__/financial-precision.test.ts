@@ -21,7 +21,7 @@ function test(name: string, fn: () => void) {
   tests.push({ name, fn });
 }
 
-function assertEqual(actual: any, expected: any, msg?: string) {
+function assertEqual(actual: unknown, expected: unknown, msg?: string) {
   if (actual !== expected) {
     throw new Error(`Assertion failed: expected ${expected}, got ${actual}${msg ? ' - ' + msg : ''}`);
   }
@@ -181,9 +181,10 @@ for (const t of tests) {
     t.fn();
     console.log(`[PASS] ${t.name}`);
     passed++;
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
     console.error(`[FAIL] ${t.name}`);
-    console.error(`       Error: ${err.message}`);
+    console.error(`       Error: ${errMsg}`);
     failed++;
   }
 }

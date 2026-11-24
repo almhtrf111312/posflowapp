@@ -373,7 +373,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                     direction: isRTL ? 'rtl' : 'ltr',
                     textAlign: 'start'
                   }}
-                  formatter={(value: any) => [formatCurrency(Number(value)), '']}
+                  formatter={(value: unknown) => [formatCurrency(Number(value)), '']}
                 />
                 <Area type="monotone" dataKey="sales" name={t('reports.sales')} stroke="hsl(var(--success))" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" />
                 <Area type="monotone" dataKey="profit" name={t('invoices.profits')} stroke="hsl(var(--info))" strokeWidth={2} fillOpacity={1} fill="url(#profitGrad)" />
@@ -407,7 +407,7 @@ export function UnifiedReportsDashboard({ stats, isLoading, onRefresh }: Unified
                       direction: isRTL ? 'rtl' : 'ltr',
                       textAlign: 'start'
                     }}
-                    formatter={(val: any) => [formatCurrency(Number(val)), '']}
+                    formatter={(val: unknown) => [formatCurrency(Number(val)), '']}
                   />
                   <Bar dataKey="amount" radius={[0, 8, 8, 0]} barSize={16}>
                     {financialDistributionData.map((entry, index) => (

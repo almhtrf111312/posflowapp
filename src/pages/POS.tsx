@@ -595,7 +595,7 @@ export default function POS() {
 
       // 🛡️ كبت إشعار الخروج لمدة ثانيتين عند إغلاق السلة برمجياً
 
-      (window as any).__posSuppressExitUntil = Date.now() + 2000;
+      (window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil = Date.now() + 2000;
 
       if (window.history.state?.posCartOpen) {
 
@@ -625,7 +625,7 @@ export default function POS() {
 
       if (cartOpenRef.current) {
 
-        (window as any).__posSuppressExitUntil = Date.now() + 2000;
+        (window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil = Date.now() + 2000;
 
         setCartOpen(false);
 

@@ -249,14 +249,15 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
         await startZxing();
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.warn('[Offline Scanner] start failed:', error);
+      const errObj = typeof error === 'object' && error !== null ? (error as { message?: unknown; name?: unknown }) : null;
 
-      if (error?.message === 'BARCODE_DETECTOR_NOT_SUPPORTED' || error?.message === 'NO_SUPPORTED_FORMATS') {
+      if (errObj?.message === 'BARCODE_DETECTOR_NOT_SUPPORTED' || errObj?.message === 'NO_SUPPORTED_FORMATS') {
         setErrorMessage('تعذر تهيئة قارئ الباركود على هذا الجهاز. حاول مرة أخرى.');
-      } else if (error?.name === 'NotAllowedError') {
+      } else if (errObj?.name === 'NotAllowedError') {
         setErrorMessage('تم رفض إذن الكاميرا. اسمح بالإذن من الإعدادات ثم أعد المحاولة.');
-      } else if (error?.name === 'NotFoundError' || error?.name === 'DevicesNotFoundError') {
+      } else if (errObj?.name === 'NotFoundError' || errObj?.name === 'DevicesNotFoundError') {
         setErrorMessage('لم يتم العثور على كاميرا. تأكد من توصيل كاميرا بالجهاز.');
       } else {
         setErrorMessage('تعذر تشغيل الكاميرا. حاول مرة أخرى.');

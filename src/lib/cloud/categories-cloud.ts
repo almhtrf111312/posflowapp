@@ -452,7 +452,7 @@ export const getCategoryNamesCloud = async (): Promise<string[]> => {
       const res = await withTimeout(
         Promise.resolve(query),
         2500,
-        { data: null, error: null } as any
+        { data: null, error: null } as unknown as Awaited<typeof query>
       );
       const data = res?.data;
       

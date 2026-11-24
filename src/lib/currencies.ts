@@ -1453,7 +1453,7 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
 
   const enabledCurrencies = Object.values(currencies).filter(
 
-    c => allowedSlotCodes.has(c.code) && (c as any).active !== false && c.enabled === true
+    c => allowedSlotCodes.has(c.code) && (c as typeof c & { active?: boolean }).active !== false && c.enabled === true
 
   );
 

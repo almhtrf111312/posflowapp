@@ -601,8 +601,9 @@ export async function editPurchaseInvoiceAtomic(
     emitEvent(EVENTS.PURCHASES_UPDATED, null);
     emitEvent(EVENTS.PRODUCTS_UPDATED, null);
     return { success: true, newInvoiceId: data as string };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Exception in editPurchaseInvoiceAtomic:', err);
-    return { success: false, error: err?.message || 'حدث خطأ أثناء الاتصال بالخادم' };
+    const msg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string' ? (err as { message: string }).message : '';
+    return { success: false, error: msg || 'حدث خطأ أثناء الاتصال بالخادم' };
   }
 }

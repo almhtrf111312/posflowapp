@@ -216,7 +216,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         if (!data.id) throw new Error('Missing product id for deletion');
         const { error } = await sb.rpc('hard_delete_product_atomic', { _product_id: String(data.id) });
         if (error) {
-          if (error.message?.includes('not found') || (error as any).code === 'P0002') return true;
+          if (error.message?.includes('not found') || (error as typeof error & { code?: string }).code === 'P0002') return true;
           throw error;
         }
         return true;

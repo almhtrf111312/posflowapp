@@ -15,7 +15,7 @@ export function getStoredPrinterConfig(): PrinterConfig {
   } catch (e) {
     console.warn('[Printer] Failed to read printer config:', e);
   }
-  const isMobile = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+  const isMobile = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
   return {
     connectionType: isMobile ? 'bluetooth' : 'wired_system',
     paperWidth: '80mm',

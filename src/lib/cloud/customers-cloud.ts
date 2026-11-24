@@ -534,7 +534,7 @@ function mergeSyncQueueCustomers(customers: Customer[]): Customer[] {
     const queueCustomers: Customer[] = [];
     for (const op of pending) {
       if (op.type === 'customer_create') {
-        const data = (op.data || {}) as Record<string, any>;
+        const data = (op.data || {}) as { id?: string; name?: string; phone?: string; email?: string; address?: string; total_purchases?: number | string; total_debt?: number | string; invoice_count?: number | string; last_purchase?: string; cashier_id?: string };
         const nowIso = op.timestamp || op.createdAt || new Date().toISOString();
         queueCustomers.push({
           id: data.id || op.id,

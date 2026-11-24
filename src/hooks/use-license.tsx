@@ -10,8 +10,8 @@ import { toast } from '@/lib/sonner-bridge';
 
 
 // رسالة مفهومة بدل "Failed to send a request to the Edge Function"
-const friendlyFunctionError = (err: any, fallback: string): string => {
-  const msg = String(err?.message || '');
+const friendlyFunctionError = (err: unknown, fallback: string): string => {
+  const msg = typeof err === 'object' && err !== null && 'message' in err ? String((err as { message?: unknown }).message || '') : '';
   if (/Failed to send a request|Failed to fetch|NetworkError|network/i.test(msg)) {
     return 'تعذّر الاتصال بالخادم، تحقق من الإنترنت ثم حاول مجدداً';
   }
@@ -148,7 +148,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
     // ✅ If cache exists, start with isLoading=false for instant UI (< 0.5s)
     // بدون نسخة محفوظة صالحة لا نفترض أن الترخيص ساري: ننتظر نتيجة الخادم
     isLoading: !initialCache && !fallbackCache,
-    isValid: cachedLicenseGrantsAccess(effectiveCache as any),
+    isValid: cachedLicenseGrantsAccess(effectiveCache as Parameters<typeof cachedLicenseGrantsAccess>[0]),
     hasLicense: effectiveCache?.hasLicense ?? false,
     isTrial: effectiveCache?.isTrial ?? false,
     isExpired: effectiveCache?.isExpired ?? false,
@@ -185,7 +185,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           isLoading: false,
-          isValid: cachedLicenseGrantsAccess(fb as any),
+          isValid: cachedLicenseGrantsAccess(fb as Parameters<typeof cachedLicenseGrantsAccess>[0]),
           hasLicense: fb?.hasLicense ?? false,
           needsActivation: fb?.needsActivation ?? false,
         };
@@ -384,7 +384,7 @@ export function LicenseProvider({ children }: { children: ReactNode }) {
         ...prev,
         isLoading: false,
         // دون اتصال: يُسمح بالعمل فقط إذا كانت النسخة المحفوظة صالحة وغير منتهية وتخص هذا المستخدم
-        isValid: cachedLicenseGrantsAccess(fallback as any, user?.id),
+        isValid: cachedLicenseGrantsAccess(fallback as Parameters<typeof cachedLicenseGrantsAccess>[0], user?.id),
         hasLicense: fallback?.hasLicense ?? false,
         needsActivation: fallback?.needsActivation ?? false,
         error: 'وضع غير متصل بالإنترنت',

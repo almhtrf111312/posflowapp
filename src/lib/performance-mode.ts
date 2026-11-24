@@ -85,10 +85,11 @@ export function usePerformanceMode() {
   const [effective, setEffective] = useState<EffectivePerformanceMode>(() => resolveEffectivePerformanceMode(pref));
 
   useEffect(() => {
-    const handler = (e: any) => {
-      if (e.detail) {
-        setPrefState(e.detail.pref);
-        setEffective(e.detail.effective);
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent<{ pref: typeof pref; effective: EffectivePerformanceMode }>;
+      if (customEvent.detail) {
+        setPrefState(customEvent.detail.pref);
+        setEffective(customEvent.detail.effective);
       } else {
         const p = getPerformanceModePref();
         setPrefState(p);

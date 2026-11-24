@@ -57,7 +57,7 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
       }
 
       // ربط الرقم بالحساب والمتجر
-      const { data: rpcRes, error: rpcErr } = await (supabase.rpc as any)('assign_store_and_profile_phone', {
+      const { data: rpcRes, error: rpcErr } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { ok?: boolean; error?: string } | null; error: { message?: string } | null }> }).rpc('assign_store_and_profile_phone', {
         _phone: phone,
       });
 
@@ -68,9 +68,10 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
       showToast.success(t('phoneVerify.linkSuccess'));
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Password verify error:', err);
-      showToast.error(err.message || t('phoneVerify.verifyError'));
+      const msg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string' ? (err as { message: string }).message : '';
+      showToast.error(msg || t('phoneVerify.verifyError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -94,9 +95,10 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
       setRequestId(data.request_id);
       setOtpSent(true);
       showToast.success(t('phoneVerify.otpSentSuccess'));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Send transfer OTP error:', err);
-      showToast.error(err.message || t('phoneVerify.otpSendError'));
+      const msg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string' ? (err as { message: string }).message : '';
+      showToast.error(msg || t('phoneVerify.otpSendError'));
     } finally {
       setIsSendingOtp(false);
     }
@@ -111,7 +113,7 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
 
     setIsSubmitting(true);
     try {
-      const { data: transferRes, error: transferErr } = await (supabase.rpc as any)('complete_phone_transfer', {
+      const { data: transferRes, error: transferErr } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { ok?: boolean; error?: string } | null; error: { message?: string } | null }> }).rpc('complete_phone_transfer', {
         _request_id: requestId,
         _entered_code: otpCode.trim(),
       });
@@ -123,9 +125,10 @@ export const StorePhoneVerificationDialog: React.FC<Props> = ({
       showToast.success(t('phoneVerify.transferSuccess'));
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Transfer verify error:', err);
-      showToast.error(err.message || t('phoneVerify.transferFailed'));
+      const msg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string' ? (err as { message: string }).message : '';
+      showToast.error(msg || t('phoneVerify.transferFailed'));
     } finally {
       setIsSubmitting(false);
     }

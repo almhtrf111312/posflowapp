@@ -18,10 +18,10 @@ export default function ContactDeveloper() {
   const isEn = language === 'en';
   const location = useLocation();
   const navigate = useNavigate();
-  const supportReason = (location.state as any)?.supportReason as string | undefined;
-  const userEmail = (location.state as any)?.email as string | undefined;
+  const supportReason = (location.state as { supportReason?: string } | null)?.supportReason;
+  const userEmail = (location.state as { email?: string } | null)?.email;
   const license = useLicense();
-  const licenseState = (license as any)?.licenseState || license;
+  const licenseState = (license as typeof license & { licenseState?: typeof license })?.licenseState || license;
   const [chatOpen, setChatOpen] = useState(true);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [publishedVersion, setPublishedVersion] = useState<string>();
@@ -44,7 +44,7 @@ export default function ContactDeveloper() {
   };
 
   useEffect(() => {
-    if ((location.state as any)?.openChat) {
+    if ((location.state as { openChat?: boolean } | null)?.openChat) {
       setChatOpen(true);
     }
   }, [location.state]);

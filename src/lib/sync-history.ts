@@ -53,7 +53,7 @@ const TYPE_LABELS: Record<string, string> = {
  */
 export function formatAccountingSyncLabel(
   type: string,
-  rawLabelOrPayload?: any
+  rawLabelOrPayload?: string | { invoiceNumber?: string; id?: string; amountText?: string; totalInCurrency?: number; customerName?: string; supplierName?: string; name?: string; description?: string; category?: string; amount?: number | string; productName?: string }
 ): { title: string; subtitle?: string; category: SyncCategory } {
   const t = (type || '').toLowerCase();
   

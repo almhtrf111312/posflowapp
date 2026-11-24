@@ -8,12 +8,12 @@ export type TamperType = 'clock_skew' | 'offline_limit_exceeded' | 'license_tamp
 export async function reportSecurityTamper(
   tamperType: TamperType,
   deviceId: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
 
-    await (supabase.from('security_tamper_logs') as any).insert({
+    await (supabase.from('security_tamper_logs') as unknown as { insert: (row: Record<string, unknown>) => Promise<unknown> }).insert({
       user_id: user?.id || null,
       device_id: deviceId,
       tamper_type: tamperType,

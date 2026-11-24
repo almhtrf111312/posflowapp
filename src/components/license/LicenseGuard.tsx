@@ -150,7 +150,7 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
 
   useEffect(() => {
     if (isRevoked) {
-      toast.error(t('license.accountRevoked' as any));
+      toast.error(t('license.accountRevoked' as Parameters<typeof t>[0]));
       signOut();
     }
   }, [isRevoked, signOut, t]);
@@ -180,9 +180,9 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
   // Offline lease blocked: expired, clock tampered, or offline invoice limit reached
   if (offlineLeaseBlocked && isAppOffline()) {
     const reasonMessages: Record<string, string> = {
-      tampered: t('license.offlineTampered' as any),
-      expired: t('license.offlineExpired' as any),
-      limit_reached: t('license.offlineLimitReached' as any),
+      tampered: t('license.offlineTampered' as Parameters<typeof t>[0]),
+      expired: t('license.offlineExpired' as Parameters<typeof t>[0]),
+      limit_reached: t('license.offlineLimitReached' as Parameters<typeof t>[0]),
     };
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4" dir={direction}>
@@ -191,15 +191,15 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
             <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <WifiOff className="w-8 h-8 text-destructive" />
             </div>
-            <CardTitle>{t('license.internetRequired' as any)}</CardTitle>
+            <CardTitle>{t('license.internetRequired' as Parameters<typeof t>[0])}</CardTitle>
             <CardDescription>
-              {reasonMessages[offlineLeaseReason || ''] || t('license.offlineVerifyFailed' as any)}
-              {' '}{t('license.offlineReconnectHint' as any)}
+              {reasonMessages[offlineLeaseReason || ''] || t('license.offlineVerifyFailed' as Parameters<typeof t>[0])}
+              {' '}{t('license.offlineReconnectHint' as Parameters<typeof t>[0])}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button variant="default" className="w-full" onClick={() => checkLicense()}>
-              {t('license.retryAfterConnect' as any)}
+              {t('license.retryAfterConnect' as Parameters<typeof t>[0])}
             </Button>
             <ContactLinksSection />
             <Button variant="ghost" className="w-full text-muted-foreground" onClick={async () => { await supabase.auth.signOut(); }}>
@@ -259,7 +259,7 @@ export function LicenseGuard({ children }: LicenseGuardProps) {
             const res = await startTrial();
             setIsStartingTrial(false);
             if (!res.success) {
-              toast.error(res.error || t('license.trialStartFailed' as any));
+              toast.error(res.error || t('license.trialStartFailed' as Parameters<typeof t>[0]));
             } else if (res.message) {
               toast.info(res.message);
             }

@@ -17,7 +17,7 @@ export interface GetInstantOptions<T> {
   strictTTL?: boolean;
 }
 
-const memoryStore = new Map<string, CacheEntry<any>>();
+const memoryStore = new Map<string, CacheEntry<unknown>>();
 const MAX_SWR_LOCAL_STORAGE_ITEMS = 60;
 
 export class NativeSWRCache {

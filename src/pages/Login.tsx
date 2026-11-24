@@ -213,7 +213,7 @@ export default function Login() {
       if (resData?.bot_link) setTgBotLink(resData.bot_link);
       toast.success(resData?.message || (isEn ? 'Verification code sent to Telegram' : 'تم إرسال رمز التحقق إلى تيليغرام بنجاح'), { duration: 7000 });
       setTelegramStep(2);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Request Telegram OTP error:', err);
       toast.error(isEn ? 'Could not connect to Telegram service, please try again later' : 'تعذر الاتصال بخدمة تيليغرام، يرجى المحاولة لاحقاً');
     } finally {
@@ -276,7 +276,7 @@ export default function Login() {
       setTgCode('');
       setTgNewPassword('');
       setTgConfirmPassword('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Verify and reset password error:', err);
       toast.error(isEn ? 'An error occurred while changing the password' : 'حدث خطأ أثناء تغيير كلمة المرور');
     } finally {
@@ -535,7 +535,7 @@ export default function Login() {
 
       toast.success(t('auth.loginSuccess'));
       navigate('/');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Reset device error:', err);
       toast.error(isEn ? 'An unexpected error occurred while resetting the device' : 'حدث خطأ غير متوقع أثناء تصفير الجهاز');
     } finally {

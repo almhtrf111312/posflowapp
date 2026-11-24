@@ -138,7 +138,7 @@ function requestToCloudPayload(req: RepairRequest) {
 }
 
 function cloudRowToRequest(row: CloudMaintenanceRow): RepairRequest {
-  let meta: any = {};
+  let meta: { deviceType?: string; deviceModel?: string; issue?: string; diagnosis?: string; estimatedCost?: number; finalCost?: number; estimatedDate?: string; completedAt?: string; notes?: string; technician?: string; amountReceived?: number; deliveredAt?: string; createdById?: string; createdByName?: string } = {};
   if (row.description) {
     try {
       meta = JSON.parse(row.description);

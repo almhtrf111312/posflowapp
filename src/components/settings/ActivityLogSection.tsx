@@ -194,10 +194,10 @@ export function ActivityLogSection() {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (minutes < 1) return t('activity.time.justNow' as any);
-    if (minutes < 60) return t('activity.time.minutesAgo' as any).replace('{n}', String(minutes));
-    if (hours < 24) return t('activity.time.hoursAgo' as any).replace('{n}', String(hours));
-    if (days < 7) return t('activity.time.daysAgo' as any).replace('{n}', String(days));
+    if (minutes < 1) return t('activity.time.justNow' as Parameters<typeof t>[0]);
+    if (minutes < 60) return t('activity.time.minutesAgo' as Parameters<typeof t>[0]).replace('{n}', String(minutes));
+    if (hours < 24) return t('activity.time.hoursAgo' as Parameters<typeof t>[0]).replace('{n}', String(hours));
+    if (days < 7) return t('activity.time.daysAgo' as Parameters<typeof t>[0]).replace('{n}', String(days));
     const locale = language === 'ar' ? 'ar-EG' : language === 'tr' ? 'tr-TR' : 'en-US';
     return new Date(timestamp).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   };
@@ -213,10 +213,10 @@ export function ActivityLogSection() {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
-                {t('activity.headerTitle' as any)}
+                {t('activity.headerTitle' as Parameters<typeof t>[0])}
               </h2>
               <p className="text-xs text-muted-foreground">
-                {t('activity.headerSubtitle' as any)}
+                {t('activity.headerSubtitle' as Parameters<typeof t>[0])}
               </p>
             </div>
           </div>
@@ -230,7 +230,7 @@ export function ActivityLogSection() {
                 className="gap-1.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{t('activity.clearLog' as any)}</span>
+                <span>{t('activity.clearLog' as Parameters<typeof t>[0])}</span>
               </Button>
             )}
           </div>
@@ -242,7 +242,7 @@ export function ActivityLogSection() {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('activity.searchPlaceholder' as any)}
+            placeholder={t('activity.searchPlaceholder' as Parameters<typeof t>[0])}
             className="ps-9 pe-3 bg-muted/40 border-border"
           />
         </div>
@@ -259,7 +259,7 @@ export function ActivityLogSection() {
                 : "bg-muted hover:bg-muted/80 text-muted-foreground"
             )}
           >
-            <span>{t('activity.filterAll' as any)}</span>
+            <span>{t('activity.filterAll' as Parameters<typeof t>[0])}</span>
             <span className="text-[10px] opacity-70 bg-black/10 dark:bg-card/20 px-1.5 py-0.2 rounded-full">{logs.length}</span>
           </button>
 
@@ -275,7 +275,7 @@ export function ActivityLogSection() {
               )}
             >
               <span className={cn("w-1.5 h-1.5 rounded-full", c.dot)} />
-              <span>{t(c.labelKey as any)}</span>
+              <span>{t(c.labelKey as Parameters<typeof t>[0])}</span>
             </button>
           ))}
 
@@ -288,10 +288,10 @@ export function ActivityLogSection() {
                 ? "bg-primary/10 text-primary border-primary font-bold"
                 : "bg-card border-border text-foreground"
             )}
-            title={t('activity.customFilter' as any)}
+            title={t('activity.customFilter' as Parameters<typeof t>[0])}
           >
             <Filter className="w-3.5 h-3.5" />
-            <span>{specificFilter ? getActivityTypeLabel(specificFilter, language) : t('activity.customFilterShort' as any)}</span>
+            <span>{specificFilter ? getActivityTypeLabel(specificFilter, language) : t('activity.customFilterShort' as Parameters<typeof t>[0])}</span>
           </button>
         </div>
       </header>
@@ -302,10 +302,10 @@ export function ActivityLogSection() {
           <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
             <Activity className="w-12 h-12 text-muted-foreground/50 mb-3" />
             <p className="text-sm sm:text-base font-semibold text-foreground">
-              {t('activity.emptyTitle' as any)}
+              {t('activity.emptyTitle' as Parameters<typeof t>[0])}
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {t('activity.emptyHint' as any)}
+              {t('activity.emptyHint' as Parameters<typeof t>[0])}
             </p>
           </div>
         ) : (
@@ -329,10 +329,10 @@ export function ActivityLogSection() {
           <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
-              {t('activity.clearConfirmTitle' as any)}
+              {t('activity.clearConfirmTitle' as Parameters<typeof t>[0])}
             </DialogTitle>
             <DialogDescription>
-              {t('activity.clearConfirmDesc' as any)}
+              {t('activity.clearConfirmDesc' as Parameters<typeof t>[0])}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">
@@ -340,7 +340,7 @@ export function ActivityLogSection() {
               {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleClearLogs}>
-              {t('activity.clearConfirmBtn' as any)}
+              {t('activity.clearConfirmBtn' as Parameters<typeof t>[0])}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -351,10 +351,10 @@ export function ActivityLogSection() {
         <DialogContent className="w-[min(calc(100vw-1.5rem),32rem)] max-h-[calc(100dvh-1.5rem)] flex flex-col p-0 overflow-hidden rounded-[24px]" dir={isRTL ? 'rtl' : 'ltr'}>
           <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle>
-              {t('activity.selectTypeTitle' as any)}
+              {t('activity.selectTypeTitle' as Parameters<typeof t>[0])}
             </DialogTitle>
             <DialogDescription>
-              {t('activity.selectTypeDesc' as any)}
+              {t('activity.selectTypeDesc' as Parameters<typeof t>[0])}
             </DialogDescription>
           </DialogHeader>
 
@@ -367,7 +367,7 @@ export function ActivityLogSection() {
                 specificFilter === null ? "border-primary bg-primary/10 text-primary font-bold" : "border-border hover:bg-muted/40 dark:hover:bg-muted/40"
               )}
             >
-              {t('activity.allTypesReset' as any)}
+              {t('activity.allTypesReset' as Parameters<typeof t>[0])}
             </button>
             {Object.keys(activityTypeLabels).map((key) => {
               const type = key as ActivityType;
@@ -437,44 +437,44 @@ function ActivityCard({ log, isRTL, language: propLanguage, timeText, isExpanded
   if (isPricing) {
     iconEmoji = '🏷️';
     iconClass = 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800/60 dark:text-amber-300';
-    badgeLabel = t('activity.badge.priceAdjustment' as any);
+    badgeLabel = t('activity.badge.priceAdjustment' as Parameters<typeof t>[0]);
     badgeClass = 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800/60';
   } else if (isDebt) {
     iconEmoji = '📝';
     iconClass = 'bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-950/40 dark:border-purple-800/60 dark:text-purple-300';
-    badgeLabel = t('activity.badge.creditSale' as any);
+    badgeLabel = t('activity.badge.creditSale' as Parameters<typeof t>[0]);
     badgeClass = 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/50 dark:text-purple-200 dark:border-purple-800/60';
     const amountVal = Number(details.total || details.debtRemaining || details.amount || 0);
     leftAmount = formatMoney(amountVal);
-    leftStatus = t('activity.status.pendingDebt' as any);
+    leftStatus = t('activity.status.pendingDebt' as Parameters<typeof t>[0]);
     leftClass = 'text-rose-600 dark:text-rose-400';
   } else if (isCash) {
     iconEmoji = '🛒';
     iconClass = 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800/60 dark:text-emerald-300';
-    badgeLabel = t('activity.badge.cashSale' as any);
+    badgeLabel = t('activity.badge.cashSale' as Parameters<typeof t>[0]);
     badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-800/60';
     const amountVal = Number(details.total || details.amount || 0);
     leftAmount = formatMoney(amountVal);
-    leftStatus = t('activity.status.paidCash' as any);
+    leftStatus = t('activity.status.paidCash' as Parameters<typeof t>[0]);
     leftClass = 'text-emerald-700 dark:text-emerald-400';
   } else if (isDebtPay) {
     iconEmoji = '💳';
     iconClass = 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800/60 dark:text-blue-300';
-    badgeLabel = t('activity.badge.debtPayment' as any);
+    badgeLabel = t('activity.badge.debtPayment' as Parameters<typeof t>[0]);
     badgeClass = 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-800/60';
     const amountVal = Number(details.amount || details.total || 0);
     leftAmount = formatMoney(amountVal);
-    leftStatus = t('activity.status.collected' as any);
+    leftStatus = t('activity.status.collected' as Parameters<typeof t>[0]);
     leftClass = 'text-blue-700 dark:text-blue-400';
   } else if (isRefund) {
     iconEmoji = '↩️';
     iconClass = 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800/60 dark:text-rose-300';
-    badgeLabel = log.type === 'partial_refund' ? t('activity.badge.partialRefund' as any) : t('activity.badge.invoiceRefund' as any);
+    badgeLabel = log.type === 'partial_refund' ? t('activity.badge.partialRefund' as Parameters<typeof t>[0]) : t('activity.badge.invoiceRefund' as Parameters<typeof t>[0]);
     badgeClass = 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:text-rose-200 dark:border-rose-800/60';
     const refundVal = Number(details.refund_amount || details.refundAmount || details.amount || details.total || 0);
     if (refundVal > 0) {
       leftAmount = formatMoney(refundVal);
-      leftStatus = t('activity.status.refundedFromBox' as any);
+      leftStatus = t('activity.status.refundedFromBox' as Parameters<typeof t>[0]);
       leftClass = 'text-rose-600 dark:text-rose-400';
     }
   } else if (isPartner) {
@@ -487,8 +487,8 @@ function ActivityCard({ log, isRTL, language: propLanguage, timeText, isExpanded
       leftAmount = `${amountVal.toFixed(2)}`;
       const isDeposit = log.type === 'partner_investment' || log.type === 'capital_added';
       leftStatus = isDeposit
-        ? t('activity.status.partnerDeposit' as any)
-        : t('activity.status.partnerWithdrawal' as any);
+        ? t('activity.status.partnerDeposit' as Parameters<typeof t>[0])
+        : t('activity.status.partnerWithdrawal' as Parameters<typeof t>[0]);
       leftClass = isDeposit ? 'text-indigo-600 dark:text-indigo-400' : 'text-amber-600 dark:text-amber-400';
     }
   }
@@ -540,7 +540,7 @@ function ActivityCard({ log, isRTL, language: propLanguage, timeText, isExpanded
           ) : (
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground  bg-muted/40 dark:bg-muted px-2 py-0.5 rounded-md border border-border">
               <User className="w-3 h-3 text-muted-foreground" />
-              <span>{t('activity.userPrefix' as any).replace('{name}', log.userName || '')}</span>
+              <span>{t('activity.userPrefix' as Parameters<typeof t>[0]).replace('{name}', log.userName || '')}</span>
             </span>
           )}
         </div>
@@ -552,7 +552,7 @@ function ActivityCard({ log, isRTL, language: propLanguage, timeText, isExpanded
         onClick={onToggle}
         className="w-full flex items-center justify-between text-xs font-semibold text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 pt-1.5 border-t border-border dark:border-border/50 transition cursor-pointer"
       >
-        <span>{isExpanded ? t('activity.hideDetails' as any) : t('activity.showDetails' as any)}</span>
+        <span>{isExpanded ? t('activity.hideDetails' as Parameters<typeof t>[0]) : t('activity.showDetails' as Parameters<typeof t>[0])}</span>
         <ChevronDown className={cn("w-3.5 h-3.5 transform transition-transform duration-200", isExpanded && "rotate-180")} />
       </button>
 
@@ -585,8 +585,8 @@ function ActivityCard({ log, isRTL, language: propLanguage, timeText, isExpanded
 // ==========================================
 function PriceComparisonTable({ changes }: { changes: Record<string, unknown> }) {
   const { t } = useLanguage();
-  const saleChange = (changes.salePrice || changes.price) as any;
-  const costChange = changes.costPrice as any;
+  const saleChange = (changes.salePrice || changes.price) as { from?: number; to?: number } | undefined;
+  const costChange = changes.costPrice as { from?: number; to?: number } | undefined;
 
   const oldCost = costChange?.from !== undefined ? Number(costChange.from) : null;
   const newCost = costChange?.to !== undefined ? Number(costChange.to) : (oldCost ?? 0);
@@ -606,23 +606,23 @@ function PriceComparisonTable({ changes }: { changes: Record<string, unknown> })
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between bg-muted/40 dark:bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border text-[11px]">
-        <span className="text-muted-foreground font-medium">{t('activity.price.source' as any)}</span>
+        <span className="text-muted-foreground font-medium">{t('activity.price.source' as Parameters<typeof t>[0])}</span>
         <span className="font-bold text-foreground dark:text-foreground">
-          {t('activity.price.manualEdit' as any)}
+          {t('activity.price.manualEdit' as Parameters<typeof t>[0])}
         </span>
       </div>
 
       <div className="rounded-xl border border-border overflow-hidden">
         <div className="bg-muted dark:bg-muted px-3 py-1.5 grid grid-cols-3 text-[11px] font-bold text-muted-foreground text-center">
-          <div className="text-start">{t('activity.price.type' as any)}</div>
-          <div>{t('activity.price.old' as any)}</div>
-          <div>{t('activity.price.new' as any)}</div>
+          <div className="text-start">{t('activity.price.type' as Parameters<typeof t>[0])}</div>
+          <div>{t('activity.price.old' as Parameters<typeof t>[0])}</div>
+          <div>{t('activity.price.new' as Parameters<typeof t>[0])}</div>
         </div>
 
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border dark:border-border/40 bg-card">
           <div className="text-start font-medium text-foreground flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground shrink-0" />
-            <span>{t('activity.price.cost' as any)}</span>
+            <span>{t('activity.price.cost' as Parameters<typeof t>[0])}</span>
           </div>
           <div className="font-mono text-muted-foreground line-through">
             <span dir="ltr" className="inline-block tabular-nums">{oldCost !== null ? formatMoney(oldCost) : '—'}</span>
@@ -640,7 +640,7 @@ function PriceComparisonTable({ changes }: { changes: Record<string, unknown> })
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border/60 bg-info/10">
           <div className="text-start font-bold text-info flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0" />
-            <span>{t('activity.price.sale' as any)}</span>
+            <span>{t('activity.price.sale' as Parameters<typeof t>[0])}</span>
           </div>
           <div className="font-mono text-muted-foreground line-through">
             <span dir="ltr" className="inline-block tabular-nums">{oldSale !== null ? formatMoney(oldSale) : '—'}</span>
@@ -658,7 +658,7 @@ function PriceComparisonTable({ changes }: { changes: Record<string, unknown> })
         <div className="px-3 py-2 grid grid-cols-3 text-xs items-center text-center border-t border-border/60 bg-success/10">
           <div className="text-start font-bold text-success flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
-            <span>{t('activity.price.margin' as any)}</span>
+            <span>{t('activity.price.margin' as Parameters<typeof t>[0])}</span>
           </div>
           <div className="font-mono text-muted-foreground numeric-tabular">
             {oldCost !== null && oldSale !== null ? `${formatMoney(oldProfit)} (${oldMargin.toFixed(0)}%)` : '—'}
@@ -686,35 +686,35 @@ function DebtDetailsGrid({ details, userName }: { details: Record<string, unknow
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
         <div className="p-2 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border">
-          <span className="text-[10px] text-muted-foreground block">{t('activity.debt.invoiceTotal' as any)}</span>
+          <span className="text-[10px] text-muted-foreground block">{t('activity.debt.invoiceTotal' as Parameters<typeof t>[0])}</span>
           <span className="font-bold text-foreground font-mono numeric-tabular text-xs">${total.toFixed(2)}</span>
         </div>
 
         <div className="p-2 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border">
-          <span className="text-[10px] text-muted-foreground block">{t('activity.debt.soldItemsCount' as any)}</span>
+          <span className="text-[10px] text-muted-foreground block">{t('activity.debt.soldItemsCount' as Parameters<typeof t>[0])}</span>
           <span className="font-bold text-foreground font-mono numeric-tabular text-xs">
-            {t('activity.debt.itemsCountUnit' as any).replace('{count}', String(itemsCount))}
+            {t('activity.debt.itemsCountUnit' as Parameters<typeof t>[0]).replace('{count}', String(itemsCount))}
           </span>
         </div>
 
         <div className="p-2 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60">
           <span className="text-[10px] text-emerald-700 dark:text-emerald-400 block font-medium">
-            {t('activity.debt.cashReceived' as any)}
+            {t('activity.debt.cashReceived' as Parameters<typeof t>[0])}
           </span>
           <span className="font-bold text-emerald-800 dark:text-emerald-300 font-mono numeric-tabular text-xs">${downPayment.toFixed(2)}</span>
         </div>
 
         <div className="p-2 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/80 dark:border-rose-800/60">
           <span className="text-[10px] text-rose-700 dark:text-rose-400 block font-medium">
-            {t('activity.debt.remainingDebt' as any)}
+            {t('activity.debt.remainingDebt' as Parameters<typeof t>[0])}
           </span>
           <span className="font-bold text-rose-800 dark:text-rose-300 font-mono numeric-tabular text-xs">${debtRemaining.toFixed(2)}</span>
         </div>
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1 pt-1 border-t border-border dark:border-border/50">
-        <span>{t('activity.debt.paymentMethod' as any)} <strong className="text-foreground dark:text-foreground">{t('activity.debt.creditMethod' as any)}</strong></span>
-        {userName && <span>{t('activity.debt.cashier' as any)} <strong className="text-foreground dark:text-foreground">{userName}</strong></span>}
+        <span>{t('activity.debt.paymentMethod' as Parameters<typeof t>[0])} <strong className="text-foreground dark:text-foreground">{t('activity.debt.creditMethod' as Parameters<typeof t>[0])}</strong></span>
+        {userName && <span>{t('activity.debt.cashier' as Parameters<typeof t>[0])} <strong className="text-foreground dark:text-foreground">{userName}</strong></span>}
       </div>
     </div>
   );
@@ -727,24 +727,24 @@ function CashDetailsBox({ details }: { details: Record<string, unknown> }) {
   const { t } = useLanguage();
   const total = Number(details.total || details.amount || 0);
   const invoiceNumber = (details.invoiceNumber || details.invoiceId || '') as string;
-  const customerName = (details.customerName || t('activity.cash.directCustomer' as any)) as string;
+  const customerName = (details.customerName || t('activity.cash.directCustomer' as Parameters<typeof t>[0])) as string;
 
   return (
     <div className="p-2.5 rounded-xl bg-muted/40 dark:bg-muted/40 border border-border space-y-1.5 text-xs">
       {invoiceNumber && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{t('activity.cash.invoiceNo' as any)}</span>
+          <span className="text-muted-foreground">{t('activity.cash.invoiceNo' as Parameters<typeof t>[0])}</span>
           <span className="font-mono font-bold text-foreground dark:text-foreground">#{invoiceNumber}</span>
         </div>
       )}
       <div className="flex justify-between">
-        <span className="text-muted-foreground">{t('activity.cash.customer' as any)}</span>
+        <span className="text-muted-foreground">{t('activity.cash.customer' as Parameters<typeof t>[0])}</span>
         <span className="font-bold text-foreground dark:text-foreground">{customerName}</span>
       </div>
       <div className="flex justify-between border-t border-border dark:border-border/50 pt-1">
-        <span className="text-muted-foreground">{t('activity.cash.drawerStatus' as any)}</span>
+        <span className="text-muted-foreground">{t('activity.cash.drawerStatus' as Parameters<typeof t>[0])}</span>
         <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-          + ${total.toFixed(2)} {t('activity.cash.depositedInDrawer' as any)}
+          + ${total.toFixed(2)} {t('activity.cash.depositedInDrawer' as Parameters<typeof t>[0])}
         </span>
       </div>
     </div>
@@ -757,23 +757,23 @@ function CashDetailsBox({ details }: { details: Record<string, unknown> }) {
 function DebtPaymentDetailsBox({ details }: { details: Record<string, unknown> }) {
   const { t } = useLanguage();
   const amount = Number(details.amount || details.total || 0);
-  const customerName = (details.customerName as string) || t('activity.debtPay.customerFallback' as any);
+  const customerName = (details.customerName as string) || t('activity.debtPay.customerFallback' as Parameters<typeof t>[0]);
   const remaining = Number(details.remainingAfter || details.debtRemaining || 0);
 
   return (
     <div className="p-2.5 rounded-xl bg-blue-50/40 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 space-y-1 text-xs">
       <div className="flex justify-between">
-        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.payingCustomer' as any)}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.payingCustomer' as Parameters<typeof t>[0])}</span>
         <span className="font-bold text-foreground">{customerName}</span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.paidAmount' as any)}</span>
-        <span className="font-mono font-bold text-blue-800 dark:text-blue-300">${amount.toFixed(2)} {t('activity.debtPay.cash' as any)}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.paidAmount' as Parameters<typeof t>[0])}</span>
+        <span className="font-mono font-bold text-blue-800 dark:text-blue-300">${amount.toFixed(2)} {t('activity.debtPay.cash' as Parameters<typeof t>[0])}</span>
       </div>
       <div className="flex justify-between border-t border-blue-200/60 dark:border-blue-800/40 pt-1">
-        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.remainingBalance' as any)}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.debtPay.remainingBalance' as Parameters<typeof t>[0])}</span>
         <span className={cn("font-mono font-bold", remaining <= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400")}>
-          ${remaining.toFixed(2)} {remaining <= 0 ? t('activity.debtPay.cleared' as any) : ''}
+          ${remaining.toFixed(2)} {remaining <= 0 ? t('activity.debtPay.cleared' as Parameters<typeof t>[0]) : ''}
         </span>
       </div>
     </div>
@@ -795,40 +795,40 @@ function RefundDetailsBox({ details }: { details: Record<string, unknown> }) {
     <div className="p-2.5 rounded-xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/60 space-y-1.5 text-xs">
       {invoiceNumber && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{t('activity.refund.invoiceNo' as any)}</span>
+          <span className="text-muted-foreground">{t('activity.refund.invoiceNo' as Parameters<typeof t>[0])}</span>
           <span className="font-mono font-bold text-foreground">#{invoiceNumber}</span>
         </div>
       )}
       {refundAmount > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.refund.amount' as any)}</span>
+          <span className="text-muted-foreground dark:text-muted-foreground">{t('activity.refund.amount' as Parameters<typeof t>[0])}</span>
           <span className="font-mono font-bold text-rose-700 dark:text-rose-400">${refundAmount.toFixed(2)}</span>
         </div>
       )}
       {invoiceTotal > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{t('activity.refund.originalTotal' as any)}</span>
+          <span className="text-muted-foreground">{t('activity.refund.originalTotal' as Parameters<typeof t>[0])}</span>
           <span className="font-mono font-semibold text-foreground dark:text-foreground">${invoiceTotal.toFixed(2)}</span>
         </div>
       )}
       {restoredUnits > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{t('activity.refund.restoredUnits' as any)}</span>
+          <span className="text-muted-foreground">{t('activity.refund.restoredUnits' as Parameters<typeof t>[0])}</span>
           <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">
-            {t('activity.refund.unitsCount' as any).replace('{count}', String(restoredUnits))}
+            {t('activity.refund.unitsCount' as Parameters<typeof t>[0]).replace('{count}', String(restoredUnits))}
           </span>
         </div>
       )}
       {deletedDebt > 0 && (
         <div className="flex justify-between">
-          <span className="text-muted-foreground">{t('activity.refund.debtDeducted' as any)}</span>
+          <span className="text-muted-foreground">{t('activity.refund.debtDeducted' as Parameters<typeof t>[0])}</span>
           <span className="font-mono font-bold text-blue-700 dark:text-blue-400">${deletedDebt.toFixed(2)}</span>
         </div>
       )}
       <div className="border-t border-rose-200/60 dark:border-rose-900/40 pt-1 text-[11px] text-muted-foreground flex items-center justify-between">
-        <span>{t('activity.refund.status' as any)}</span>
+        <span>{t('activity.refund.status' as Parameters<typeof t>[0])}</span>
         <span className="font-semibold text-rose-700 dark:text-rose-400">
-          {t('activity.refund.statusDesc' as any)}
+          {t('activity.refund.statusDesc' as Parameters<typeof t>[0])}
         </span>
       </div>
     </div>
@@ -840,7 +840,7 @@ function RefundDetailsBox({ details }: { details: Record<string, unknown> }) {
 // ==========================================
 function PartnerFinancialDetailsBox({ details }: { details: Record<string, unknown> }) {
   const { t } = useLanguage();
-  const partnerName = String(details.partnerName || t('activity.partner.fallback' as any));
+  const partnerName = String(details.partnerName || t('activity.partner.fallback' as Parameters<typeof t>[0]));
   const amountUsd = Number(details.amount || 0);
   const origAmount = Number(details.originalAmount || amountUsd);
   const currency = String(details.currency || 'USD');
@@ -849,18 +849,18 @@ function PartnerFinancialDetailsBox({ details }: { details: Record<string, unkno
   return (
     <div className="p-2.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/60 space-y-1.5 text-xs">
       <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">{t('activity.partner.name' as any)}</span>
+        <span className="text-muted-foreground">{t('activity.partner.name' as Parameters<typeof t>[0])}</span>
         <span className="font-bold text-foreground">{partnerName}</span>
       </div>
 
       <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">{t('activity.partner.amountUsd' as any)}</span>
+        <span className="text-muted-foreground">{t('activity.partner.amountUsd' as Parameters<typeof t>[0])}</span>
         <span className="font-mono font-bold text-indigo-700 dark:text-indigo-300">${amountUsd.toFixed(2)}</span>
       </div>
 
       {currency !== 'USD' && (
         <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">{t('activity.partner.localCurrency' as any)}</span>
+          <span className="text-muted-foreground">{t('activity.partner.localCurrency' as Parameters<typeof t>[0])}</span>
           <span className="font-mono font-semibold text-muted-foreground ">
             {origAmount.toLocaleString()} {currency}
           </span>
@@ -869,7 +869,7 @@ function PartnerFinancialDetailsBox({ details }: { details: Record<string, unkno
 
       {notes && (
         <div className="pt-1 border-t border-indigo-200/50 dark:border-indigo-800/40 text-[11px]">
-          <span className="text-muted-foreground block mb-0.5">{t('activity.partner.notes' as any)}</span>
+          <span className="text-muted-foreground block mb-0.5">{t('activity.partner.notes' as Parameters<typeof t>[0])}</span>
           <p className="text-muted-foreground  italic bg-card/60 dark:bg-black/20 p-1.5 rounded-md">
             "{notes}"
           </p>

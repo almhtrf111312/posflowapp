@@ -7,14 +7,14 @@ export interface ToastOptions {
   description?: React.ReactNode;
   variant?: "default" | "destructive";
   duration?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
  * Standardized POS Flow App useToast hook
  * Routes legacy and component useToast calls to the in-app unified SmartToastCard.
  */
-export function toast(options: ToastOptions | string, extra?: any) {
+export function toast(options: ToastOptions | string, extra?: { description?: React.ReactNode; duration?: number; [key: string]: unknown }) {
   if (typeof options === "string") {
     const desc = typeof extra === "object" && extra?.description ? extra.description : options;
     showSmartToast({

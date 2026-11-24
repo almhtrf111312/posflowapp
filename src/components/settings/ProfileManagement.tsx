@@ -165,9 +165,10 @@ export function ProfileManagement() {
       toast.success(t('profile.emailUpdated'));
       setIsEditingEmail(false);
       await supabase.auth.refreshSession();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating email:', error);
-      toast.error(error.message || t('profile.emailUpdateFailed'));
+      const msg = typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message?: unknown }).message === 'string' ? (error as { message: string }).message : '';
+      toast.error(msg || t('profile.emailUpdateFailed'));
     } finally {
       setIsSavingEmail(false);
     }
@@ -184,7 +185,7 @@ export function ProfileManagement() {
 
     if (normalized) {
       try {
-        const { data: checkResult, error: checkError } = await (supabase.rpc as any)('check_phone_email_availability', {
+        const { data: checkResult, error: checkError } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { available?: boolean; error?: string } | null; error: unknown }> }).rpc('check_phone_email_availability', {
           _phone: normalized,
           _email: '',
           _exclude_user_id: user?.id,
@@ -207,7 +208,7 @@ export function ProfileManagement() {
         .eq('user_id', user?.id);
 
       if (error) {
-        if (error.message?.includes('unique') || (error as any).code === '23505') {
+        if (error.message?.includes('unique') || (error as typeof error & { code?: string }).code === '23505') {
           toast.error(t('profile.phoneInUseCannotUse'));
         } else {
           toast.error(`${t('profile.phoneSaveError')}: ${error.message}`);
@@ -218,7 +219,7 @@ export function ProfileManagement() {
       await refreshProfile();
       toast.success(t('profile.phoneUpdated'));
       setIsEditingPhone(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating phone:', error);
       toast.error(t('profile.phoneSaveError'));
     } finally {
@@ -259,7 +260,7 @@ export function ProfileManagement() {
       setShowPinDialog(false);
       setNewPin('');
       setConfirmPin('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error setting PIN:', err);
       toast.error(t('profile.pinSetError'));
     } finally {

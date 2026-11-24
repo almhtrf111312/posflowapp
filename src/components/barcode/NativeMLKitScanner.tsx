@@ -275,13 +275,17 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
           }
         }, 1800);
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn('[MLKit Scanner] Failed to start scanner:', err);
         await cleanup();
         if (mountedRef.current && !cancelled) {
           setIsStarting(false);
           setScannerTransparency(false);
-          setErrorMessage(err?.message || 'تعذر تشغيل ماسح الباركود (ML Kit). يمكنك إدخال رقم الباركود يدوياً أو إعادة المحاولة.');
+          // تضييق نوع الخطأ لاستخراج الرسالة بأمان
+          const errMsg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string'
+            ? (err as { message: string }).message
+            : '';
+          setErrorMessage(errMsg || 'تعذر تشغيل ماسح الباركود (ML Kit). يمكنك إدخال رقم الباركود يدوياً أو إعادة المحاولة.');
         }
       }
     })();

@@ -410,7 +410,7 @@ export default function Customers() {
   return (
     <div className="p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
-        title={activeTab === 'debts' ? (t('customers.tabDebts' as any) || 'الديون') : (t('customers.tabCustomers' as any) || 'العملاء')}
+        title={activeTab === 'debts' ? (t('customers.tabDebts' as Parameters<typeof t>[0]) || 'الديون') : (t('customers.tabCustomers' as Parameters<typeof t>[0]) || 'العملاء')}
         icon={activeTab === 'debts' ? <CreditCard className="w-5 h-5" /> : <User className="w-5 h-5" />}
         actions={
           activeTab === 'debts' ? (
@@ -443,14 +443,14 @@ export default function Customers() {
                 className={capsuleTrigger}
               >
                 <User className="w-3.5 h-3.5 shrink-0" />
-                <span>{t('customers.tabCustomers' as any) || 'العملاء'}</span>
+                <span>{t('customers.tabCustomers' as Parameters<typeof t>[0]) || 'العملاء'}</span>
               </TabsTrigger>
               <TabsTrigger
                 value="debts"
                 className={capsuleTrigger}
               >
                 <CreditCard className="w-3.5 h-3.5 shrink-0" />
-                <span>{t('customers.tabDebts' as any) || 'الديون'}</span>
+                <span>{t('customers.tabDebts' as Parameters<typeof t>[0]) || 'الديون'}</span>
               </TabsTrigger>
           </TabsList>
         </div>
@@ -875,9 +875,10 @@ export default function Customers() {
                     <div className="space-y-2 max-h-72 overflow-y-auto border rounded-xl divide-y">
                       {statementItems.map((item, idx) => {
                         const isExpanded = !!expandedInvoices[item.id];
-                        const hasItems = (item as any).items && (item as any).items.length > 0;
-                        const itemRate = (item as any).exchangeRate ?? (item as any).exchange_rate ?? exchangeRate;
-                        const itemCode = (item as any).currencyCode ?? (item as any).currency_code ?? currencyCode;
+                        const itemExt = item as typeof item & { items?: Array<{ name?: string; quantity?: number; price?: number }>; exchangeRate?: number; exchange_rate?: number; currencyCode?: string; currency_code?: string };
+                        const hasItems = itemExt.items && itemExt.items.length > 0;
+                        const itemRate = itemExt.exchangeRate ?? itemExt.exchange_rate ?? exchangeRate;
+                        const itemCode = itemExt.currencyCode ?? itemExt.currency_code ?? currencyCode;
                         const itemIsNonUsd = itemCode !== 'USD';
                         return (
                           <div key={`${item.id}-${idx}`} className="p-3 bg-card hover:bg-muted/30 transition-colors text-xs flex flex-col gap-1.5">
@@ -894,7 +895,7 @@ export default function Customers() {
                                 </Badge>
                                 {hasItems && (
                                   <span className="text-xs text-primary flex items-center gap-0.5 font-medium">
-                                    {(item as any).items.length} أصناف
+                                    {itemExt.items?.length} أصناف
                                     {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                                   </span>
                                 )}
@@ -937,7 +938,7 @@ export default function Customers() {
                                     <span>الإجمالي</span>
                                   </div>
                                 </div>
-                                {(item as any).items.map((prod: any, pIdx: number) => (
+                                {itemExt.items?.map((prod, pIdx: number) => (
                                   <div key={pIdx} className="text-xs flex items-center justify-between py-0.5">
                                     <span className="font-medium text-foreground">{prod.name}</span>
                                     <div className="flex items-center gap-4 font-mono text-xs">

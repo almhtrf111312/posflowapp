@@ -192,7 +192,7 @@ export async function loadProductsFromIDB<T>(): Promise<{ products: T[]; timesta
         const res = await nativeDb.query('SELECT * FROM local_products WHERE is_active = 1;');
         if (res.values && res.values.length > 0) {
           const products = res.values.map(p => {
-            let baseObj: any = {};
+            let baseObj: Record<string, unknown> = {};
             if (p.raw_data) {
               try {
                 baseObj = JSON.parse(p.raw_data);
@@ -280,7 +280,7 @@ export async function getProductByBarcodeIDB<T>(barcode: string): Promise<T | nu
         );
         if (res.values && res.values.length > 0) {
           const p = res.values[0];
-          let baseObj: any = {};
+          let baseObj: Record<string, unknown> = {};
           if (p.raw_data) {
             try {
               baseObj = JSON.parse(p.raw_data);
@@ -409,7 +409,7 @@ export async function updateProductInIDB(id: string, updates: Record<string, unk
       const nativeDb = await getNativeDB();
       if (nativeDb) {
         const sets: string[] = [];
-        const vals: any[] = [];
+        const vals: unknown[] = [];
         for (const [key, val] of Object.entries(updates)) {
           if (['name', 'barcode', 'barcode2', 'barcode3', 'category', 'updated_at'].includes(key)) {
             sets.push(`${key} = ?`);

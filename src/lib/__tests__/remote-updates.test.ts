@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, it, expect, mock } from 'bun:test';
 mock.module('@/integrations/supabase/client', () => ({ supabase: {} }));
-(globalThis as any).__APP_VERSION__ = { versionName: '1.3.5', versionCode: 348, lastUpdated: '' };
+(globalThis as unknown as { __APP_VERSION__: { versionName: string; versionCode: number; lastUpdated: string } }).__APP_VERSION__ = { versionName: '1.3.5', versionCode: 348, lastUpdated: '' };
 const { computeUpdateStatus, DEFAULT_RELEASE_CONFIG } = await import('../remote-updates');
 
 const now = new Date('2026-10-27T12:00:00Z');

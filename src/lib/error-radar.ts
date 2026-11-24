@@ -428,11 +428,12 @@ async function sendErrorLogToServer(log: QueuedErrorRadarLog): Promise<SendResul
       serverConfirmed: false,
       error: error?.message || 'Server error',
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const msg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string' ? (err as { message: string }).message : '';
     return {
       success: false,
       serverConfirmed: false,
-      error: err?.message || 'Network exception',
+      error: msg || 'Network exception',
     };
   }
 }

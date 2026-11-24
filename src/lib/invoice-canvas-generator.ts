@@ -675,7 +675,7 @@ export async function generateInvoiceCanvas(data: InvoiceCanvasData): Promise<HT
       const invRate = Number(data.exchange_rate || data.exchangeRate) || 1;
       
       // 1. حساب المعادل بالدولار الأساسي أولاً
-      let baseUSD = Number((data as any).totalUSD);
+      let baseUSD = Number((data as { totalUSD?: number }).totalUSD);
       if (typeof baseUSD !== 'number' || isNaN(baseUSD) || baseUSD <= 0) {
         if (invRate > 0 && invCurrency !== 'USD') {
           baseUSD = data.total / invRate;

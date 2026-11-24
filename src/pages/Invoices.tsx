@@ -303,7 +303,7 @@ export default function Invoices() {
   const tx = useCallback((key: string, arabicFallback: string): string => {
     if (!language || language === 'ar') return arabicFallback;
     try {
-      const val = t(key as any);
+      const val = t(key as Parameters<typeof t>[0]);
       if (val && val !== key && !val.includes('.')) return val;
     } catch {}
     return arabicFallback;
@@ -760,7 +760,7 @@ export default function Invoices() {
 
     if (filterType !== 'all') {
       if (filterType === 'shipping') {
-        result = result.filter(inv => (inv.type as any) === 'shipping' || inv.serviceType === 'shipping' || (inv.serviceDescription && inv.serviceDescription.includes('شحن')));
+        result = result.filter(inv => (inv.type as string) === 'shipping' || inv.serviceType === 'shipping' || (inv.serviceDescription && inv.serviceDescription.includes('شحن')));
       } else {
         result = result.filter(inv => inv.type === filterType);
       }
@@ -768,7 +768,7 @@ export default function Invoices() {
 
     if (filterPayment !== 'all') {
       if (filterPayment === 'card') {
-        result = result.filter(inv => (inv.paymentType as any) === 'card' || (inv as any).paymentType === 'network' || (inv as any).paymentMethod === 'card');
+        result = result.filter(inv => (inv.paymentType as string) === 'card' || (inv.paymentType as string) === 'network' || (inv as typeof inv & { paymentMethod?: string }).paymentMethod === 'card');
       } else {
         result = result.filter(inv => inv.paymentType === filterPayment);
       }
@@ -1092,7 +1092,7 @@ export default function Invoices() {
       
       const pending = getPendingOperations();
       const pendingSaleOp = pending.find(op => {
-        const invNum = (op.data?.bundle as any)?.invoiceNumber || op.data?.invoiceNumber;
+        const invNum = (op.data?.bundle as { invoiceNumber?: string } | undefined)?.invoiceNumber || op.data?.invoiceNumber;
         return invNum === invoiceLabel;
       });
 
@@ -1224,7 +1224,7 @@ export default function Invoices() {
         return line.method === 'cash' ? `رد نقدي: ${amount}` : `رد عبر وسيلة الدفع الأصلية: ${amount}`;
       }).join('، ');
       toast.success(`تم تسجيل استرداد الفاتورة ${invoiceLabel}`, { id: toastId, description: payout || undefined });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('[Refund] Network exception during cloud refund, applying local fallback:', err);
       await applyLocalRefundFallback(true);
     }
@@ -1546,7 +1546,7 @@ export default function Invoices() {
       // تحديث الحالة المحلية للوردية (الحركة السحابية سجلتها الدالة الذرية مرة واحدة)
       processDebtPayment(
         finalPaymentUSD,
-        (selectedDebtForPayment as any).customerId,
+        (selectedDebtForPayment as typeof selectedDebtForPayment & { customerId?: string }).customerId,
         user?.id,
         profile?.full_name || user?.email || 'مستخدم',
         paymentCurrency,
@@ -1681,14 +1681,14 @@ export default function Invoices() {
     const printerConfig = getStoredPrinterConfig();
     if (printerConfig.connectionType === 'bluetooth' && isNativeAndroid()) {
       const invoiceData: PrintableInvoice = {
-        id: (invoice as any).invoiceNumber || invoice.id,
-        invoiceNumber: (invoice as any).invoiceNumber || invoice.id,
+        id: (invoice as typeof invoice & { invoiceNumber?: string }).invoiceNumber || invoice.id,
+        invoiceNumber: (invoice as typeof invoice & { invoiceNumber?: string }).invoiceNumber || invoice.id,
         date: date,
         time: time,
         customerName: invoice.customerName || (language === 'ar' ? 'زبون عام' : 'General Customer'),
         customerPhone: invoice.customerPhone,
         items: (invoice.items || [])
-          .filter(item => !(item as any).refunded && item.quantity > 0)
+          .filter(item => !(item as typeof item & { refunded?: boolean }).refunded && item.quantity > 0)
           .map(item => ({
             name: item.name,
             quantity: item.quantity,
@@ -1702,7 +1702,7 @@ export default function Invoices() {
         currencyName: printFinancials.name,
         currency: printFinancials.code,
         paymentType: invoice.paymentType,
-        notes: (invoice as any).notes,
+        notes: (invoice as typeof invoice & { notes?: string }).notes,
       };
       printInvoice(invoiceData);
       return;
@@ -1996,7 +1996,7 @@ export default function Invoices() {
           setShowShareSheet(false);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error during invoice share:', err);
       toast.error(t('invoices.invoiceShareFailed') || (language === 'en' ? 'Failed to share invoice' : 'تعذر مشاركة الفاتورة'));
     } finally {
@@ -2062,7 +2062,7 @@ export default function Invoices() {
         icon={<ShoppingCart className="w-5 h-5" />}
       />
 
-      <Tabs value={activeMainTab} onValueChange={(val: any) => setActiveMainTab(val)} className="w-full space-y-4">
+      <Tabs value={activeMainTab} onValueChange={(val) => setActiveMainTab(val as typeof activeMainTab)} className="w-full space-y-4">
         <TabsContent value="sales" className="space-y-4 m-0">
 
           {/* 1. Sleek Sales Snapshot Card (بطاقة مبيعات موحدة + خيار المزيد) */}
@@ -2369,7 +2369,7 @@ export default function Invoices() {
                 const isPartiallyRefunded = !isFullyRefunded && (
                   refundMeta[invoice.id]?.mode === 'partial' ||
                   Boolean(invoice.items && invoice.items.length > 0 && invoice.items.some(it => it.refunded || it.quantity <= 0)) ||
-                  Boolean((invoice as any).is_partially_refunded || (invoice as any).partially_refunded)
+                  Boolean((invoice as typeof invoice & { is_partially_refunded?: boolean; partially_refunded?: boolean }).is_partially_refunded || (invoice as typeof invoice & { is_partially_refunded?: boolean; partially_refunded?: boolean }).partially_refunded)
                 );
 
                 return (
@@ -3698,7 +3698,7 @@ export default function Invoices() {
                     <button
                       key={it.id}
                       type="button"
-                      onClick={() => setFilterType(it.id as any)}
+                      onClick={() => setFilterType(it.id as Parameters<typeof setFilterType>[0])}
                       className={cn(
                         "py-2 px-1 rounded-xl text-xs font-bold transition-colors border cursor-pointer text-center",
                         isSelected

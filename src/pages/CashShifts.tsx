@@ -944,9 +944,9 @@ export default function CashShifts() {
               </div>
             )}
 
-            {Number((openShift as any)?.digitalTotal || 0) > 0 && (
+            {Number((openShift as typeof openShift & { digitalTotal?: number })?.digitalTotal || 0) > 0 && (
               <div className="rounded-lg border p-3 text-xs">
-                {isEn ? "Digital Sales (not in cash drawer):" : "مبيعات دفع رقمي (لا تدخل درج النقد):"} <b>{formatUsd(Number((openShift as any).digitalTotal))}</b>
+                {isEn ? "Digital Sales (not in cash drawer):" : "مبيعات دفع رقمي (لا تدخل درج النقد):"} <b>{formatUsd(Number((openShift as typeof openShift & { digitalTotal?: number }).digitalTotal))}</b>
               </div>
             )}
 

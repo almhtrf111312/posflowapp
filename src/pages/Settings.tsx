@@ -368,33 +368,33 @@ export default function Settings() {
 
       if (status === 'granted') {
         localStorage.setItem('posflow_notifications_enabled', 'true');
-        toast({ title: t('settings.notifPerm.enabledTitle' as any), description: t('settings.notifPerm.enabledDesc' as any) });
+        toast({ title: t('settings.notifPerm.enabledTitle' as Parameters<typeof t>[0]), description: t('settings.notifPerm.enabledDesc' as Parameters<typeof t>[0]) });
         // إرسال إشعار تجريبي فوري حقيقي في شريط الإشعارات
-        await sendLocalNotification('PosFlow', t('settings.notifPerm.testBody' as any));
+        await sendLocalNotification('PosFlow', t('settings.notifPerm.testBody' as Parameters<typeof t>[0]));
       } else {
         toast({
-          title: t('settings.notifPerm.permissionAlertTitle' as any),
-          description: t('settings.notifPerm.permissionAlertDesc' as any),
+          title: t('settings.notifPerm.permissionAlertTitle' as Parameters<typeof t>[0]),
+          description: t('settings.notifPerm.permissionAlertDesc' as Parameters<typeof t>[0]),
           variant: 'destructive'
         });
       }
     } catch (err) {
       console.error('Error requesting notification permission:', err);
-      toast({ title: t('settings.notifPerm.alertTitle' as any), description: t('settings.notifPerm.checkDeviceSettings' as any), variant: 'destructive' });
+      toast({ title: t('settings.notifPerm.alertTitle' as Parameters<typeof t>[0]), description: t('settings.notifPerm.checkDeviceSettings' as Parameters<typeof t>[0]), variant: 'destructive' });
     }
   };
 
   const handleSendTestNotification = async () => {
-    const success = await sendLocalNotification('PosFlow', t('settings.notifPerm.testBody' as any));
+    const success = await sendLocalNotification('PosFlow', t('settings.notifPerm.testBody' as Parameters<typeof t>[0]));
     if (success) {
       toast({
-        title: t('settings.notifPerm.testSentTitle' as any),
-        description: t('settings.notifPerm.testSentDesc' as any),
+        title: t('settings.notifPerm.testSentTitle' as Parameters<typeof t>[0]),
+        description: t('settings.notifPerm.testSentDesc' as Parameters<typeof t>[0]),
       });
     } else {
       toast({
-        title: t('settings.notifPerm.testFailedTitle' as any),
-        description: t('settings.notifPerm.testFailedDesc' as any),
+        title: t('settings.notifPerm.testFailedTitle' as Parameters<typeof t>[0]),
+        description: t('settings.notifPerm.testFailedDesc' as Parameters<typeof t>[0]),
         variant: 'destructive',
       });
     }
@@ -583,16 +583,16 @@ export default function Settings() {
   );
   const renderCurrencyDisplayOptions = (code: string) => {
     const labels = {
-      symbol: t('settings.currencyDisplay.symbolOnly' as any),
-      name: t('settings.currencyDisplay.nameOnly' as any),
-      both: t('settings.currencyDisplay.both' as any),
+      symbol: t('settings.currencyDisplay.symbolOnly' as Parameters<typeof t>[0]),
+      name: t('settings.currencyDisplay.nameOnly' as Parameters<typeof t>[0]),
+      both: t('settings.currencyDisplay.both' as Parameters<typeof t>[0]),
     };
     const selectedMode = currencyDisplayMode[code] || 'symbol';
 
     return (
       <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30 mt-2">
         <span className="text-[10px] text-muted-foreground font-medium">
-          {t('settings.currencyDisplay.label' as any)}
+          {t('settings.currencyDisplay.label' as Parameters<typeof t>[0])}
         </span>
         <div className="flex items-center gap-1 rounded-lg border border-border/40 bg-muted/60 p-0.5">
           {(['symbol', 'name', 'both'] as const).map((mode) => (
@@ -626,16 +626,16 @@ export default function Settings() {
   // Notification settings
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsType>(() => {
     const defaultEvts = getDefaultNotificationEvents();
-    const savedEvts = persisted?.notificationSettings?.events ?? (initialUnified?.notificationSettings as any)?.events ?? {};
+    const savedEvts = persisted?.notificationSettings?.events ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.events ?? {};
     return {
-      masterEnabled: persisted?.notificationSettings?.masterEnabled ?? (initialUnified?.notificationSettings as any)?.masterEnabled ?? true,
-      sound: persisted?.notificationSettings?.sound ?? (initialUnified?.notificationSettings as any)?.sound ?? true,
-      newSale: persisted?.notificationSettings?.newSale ?? (initialUnified?.notificationSettings as any)?.newSale ?? true,
-      lowStock: persisted?.notificationSettings?.lowStock ?? (initialUnified?.notificationSettings as any)?.lowStock ?? true,
-      newDebt: persisted?.notificationSettings?.newDebt ?? (initialUnified?.notificationSettings as any)?.newDebt ?? true,
-      paymentReceived: persisted?.notificationSettings?.paymentReceived ?? (initialUnified?.notificationSettings as any)?.paymentReceived ?? true,
-      dailyReport: persisted?.notificationSettings?.dailyReport ?? (initialUnified?.notificationSettings as any)?.dailyReport ?? false,
-      durationSeconds: persisted?.notificationSettings?.durationSeconds ?? (initialUnified?.notificationSettings as any)?.durationSeconds ?? 2,
+      masterEnabled: persisted?.notificationSettings?.masterEnabled ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.masterEnabled ?? true,
+      sound: persisted?.notificationSettings?.sound ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.sound ?? true,
+      newSale: persisted?.notificationSettings?.newSale ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.newSale ?? true,
+      lowStock: persisted?.notificationSettings?.lowStock ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.lowStock ?? true,
+      newDebt: persisted?.notificationSettings?.newDebt ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.newDebt ?? true,
+      paymentReceived: persisted?.notificationSettings?.paymentReceived ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.paymentReceived ?? true,
+      dailyReport: persisted?.notificationSettings?.dailyReport ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.dailyReport ?? false,
+      durationSeconds: persisted?.notificationSettings?.durationSeconds ?? (initialUnified?.notificationSettings as { events?: Record<string, boolean>; masterEnabled?: boolean; sound?: boolean; newSale?: boolean; lowStock?: boolean; newDebt?: boolean; paymentReceived?: boolean; dailyReport?: boolean; durationSeconds?: number } | undefined)?.durationSeconds ?? 2,
       events: { ...defaultEvts, ...savedEvts },
     };
   });
@@ -663,7 +663,7 @@ export default function Settings() {
     saveStoredPrinterConfig(next);
     toast({
       title: t('common.saved'),
-      description: t('settings.printerSaved' as any),
+      description: t('settings.printerSaved' as Parameters<typeof t>[0]),
     });
   };
 
@@ -676,7 +676,7 @@ export default function Settings() {
       setIsPrinterConnected(true);
       toast({
         title: t('common.success'),
-        description: t('settings.printerTestSuccess' as any),
+        description: t('settings.printerTestSuccess' as Parameters<typeof t>[0]),
       });
     } catch (e) {
       setIsPrinterConnected(false);
@@ -700,7 +700,7 @@ export default function Settings() {
     } catch {}
     toast({
       title: t('common.saved'),
-      description: t('settings.printerDisconnected' as any),
+      description: t('settings.printerDisconnected' as Parameters<typeof t>[0]),
     });
   };
 
@@ -708,20 +708,20 @@ export default function Settings() {
 
   // Printing settings
   const [printSettings, setPrintSettings] = useState({
-    autoPrint: persisted?.printSettings?.autoPrint ?? (initialUnified?.printSettings as any)?.autoPrint ?? true,
-    showStoreName: persisted?.printSettings?.showStoreName ?? (initialUnified?.printSettings as any)?.showStoreName ?? true,
-    showLogo: persisted?.printSettings?.showLogo ?? (initialUnified?.printSettings as any)?.showLogo ?? true,
-    showAddress: persisted?.printSettings?.showAddress ?? (initialUnified?.printSettings as any)?.showAddress ?? true,
-    showPhone: persisted?.printSettings?.showPhone ?? (initialUnified?.printSettings as any)?.showPhone ?? true,
-    showEmail: persisted?.printSettings?.showEmail ?? (initialUnified?.printSettings as any)?.showEmail ?? true,
-    showInvoiceNumber: persisted?.printSettings?.showInvoiceNumber ?? (initialUnified?.printSettings as any)?.showInvoiceNumber ?? true,
-    showDateTime: persisted?.printSettings?.showDateTime ?? (initialUnified?.printSettings as any)?.showDateTime ?? true,
-    showCashierName: persisted?.printSettings?.showCashierName ?? (initialUnified?.printSettings as any)?.showCashierName ?? true,
-    welcomeMessage: persisted?.printSettings?.welcomeMessage ?? (initialUnified?.printSettings as any)?.welcomeMessage ?? '',
-    footer: persisted?.printSettings?.footer || (initialUnified?.printSettings as any)?.footer || t('settings.defaultFooter'),
-    showAlternativeCurrencies: persisted?.printSettings?.showAlternativeCurrencies ?? (initialUnified?.printSettings as any)?.showAlternativeCurrencies ?? false,
-    paperSize: persisted?.printSettings?.paperSize || (initialUnified?.printSettings as any)?.paperSize || '80mm',
-    copies: String(persisted?.printSettings?.copies ?? (initialUnified?.printSettings as any)?.copies ?? 1),
+    autoPrint: persisted?.printSettings?.autoPrint ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.autoPrint ?? true,
+    showStoreName: persisted?.printSettings?.showStoreName ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showStoreName ?? true,
+    showLogo: persisted?.printSettings?.showLogo ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showLogo ?? true,
+    showAddress: persisted?.printSettings?.showAddress ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showAddress ?? true,
+    showPhone: persisted?.printSettings?.showPhone ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showPhone ?? true,
+    showEmail: persisted?.printSettings?.showEmail ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showEmail ?? true,
+    showInvoiceNumber: persisted?.printSettings?.showInvoiceNumber ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showInvoiceNumber ?? true,
+    showDateTime: persisted?.printSettings?.showDateTime ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showDateTime ?? true,
+    showCashierName: persisted?.printSettings?.showCashierName ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showCashierName ?? true,
+    welcomeMessage: persisted?.printSettings?.welcomeMessage ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.welcomeMessage ?? '',
+    footer: persisted?.printSettings?.footer || (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.footer || t('settings.defaultFooter'),
+    showAlternativeCurrencies: persisted?.printSettings?.showAlternativeCurrencies ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.showAlternativeCurrencies ?? false,
+    paperSize: persisted?.printSettings?.paperSize || (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.paperSize || '80mm',
+    copies: String(persisted?.printSettings?.copies ?? (initialUnified?.printSettings as { autoPrint?: boolean; showStoreName?: boolean; showLogo?: boolean; showAddress?: boolean; showPhone?: boolean; showEmail?: boolean; showInvoiceNumber?: boolean; showDateTime?: boolean; showCashierName?: boolean; welcomeMessage?: string; footer?: string; showAlternativeCurrencies?: boolean; paperSize?: string; copies?: number | string } | undefined)?.copies ?? 1),
   });
 
   // Users are now managed by useUsersManagement hook
@@ -1008,137 +1008,137 @@ export default function Settings() {
     {
       id: 'profile',
       label: t('settings.profile'),
-      description: t('settings.tab.profileDesc' as any),
+      description: t('settings.tab.profileDesc' as Parameters<typeof t>[0]),
       icon: User,
       category: 'core',
       color: 'rose',
       badge: isBoss ? 'Boss 👑' : isOwnerAdmin ? 'Owner' : 'Cashier',
-      keywords: t('settings.tabKeywords.profile' as any).split(','),
+      keywords: t('settings.tabKeywords.profile' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'store',
       label: t('settings.store'),
-      description: t('settings.tab.storeDesc' as any),
+      description: t('settings.tab.storeDesc' as Parameters<typeof t>[0]),
       icon: Store,
       category: 'core',
       color: 'amber',
       badge: `${primaryCurrency || 'USD'}`,
-      keywords: t('settings.tabKeywords.store' as any).split(','),
+      keywords: t('settings.tabKeywords.store' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'backup',
       label: t('settings.backupSync'),
-      description: t('settings.tab.backupDesc' as any),
+      description: t('settings.tab.backupDesc' as Parameters<typeof t>[0]),
       icon: Database,
       adminOnly: true,
       category: 'core',
       color: 'blue',
-      badge: syncSettings?.lastSync ? (syncSettings.lastSync.includes(' ') ? syncSettings.lastSync.split(' ')[1] : syncSettings.lastSync) : t('settings.tab.cloudBadge' as any),
-      keywords: t('settings.tabKeywords.backup' as any).split(','),
+      badge: syncSettings?.lastSync ? (syncSettings.lastSync.includes(' ') ? syncSettings.lastSync.split(' ')[1] : syncSettings.lastSync) : t('settings.tab.cloudBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.backup' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'notifications',
       label: t('settings.notifications'),
-      description: t('settings.tab.notificationsDesc' as any),
+      description: t('settings.tab.notificationsDesc' as Parameters<typeof t>[0]),
       icon: Bell,
       category: 'core',
       color: 'purple',
-      badge: notificationSettings.masterEnabled !== false ? t('settings.tab.notifActiveBadge' as any) : t('settings.tab.notifOffBadge' as any),
-      keywords: t('settings.tabKeywords.notifications' as any).split(','),
+      badge: notificationSettings.masterEnabled !== false ? t('settings.tab.notifActiveBadge' as Parameters<typeof t>[0]) : t('settings.tab.notifOffBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.notifications' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'productFields',
       label: t('settings.productFields'),
-      description: t('settings.tab.productFieldsDesc' as any),
+      description: t('settings.tab.productFieldsDesc' as Parameters<typeof t>[0]),
       icon: Package,
       category: 'core',
       color: 'amber',
-      badge: t('settings.tab.customBadge' as any),
-      keywords: t('settings.tabKeywords.productFields' as any).split(','),
+      badge: t('settings.tab.customBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.productFields' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'printing',
       label: t('settings.printing'),
-      description: t('settings.tab.printingDesc' as any),
+      description: t('settings.tab.printingDesc' as Parameters<typeof t>[0]),
       icon: Printer,
       category: 'operations',
       color: 'teal',
       badge: printSettings?.paperSize || '80mm',
-      keywords: t('settings.tabKeywords.printing' as any).split(','),
+      keywords: t('settings.tabKeywords.printing' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'users',
       label: t('settings.users'),
-      description: t('settings.tab.usersDesc' as any),
+      description: t('settings.tab.usersDesc' as Parameters<typeof t>[0]),
       icon: Users,
       adminOnly: true,
       category: 'operations',
       color: 'indigo',
-      badge: t('settings.tab.manageBadge' as any),
-      keywords: t('settings.tabKeywords.users' as any).split(','),
+      badge: t('settings.tab.manageBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.users' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'activity',
-      label: t('settings.tab.activityLabel' as any),
-      description: t('settings.tab.activityDesc' as any),
+      label: t('settings.tab.activityLabel' as Parameters<typeof t>[0]),
+      description: t('settings.tab.activityDesc' as Parameters<typeof t>[0]),
       icon: Activity,
       category: 'operations',
       color: 'emerald',
-      badge: t('settings.tab.auditBadge' as any),
-      keywords: t('settings.tabKeywords.activity' as any).split(','),
+      badge: t('settings.tab.auditBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.activity' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'license',
       label: t('settings.license'),
-      description: t('settings.tab.licenseDesc' as any),
+      description: t('settings.tab.licenseDesc' as Parameters<typeof t>[0]),
       icon: Key,
       category: 'operations',
       color: 'orange',
-      badge: t('settings.tab.activeBadge' as any),
-      keywords: t('settings.tabKeywords.license' as any).split(','),
+      badge: t('settings.tab.activeBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.license' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'partners',
       label: t('nav.partners'),
-      description: t('settings.tab.partnersDesc' as any),
+      description: t('settings.tab.partnersDesc' as Parameters<typeof t>[0]),
       icon: UserCheck,
       adminOnly: true,
       category: 'operations',
       color: 'cyan',
-      badge: t('settings.tab.profitsBadge' as any),
-      keywords: t('settings.tabKeywords.partners' as any).split(','),
+      badge: t('settings.tab.profitsBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.partners' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'reset',
       label: t('settings.resetData'),
-      description: t('settings.tab.resetDesc' as any),
+      description: t('settings.tab.resetDesc' as Parameters<typeof t>[0]),
       icon: AlertTriangle,
       adminOnly: true,
       danger: true,
       category: 'operations',
       color: 'destructive',
       badge: '⚠️',
-      keywords: t('settings.tabKeywords.reset' as any).split(','),
+      keywords: t('settings.tabKeywords.reset' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'contact',
       label: t('license.contactDeveloper'),
-      description: t('settings.tab.contactDesc' as any),
+      description: t('settings.tab.contactDesc' as Parameters<typeof t>[0]),
       icon: Phone,
       category: 'support',
       color: 'emerald',
-      badge: t('settings.tab.liveBadge' as any),
-      keywords: t('settings.tabKeywords.contact' as any).split(','),
+      badge: t('settings.tab.liveBadge' as Parameters<typeof t>[0]),
+      keywords: t('settings.tabKeywords.contact' as Parameters<typeof t>[0]).split(','),
     },
     {
       id: 'about',
-      label: t('settings.tab.aboutLabel' as any),
-      description: t('settings.tab.aboutDesc' as any),
+      label: t('settings.tab.aboutLabel' as Parameters<typeof t>[0]),
+      description: t('settings.tab.aboutDesc' as Parameters<typeof t>[0]),
       icon: FileText,
       category: 'support',
       color: 'primary',
       badge: 'v1.0.68',
-      keywords: t('settings.tabKeywords.about' as any).split(','),
+      keywords: t('settings.tabKeywords.about' as Parameters<typeof t>[0]).split(','),
     },
   ], [t, isRTL, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationPerm, notificationSettings.masterEnabled, printSettings?.paperSize]);
 
@@ -1156,8 +1156,8 @@ export default function Settings() {
     if (activeTab === 'store') {
       return (
         primaryCurrency !== snap.primaryCurrency ||
-        slot1Code !== (snap as any).slot1Code ||
-        slot2Code !== (snap as any).slot2Code ||
+        slot1Code !== (snap as typeof snap & { slot1Code?: string }).slot1Code ||
+        slot2Code !== (snap as typeof snap & { slot2Code?: string }).slot2Code ||
         JSON.stringify(enabledCurrencies) !== JSON.stringify(snap.enabledCurrencies) ||
         JSON.stringify(storeSettings) !== JSON.stringify(snap.storeSettings) ||
         JSON.stringify(exchangeRates) !== JSON.stringify(snap.exchangeRates) ||
@@ -1206,8 +1206,8 @@ export default function Settings() {
     if (!snap) return;
     setStoreSettings({ ...snap.storeSettings });
     setPrimaryCurrency(snap.primaryCurrency ?? 'USD');
-    if ((snap as any).slot1Code) setSlot1Code((snap as any).slot1Code);
-    if ((snap as any).slot2Code) setSlot2Code((snap as any).slot2Code);
+    if ((snap as typeof snap & { slot1Code?: string }).slot1Code) setSlot1Code((snap as typeof snap & { slot1Code?: string }).slot1Code);
+    if ((snap as typeof snap & { slot2Code?: string }).slot2Code) setSlot2Code((snap as typeof snap & { slot2Code?: string }).slot2Code);
     if (snap.enabledCurrencies) {
       setEnabledCurrencies({ ...snap.enabledCurrencies });
     }
@@ -1429,24 +1429,24 @@ export default function Settings() {
       if (saveResult.status === 'synced') {
         toast({
           title: t('common.saved'),
-          description: t('settings.saveSynced' as any),
+          description: t('settings.saveSynced' as Parameters<typeof t>[0]),
         });
       } else if (saveResult.status === 'queued') {
         toast({
           title: t('common.saved'),
-          description: t('settings.saveQueued' as any),
+          description: t('settings.saveQueued' as Parameters<typeof t>[0]),
         });
       } else {
         toast({
           title: t('common.saved'),
-          description: t('settings.saveLocal' as any),
+          description: t('settings.saveLocal' as Parameters<typeof t>[0]),
         });
       }
     } catch (err) {
       console.error('[Settings] Save error:', err);
       toast({
         title: t('common.error'),
-        description: t('settings.saveFailed' as any),
+        description: t('settings.saveFailed' as Parameters<typeof t>[0]),
         variant: 'destructive',
       });
     } finally {
@@ -1458,12 +1458,12 @@ export default function Settings() {
     // 1. فحص حالة رقم هاتف المتجر قبل الحفظ
     if (storeSettings.phone && storeSettings.phone.trim()) {
       try {
-        const { data: phoneCheck } = await (supabase.rpc as any)('check_store_phone_status', {
+        const { data: phoneCheck } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: { ok?: boolean; error?: string; status?: string } | null; error: unknown }> }).rpc('check_store_phone_status', {
           _phone: storeSettings.phone,
         });
 
         if (phoneCheck && !phoneCheck.ok && phoneCheck.status === 'conflict_no_telegram') {
-          sonnerToast.error(phoneCheck.error || t('settings.phoneConflictNoTelegram' as any));
+          sonnerToast.error(phoneCheck.error || t('settings.phoneConflictNoTelegram' as Parameters<typeof t>[0]));
           return;
         }
 
@@ -1545,7 +1545,7 @@ export default function Settings() {
       const { decodeBackupFile, parseBackup } = await import('@/lib/full-backup');
       const parsed = await parseBackup(await decodeBackupFile(file));
       const c = parsed.counts || {};
-      const summary = t('settings.backupSummaryTemplate' as any).replace('{products}', String(c.products ?? 0)).replace('{invoices}', String(c.invoices ?? 0)).replace('{expenses}', String(c.expenses ?? 0)).replace('{customers}', String(c.customers ?? 0)).replace('{images}', String(Object.keys(parsed.images || {}).length));
+      const summary = t('settings.backupSummaryTemplate' as Parameters<typeof t>[0]).replace('{products}', String(c.products ?? 0)).replace('{invoices}', String(c.invoices ?? 0)).replace('{expenses}', String(c.expenses ?? 0)).replace('{customers}', String(c.customers ?? 0)).replace('{images}', String(Object.keys(parsed.images || {}).length));
       setPendingRestore({ backup: parsed, fileName: file.name, summary });
     } catch (error) {
       console.error('Import error:', error);
@@ -1577,8 +1577,8 @@ export default function Settings() {
       toast({
         title: t('settings.restoreComplete'),
         description: report.failed.length
-          ? t('settings.restorePartialDesc' as any).replace('{total}', String(total)).replace('{failed}', report.failed.map((f) => `${f.table} (${f.message})`).join(' | '))
-          : t('settings.restoreSuccessDesc' as any).replace('{total}', String(total)).replace('{images}', String(report.imagesRestored)),
+          ? t('settings.restorePartialDesc' as Parameters<typeof t>[0]).replace('{total}', String(total)).replace('{failed}', report.failed.map((f) => `${f.table} (${f.message})`).join(' | '))
+          : t('settings.restoreSuccessDesc' as Parameters<typeof t>[0]).replace('{total}', String(total)).replace('{images}', String(report.imagesRestored)),
         variant: report.failed.length ? 'destructive' : undefined,
       });
       setPendingRestore(null);
@@ -1628,14 +1628,14 @@ export default function Settings() {
       const storeAddress = storeSettings.address || '';
       const paperSize = printSettings.paperSize || '80mm';
       const copies = printSettings.copies || '1';
-      const footer = printSettings.footer || t('settings.testPrint.defaultFooter' as any);
+      const footer = printSettings.footer || t('settings.testPrint.defaultFooter' as Parameters<typeof t>[0]);
 
       const testContent = `
         <!DOCTYPE html>
         <html dir="${isRTL ? 'rtl' : 'ltr'}" lang="${language}">
         <head>
           <meta charset="UTF-8">
-          <title>${t('settings.testPrint.docTitle' as any)} - ${storeName}</title>
+          <title>${t('settings.testPrint.docTitle' as Parameters<typeof t>[0])} - ${storeName}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', system-ui, sans-serif; }
             body { width: ${paperSize === '58mm' ? '54mm' : paperSize === 'A4' ? '210mm' : '76mm'}; margin: 0 auto; padding: 8px; font-size: 12px; color: #000; }
@@ -1654,28 +1654,28 @@ export default function Settings() {
           <div class="header">
             <div class="title">${storeName}</div>
             ${storeAddress ? '<div>' + storeAddress + '</div>' : ''}
-            ${storePhone ? '<div>' + t('settings.testPrint.phoneLabel' as any) + ' ' + storePhone + '</div>' : ''}
-            <div class="badge">${t('settings.testPrint.badge' as any)}</div>
+            ${storePhone ? '<div>' + t('settings.testPrint.phoneLabel' as Parameters<typeof t>[0]) + ' ' + storePhone + '</div>' : ''}
+            <div class="badge">${t('settings.testPrint.badge' as Parameters<typeof t>[0])}</div>
           </div>
-          <div class="info-row"><span>${t('settings.testPrint.dateLabel' as any)}</span><span>${dateStr}</span></div>
-          <div class="info-row"><span>${t('settings.testPrint.timeLabel' as any)}</span><span>${timeStr}</span></div>
-          <div class="info-row"><span>${t('settings.testPrint.paperSizeLabel' as any)}</span><span>${paperSize}</span></div>
-          <div class="info-row"><span>${t('settings.testPrint.copiesLabel' as any)}</span><span>${copies}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.dateLabel' as Parameters<typeof t>[0])}</span><span>${dateStr}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.timeLabel' as Parameters<typeof t>[0])}</span><span>${timeStr}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.paperSizeLabel' as Parameters<typeof t>[0])}</span><span>${paperSize}</span></div>
+          <div class="info-row"><span>${t('settings.testPrint.copiesLabel' as Parameters<typeof t>[0])}</span><span>${copies}</span></div>
           <table>
             <thead>
-              <tr><th>${t('settings.testPrint.colItem' as any)}</th><th>${t('settings.testPrint.colQty' as any)}</th><th>${t('settings.testPrint.colPrice' as any)}</th></tr>
+              <tr><th>${t('settings.testPrint.colItem' as Parameters<typeof t>[0])}</th><th>${t('settings.testPrint.colQty' as Parameters<typeof t>[0])}</th><th>${t('settings.testPrint.colPrice' as Parameters<typeof t>[0])}</th></tr>
             </thead>
             <tbody>
-              <tr><td>${t('settings.testPrint.sampleItemA' as any)}</td><td>1</td><td>$10.00</td></tr>
-              <tr><td>${t('settings.testPrint.sampleItemB' as any)}</td><td>2</td><td>$20.00</td></tr>
+              <tr><td>${t('settings.testPrint.sampleItemA' as Parameters<typeof t>[0])}</td><td>1</td><td>$10.00</td></tr>
+              <tr><td>${t('settings.testPrint.sampleItemB' as Parameters<typeof t>[0])}</td><td>2</td><td>$20.00</td></tr>
             </tbody>
           </table>
           <div class="total-box">
-            ${t('settings.testPrint.totalLabel' as any)} $30.00
+            ${t('settings.testPrint.totalLabel' as Parameters<typeof t>[0])} $30.00
           </div>
           <div class="footer">
             <p>${footer}</p>
-            <p style="margin-top: 4px; font-size: 9px; color: #888;">PosFlow • ${t('settings.testPrint.responseSuccess' as any)}</p>
+            <p style="margin-top: 4px; font-size: 9px; color: #888;">PosFlow • ${t('settings.testPrint.responseSuccess' as Parameters<typeof t>[0])}</p>
           </div>
         </body>
         </html>
@@ -1683,14 +1683,14 @@ export default function Settings() {
 
       await printHTML(testContent);
       toast({
-        title: t('settings.testPrint.sentTitle' as any),
-        description: t('settings.testPrint.sentDesc' as any),
+        title: t('settings.testPrint.sentTitle' as Parameters<typeof t>[0]),
+        description: t('settings.testPrint.sentDesc' as Parameters<typeof t>[0]),
       });
     } catch (err) {
       console.error('Test print failed:', err);
       toast({
-        title: t('settings.testPrint.errorTitle' as any),
-        description: t('settings.testPrint.errorDesc' as any),
+        title: t('settings.testPrint.errorTitle' as Parameters<typeof t>[0]),
+        description: t('settings.testPrint.errorDesc' as Parameters<typeof t>[0]),
         variant: 'destructive'
       });
     }
@@ -1913,19 +1913,19 @@ export default function Settings() {
                     <Bell className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground">{t('settings.notifDeviceDisabledTitle' as any)}</p>
+                    <p className="text-sm font-bold text-foreground">{t('settings.notifDeviceDisabledTitle' as Parameters<typeof t>[0])}</p>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      {t('settings.notifDeviceDisabledDesc' as any)}
+                      {t('settings.notifDeviceDisabledDesc' as Parameters<typeof t>[0])}
                     </p>
                   </div>
                 </div>
                 {notificationPerm === 'denied' ? (
                   <p className="text-[11px] text-muted-foreground">
-                    {t('settings.notifDeviceDeniedHint' as any)}
+                    {t('settings.notifDeviceDeniedHint' as Parameters<typeof t>[0])}
                   </p>
                 ) : (
                   <Button className="w-full sm:w-auto" onClick={() => void handleRequestNotificationPermission()}>
-                    {t('settings.notifDeviceEnableBtn' as any)}
+                    {t('settings.notifDeviceEnableBtn' as Parameters<typeof t>[0])}
                   </Button>
                 )}
               </div>
@@ -1944,12 +1944,12 @@ export default function Settings() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-foreground">
-                    {notificationSettings.masterEnabled ? t('settings.notifMasterEnabled' as any) : t('settings.notifMasterDisabled' as any)}
+                    {notificationSettings.masterEnabled ? t('settings.notifMasterEnabled' as Parameters<typeof t>[0]) : t('settings.notifMasterDisabled' as Parameters<typeof t>[0])}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     {notificationSettings.masterEnabled
-                      ? t('settings.notifMasterEnabledDesc' as any)
-                      : t('settings.notifMasterDisabledDesc' as any)}
+                      ? t('settings.notifMasterEnabledDesc' as Parameters<typeof t>[0])
+                      : t('settings.notifMasterDisabledDesc' as Parameters<typeof t>[0])}
                   </p>
                 </div>
               </div>
@@ -1964,7 +1964,7 @@ export default function Settings() {
               notificationSettings.masterEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'
             }`}>
               <div className="px-4 py-3 bg-muted/20">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.notifDisplaySoundTitle' as any)}</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('settings.notifDisplaySoundTitle' as Parameters<typeof t>[0])}</p>
               </div>
               {/* الصوت */}
               <div className="flex items-center justify-between px-4 py-3 hover:bg-muted/20 transition-colors">
@@ -1975,7 +1975,7 @@ export default function Settings() {
                   <div>
                     <span className="text-sm font-medium text-foreground block">{t('settings.sound')}</span>
                     <span className="text-xs text-muted-foreground block">
-                      {notificationSettings.sound ? t('settings.notifSoundOnDesc' as any) : t('settings.notifSoundMutedDesc' as any)}
+                      {notificationSettings.sound ? t('settings.notifSoundOnDesc' as Parameters<typeof t>[0]) : t('settings.notifSoundMutedDesc' as Parameters<typeof t>[0])}
                     </span>
                   </div>
                 </div>
@@ -1993,14 +1993,14 @@ export default function Settings() {
                       <Clock className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-foreground block">{t('settings.notifDurationTitle' as any)}</span>
+                      <span className="text-sm font-medium text-foreground block">{t('settings.notifDurationTitle' as Parameters<typeof t>[0])}</span>
                       <span className="text-xs text-muted-foreground block">
-                        {t('settings.notifDurationDesc' as any)}
+                        {t('settings.notifDurationDesc' as Parameters<typeof t>[0])}
                       </span>
                     </div>
                   </div>
                   <span className="font-mono text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
-                    {notificationSettings.durationSeconds ?? 2} {t('settings.notifSeconds' as any)}
+                    {notificationSettings.durationSeconds ?? 2} {t('settings.notifSeconds' as Parameters<typeof t>[0])}
                   </span>
                 </div>
                 <div dir="ltr" className="space-y-1.5 pt-1 px-1">
@@ -2016,9 +2016,9 @@ export default function Settings() {
                     className="w-full cursor-pointer"
                   />
                   <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
-                    <span>{t('settings.notifDurationBrief' as any)}</span>
-                    <span>{t('settings.notifDurationMedium' as any)}</span>
-                    <span>{t('settings.notifDurationLong' as any)}</span>
+                    <span>{t('settings.notifDurationBrief' as Parameters<typeof t>[0])}</span>
+                    <span>{t('settings.notifDurationMedium' as Parameters<typeof t>[0])}</span>
+                    <span>{t('settings.notifDurationLong' as Parameters<typeof t>[0])}</span>
                   </div>
                 </div>
               </div>
@@ -2030,8 +2030,8 @@ export default function Settings() {
             }`}>
               <div className="flex items-center justify-between px-1">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">{t('settings.notifCustomizeTitle' as any)}</h3>
-                  <p className="text-xs text-muted-foreground">{t('settings.notifCustomizeDesc' as any)}</p>
+                  <h3 className="text-sm font-bold text-foreground">{t('settings.notifCustomizeTitle' as Parameters<typeof t>[0])}</h3>
+                  <p className="text-xs text-muted-foreground">{t('settings.notifCustomizeDesc' as Parameters<typeof t>[0])}</p>
                 </div>
               </div>
 
@@ -2055,11 +2055,11 @@ export default function Settings() {
                           <IconComp className="w-4 h-4" />
                         </div>
                         <span className="text-sm font-bold text-foreground">
-                          {language === 'en' ? ((group as any).titleEn || (group as any).labelEn || group.title) : group.title}
+                          {language === 'en' ? ((group as typeof group & { titleEn?: string }).titleEn || (group as typeof group & { labelEn?: string }).labelEn || group.title) : group.title}
                         </span>
                       </div>
                       <Badge variant="outline" className={`text-[11px] font-mono font-medium ${colors.badge}`}>
-                        {activeCount} / {totalCount} {t('settings.notifActiveCountLabel' as any)}
+                        {activeCount} / {totalCount} {t('settings.notifActiveCountLabel' as Parameters<typeof t>[0])}
                       </Badge>
                     </div>
 
@@ -2076,7 +2076,7 @@ export default function Settings() {
                               <span className={`text-sm block transition-colors ${
                                 isChecked ? 'font-medium text-foreground' : 'text-muted-foreground'
                               }`}>
-                                {language === 'en' ? ((evt as any).titleEn || (evt as any).labelEn || evt.title) : evt.title}
+                                {language === 'en' ? ((evt as typeof evt & { titleEn?: string }).titleEn || (evt as typeof evt & { labelEn?: string }).labelEn || evt.title) : evt.title}
                               </span>
                             </div>
                             <Switch
@@ -2153,32 +2153,32 @@ export default function Settings() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm sm:text-base font-semibold text-foreground">{licenseState.isTrial ? t('settings.licenseTrial' as any) : t('settings.licenseActive' as any)}</h3>
+                      <h3 className="text-sm sm:text-base font-semibold text-foreground">{licenseState.isTrial ? t('settings.licenseTrial' as Parameters<typeof t>[0]) : t('settings.licenseActive' as Parameters<typeof t>[0])}</h3>
                       <Badge variant={licenseState.isTrial ? 'outline' : 'default'}>
-                        {(licenseState as any).planName || (licenseState as any).licenseTier || t('settings.licenseBasicTier' as any)}
+                        {licenseState.planName || licenseState.licenseTier || t('settings.licenseBasicTier' as Parameters<typeof t>[0])}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t('settings.licenseExpiry' as any)}: {licenseState.expiresAt ? new Date(licenseState.expiresAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : t('settings.licenseUnspecified' as any)}
+                      {t('settings.licenseExpiry' as Parameters<typeof t>[0])}: {licenseState.expiresAt ? new Date(licenseState.expiresAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : t('settings.licenseUnspecified' as Parameters<typeof t>[0])}
                     </p>
                   </div>
                   <Button onClick={() => navigate('/renew')} className="gap-2 shrink-0">
-                    {t('settings.licenseRenewUpgrade' as any)}
+                    {t('settings.licenseRenewUpgrade' as Parameters<typeof t>[0])}
                   </Button>
                 </div>
 
                 {/* Remaining days bar */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-medium">
-                    <span>{t('settings.licenseRemaining' as any)}: {licenseState.remainingDays ?? 0} {t('settings.licenseDays' as any)}</span>
-                    <span>{t('settings.licenseTotalDuration' as any)}: {(licenseState as any).totalDays || 30} {t('settings.licenseDays' as any)}</span>
+                    <span>{t('settings.licenseRemaining' as Parameters<typeof t>[0])}: {licenseState.remainingDays ?? 0} {t('settings.licenseDays' as Parameters<typeof t>[0])}</span>
+                    <span>{t('settings.licenseTotalDuration' as Parameters<typeof t>[0])}: {licenseState.totalDays || 30} {t('settings.licenseDays' as Parameters<typeof t>[0])}</span>
                   </div>
                   <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all ${
                         (licenseState.remainingDays ?? 0) <= 3 ? 'bg-destructive' : (licenseState.remainingDays ?? 0) <= 10 ? 'bg-warning' : 'bg-primary'
                       }`}
-                      style={{ width: `${Math.min(100, Math.max(5, (((licenseState.remainingDays ?? 0)) / ((licenseState as any).totalDays || 30)) * 100))}%` }}
+                      style={{ width: `${Math.min(100, Math.max(5, (((licenseState.remainingDays ?? 0)) / (licenseState.totalDays || 30)) * 100))}%` }}
                     />
                   </div>
                 </div>
@@ -2193,7 +2193,7 @@ export default function Settings() {
                 {t('settings.transferLicense')}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {t('settings.transferLicenseInfo' as any)}
+                {t('settings.transferLicenseInfo' as Parameters<typeof t>[0])}
               </p>
               <Button
                 variant="outline"
@@ -2219,7 +2219,7 @@ export default function Settings() {
                   {t('license.contactDeveloper')}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {t('settings.contactSupportSubtitle' as any)}
+                  {t('settings.contactSupportSubtitle' as Parameters<typeof t>[0])}
                 </p>
               </div>
             </div>
@@ -2262,7 +2262,7 @@ export default function Settings() {
               <img src={appIconUrl} alt="PosFlow" className="w-16 h-16 rounded-2xl shadow-md flex-shrink-0 object-contain" />
               <div>
                 <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">PosFlow</h2>
-                <p className="text-sm text-muted-foreground">{t('settings.about.tagline' as any)}</p>
+                <p className="text-sm text-muted-foreground">{t('settings.about.tagline' as Parameters<typeof t>[0])}</p>
               </div>
             </div>
 
@@ -2270,15 +2270,15 @@ export default function Settings() {
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-4 py-2.5 border-b border-border bg-muted/30">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {t('settings.about.versionInfo' as any)}
+                  {t('settings.about.versionInfo' as Parameters<typeof t>[0])}
                 </p>
               </div>
               <div className="divide-y divide-border">
                 {[
-                  { label: t('settings.about.currentVersion' as any), value: `v${versionInfo.versionName}`, icon: '🏷️' },
-                  { label: t('settings.about.releaseDate' as any), value: releaseDateStr, icon: '📅' },
-                  { label: t('settings.about.platform' as any), value: 'Android / Web / Windows', icon: '📱' },
-                  { label: t('settings.about.developer' as any), value: 'PosFlow Team', icon: '👨‍💻' },
+                  { label: t('settings.about.currentVersion' as Parameters<typeof t>[0]), value: `v${versionInfo.versionName}`, icon: '🏷️' },
+                  { label: t('settings.about.releaseDate' as Parameters<typeof t>[0]), value: releaseDateStr, icon: '📅' },
+                  { label: t('settings.about.platform' as Parameters<typeof t>[0]), value: 'Android / Web / Windows', icon: '📱' },
+                  { label: t('settings.about.developer' as Parameters<typeof t>[0]), value: 'PosFlow Team', icon: '👨‍💻' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -2295,7 +2295,7 @@ export default function Settings() {
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-4 py-2.5 border-b border-border bg-muted/30">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {t('settings.about.latestUpdates' as any).replace('{version}', versionInfo.versionName)}
+                  {t('settings.about.latestUpdates' as Parameters<typeof t>[0]).replace('{version}', versionInfo.versionName)}
                 </p>
               </div>
               <div className="divide-y divide-border">
@@ -2306,11 +2306,11 @@ export default function Settings() {
                     fixed: 'bg-warning/15 text-warning border-warning/30',
                   };
                   const labels = {
-                    new: t('settings.about.badgeNew' as any),
-                    improved: t('settings.about.badgeImproved' as any),
-                    fixed: t('settings.about.badgeFixed' as any),
+                    new: t('settings.about.badgeNew' as Parameters<typeof t>[0]),
+                    improved: t('settings.about.badgeImproved' as Parameters<typeof t>[0]),
+                    fixed: t('settings.about.badgeFixed' as Parameters<typeof t>[0]),
                   };
-                  const text = item.textKey ? t(item.textKey as any) : (isRTL ? item.ar : item.en);
+                  const text = item.textKey ? t(item.textKey as Parameters<typeof t>[0]) : (isRTL ? item.ar : item.en);
                   return (
                     <div key={idx} className="flex items-start gap-3 px-4 py-3">
                       <Badge variant="outline" className={`mt-0.5 shrink-0 ${colors[item.type]}`}>
@@ -2325,7 +2325,7 @@ export default function Settings() {
 
             {/* Footer */}
             <p className="text-center text-xs text-muted-foreground pb-2">
-              {t('settings.about.copyright' as any)}
+              {t('settings.about.copyright' as Parameters<typeof t>[0])}
             </p>
           </div>
         );
@@ -2357,7 +2357,7 @@ export default function Settings() {
                 id="settingsSearchInput"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('settings.searchPlaceholder' as any)}
+                placeholder={t('settings.searchPlaceholder' as Parameters<typeof t>[0])}
                 className="bg-card border border-border/80 rounded-[14px] ps-9 pe-9 text-sm shadow-2xs focus-visible:ring-primary/20"
               />
               {searchQuery && (
@@ -2367,8 +2367,8 @@ export default function Settings() {
                   size="icon"
                   onClick={() => setSearchQuery('')}
                   className="absolute end-1 top-1/2 -translate-y-1/2 size-9 sm:size-8 rounded-full text-muted-foreground hover:text-foreground"
-                  title={t('settings.clearSearch' as any)}
-                  aria-label={t('settings.clearSearch' as any)}
+                  title={t('settings.clearSearch' as Parameters<typeof t>[0])}
+                  aria-label={t('settings.clearSearch' as Parameters<typeof t>[0])}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -2386,8 +2386,8 @@ export default function Settings() {
                     ? "bg-background text-foreground shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
                 )}
-                title={t('settings.gridView' as any)}
-                aria-label={t('settings.gridView' as any)}
+                title={t('settings.gridView' as Parameters<typeof t>[0])}
+                aria-label={t('settings.gridView' as Parameters<typeof t>[0])}
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -2400,8 +2400,8 @@ export default function Settings() {
                     ? "bg-background text-foreground shadow-xs font-bold"
                     : "text-muted-foreground hover:text-foreground"
                 )}
-                title={t('settings.listView' as any)}
-                aria-label={t('settings.listView' as any)}
+                title={t('settings.listView' as Parameters<typeof t>[0])}
+                aria-label={t('settings.listView' as Parameters<typeof t>[0])}
               >
                 <List className="w-4 h-4" />
               </button>
@@ -2431,18 +2431,18 @@ export default function Settings() {
 
             const getStoreTypeLabel = (type: string) => {
               const map: Record<string, string> = {
-                phones: t('settings.storeTypeLabel.phones' as any),
-                electronics: t('settings.storeTypeLabel.electronics' as any),
-                clothing: t('settings.storeTypeLabel.clothing' as any),
-                grocery: t('settings.storeTypeLabel.grocery' as any),
-                supermarket: t('settings.storeTypeLabel.supermarket' as any),
-                perfumes: t('settings.storeTypeLabel.perfumes' as any),
-                pharmacy: t('settings.storeTypeLabel.pharmacy' as any),
-                bakery: t('settings.storeTypeLabel.bakery' as any),
-                bookstore: t('settings.storeTypeLabel.bookstore' as any),
-                services: t('settings.storeTypeLabel.services' as any),
-                restaurant: t('settings.storeTypeLabel.restaurant' as any),
-                general: t('settings.storeTypeLabel.general' as any),
+                phones: t('settings.storeTypeLabel.phones' as Parameters<typeof t>[0]),
+                electronics: t('settings.storeTypeLabel.electronics' as Parameters<typeof t>[0]),
+                clothing: t('settings.storeTypeLabel.clothing' as Parameters<typeof t>[0]),
+                grocery: t('settings.storeTypeLabel.grocery' as Parameters<typeof t>[0]),
+                supermarket: t('settings.storeTypeLabel.supermarket' as Parameters<typeof t>[0]),
+                perfumes: t('settings.storeTypeLabel.perfumes' as Parameters<typeof t>[0]),
+                pharmacy: t('settings.storeTypeLabel.pharmacy' as Parameters<typeof t>[0]),
+                bakery: t('settings.storeTypeLabel.bakery' as Parameters<typeof t>[0]),
+                bookstore: t('settings.storeTypeLabel.bookstore' as Parameters<typeof t>[0]),
+                services: t('settings.storeTypeLabel.services' as Parameters<typeof t>[0]),
+                restaurant: t('settings.storeTypeLabel.restaurant' as Parameters<typeof t>[0]),
+                general: t('settings.storeTypeLabel.general' as Parameters<typeof t>[0]),
               };
               return map[type] || type;
             };
@@ -2514,13 +2514,13 @@ export default function Settings() {
                 <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20 space-y-2">
                   <Search className="w-12 h-12 text-muted-foreground/50 mb-1" />
                   <p className="text-sm sm:text-base font-semibold text-foreground">
-                    {t('settings.noMatchingSettings' as any)}
+                    {t('settings.noMatchingSettings' as Parameters<typeof t>[0])}
                   </p>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    {t('settings.noSettingMatchingQuery' as any).replace('{query}', searchQuery)}
+                    {t('settings.noSettingMatchingQuery' as Parameters<typeof t>[0]).replace('{query}', searchQuery)}
                   </p>
                   <Button variant="outline" size="sm" onClick={() => setSearchQuery('')} className="rounded-xl mt-2">
-                    {t('settings.clearSearch' as any)}
+                    {t('settings.clearSearch' as Parameters<typeof t>[0])}
                   </Button>
                 </div>
               );
@@ -2639,7 +2639,7 @@ export default function Settings() {
           <div className="bg-card/70 sm:bg-card rounded-2xl border border-border/70 sm:border-border p-3.5 sm:p-6 overflow-hidden max-w-full pb-28">
             {/* ✅ حماية كل تبويب داخل إطار معالجة الأخطاء FeatureErrorBoundary لعزل أي خطأ دون إسقاط الشاشة */}
             <FeatureErrorBoundary
-              featureName={t('settings.errorBoundaryTab' as any).replace('{tab}', activeTab || t('settings.general'))}
+              featureName={t('settings.errorBoundaryTab' as Parameters<typeof t>[0]).replace('{tab}', activeTab || t('settings.general'))}
               compact
             >
               <Suspense fallback={

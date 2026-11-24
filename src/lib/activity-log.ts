@@ -241,7 +241,7 @@ export const getActivityTypeLabel = (type: ActivityType, lang: string = 'ar'): s
   if (!item) return type;
   if (lang === 'ar') return item.ar;
   if (lang === 'tr') return item.tr || item.en;
-  if (lang === 'fr' && (item as any).fr) return (item as any).fr;
+  if (lang === 'fr' && (item as typeof item & { fr?: string }).fr) return (item as typeof item & { fr?: string }).fr;
   return item.en;
 };
 

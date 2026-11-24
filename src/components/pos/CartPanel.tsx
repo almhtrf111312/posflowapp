@@ -93,7 +93,7 @@ const getFallbackCostPrice = (productId: string): number => {
       const parsed = JSON.parse(cached);
       const list = parsed.products || (Array.isArray(parsed) ? parsed : null);
       if (Array.isArray(list)) {
-        const p = list.find((x: any) => x && (x.id === productId || String(x.id) === String(productId)));
+        const p = list.find((x: { id?: string | number }) => x && (x.id === productId || String(x.id) === String(productId)));
         if (p && typeof p.costPrice === 'number' && p.costPrice > 0) {
           return p.costPrice;
         }
@@ -289,7 +289,7 @@ export function CartPanel({
   const activeCartCurrencies = useMemo(() => {
     return (currencies || []).filter(c => 
       c.enabled !== false && 
-      (c as any).active !== false && 
+      (c as typeof c & { active?: boolean }).active !== false && 
       Number.isFinite(c.rate) && 
       c.rate > 0
     );
@@ -707,7 +707,7 @@ export function CartPanel({
 
     // 🚀 توليد رقم الفاتورة وإغلاق نافذة الدفع والسلة فوراً وتفريغ المحتويات
     const invoiceNumber = getNextInvoiceNumber();
-    (window as any).__posSuppressExitUntil = Date.now() + 4000;
+    (window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil = Date.now() + 4000;
     setShowCashDialog(false);
     onClose?.();
     saveSaleSnapshot(cartSnapshot, customerNameSnapshot || 'عميل نقدي', 'cash', 0, 0, invoiceNumber, effectiveCurrencySymbol);
@@ -788,8 +788,8 @@ export function CartPanel({
         };
       });
       // الأرقام التسلسلية أصبحت ضمن عناصر البيع (تُحفظ في الطابور) — نفرّغ الاختيار ونخفي المباعة محلياً
-      markSerialsSoldLocally(localItems.flatMap((i: any) => i.serials || []));
-      clearSelectedSerials(localItems.map((i: any) => i.id));
+      markSerialsSoldLocally(localItems.flatMap((i: { serials?: string[] }) => i.serials || []));
+      clearSelectedSerials(localItems.map((i: { id: string }) => i.id));
 
       const discountRatio = subtotal > 0 ? Math.min(1, effectiveDiscountAmount / subtotal) : 0;
       // الربح = المجموع − الخصم − التكلفة بدقة 8 منازل
@@ -971,14 +971,14 @@ export function CartPanel({
 
       if (payMethod === 'digital') {
         // دفع رقمي: لا يدخل درج النقد، يُسجَّل كدفع رقمي في الوردية
-        addDigitalSaleToShift(totalSnapshot, discountedProfit, totalCOGS, (receivedCurrencyCode as any) || 'USD', netCashReceivedInCurrency, operationId);
+        addDigitalSaleToShift(totalSnapshot, discountedProfit, totalCOGS, receivedCurrencyCode || 'USD', netCashReceivedInCurrency, operationId);
         setPayMethod('cash');
       } else {
         addSalesToShift(
           totalSnapshot,
           discountedProfit,
           totalCOGS,
-          (receivedCurrencyCode as any) || 'USD',
+          receivedCurrencyCode || 'USD',
           netCashReceivedInCurrency,
           operationId,
           // audit F1: the drawer movement is posted with the invoice on the server, so no separate movement is queued
@@ -1146,7 +1146,7 @@ export function CartPanel({
 
     // 🚀 توليد رقم الفاتورة وإغلاق نافذة الدفع والسلة فوراً وتفريغ المحتويات
     const invoiceNumber = getNextInvoiceNumber();
-    (window as any).__posSuppressExitUntil = Date.now() + 4000;
+    (window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil = Date.now() + 4000;
     setShowDebtDialog(false);
     onClose?.();
     saveSaleSnapshot(
@@ -1236,8 +1236,8 @@ export function CartPanel({
           ...((getSelectedSerials(item.id)?.length) ? { serials: [...(getSelectedSerials(item.id) as string[])] } : {}),
         };
       });
-      markSerialsSoldLocally(localItems.flatMap((i: any) => i.serials || []));
-      clearSelectedSerials(localItems.map((i: any) => i.id));
+      markSerialsSoldLocally(localItems.flatMap((i: { serials?: string[] }) => i.serials || []));
+      clearSelectedSerials(localItems.map((i: { id: string }) => i.id));
 
       const discountRatio = subtotal > 0 ? discountAmount / subtotal : 0;
       const discountedProfit = round8(totalProfit - discountAmount * (taxMode === 'gross' && effectiveTaxRate > 0 ? 1 / (1 + effectiveTaxRate / 100) : 1));
@@ -1390,7 +1390,7 @@ export function CartPanel({
             downPaymentSnapshot,
             downPaymentProfit,
             downPaymentCOGS,
-            (receivedCurrencyCode as any) || 'USD',
+            receivedCurrencyCode || 'USD',
             downPaymentInCurr,
             operationId
           );
@@ -1400,7 +1400,7 @@ export function CartPanel({
             downPaymentSnapshot,
             downPaymentProfit,
             downPaymentCOGS,
-            (receivedCurrencyCode as any) || 'USD',
+            receivedCurrencyCode || 'USD',
             downPaymentInCurr,
             operationId
           );

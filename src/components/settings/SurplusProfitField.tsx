@@ -14,7 +14,7 @@ export async function syncSurplusSetting(): Promise<boolean | null> {
     const { data: { user } } = await supabase.auth.getUser();
     const ownerId = (await getOwnerIdForInsert()) || user?.id;
     if (!ownerId) return null;
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (supabase as unknown as { from: (t: string) => { select: (c: string) => { eq: (col: string, val: string) => { limit: (n: number) => { maybeSingle: () => Promise<{ data: { surplus_as_profit?: boolean } | null; error: unknown }> } } } } })
       .from('store_settings')
       .select('surplus_as_profit')
       .eq('user_id', ownerId)
@@ -66,7 +66,7 @@ export function SurplusProfitField() {
       const { data: { user } } = await supabase.auth.getUser();
       const ownerId = (await getOwnerIdForInsert()) || user?.id;
       if (ownerId) {
-        await (supabase as any)
+        await (supabase as unknown as { from: (t: string) => { update: (v: { surplus_as_profit: boolean }) => { eq: (col: string, val: string) => Promise<unknown> } } })
           .from('store_settings')
           .update({ surplus_as_profit: v })
           .eq('user_id', ownerId);

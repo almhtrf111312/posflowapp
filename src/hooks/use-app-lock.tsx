@@ -34,7 +34,7 @@ const AppLockContext = createContext<AppLockContextType | undefined>(undefined);
 // دالة تعيين رمز PIN في واجهة المستخدم مع التقاط الأخطاء الصريحة
 export async function setUserPinSecurely(targetUserId: string, rawPin: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const { data, error } = await (supabase.rpc as any)('set_user_pin', {
+    const { data, error } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> }).rpc('set_user_pin', {
       _target_user_id: targetUserId,
       _raw_pin: rawPin.trim(),
     });
@@ -45,8 +45,9 @@ export async function setUserPinSecurely(targetUserId: string, rawPin: string): 
     }
 
     return { success: !!data };
-  } catch (err: any) {
-    return { success: false, error: err.message || 'فشل تعيين رمز الأمان' };
+  } catch (err: unknown) {
+    const msg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string' ? (err as { message: string }).message : '';
+    return { success: false, error: msg || 'فشل تعيين رمز الأمان' };
   }
 }
 
@@ -58,7 +59,7 @@ export async function verifyPinSecurely(userId: string, enteredPin: string): Pro
     return false;
   }
 
-  const { data, error } = await (supabase.rpc as any)('verify_user_pin', {
+  const { data, error } = await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> }).rpc('verify_user_pin', {
     _user_id: userId,
     _entered_pin: enteredPin.trim(),
   });
@@ -201,12 +202,15 @@ export function AppLockProvider({ children }: { children: ReactNode }) {
       setRequiresPinSetup(true);
 
       // تصفير الهاش السحابي عبر RPC
-      void (supabase.rpc as any)('clear_user_pin', { _target_user_id: userId })
+      void (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> }).rpc('clear_user_pin', { _target_user_id: userId })
         .then(() => {
           console.log('[AppLock] Cloud PIN cleared successfully via RPC.');
         })
-        .catch((err: any) => {
-          console.warn('[AppLock] clear_user_pin RPC call notice:', err?.message || err);
+        .catch((err: unknown) => {
+          const msg = typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message?: unknown }).message === 'string'
+            ? (err as { message: string }).message
+            : '';
+          console.warn('[AppLock] clear_user_pin RPC call notice:', msg || err);
         });
 
       return;

@@ -112,56 +112,56 @@ export function ArchiveSection() {
 
   const sections: { id: GeneralSubTab; label: string; icon: typeof Package; emptyTitle: string; emptyHint: string; rows: Row[] }[] = [
     {
-      id: 'invoices', label: t('archive.tabInvoices' as any), icon: FileX,
-      emptyTitle: t('archive.emptyInvoicesTitle' as any), emptyHint: t('archive.emptyInvoicesHint' as any),
+      id: 'invoices', label: t('archive.tabInvoices' as Parameters<typeof t>[0]), icon: FileX,
+      emptyTitle: t('archive.emptyInvoicesTitle' as Parameters<typeof t>[0]), emptyHint: t('archive.emptyInvoicesHint' as Parameters<typeof t>[0]),
       rows: archivedInvoices.map(inv => ({
         id: inv.id,
-        title: `${inv.customerName || t('archive.cashCustomer' as any)} #${inv.id.slice(-6)}`,
+        title: `${inv.customerName || t('archive.cashCustomer' as Parameters<typeof t>[0])} #${inv.id.slice(-6)}`,
         sub: `${inv.currencySymbol || '$'}${formatNumber(inv.totalInCurrency ?? inv.total)} • ${fmtDate(inv.createdAt)}`,
         badge: inv.status === 'refunded'
-          ? t('archive.badgeRefundedFull' as any)
+          ? t('archive.badgeRefundedFull' as Parameters<typeof t>[0])
           : (inv as any).status === 'partially_refunded'
-            ? t('archive.badgeRefundedPartial' as any)
-            : t('archive.badgeCancelled' as any),
+            ? t('archive.badgeRefundedPartial' as Parameters<typeof t>[0])
+            : t('archive.badgeCancelled' as Parameters<typeof t>[0]),
         badgeClass: inv.status === 'refunded' ? 'bg-orange-500/15 text-orange-600 border-orange-500/30' : (inv as any).status === 'partially_refunded' ? 'bg-amber-500/15 text-amber-600 border-amber-500/30' : 'bg-destructive/15 text-destructive border-destructive/30',
       })),
     },
     {
-      id: 'debts', label: t('archive.tabDebts' as any), icon: CreditCard,
-      emptyTitle: t('archive.emptyDebtsTitle' as any), emptyHint: t('archive.emptyDebtsHint' as any),
+      id: 'debts', label: t('archive.tabDebts' as Parameters<typeof t>[0]), icon: CreditCard,
+      emptyTitle: t('archive.emptyDebtsTitle' as Parameters<typeof t>[0]), emptyHint: t('archive.emptyDebtsHint' as Parameters<typeof t>[0]),
       rows: [
-        ...paidDebts.map(d => ({ id: d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • ${t('archive.debtFullyPaid' as any)}`, badge: t('archive.badgePaid' as any), badgeClass: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' })),
-        ...writtenOffDebts.map(d => ({ id: 'wo_' + d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • ${t('archive.debtWrittenOff' as any)}`, badge: t('archive.badgeWrittenOff' as any), badgeClass: 'bg-purple-500/15 text-purple-600 border-purple-500/30' })),
+        ...paidDebts.map(d => ({ id: d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • ${t('archive.debtFullyPaid' as Parameters<typeof t>[0])}`, badge: t('archive.badgePaid' as Parameters<typeof t>[0]), badgeClass: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' })),
+        ...writtenOffDebts.map(d => ({ id: 'wo_' + d.id, title: d.customerName, sub: `$${formatNumber(d.totalDebt)} • ${t('archive.debtWrittenOff' as Parameters<typeof t>[0])}`, badge: t('archive.badgeWrittenOff' as Parameters<typeof t>[0]), badgeClass: 'bg-purple-500/15 text-purple-600 border-purple-500/30' })),
       ],
     },
     {
-      id: 'products', label: t('archive.tabProducts' as any), icon: Package,
-      emptyTitle: t('archive.emptyProductsTitle' as any), emptyHint: t('archive.emptyProductsHint' as any),
-      rows: outOfStockProducts.map(p => ({ id: p.id, title: p.name, sub: `${p.category || t('archive.uncategorized' as any)} • ${t('archive.qtyZero' as any)}`, badge: t('archive.badgeOutOfStock' as any), badgeClass: 'bg-destructive/15 text-destructive border-destructive/30' })),
+      id: 'products', label: t('archive.tabProducts' as Parameters<typeof t>[0]), icon: Package,
+      emptyTitle: t('archive.emptyProductsTitle' as Parameters<typeof t>[0]), emptyHint: t('archive.emptyProductsHint' as Parameters<typeof t>[0]),
+      rows: outOfStockProducts.map(p => ({ id: p.id, title: p.name, sub: `${p.category || t('archive.uncategorized' as Parameters<typeof t>[0])} • ${t('archive.qtyZero' as Parameters<typeof t>[0])}`, badge: t('archive.badgeOutOfStock' as Parameters<typeof t>[0]), badgeClass: 'bg-destructive/15 text-destructive border-destructive/30' })),
     },
     {
-      id: 'expenses', label: t('archive.tabExpenses' as any), icon: Receipt,
-      emptyTitle: t('archive.emptyExpensesTitle' as any), emptyHint: t('archive.emptyExpensesHint' as any),
-      rows: archivedExpenses.map(e => ({ id: e.id, title: e.notes || e.typeLabel || e.type || t('archive.expenseFallback' as any), sub: `$${formatNumber(e.amount)} • ${fmtDate(e.date || e.createdAt)}`, badge: t('archive.badgeExpenseReversed' as any), badgeClass: 'bg-rose-500/15 text-rose-600 border-rose-500/30' })),
+      id: 'expenses', label: t('archive.tabExpenses' as Parameters<typeof t>[0]), icon: Receipt,
+      emptyTitle: t('archive.emptyExpensesTitle' as Parameters<typeof t>[0]), emptyHint: t('archive.emptyExpensesHint' as Parameters<typeof t>[0]),
+      rows: archivedExpenses.map(e => ({ id: e.id, title: e.notes || e.typeLabel || e.type || t('archive.expenseFallback' as Parameters<typeof t>[0]), sub: `$${formatNumber(e.amount)} • ${fmtDate(e.date || e.createdAt)}`, badge: t('archive.badgeExpenseReversed' as Parameters<typeof t>[0]), badgeClass: 'bg-rose-500/15 text-rose-600 border-rose-500/30' })),
     },
     {
-      id: 'purchases', label: t('archive.tabPurchases' as any), icon: ShoppingBag,
-      emptyTitle: t('archive.emptyPurchasesTitle' as any), emptyHint: t('archive.emptyPurchasesHint' as any),
+      id: 'purchases', label: t('archive.tabPurchases' as Parameters<typeof t>[0]), icon: ShoppingBag,
+      emptyTitle: t('archive.emptyPurchasesTitle' as Parameters<typeof t>[0]), emptyHint: t('archive.emptyPurchasesHint' as Parameters<typeof t>[0]),
       rows: archivedPurchases.map(p => ({
-        id: p.id, title: `${p.supplier_name || t('archive.supplierFallback' as any)} #${p.invoice_number}`,
+        id: p.id, title: `${p.supplier_name || t('archive.supplierFallback' as Parameters<typeof t>[0])} #${p.invoice_number}`,
         sub: `$${formatNumber(p.actual_grand_total || p.expected_grand_total || 0)} • ${fmtDate(p.invoice_date || p.created_at)}`,
         badge: p.status === 'cancelled'
-          ? t('archive.badgeCancelled' as any)
+          ? t('archive.badgeCancelled' as Parameters<typeof t>[0])
           : p.status === 'superseded'
-            ? t('archive.badgeSuperseded' as any)
-            : t('archive.badgeReturned' as any),
+            ? t('archive.badgeSuperseded' as Parameters<typeof t>[0])
+            : t('archive.badgeReturned' as Parameters<typeof t>[0]),
         badgeClass: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
       })),
     },
     {
-      id: 'deleted', label: t('archive.tabDeleted' as any), icon: Trash2,
-      emptyTitle: t('archive.emptyDeletedTitle' as any), emptyHint: t('archive.emptyDeletedHint' as any),
-      rows: deletedLogs.map(l => ({ id: l.id, title: l.description || '—', sub: `${t('archive.byActor' as any)} ${l.userName || t('archive.adminFallback' as any)} • ${fmtDate(l.timestamp)}`, badge: getActivityTypeLabel(l.type, language) || l.type, badgeClass: 'bg-muted text-muted-foreground border-border' })),
+      id: 'deleted', label: t('archive.tabDeleted' as Parameters<typeof t>[0]), icon: Trash2,
+      emptyTitle: t('archive.emptyDeletedTitle' as Parameters<typeof t>[0]), emptyHint: t('archive.emptyDeletedHint' as Parameters<typeof t>[0]),
+      rows: deletedLogs.map(l => ({ id: l.id, title: l.description || '—', sub: `${t('archive.byActor' as Parameters<typeof t>[0])} ${l.userName || t('archive.adminFallback' as Parameters<typeof t>[0])} • ${fmtDate(l.timestamp)}`, badge: getActivityTypeLabel(l.type, language) || l.type, badgeClass: 'bg-muted text-muted-foreground border-border' })),
     },
   ];
   const current = sections.find(s => s.id === generalSubTab) || sections[0];
@@ -170,12 +170,12 @@ export function ArchiveSection() {
     <div className="space-y-3 max-w-4xl mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between gap-3 bg-card p-3 rounded-2xl border border-border shadow-2xs">
         <div className="min-w-0">
-          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">{t('archive.headerTitle' as any)}</h2>
-          <p className="text-xs text-muted-foreground">{t('archive.recordCount' as any).replace('{count}', String(totalGeneralCount))}</p>
+          <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">{t('archive.headerTitle' as Parameters<typeof t>[0])}</h2>
+          <p className="text-xs text-muted-foreground">{t('archive.recordCount' as Parameters<typeof t>[0]).replace('{count}', String(totalGeneralCount))}</p>
         </div>
         <Button variant="outline" size="sm" onClick={loadGeneralArchive} disabled={isLoading} className="h-8 px-2.5 text-xs shrink-0">
           {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
-          {t('archive.refresh' as any)}
+          {t('archive.refresh' as Parameters<typeof t>[0])}
         </Button>
       </div>
 
@@ -200,7 +200,7 @@ export function ArchiveSection() {
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">
           <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin text-primary" />
-          <p className="text-xs">{t('archive.loadingArchive' as any)}</p>
+          <p className="text-xs">{t('archive.loadingArchive' as Parameters<typeof t>[0])}</p>
         </div>
       ) : current.rows.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground bg-card rounded-2xl border border-border p-4">

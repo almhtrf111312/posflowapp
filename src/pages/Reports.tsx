@@ -517,7 +517,7 @@ function ReportsContent() {
   const reportData = useMemo(() => {
     // Helper function to reliably compute invoice profit with cloudProducts costPrice fallback and discounts
     const getInvoiceCalculatedMetrics = (inv: (typeof cloudInvoices)[0]) => {
-      const discount = Number(inv.discount || (inv as any).discountAmount || 0);
+      const discount = Number(inv.discount || (inv as typeof inv & { discountAmount?: number }).discountAmount || 0);
 
       let itemsProfit = 0;
       let hasCalculatedItems = false;
@@ -537,7 +537,7 @@ function ReportsContent() {
             const price = Number(item.price || 0);
             const qty = Number(item.quantity || 1);
             const taxRate = Number(inv.taxRate || 0);
-            const isInclusive = inv.taxMode === 'inclusive' || (inv as any).tax_inclusive;
+            const isInclusive = inv.taxMode === 'inclusive' || (inv as typeof inv & { tax_inclusive?: boolean }).tax_inclusive;
             const netPrice = (isInclusive && taxRate > 0) ? price / (1 + taxRate / 100) : price;
             singleItemProfit = (netPrice - actualCost) * qty;
           }
@@ -629,7 +629,7 @@ function ReportsContent() {
       dailySalesMap[day.date] = { sales: day.sales, profit: day.realizedProfit, orders: day.orders, discount: 0 };
     });
     filteredInvoices.forEach(inv => {
-      const discount = Number(inv.discount || (inv as any).discountAmount || 0);
+      const discount = Number(inv.discount || (inv as typeof inv & { discountAmount?: number }).discountAmount || 0);
       totalDiscount += discount;
       const date = toLocalDateString(inv.createdAt);
       if (!dailySalesMap[date]) dailySalesMap[date] = { sales: 0, profit: 0, orders: 0, discount: 0 };
@@ -698,7 +698,7 @@ function ReportsContent() {
     const partnerProfitData = filteredPartners.map(partner => {
       const filteredProfitHistory = (partner.profitHistory || []).filter(record => {
         const recordDate = toLocalDateString(record.createdAt);
-        return isDateInRange(recordDate, dateRange.from, dateRange.to) && !record.isDebt && !(record as any).superseded;
+        return isDateInRange(recordDate, dateRange.from, dateRange.to) && !record.isDebt && !(record as typeof record & { superseded?: boolean }).superseded;
       });
       const totalProfitInPeriod = filteredProfitHistory.reduce((sum, r) => sum + r.amount, 0);
 

@@ -139,7 +139,7 @@ export async function sendLocalNotification(
   title: string,
   body: string,
   channel: NotificationChannelType = 'critical',
-  extra?: Record<string, any>
+  extra?: Record<string, unknown>
 ): Promise<boolean> {
   // Deduplication guard
   if (isDuplicate(title, body)) {

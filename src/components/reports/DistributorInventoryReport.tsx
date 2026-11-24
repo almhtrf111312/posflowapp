@@ -105,7 +105,7 @@ export function DistributorInventoryReport() {
       const soldMap = new Map<string, number>();
       if (allInvoices) {
         for (const invoice of allInvoices) {
-          const items = (invoice as any).invoice_items || [];
+          const items = (invoice as { invoice_items?: Array<{ product_id?: string | null; quantity?: number | null }> }).invoice_items || [];
           for (const item of items) {
             if (item.product_id) {
               const current = soldMap.get(item.product_id) || 0;

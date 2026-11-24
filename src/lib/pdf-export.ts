@@ -42,7 +42,7 @@ export interface PDFExportOptions {
   totals?: Record<string, number | string>;
   summary?: { label: string; value: string | number }[];
   fileName?: string;
-  columnStyles?: Record<number | string, any>;
+  columnStyles?: Record<number | string, Record<string, unknown>>;
   orientation?: 'portrait' | 'landscape';
   /** القيم المالية بالدولار: تُحوَّل لعملة التقرير بسعر الصرف قبل الطباعة */
   amountsInUsd?: boolean;
@@ -427,7 +427,7 @@ export const exportToPDF = async (options: PDFExportOptions): Promise<void> => {
   }
 
   // Adjust columnStyles for reversed columns
-  const effectiveColumnStyles: Record<number | string, any> = {};
+  const effectiveColumnStyles: Record<number | string, Record<string, unknown>> = {};
   if (columnStyles) {
     Object.keys(columnStyles).forEach(key => {
       const num = Number(key);

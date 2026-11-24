@@ -57,8 +57,8 @@ export function setupSystemLanguageListener(callback: (lang: string) => void) {
 export async function initializeLanguage(userPreference: string | null): Promise<'ar' | 'en' | 'tr' | 'fa' | 'ku'> {
   // Use user's explicit preference if valid
   const validLangs = ['ar', 'en'] as const;
-  if (userPreference && validLangs.includes(userPreference as any)) {
-    return userPreference as any;
+  if (userPreference && (validLangs as readonly string[]).includes(userPreference)) {
+    return userPreference as (typeof validLangs)[number];
   }
   
   // Default is ALWAYS Arabic on first launch / no preference

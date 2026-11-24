@@ -19,7 +19,7 @@ export const NetworkStatusIndicator = forwardRef<HTMLDivElement, NetworkStatusIn
     const isArabic = language === 'ar';
     const onlineLabel = isArabic ? 'متصل بالإنترنت' : 'Online';
     const offlineLabel = isArabic ? 'غير متصل بالإنترنت' : 'Offline';
-    const syncingLabel = t('sync.syncing' as any);
+    const syncingLabel = t('sync.syncing' as Parameters<typeof t>[0]);
 
     const wrapperClass = cn(
       'flex items-center gap-2',

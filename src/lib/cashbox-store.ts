@@ -485,7 +485,7 @@ export const addDigitalSaleToShift = (
   const shifts = loadShifts();
   const idx = shifts.findIndex(s => s.status === 'open');
   if (idx === -1) return;
-  const shift = shifts[idx] as any;
+  const shift = shifts[idx] as Shift & { digitalTotal?: number };
   shift.digitalTotal = addUsd(shift.digitalTotal || 0, roundedAmount);
   shift.grossProfitTotal = addUsd(shift.grossProfitTotal || 0, roundCurrency(grossProfit));
   shift.cogsTotal = addUsd(shift.cogsTotal || 0, roundCurrency(cogs));

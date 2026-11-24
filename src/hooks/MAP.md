@@ -10,7 +10,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `use-action-guard.tsx` | Prevents duplicate execution of a sensitive async action. | useActionGuard | — | — |
 | `use-app-font.tsx` | App font selection hook. | useAppFont | lib/app-font-config, lib/events | — |
 | `use-app-lifecycle.tsx` | Persists route on background; auth and orientation lifecycle hooks. | useAppLifecycle, useAuthLifecycle, useOrientationChange | lib/last-route | — |
-| `use-app-lock.tsx` | App PIN lock: secure PIN set/verify, provider and hook. | setUserPinSecurely, verifyPinSecurely, AppLockProvider, useAppLock · 2 types | use-app-lifecycle, use-auth, lib/biometric-auth | — |
+| `use-app-lock.tsx` | App PIN lock: secure PIN set/verify, provider and hook. | setUserPinSecurely, verifyPinSecurely, AppLockProvider, useAppLock · 2 types | use-app-lifecycle, use-auth, lib/biometric-auth | rpc: clear_user_pin, set_user_pin, verify_user_pin |
 | `use-auth.tsx` | Auth provider/hook: session, profile, sign-in/out, account status. | checkUserAccountStatus, AuthProvider, useAuth · 2 types | lib/demo-data, lib/device-fingerprint, lib/sonner-bridge, use-device-binding*, lib/activity-log*, lib/cache/native-swr-cache*, lib/cloud*, lib/indexeddb-cache* | tbl: app_licenses, profiles, user_roles |
 | `use-camera.tsx` | Camera capture hook (native/web). | useCamera | — | — |
 | `use-count-up.tsx` | Animated count-up number hook. | useCountUp | — | — |

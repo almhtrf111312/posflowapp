@@ -176,7 +176,7 @@ export default function Purchases() {
                   <div className="flex items-center gap-1">
                     <DollarSign className="w-3.5 h-3.5" />
                     <span dir="ltr" className="inline-block font-semibold text-foreground tabular-nums">
-                      {m.fmtDoc(invoice.actual_grand_total || invoice.expected_grand_total, invoice as any)}
+                      {m.fmtDoc(invoice.actual_grand_total || invoice.expected_grand_total, invoice as Parameters<typeof m.fmtDoc>[1])}
                     </span>
                   </div>
                   <span className="text-xs">

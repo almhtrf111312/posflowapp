@@ -7,7 +7,7 @@ import { Capacitor } from '@capacitor/core';
 export function hideSplashScreen(): void {
   try {
     if (Capacitor.isNativePlatform()) {
-      const plugins = (Capacitor as any).Plugins || (typeof window !== 'undefined' ? (window as any).Capacitor?.Plugins : undefined);
+      const plugins = (Capacitor as unknown as { Plugins?: { SplashScreen?: { hide?: () => void } } }).Plugins || (typeof window !== 'undefined' ? (window as unknown as { Capacitor?: { Plugins?: { SplashScreen?: { hide?: () => void } } } }).Capacitor?.Plugins : undefined);
       if (plugins?.SplashScreen && typeof plugins.SplashScreen.hide === 'function') {
         plugins.SplashScreen.hide();
       }

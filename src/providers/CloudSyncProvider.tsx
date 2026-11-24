@@ -449,7 +449,7 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
       let processedNonRefund = false;
       const result = await processQueue(async (operation) => {
         const opKey = String(operation.data.uniqueKey || operation.data.operationId || operation.data.localId || operation.id);
-        const bInv = (operation.data?.bundle as any)?.invoiceNumber || operation.data?.invoiceNumber;
+        const bInv = (operation.data?.bundle as { invoiceNumber?: string } | undefined)?.invoiceNumber || operation.data?.invoiceNumber;
 
         // 🛡️ صمام أمان مزدوج: التحقق من سجل الإلغاء أو الكاش المحلي
         let isLocallyRefunded = false;

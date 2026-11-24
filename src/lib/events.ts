@@ -42,7 +42,7 @@ export function subscribeToEvent(eventName: string, callback: (event: CustomEven
   return () => window.removeEventListener(eventName, handler);
 }
 
-export function emitEvent(name: string, detail?: any) {
+export function emitEvent(name: string, detail?: unknown) {
   try {
     // Dispatch a single unified CustomEvent to notify listeners in the same window/tab
     window.dispatchEvent(new CustomEvent(name, { detail }));
@@ -51,6 +51,6 @@ export function emitEvent(name: string, detail?: any) {
   }
 }
 
-export function emitAppRefresh(detail?: any) {
+export function emitAppRefresh(detail?: unknown) {
   emitEvent(EVENTS.APP_REFRESH, detail);
 }

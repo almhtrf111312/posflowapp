@@ -117,7 +117,7 @@ export const getStuckOperations = (): StuckOperation[] => {
       const bundle = getBundle(op);
       const opId = getOperationId(op);
       const cancelRec = getCancellationRecord(opId);
-      const invoiceNumber = bundle?.invoiceNumber || (op.data as any)?.invoiceNumber;
+      const invoiceNumber = bundle?.invoiceNumber || (op.data as { invoiceNumber?: string } | undefined)?.invoiceNumber;
 
       return {
         id: op.id,
@@ -151,7 +151,7 @@ export const getStuckOperations = (): StuckOperation[] => {
         id: rec.operationQueueId || rec.operationId,
         operationId: rec.operationId,
         invoiceNumber: rec.invoiceNumber,
-        type: (rec.type as any) || 'invoice_create',
+        type: (rec.type as StuckOperation['type']) || 'invoice_create',
         label: TYPE_LABELS[rec.type] || 'عملية بيع ملغاة',
         customerName: rec.bundleSummary?.customerName,
         total: rec.bundleSummary?.total,
@@ -277,7 +277,7 @@ export const discardStuckOperation = async (operationQueueId: string): Promise<D
 
   const operationId = getOperationId(operation);
   const bundle = getBundle(operation);
-  const invoiceNumber = bundle?.invoiceNumber || (operation.data as any)?.invoiceNumber || operationId;
+  const invoiceNumber = bundle?.invoiceNumber || (operation.data as { invoiceNumber?: string } | undefined)?.invoiceNumber || operationId;
 
   // حماية من السباق: فحص القفل
   if (inFlightCancellations.has(operationId)) {

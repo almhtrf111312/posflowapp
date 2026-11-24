@@ -95,7 +95,7 @@ export function ContactLinksSection() {
               {ch.icon}
             </div>
             <span className="font-semibold text-xs sm:text-sm !text-white truncate">
-              {t(ch.labelKey as any)}
+              {t(ch.labelKey as Parameters<typeof t>[0])}
             </span>
           </button>
         ))}

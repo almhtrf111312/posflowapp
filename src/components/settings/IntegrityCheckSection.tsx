@@ -26,10 +26,10 @@ export function IntegrityCheckSection() {
   const run = async () => {
     setLoading(true);
     setError(null);
-    const { data, error } = await (supabase as any).rpc('posflow_integrity_check');
+    const { data, error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: unknown; error: { message?: string } | null }> }).rpc('posflow_integrity_check');
     if (error) setError(error.message || 'تعذّر تنفيذ الفحص');
     else setReport(data as Report);
-    const pm = await (supabase as any).from('partner_ledger_reconciliation').select('name').eq('mismatch', true);
+    const pm = await (supabase as unknown as { from: (t: string) => { select: (c: string) => { eq: (col: string, val: boolean) => Promise<{ data: Array<{ name: string }> | null; error: unknown }> } } }).from('partner_ledger_reconciliation').select('name').eq('mismatch', true);
     setPartnerMismatch(pm.error ? null : (pm.data || []).map((r: { name: string }) => r.name));
     setLoading(false);
   };

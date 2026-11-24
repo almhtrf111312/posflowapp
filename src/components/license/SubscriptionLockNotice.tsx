@@ -19,14 +19,14 @@ export function SubscriptionLockNotice({ sectionName }: SubscriptionLockNoticePr
           <Lock className="h-6 w-6 text-primary" />
         </div>
         <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
-          {sectionName ? `${sectionName}: ` : ''}{t('license.sectionRequiresSubscription' as any)}
+          {sectionName ? `${sectionName}: ` : ''}{t('license.sectionRequiresSubscription' as Parameters<typeof t>[0])}
         </h2>
         <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 p-3 text-start text-sm text-warning">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>{t('license.noCloudBackupWarning' as any)}</p>
+          <p>{t('license.noCloudBackupWarning' as Parameters<typeof t>[0])}</p>
         </div>
         <Button className="w-full" onClick={() => navigate('/renew')}>
-          {t('license.viewPlans' as any)}
+          {t('license.viewPlans' as Parameters<typeof t>[0])}
         </Button>
       </div>
     </div>

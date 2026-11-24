@@ -292,7 +292,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         .filter(inv => isActiveInvoice(inv))
         .reduce((sum, inv) => {
           if (inv.paymentType === 'cash') return sum + inv.total;
-          if ((inv.paymentType as string) === 'split' && (inv as any).downPayment) return sum + Number((inv as any).downPayment);
+          if ((inv.paymentType as string) === 'split' && (inv as typeof inv & { downPayment?: number }).downPayment) return sum + Number((inv as typeof inv & { downPayment?: number }).downPayment);
           return sum;
         }, 0);
 
@@ -304,7 +304,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       const totalDebtPaid = Math.max(debtPaidInvoices, debtPaidTable);
 
       // 4. فواتير الشراء المسددة نقداً فقط (فواتير الآجل لا تُخصم من السيولة النقدية حتى تُسدد)
-      const isCashPurchase = (pi: any) => {
+      const isCashPurchase = (pi: { paymentType?: string; payment_type?: string; notes?: string }) => {
         const pType = pi.paymentType || pi.payment_type;
         if (pType === 'debt' || pType === 'credit') return false;
         if (typeof pi.notes === 'string' && (pi.notes.includes('آجل') || pi.notes.includes('دين'))) return false;

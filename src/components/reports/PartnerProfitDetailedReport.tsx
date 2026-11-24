@@ -114,7 +114,7 @@ export function PartnerProfitDetailedReport({ dateRange }: PartnerProfitDetailed
 
       profitHistory.forEach(record => {
         // قيد تحرير دفعة دين أصبح مشمولاً بالقيد الأصلي المؤكد بعد السداد الكامل
-        if ((record as any).superseded) return;
+        if ((record as { superseded?: boolean }).superseded) return;
         const recordDate = toLocalDateString(record.createdAt);
 
         // Filter by date range

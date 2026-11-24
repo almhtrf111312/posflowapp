@@ -78,8 +78,9 @@ export async function shareInvoiceImage(
         dialogTitle: 'مشاركة الفاتورة كصورة',
       });
       return true;
-    } catch (error: any) {
-      if (error?.message?.includes('cancel') || error?.name === 'AbortError') {
+    } catch (error: unknown) {
+      const errObj = typeof error === 'object' && error !== null ? (error as { message?: unknown; name?: unknown }) : null;
+      if ((typeof errObj?.message === 'string' && errObj.message.includes('cancel')) || errObj?.name === 'AbortError') {
         return false;
       }
       console.warn('[NativeShare] Capacitor file share failed, trying web fallback:', error);
@@ -97,8 +98,9 @@ export async function shareInvoiceImage(
         });
         return true;
       }
-    } catch (error: any) {
-      if (error?.name === 'AbortError') {
+    } catch (error: unknown) {
+      const errObj = typeof error === 'object' && error !== null ? (error as { name?: unknown }) : null;
+      if (errObj?.name === 'AbortError') {
         return false;
       }
       console.warn('[NativeShare] navigator.share with file failed, falling back to download:', error);
@@ -145,8 +147,9 @@ export async function shareCanvasImage(
       const fileUri = writeResult.uri || (await Filesystem.getUri({ path: safeName, directory: Directory.Cache })).uri;
       await CapacitorShare.share({ title, files: [fileUri], dialogTitle: 'مشاركة الفاتورة كصورة' });
       return true;
-    } catch (error: any) {
-      if (error?.message?.includes('cancel') || error?.name === 'AbortError') return false;
+    } catch (error: unknown) {
+      const errObj = typeof error === 'object' && error !== null ? (error as { message?: unknown; name?: unknown }) : null;
+      if ((typeof errObj?.message === 'string' && errObj.message.includes('cancel')) || errObj?.name === 'AbortError') return false;
       console.warn('[NativeShare] Fast canvas share failed, trying blob path:', error);
     }
   }
@@ -169,9 +172,10 @@ export async function nativeShare(options: ShareOptions): Promise<boolean> {
         dialogTitle: dialogTitle || 'مشاركة عبر التطبيقات',
       });
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // إذا قام المستخدم بإلغاء نافذة المشاركة، لا نعتبره خطأ ولا نفتح واتساب إجبارياً
-      if (error?.message?.includes('cancel') || error?.name === 'AbortError') {
+      const errObj = typeof error === 'object' && error !== null ? (error as { message?: unknown; name?: unknown }) : null;
+      if ((typeof errObj?.message === 'string' && errObj.message.includes('cancel')) || errObj?.name === 'AbortError') {
         return false;
       }
       console.warn('[NativeShare] Capacitor share failed or dismissed:', error);

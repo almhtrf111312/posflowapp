@@ -103,13 +103,13 @@ export default function Expenses() {
 
   const getLocalizedExpenseType = (type: string, fallback?: string): string => {
     const translationKey = `expenses.types.${type}`;
-    const translated = (t as any)(translationKey);
+    const translated = t(translationKey as Parameters<typeof t>[0]);
     if (translated && translated !== translationKey) return translated;
     return fallback || type;
   };
 
   const getLocalizedInterval = (interval: { value: number; label: string; interval: string }): string => {
-    return (t as any)(`expenses.intervals.${interval.interval}`) || interval.label;
+    return t(`expenses.intervals.${interval.interval}` as Parameters<typeof t>[0]) || interval.label;
   };
   const [searchParams, setSearchParams] = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);

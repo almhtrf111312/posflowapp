@@ -20,9 +20,9 @@ export function ActivityArchiveSection({ initialView }: { initialView?: View }) 
   const active: View = !canSeeActivity ? 'archive' : view;
 
   const tabs: { id: View; label: string; Icon: typeof Activity }[] = [
-    ...(canSeeActivity ? [{ id: 'activity' as View, label: t('archive.tabActivity' as any), Icon: Activity }] : []),
-    { id: 'archive', label: t('archive.tabArchive' as any), Icon: Archive },
-    ...(canSeeActivity ? [{ id: 'integrity' as View, label: t('archive.tabIntegrity' as any), Icon: ShieldCheck }] : []),
+    ...(canSeeActivity ? [{ id: 'activity' as View, label: t('archive.tabActivity' as Parameters<typeof t>[0]), Icon: Activity }] : []),
+    { id: 'archive', label: t('archive.tabArchive' as Parameters<typeof t>[0]), Icon: Archive },
+    ...(canSeeActivity ? [{ id: 'integrity' as View, label: t('archive.tabIntegrity' as Parameters<typeof t>[0]), Icon: ShieldCheck }] : []),
   ];
 
   return (

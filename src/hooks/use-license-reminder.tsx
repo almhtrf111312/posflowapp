@@ -10,7 +10,7 @@ export function useLicenseReminder() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const license = useLicense();
-  const licenseState = (license as any)?.licenseState || license;
+  const licenseState = (license as typeof license & { licenseState?: typeof license })?.licenseState || license;
 
   useEffect(() => {
     if (!user?.id || licenseState.remainingDays === undefined || licenseState.remainingDays === null) return;

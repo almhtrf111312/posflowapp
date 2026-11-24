@@ -12,9 +12,9 @@ export interface AppFontOption {
 }
 
 export function getPlatformStoragePrefix(): 'mobile' | 'desktop' | 'web' {
-  const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
+  const isCapacitor = typeof window !== 'undefined' && !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
   if (isCapacitor) return 'mobile';
-  const isElectron = typeof window !== 'undefined' && (navigator.userAgent.toLowerCase().includes('electron') || !!(window as any).electron);
+  const isElectron = typeof window !== 'undefined' && (navigator.userAgent.toLowerCase().includes('electron') || !!(window as unknown as { electron?: unknown }).electron);
   if (isElectron) return 'desktop';
   return 'web';
 }

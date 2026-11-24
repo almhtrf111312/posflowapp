@@ -170,7 +170,7 @@ export const clearAllDataCompletely = async (): Promise<boolean> => {
   if (isLocalDataMode()) return false;
 
   try {
-    const { data, error } = await (supabase.rpc as any)('reset_user_store_data');
+    const { data, error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: { success?: boolean; error?: string; deleted?: unknown } | null; error: { message?: string } | null }> }).rpc('reset_user_store_data');
     if (error) throw new Error(error.message || 'reset_user_store_data failed');
     if (!data || data.success !== true) {
       throw new Error((data && data.error) || 'reset_user_store_data returned no success');
@@ -201,7 +201,7 @@ export const executePendingCloudClear = async (): Promise<void> => {
   const isPending = localStorage.getItem(PENDING_CLOUD_CLEAR_KEY);
   if (!isPending) return;
   try {
-    const { data, error } = await (supabase.rpc as any)('reset_user_store_data');
+    const { data, error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: { success?: boolean; error?: string } | null; error: { message?: string } | null }> }).rpc('reset_user_store_data');
     if (error || !data || data.success !== true) {
       console.warn('[ClearData] pending cloud clear not confirmed, keeping it for the next attempt:', error || data);
       return;

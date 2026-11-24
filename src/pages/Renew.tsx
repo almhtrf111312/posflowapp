@@ -377,8 +377,9 @@ export default function RenewPage() {
 
       if (proofSent) showToast.success('تم تسجيل الطلب وإرسال إشعار التحويل للدعم الفني');
       loadData();
-    } catch (e: any) {
-      showToast.error(e.message || 'فشل إرسال الطلب، يرجى التواصل مع الدعم الفني مباشرة');
+    } catch (e: unknown) {
+      const msg = typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message?: unknown }).message === 'string' ? (e as { message: string }).message : '';
+      showToast.error(msg || 'فشل إرسال الطلب، يرجى التواصل مع الدعم الفني مباشرة');
     } finally {
       setSubmitting(false);
     }

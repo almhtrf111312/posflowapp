@@ -292,7 +292,7 @@ export const addToQueue = (
   maxRetries: number = 3
 ): QueuedOperation => {
   const candidateOpKey = String(data.uniqueKey || data.operationId || data.localId || '');
-  const candidateInvoiceNum = (data.bundle as any)?.invoiceNumber || data.invoiceNumber;
+  const candidateInvoiceNum = (data.bundle as { invoiceNumber?: string } | undefined)?.invoiceNumber || data.invoiceNumber;
   if ((candidateOpKey && isOperationCancelled(candidateOpKey)) || (candidateInvoiceNum && isOperationCancelled(String(candidateInvoiceNum)))) {
     console.warn('[SyncQueue] Blocked adding cancelled operation to queue:', candidateOpKey || candidateInvoiceNum);
     return {
@@ -343,7 +343,7 @@ export const addToQueue = (
     setTimeout(mergePendingQueue, 0);
   
   // Track in history for UI display
-  addToHistory(operation.id, type, undefined, operation.data as any);
+  addToHistory(operation.id, type, undefined, operation.data as Parameters<typeof addToHistory>[3]);
   
   console.log(`[SyncQueue] Added operation: ${type}`, operation.id);
 
@@ -466,7 +466,7 @@ export const resetOperationForRetry = (operationId: string): boolean => {
   if (index === -1) return false;
   const opCandidate = queue[index];
   const retryOpKey = String(opCandidate.data.uniqueKey || opCandidate.data.operationId || opCandidate.data.localId || opCandidate.id);
-  const retryInvNum = (opCandidate.data?.bundle as any)?.invoiceNumber || opCandidate.data?.invoiceNumber;
+  const retryInvNum = (opCandidate.data?.bundle as { invoiceNumber?: string } | undefined)?.invoiceNumber || opCandidate.data?.invoiceNumber;
   if (isOperationCancelled(retryOpKey) || (retryInvNum && isOperationCancelled(String(retryInvNum)))) {
     console.warn('[SyncQueue] Cannot retry cancelled operation:', operationId);
     return false;
@@ -634,7 +634,7 @@ export const processQueue = async (
       }
 
       const opKey = String(operation.data.uniqueKey || operation.data.operationId || operation.data.localId || operation.id);
-      const bInv = (operation.data?.bundle as any)?.invoiceNumber || operation.data?.invoiceNumber;
+      const bInv = (operation.data?.bundle as { invoiceNumber?: string } | undefined)?.invoiceNumber || operation.data?.invoiceNumber;
       if (isOperationCancelled(opKey) || (bInv && isOperationCancelled(String(bInv)))) {
         console.warn(`[SyncQueue] Skipping upload for cancelled operation: ${operation.id} (${opKey})`);
         removeFromQueue(operation.id);

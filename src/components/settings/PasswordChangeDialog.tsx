@@ -207,11 +207,15 @@ export function PasswordChangeDialog({
       }
 
       handleClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password change error:', error);
+      // تضييق نوع الخطأ لاستخراج الرسالة بأمان
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : '';
       toast({
         title: t('password.error'),
-        description: error.message || t('password.changeFailedLater'),
+        description: errorMessage || t('password.changeFailedLater'),
         variant: 'destructive',
       });
     } finally {

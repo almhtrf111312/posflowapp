@@ -298,7 +298,7 @@ export const resolveShiftVarianceCloud = async (shiftId: string, decision: 'acce
 export async function recordShiftFxCloud(p: {
   shiftId: string; fromCode: string; fromAmount: number; fromUsd: number; toCode: string; toAmount: number; toUsd: number;
 }): Promise<void> {
-  const { error } = await (supabase as any).rpc('record_shift_fx_atomic', {
+  const { error } = await sb.rpc('record_shift_fx_atomic', {
     _shift_id: p.shiftId, _from_ccy: p.fromCode, _from_amount: p.fromAmount, _from_usd: p.fromUsd,
     _to_ccy: p.toCode, _to_amount: p.toAmount, _to_usd: p.toUsd, _operation_id: crypto.randomUUID(),
   });

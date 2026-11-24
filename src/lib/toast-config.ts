@@ -239,7 +239,7 @@ export const showToast = {
       : optionsOrDesc?.description || formatHelperDescription(optionsOrDesc) || message;
 
     const parsed = isObj ? parseToastArgs(optionsOrDesc) : {};
-    const isPersistent = isObj && (optionsOrDesc as any).persistent === true;
+    const isPersistent = isObj && (optionsOrDesc as ToastOptions & { persistent?: boolean }).persistent === true;
     const duration = (isObj && optionsOrDesc.duration)
       ? Math.max(optionsOrDesc.duration, 6000)
       : (isPersistent ? Infinity : 6000);

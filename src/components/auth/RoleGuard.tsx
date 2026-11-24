@@ -57,7 +57,7 @@ export function RoleGuard({
   if (!role || !allowedRoles.includes(role)) {
     // التحقق من صلاحيات الكاشير فقط إذا كان الدور كاشير صريح
     if (role === 'cashier' && profile) {
-      const allowedPages = (profile as any).allowed_pages as string[] | null;
+      const allowedPages = profile.allowed_pages;
       if (allowedPages && allowedPages.length > 0) {
         const currentPath = location.pathname;
         // Check exact match or prefix match for nested routes

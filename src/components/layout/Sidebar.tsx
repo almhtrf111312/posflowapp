@@ -106,9 +106,9 @@ const storeTypeIcons: Record<string, React.ElementType> = {
   custom: Store,
 };
 
-function StoreTypeBadge({ storeType, t }: { storeType: string; t: (key: any) => string }) {
+function StoreTypeBadge({ storeType, t }: { storeType: string; t: ReturnType<typeof useLanguage>['t'] }) {
   const Icon = storeTypeIcons[storeType] || Store;
-  const label = t(`settings.storeTypes.${storeType}` as any) || storeType;
+  const label = t(`settings.storeTypes.${storeType}` as Parameters<typeof t>[0]) || storeType;
   return (
     <div className="flex items-center gap-1 mb-0.5">
       <Icon className="w-3 h-3 text-primary" />
@@ -184,7 +184,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
   }, [isMobile, effectiveCollapsed]);
 
   const license = useLicense();
-  const licenseState = (license as any)?.licenseState || license;
+  const licenseState = (license as typeof license & { licenseState?: typeof license })?.licenseState || license;
   const shouldShowContactDueToLicense = !!licenseState?.isExpired || (licenseState?.remainingDays !== null && licenseState?.remainingDays !== undefined && licenseState?.remainingDays <= 30);
   const isContactUrgent = !!licenseState?.isExpired || (licenseState?.remainingDays !== null && licenseState?.remainingDays !== undefined && licenseState?.remainingDays <= 10);
 
@@ -441,7 +441,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                     
                     {(!effectiveCollapsed || isMobile) && (
                       <>
-                        <span className="text-sm truncate select-none">{item.labelOverride || (item.dynamicKey ? tDynamic(item.dynamicKey as any) : t(item.translationKey))}</span>
+                        <span className="text-sm truncate select-none">{item.labelOverride || (item.dynamicKey ? tDynamic(item.dynamicKey as Parameters<typeof tDynamic>[0]) : t(item.translationKey))}</span>
                         {itemBadge !== undefined && itemBadge > 0 && (
                           <span className="ms-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full select-none animate-pulse shadow-sm shadow-destructive/25">
                             {itemBadge > 99 ? '99+' : itemBadge}

@@ -29,7 +29,7 @@ export function usePushRegistration() {
       try {
         const { token } = await Push.getFcmToken();
         if (!cancelled && token) {
-          await (supabase as any).rpc('register_push_token', { p_token: token });
+          await (supabase as unknown as { rpc: (fn: string, args: Record<string, unknown>) => Promise<unknown> }).rpc('register_push_token', { p_token: token });
         }
       } catch { /* push is best-effort */ }
     })();

@@ -52,7 +52,7 @@ export function ExitConfirmDialog() {
         try {
           listenerHandle = await App.addListener('backButton', ({ canGoBack }) => {
             // 🛡️ إذا كان هناك كبت نشط (مثل إغلاق سلة أو إتمام عملية بيع)، لا نظهر إشعار الخروج
-            if ((window as any).__posSuppressExitUntil && Date.now() < (window as any).__posSuppressExitUntil) {
+            if ((window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil && Date.now() < (window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil) {
               return;
             }
 
@@ -87,7 +87,7 @@ export function ExitConfirmDialog() {
       if (!isMainRoute) return;
       
       // 🛡️ إذا كان هناك كبت نشط (مثل إغلاق سلة أو إتمام عملية بيع)، لا نظهر إشعار الخروج
-      if ((window as any).__posSuppressExitUntil && Date.now() < (window as any).__posSuppressExitUntil) {
+      if ((window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil && Date.now() < (window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil) {
         return;
       }
 

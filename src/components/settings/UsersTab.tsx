@@ -40,7 +40,7 @@ export function UsersTab() {
     else sonnerToast.success(title || description || '', title && description ? { description } : undefined);
   };
   const license = useLicense();
-  const licenseState = (license as any)?.licenseState || license;
+  const licenseState = (license as typeof license & { licenseState?: typeof license })?.licenseState || license;
   const { users, isLoading: usersLoading, addUser, updateUserProfile, deleteUser, setUserRefundPermission } = useUsersManagement();
 
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -407,12 +407,12 @@ export function UsersTab() {
           </DialogHeader>
           <DialogBody className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('settings.username' as any)}</label>
+              <label className="text-sm font-medium">{t('settings.username' as Parameters<typeof t>[0])}</label>
               <Input
                 ref={userNameInputRef}
                 value={userForm.name}
                 onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                placeholder={t('settings.username' as any)}
+                placeholder={t('settings.username' as Parameters<typeof t>[0])}
               />
             </div>
             {!selectedUser && (

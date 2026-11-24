@@ -48,7 +48,7 @@ export function MandatoryPinSetupModal() {
       } else {
         setErrorMsg(t('pinSetup.saveFailed'));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[MandatoryPinSetupModal] Error:', err);
       setErrorMsg(t('pinSetup.unexpectedError'));
     } finally {

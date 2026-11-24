@@ -151,7 +151,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
     notes: '',
   });
 
-  const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
+  const statusConfig: Record<string, { label: string; icon: typeof Clock; color: string }> = {
     pending: { label: isEn ? 'Syncing' : 'قيد المزامنة', icon: Clock, color: 'badge-warning' },
     due: { label: t('debts.statusDue'), icon: Clock, color: 'badge-info' },
     partially_paid: { label: t('debts.statusPartiallyPaid'), icon: Banknote, color: 'badge-warning' },

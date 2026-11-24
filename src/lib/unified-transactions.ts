@@ -379,7 +379,7 @@ export const processExpense = (
  * استرداد / عكس مصروف تشغيلي وإعادة المال للصندوق والوردية وإلغاء أثره من الأرباح التشغيلية
  */
 export const reverseExpenseTransaction = (
-  expenseIdOrTx: string | { id?: string; reference_id?: string; amount?: number; expense_type?: string; type?: string; currency?: any },
+  expenseIdOrTx: string | { id?: string; reference_id?: string; amount?: number; expense_type?: string; type?: string; currency?: string },
   amount?: number,
   expenseType: string = 'other',
   currency: string = 'USD',

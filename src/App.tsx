@@ -272,7 +272,7 @@ const AppContent = () => {
     // Only setup listener on native platforms
     if (!Capacitor.isNativePlatform()) return;
 
-    let listenerHandle: any = null;
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
 
     const setupListener = async () => {
       listenerHandle = await CapApp.addListener('appRestoredResult', (data) => {
@@ -300,7 +300,7 @@ const AppContent = () => {
           try {
             // Extract barcode from all possible result shapes
             let scanResult: string | null = null;
-            const d = data.data as any;
+            const d = data.data as { barcodes?: Array<{ rawValue?: string }>; rawValue?: string; ScanResult?: string; result?: string } | undefined;
             if (d?.barcodes?.[0]?.rawValue) {
               scanResult = d.barcodes[0].rawValue;
             } else if (d?.rawValue) {

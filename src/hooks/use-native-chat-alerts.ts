@@ -67,7 +67,7 @@ export function useNativeChatAlerts() {
   useEffect(() => {
     checkUnreadMessagesAndAlert();
 
-    let appListenerHandle: any = null;
+    let appListenerHandle: { remove: () => Promise<void> } | null = null;
     if (Capacitor.isNativePlatform()) {
       CapApp.addListener('appStateChange', ({ isActive }) => {
         if (isActive) {
@@ -95,7 +95,7 @@ export function useNativeChatAlerts() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    let notifListenerHandle: any = null;
+    let notifListenerHandle: { remove: () => Promise<void> } | null = null;
     LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
       const extra = notification.notification.extra;
       if (extra?.action === 'open_support_chat') {
@@ -127,7 +127,7 @@ export function useNativeChatAlerts() {
           table: 'support_messages',
         },
         async (payload) => {
-          const newMsg = payload.new as any;
+          const newMsg = payload.new as { id: string; sender_id?: string; sender_role?: string; message?: string; conversation_id?: string } | null;
           if (!newMsg) return;
 
           // تجاهل الرسائل التي أرسلتها أنا بنفسي

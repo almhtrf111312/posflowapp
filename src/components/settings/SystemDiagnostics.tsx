@@ -199,9 +199,13 @@ export function SystemDiagnostics() {
       toast({ title: isEn ? 'Deleted' : 'تم الحذف', description: isEn ? `Account "${user.full_name || user.email}" deleted successfully` : `تم حذف الحساب "${user.full_name || user.email}" بنجاح` });
       setDeleteTarget(null);
       fetchDiagnostics();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Delete user error:', error);
-      toast({ title: isEn ? 'Error' : 'خطأ', description: error.message || (isEn ? 'Failed to delete account' : 'فشل في حذف الحساب'), variant: 'destructive' });
+      // تضييق نوع الخطأ لاستخراج الرسالة بأمان
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : '';
+      toast({ title: isEn ? 'Error' : 'خطأ', description: errorMessage || (isEn ? 'Failed to delete account' : 'فشل في حذف الحساب'), variant: 'destructive' });
     } finally {
       setIsDeleting(false);
     }
@@ -213,8 +217,12 @@ export function SystemDiagnostics() {
       if (error) throw error;
       toast({ title: isEn ? 'Done' : 'تم', description: isEn ? 'Profile created' : 'تم إنشاء الملف الشخصي' });
       fetchDiagnostics();
-    } catch (error: any) {
-      toast({ title: isEn ? 'Error' : 'خطأ', description: error.message || (isEn ? 'Failed to create profile' : 'فشل في إنشاء الملف الشخصي'), variant: 'destructive' });
+    } catch (error: unknown) {
+      // تضييق نوع الخطأ لاستخراج الرسالة بأمان
+      const errorMessage = typeof error === 'object' && error !== null && 'message' in error && typeof (error as { message?: unknown }).message === 'string'
+        ? (error as { message: string }).message
+        : '';
+      toast({ title: isEn ? 'Error' : 'خطأ', description: errorMessage || (isEn ? 'Failed to create profile' : 'فشل في إنشاء الملف الشخصي'), variant: 'destructive' });
     }
   };
 

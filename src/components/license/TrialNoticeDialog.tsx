@@ -31,19 +31,19 @@ export function TrialNoticeDialog({ open, onOpenChange, onConfirm }: TrialNotice
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent dir={direction}>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t('license.trialNoticeTitle' as any)}</AlertDialogTitle>
+          <AlertDialogTitle>{t('license.trialNoticeTitle' as Parameters<typeof t>[0])}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('license.trialNoticeDesc' as any)}
+            {t('license.trialNoticeDesc' as Parameters<typeof t>[0])}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ul className="list-disc space-y-2 ps-5 text-sm text-muted-foreground">
           {TRIAL_NOTICE_POINT_KEYS.map((key) => (
-            <li key={key}>{t(key as any)}</li>
+            <li key={key}>{t(key as Parameters<typeof t>[0])}</li>
           ))}
         </ul>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>{t('license.trialUnderstandStart' as any)}</AlertDialogAction>
+          <AlertDialogAction onClick={onConfirm}>{t('license.trialUnderstandStart' as Parameters<typeof t>[0])}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

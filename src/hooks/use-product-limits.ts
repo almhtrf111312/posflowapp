@@ -17,7 +17,7 @@ export interface ProductLimitStatus {
 export function useProductLimits() {
   const { user } = useAuth();
   const license = useLicense();
-  const licenseState = (license as any)?.licenseState || license;
+  const licenseState = (license as typeof license & { licenseState?: typeof license })?.licenseState || license;
 
   const [status, setStatus] = useState<ProductLimitStatus>({
     canAdd: true,
@@ -52,12 +52,12 @@ export function useProductLimits() {
       // 2. قراءة باقة الترخيص
       const isTrial = !!licenseState?.isTrial;
       const tierName: 'trial' | 'standard' | 'pro' | 'institution' =
-        (licenseState as any)?.planAudience ||
-        (licenseState as any)?.licenseTier ||
+        (licenseState?.planAudience as 'trial' | 'standard' | 'pro' | 'institution' | undefined) ||
+        (licenseState?.licenseTier as 'trial' | 'standard' | 'pro' | 'institution' | undefined) ||
         (isTrial ? 'trial' : 'standard');
 
       // قراءة الحد الأقصى الفعلي المسجل لترخيص هذا المتجر بدقة
-      const rawLimit = licenseState?.maxProducts ?? (licenseState as any)?.max_products;
+      const rawLimit = licenseState?.maxProducts ?? (licenseState as typeof licenseState & { max_products?: number | null })?.max_products;
       const dynamicLimit = (rawLimit !== null && rawLimit !== undefined && !isNaN(Number(rawLimit)))
         ? Number(rawLimit)
         : -1;

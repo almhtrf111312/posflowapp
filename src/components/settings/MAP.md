@@ -23,11 +23,11 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `PasswordChangeDialog.tsx` | Password change dialog. | PasswordChangeDialog | hooks/use-auth, hooks/use-language, hooks/use-user-role, lib/sonner-bridge, ui/* | — |
 | `PrinterSettingsSection.tsx` | Printer settings section. | PrinterSettingsSection, default · 1 types | hooks/use-language, ui/* | — |
 | `ProductFieldsSection.tsx` | Product form fields settings. | ProductFieldsSection | CustomFieldsManager, hooks/use-language, hooks/use-network-status, lib/product-fields-config, ui/* | — |
-| `ProfileManagement.tsx` | User profile management. | ProfileManagement | hooks/use-app-lock, hooks/use-auth, hooks/use-language, hooks/use-user-role, lib/demo-data, lib/phone-utils, lib/sonner-bridge, ui/* | tbl: profiles |
+| `ProfileManagement.tsx` | User profile management. | ProfileManagement | hooks/use-app-lock, hooks/use-auth, hooks/use-language, hooks/use-user-role, lib/demo-data, lib/phone-utils, lib/sonner-bridge, ui/* | rpc: check_phone_email_availability · tbl: profiles |
 | `RestoreWarningDialog.tsx` | Backup restore warning dialog. | RestoreWarningDialog, default | hooks/use-language, ui/* | — |
 | `ShiftToleranceField.tsx` | Shift variance tolerance field. | ShiftToleranceField | hooks/use-language, hooks/use-user-role, lib/cloud/cashbox-cloud, lib/sonner-bridge, ui/* | — |
 | `StoreInfoSection.tsx` | Store information section. | StoreInfoSection, default · 1 types | LanguageSection, hooks/use-language, lib/product-fields-config, ui/* | — |
-| `StorePhoneVerificationDialog.tsx` | Store phone verification dialog. | StorePhoneVerificationDialog | hooks/use-language, lib/sonner-bridge, ui/* | — |
+| `StorePhoneVerificationDialog.tsx` | Store phone verification dialog. | StorePhoneVerificationDialog | hooks/use-language, lib/sonner-bridge, ui/* | rpc: assign_store_and_profile_phone, complete_phone_transfer |
 | `SurplusProfitField.tsx` | Surplus-profit setting field and sync. | syncSurplusSetting, SurplusProfitField | hooks/use-language, hooks/use-user-role, lib/supabase-store, ui/* | tbl: store_settings |
 | `SystemDiagnostics.tsx` | System diagnostics panel. | SystemDiagnostics | hooks/use-language, hooks/use-network-status, lib/sonner-bridge, ui/* | tbl: app_licenses, profiles, user_roles |
 | `ThemeLivePreview.tsx` | Theme live preview. | ThemeLivePreview | hooks/use-language, hooks/use-theme | — |

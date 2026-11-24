@@ -463,7 +463,7 @@ export interface BluetoothDevice {
  */
 export function isBluetoothSupported(): boolean {
   if (isNativeAndroid()) return true;
-  if (typeof navigator !== 'undefined' && Boolean((navigator as any).bluetooth)) return true;
+  if (typeof navigator !== 'undefined' && Boolean((navigator as unknown as { bluetooth?: unknown }).bluetooth)) return true;
   return false;
 }
 
@@ -482,11 +482,12 @@ export async function searchBluetoothPrinters(): Promise<BluetoothDevice[]> {
   }
 
   // Web Bluetooth API fallback
-  if (typeof navigator !== 'undefined' && (navigator as any).bluetooth?.getDevices) {
+  const navBt = typeof navigator !== 'undefined' ? (navigator as unknown as { bluetooth?: { getDevices?: () => Promise<Array<{ name?: string; id?: string }>> } }).bluetooth : undefined;
+  if (navBt?.getDevices) {
     try {
-      const webDevices = await (navigator as any).bluetooth.getDevices();
+      const webDevices = await navBt.getDevices();
       if (webDevices && Array.isArray(webDevices)) {
-        return webDevices.map((d: any) => ({ name: d.name || 'Bluetooth Printer', address: d.id || '' }));
+        return webDevices.map((d) => ({ name: d.name || 'Bluetooth Printer', address: d.id || '' }));
       }
     } catch (e) {
       console.warn('[Printer] Web Bluetooth getDevices:', e);
@@ -663,12 +664,12 @@ export async function printHTML(rawHtml: string): Promise<boolean> {
   }
 
   // المسار الثاني: الطباعة السلكية / طابعة النظام على الكمبيوتر PC/Electron أو المتصفح Web
-  if (typeof window !== 'undefined' && (window as any).AndroidPrinter?.print) {
+  if (typeof window !== 'undefined' && (window as unknown as { AndroidPrinter?: { print?: () => void } }).AndroidPrinter?.print) {
     try {
       printOnWeb(htmlContent);
       setTimeout(() => {
         try {
-          (window as any).AndroidPrinter.print();
+          (window as unknown as { AndroidPrinter?: { print?: () => void } }).AndroidPrinter?.print?.();
         } catch (e) {
           console.warn('[NativePrint] AndroidPrinter.print failed:', e);
         }

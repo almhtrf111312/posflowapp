@@ -140,7 +140,7 @@ export async function authenticateBiometric(credentialId?: string | null): Promi
           atob(credentialId.replace(/-/g, '+').replace(/_/g, '/')),
           (c) => c.charCodeAt(0)
         );
-        (getOptions.publicKey as any).allowCredentials = [
+        if (getOptions.publicKey) getOptions.publicKey.allowCredentials = [
           {
             id: rawId,
             type: 'public-key',

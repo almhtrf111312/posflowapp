@@ -15,6 +15,7 @@ import {
 import { useSmartToastListener, hideSmartToast, SmartToastData } from '@/hooks/use-smart-toast';
 import { cn } from '@/lib/utils';
 import { getCurrentLanguage } from '@/lib/i18n';
+import { getDefaultToastDuration } from '@/components/ui/toast-duration';
 
 // =========================================================================
 // محرك المؤثرات الصوتية الخفيفة المدمج بواسطة Web Audio API (Native Feel)
@@ -69,18 +70,6 @@ function playDismissSound() {
     osc.start(now);
     osc.stop(now + 0.11);
   } catch { /* intentionally empty */ }
-}
-
-// قراءة مدة بقاء الإشعار بدقة من الإعدادات المخزنة محلياً
-export function getDefaultToastDuration(): number {
-  try {
-    const saved = localStorage.getItem('posflow_toast_duration');
-    if (saved) {
-      const val = Number(saved);
-      if (!isNaN(val) && val >= 500 && val <= 10000) return val;
-    }
-  } catch { /* intentionally empty */ }
-  return 2500;
 }
 
 // =========================================================================

@@ -3,7 +3,7 @@
 Role, exports and local dependencies only — no internals. 6 files. Lists are capped; open the file for the rest.
 `dep*` = dynamic import · bare name = same directory · `ui/*` = shadcn primitives · `(+N)` = more not shown.
 Omitted as noise: `integrations/supabase/client`, `lib/utils`.
-Subfolders with their own map: auth/, dashboard/, debug/, layout/, license/, pos/, products/, purchases/, reports/, settings/
+Subfolders with their own map: auth/, barcode/, dashboard/, debug/, layout/, license/, pos/, products/, purchases/, reports/, settings/, support/
 
 
 | file | role | exports | local deps |
@@ -13,4 +13,4 @@ Subfolders with their own map: auth/, dashboard/, debug/, layout/, license/, pos
 | `ExitConfirmDialog.tsx` | Exit confirmation dialog. | ExitConfirmDialog | lib/toast-config, ui/* |
 | `NavLink.tsx` | Router NavLink wrapper. | NavLink | — |
 | `NotificationPermissionPrompt.tsx` | Notification permission prompt. | NotificationPermissionPrompt | hooks/use-auth, lib/native-notifications, ui/* |
-| `PrivacyPolicyScreen.tsx` | First-launch privacy policy screen and accepted-state hook. | usePrivacyAccepted, PrivacyPolicyScreen | hooks/use-language, hooks/use-theme, hooks/use-ui-scale, lib/i18n, lib/ui-scale-config, ui/* |
+| `PrivacyPolicyScreen.tsx` | First-launch privacy policy screen. | PrivacyPolicyScreen | hooks/use-language, hooks/use-theme, hooks/use-ui-scale, lib/i18n, lib/ui-scale-config, ui/* |

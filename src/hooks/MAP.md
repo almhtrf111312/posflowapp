@@ -40,5 +40,5 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `use-toast.ts` | Toast hook (shadcn). | toast, useToast · 1 types | use-smart-toast, lib/toast-config | — |
 | `use-ui-scale.tsx` | UI scale hook. | useUIScale | lib/events, lib/ui-scale-config | — |
 | `use-user-role.tsx` | User role provider and hook. | UserRoleProvider, useUserRole · 1 types | use-auth, lib/demo-data, lib/secure-storage | tbl: user_roles |
-| `use-users-management.tsx` | Store users management (list/create/update). | useUsersManagement · 2 types | use-auth, use-toast, lib/activity-log, lib/demo-data, lib/phone-utils | rpc: can_add_cashier · tbl: profiles, user_roles |
+| `use-users-management.tsx` | Store users management (list/create/update). | useUsersManagement · 2 types | use-auth, use-toast, lib/activity-log, lib/demo-data, lib/phone-utils | rpc: can_add_cashier, check_phone_email_availability · tbl: profiles, user_roles |
 | `use-warehouse.tsx` | Default-warehouse provider and hook (active; POS depends on it). | WarehouseProvider, useWarehouse | use-auth, use-user-role, lib/cloud/warehouses-cloud, lib/events | — |

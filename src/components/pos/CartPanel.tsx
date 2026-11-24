@@ -3,7 +3,7 @@ import { isLocalOnlyMode } from '@/lib/subscription-lock';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { SerialPickerDialog, SerialPickItem } from '@/components/pos/SerialPickerDialog';
 import { loadTrackedProducts, getSelectedSerials, clearSelectedSerials, markSerialsSoldLocally, warmSerialCache } from '@/lib/serials-store';
-import { syncSurplusSetting } from '@/components/settings/SurplusProfitField';
+import { syncSurplusSetting } from '@/components/settings/surplus-profit-sync';
 import { tryAcquireLock, releaseLock, LOCK_RESOURCES } from '@/lib/transaction-lock';
 import {
   Wrench,
@@ -69,7 +69,8 @@ import {
   addCustomerCloud,
 } from '@/lib/cloud/customers-cloud';
 import { useWarehouse } from '@/hooks/use-warehouse';
-import { BackgroundSyncIndicator, useSyncState } from './BackgroundSyncIndicator';
+import { BackgroundSyncIndicator } from './BackgroundSyncIndicator';
+import { useSyncState } from './use-sync-state';
 import { addUniqueOperation } from '@/lib/sync-queue';
 import { deductProductsLocalCache, validateCartProducts } from '@/lib/cloud/products-cloud';
 import { useCloudSyncContext } from '@/providers/CloudSyncProvider';

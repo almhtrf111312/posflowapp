@@ -6,6 +6,7 @@ import { PageActivityProvider } from '@/contexts/PageActivityContext';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
 import { performanceMetrics } from '@/lib/performance-metrics';
+import { getBaseTabPath } from '@/components/layout/tab-paths';
 
 /**
  * KeepAliveTab Component
@@ -50,22 +51,6 @@ export const KeepAliveTab = memo(({ activePath, tabPath, children }: KeepAliveTa
 });
 
 KeepAliveTab.displayName = 'KeepAliveTab';
-
-/**
- * استخراج المسار الأساسي للتبويبات الرئيسية
- */
-export function getBaseTabPath(pathname: string): string | null {
-  if (pathname === '/products' || pathname.startsWith('/products/')) return '/products';
-  if (pathname === '/invoices' || pathname.startsWith('/invoices/')) return '/invoices';
-  if (pathname === '/customers' || pathname.startsWith('/customers/')) return '/customers';
-  if (pathname === '/services' || pathname.startsWith('/services/')) return '/services';
-  if (pathname === '/expenses' || pathname.startsWith('/expenses/')) return '/expenses';
-  if (pathname === '/purchases' || pathname.startsWith('/purchases/')) return '/purchases';
-  if (pathname === '/reports' || pathname.startsWith('/reports/')) return '/reports';
-  if (pathname === '/settings' || pathname.startsWith('/settings/')) return '/settings';
-  if (pathname === '/appearance' || pathname.startsWith('/appearance/')) return '/appearance';
-  return null;
-}
 
 // Lazy load primary tab components
 const Products = lazy(() => import('@/pages/Products'));

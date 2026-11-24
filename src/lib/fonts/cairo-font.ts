@@ -1,3 +1,4 @@
+import type { jsPDF } from 'jspdf';
 // Noto Sans Arabic Font - for PDF export with proper Arabic RTL support
 // IMPORTANT: jsPDF requires TTF fonts. WOFF/WOFF2 will cause "No unicode cmap" or glyph issues.
 
@@ -33,7 +34,7 @@ const fetchFontAsBase64 = async (url: string): Promise<string> => {
 
 // Loads Arabic fonts into jsPDF (normal + bold) and sets default to normal.
 // Includes offline local caching in memory and localStorage for resilience when offline on mobile/desktop.
-export const loadArabicFont = async (doc: any): Promise<void> => {
+export const loadArabicFont = async (doc: jsPDF): Promise<void> => {
   // 1) Load Regular font
   if (!cachedRegularBase64) {
     // Check localStorage cache first (offline fast-path)
@@ -142,7 +143,7 @@ export const loadArabicFont = async (doc: any): Promise<void> => {
 };
 
 // Helper to check if Arabic font is available
-export const isArabicFontLoaded = (doc: any): boolean => {
+export const isArabicFontLoaded = (doc: jsPDF): boolean => {
   try {
     const fonts = doc.getFontList?.();
     return !!fonts && ARABIC_FONT_NAME in fonts;
@@ -151,7 +152,7 @@ export const isArabicFontLoaded = (doc: any): boolean => {
   }
 };
 
-export const isArabicBoldFontLoaded = (doc: any): boolean => {
+export const isArabicBoldFontLoaded = (doc: jsPDF): boolean => {
   try {
     const fonts = doc.getFontList?.();
     const styles = fonts?.[ARABIC_FONT_NAME];

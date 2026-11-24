@@ -13,7 +13,7 @@ import { BrowserMultiFormatReader, type Result } from '@zxing/library';
 import { Camera, ScanLine, X, RotateCcw, Flashlight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { playBeep } from '@/lib/sound-utils';
-import { setScannerTransparency } from './NativeMLKitScanner';
+import { setScannerTransparency } from './scanner-utils';
 
 export const PENDING_BARCODE_KEY = 'posflow_pending_scan';
 

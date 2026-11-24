@@ -173,7 +173,7 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
   const store = storeName ? { name: storeName, phone: storePhone, address: storeAddress } : getStoreInfo();
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet(sheetName, { views: [{ rightToLeft: true } as any] });
+  const ws = wb.addWorksheet(sheetName, { views: [{ rightToLeft: true }] });
 
   // Store header
   ws.addRow([store.name]);
@@ -347,7 +347,7 @@ export const exportToExcel = async (options: ExcelExportOptions): Promise<void> 
   }
 
   // تثبيت صف العناوين أثناء التمرير، وإضافة فلاتر على الأعمدة
-  ws.views = [{ rightToLeft: true, state: 'frozen', ySplit: headerRowNumber } as any];
+  ws.views = [{ rightToLeft: true, state: 'frozen', ySplit: headerRowNumber }];
   if (data.length > 0) {
     ws.autoFilter = {
       from: { row: headerRowNumber, column: 1 },

@@ -78,7 +78,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from '@/lib/sonner-bridge';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
-import { PENDING_BARCODE_KEY } from '@/components/barcode/OfflineBarcodeScanner';
+import { PENDING_BARCODE_KEY } from '@/components/barcode/scanner-utils';
 import { CategoryManager } from '@/components/CategoryManager';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DatePicker } from '@/components/ui/date-picker';

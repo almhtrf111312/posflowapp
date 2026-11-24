@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/hooks/use-language';
 import { useSidebarOpenState } from '@/hooks/use-scroll-visibility';
-import { floatingSideClass, floatingBottomClass } from '@/components/ui/SmartFab';
+import { floatingSideClass, floatingBottomClass } from '@/components/ui/floating-classes';
 
 interface FloatingSaveBarProps {
   visible: boolean;

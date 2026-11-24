@@ -42,7 +42,8 @@ import { resolveEffectivePerformanceMode } from "./lib/performance-mode";
 // Demo data loading removed - app uses cloud sync for data persistence
 import { ClickProbe } from "./components/debug/ClickProbe";
 import { SafeModeScreen } from "./components/debug/SafeModeScreen";
-import { PrivacyPolicyScreen, usePrivacyAccepted } from "./components/PrivacyPolicyScreen";
+import { PrivacyPolicyScreen } from "./components/PrivacyPolicyScreen";
+import { usePrivacyAccepted } from "./components/privacy/use-privacy-accepted";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { FeatureErrorBoundary } from "@/components/debug/FeatureErrorBoundary";

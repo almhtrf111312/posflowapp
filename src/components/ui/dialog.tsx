@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useIsScannerActive } from "@/components/ui/use-is-scanner-active";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -11,29 +12,6 @@ const DialogTrigger = DialogPrimitive.Trigger;
 const DialogPortal = DialogPrimitive.Portal;
 
 const DialogClose = DialogPrimitive.Close;
-
-export function useIsScannerActive() {
-  const [active, setActive] = React.useState(() =>
-    typeof document !== 'undefined' && document.body.classList.contains('barcode-scanner-active')
-  );
-
-  React.useEffect(() => {
-    const handleState = (e: Event) => {
-      const customEvent = e as CustomEvent<{ active: boolean }>;
-      if (customEvent.detail && typeof customEvent.detail.active === 'boolean') {
-        setActive(customEvent.detail.active);
-      } else if (typeof document !== 'undefined') {
-        setActive(document.body.classList.contains('barcode-scanner-active'));
-      }
-    };
-    window.addEventListener('posflow:scanner-state', handleState);
-    return () => {
-      window.removeEventListener('posflow:scanner-state', handleState);
-    };
-  }, []);
-
-  return active;
-}
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,

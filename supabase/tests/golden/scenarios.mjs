@@ -466,6 +466,33 @@ export async function runLawFixes(k, newWorldFn) {
     check('GENERAL sale with zero stock is still refused', g.refused !== null && g.refused.includes('المخزون المتاح'), true);
   }
 
+  // Re-audit v1.5.272 (migration 20261124080800): N1 repeated purchase edit keeps the whole credit, N2 drawer keeps 8 decimals, N3 currency must match.
+  {
+    const w = await newWorldFn();
+    const shift = await w.newShift(500);
+    const supplier = (await w.one(`insert into public.suppliers(user_id,name,created_by) values($1,'N1',$1) returning id`, [OWNER])).id;
+    const product = (await w.one(`insert into public.products(user_id,name,quantity,cost_price,sale_price) values($1,'N1 item',0,0,20) returning id`, [OWNER])).id;
+    const inv = (await w.one(`insert into public.purchase_invoices(user_id,invoice_number,supplier_name,supplier_id,invoice_date,status,payment_status,payment_method,amount_paid,paid_from,paid_shift_id,expected_items_count,expected_total_quantity,expected_grand_total,actual_items_count,actual_total_quantity,actual_grand_total)
+      values($1,'N1-GOLDEN-0001','N1',$2,current_date,'draft','paid','cash',100,'drawer',$3,1,10,100,1,10,100) returning id`, [OWNER, supplier, shift])).id;
+    await w.one(`insert into public.purchase_invoice_items(invoice_id,product_id,product_name,quantity,cost_price,sale_price,total_cost) values($1,$2,'N1 item',10,10,20,100)`, [inv, product]);
+    await w.one(`select public.finalize_purchase_invoice_atomic($1) r`, [inv]);
+    const line = (q) => JSON.stringify([{ product_id: product, quantity: q, cost_price: 10, product_name: 'N1 item', sale_price: 20 }]);
+    const e1 = await w.one(`select public.edit_purchase_invoice_atomic($1,$2::jsonb,'n1-golden-edit-01','e1') id`, [inv, line(8)]);
+    const e2 = await w.one(`select public.edit_purchase_invoice_atomic($1,$2::jsonb,'n1-golden-edit-02','e2') id`, [e1.id, line(7)]);
+    const s2 = await w.one(`select supplier_credit::float8 c from public.purchase_invoices where id=$1`, [e2.id]);
+    check('N1 second edit keeps the whole credit (100 paid - 70 total = 30)', s2.c, 30);
+    const led = await w.one(`select coalesce(sum(amount),0)::float8 b from public.supplier_ledger_entries where supplier_id=$1`, [supplier]);
+    check('N1 supplier ledger nets to -30 after two edits', led.b, -30);
+
+    const items = (q, price) => JSON.stringify([{ product_id: product, product_name: 'N2', quantity: q, unit_price: price, amount_usd: price * q, amount_original: price * q, cost_price: 0 }]);
+    await w.one(`select * from public.process_pos_sale_with_drawer_atomic('n2-golden-000001','cash','N','',1.23456789,0,0,0,0,1.23456789,0,'USD',null::uuid,$1::jsonb,0,1,null,$2::uuid,null,null)`, [items(1, 1.23456789), shift]);
+    const mv = await w.one(`select amount::float8 a from public.shift_transactions where reference_id='n2-golden-000001'`);
+    check('N2 drawer movement keeps 8 decimals (1.23456789)', mv.a, 1.23456789);
+
+    const refused = await w.fails(w.one(`select * from public.process_pos_sale_with_drawer_atomic('n3-golden-000001','cash','N','',10,0,0,0,0,10,0,'USD',null::uuid,$1::jsonb,0,1,null,$2::uuid,999,null)`, [items(1, 10), shift]));
+    check('N3 a received amount that does not match the sale is refused', refused !== null && refused.includes('لا يطابق'), true);
+  }
+
   // F4 (audit): the period closing stores the FX difference of debt collections as its own line (migration 20261124080300).
   {
     const w = await newWorldFn();

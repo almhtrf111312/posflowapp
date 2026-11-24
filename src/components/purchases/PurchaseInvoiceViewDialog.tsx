@@ -448,6 +448,13 @@ export function PurchaseInvoiceViewDialog({
                 </div>
               </div>
 
+              {!isEditing && Number(invoice?.supplier_credit || 0) > 0 && (
+                <div className="p-2.5 rounded-xl bg-success/10 border border-success/30 text-sm text-foreground flex flex-wrap items-center justify-between gap-2">
+                  <span>{isEn ? "Credit from supplier (paid above the new total)" : "رصيد لصالحنا عند المورد (مدفوع أكثر من المجموع الجديد)"}</span>
+                  <span dir="ltr" className="font-bold tabular-nums text-success">{displayMoney(Number(invoice?.supplier_credit || 0))}</span>
+                </div>
+              )}
+
               {/* Edit Mode Notice & Reason Input */}
               {isEditing && (
                 <div className="p-3 bg-warning/10 border border-warning/30 rounded-xl space-y-2 text-xs">

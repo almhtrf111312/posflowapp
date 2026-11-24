@@ -69,7 +69,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from '@/lib/sonner-bridge';
-import { getCategoryNames } from '@/lib/categories-store';
+import { getCategoryNamesCloud, getCategoryNamesLocalFirst } from '@/lib/cloud/categories-cloud';
 import { CategoryManager } from '@/components/CategoryManager';
 import { loadProducts } from '@/lib/products-store';
 import { useLanguage } from '@/hooks/use-language';
@@ -91,18 +91,27 @@ export default function Partners() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
 
-  // Load categories from shared store
+  // Same category source as Products/POS (cloud list, local fallback) so the partner screen matches the product screen
   const [categories, setCategories] = useState(() =>
-    getCategoryNames().map((name, idx) => ({ id: `cat_${idx}`, label: name }))
+    getCategoryNamesLocalFirst().map((name, idx) => ({ id: `cat_${idx}`, label: name }))
   );
 
   // Get used categories from products
   const usedCategories = [...new Set(loadProducts().map(p => p.category))];
 
-  // Reload categories from store
-  const reloadCategories = () => {
-    setCategories(getCategoryNames().map((name, idx) => ({ id: `cat_${idx}`, label: name })));
+  // Reload categories from the cloud source
+  const reloadCategories = async () => {
+    try {
+      const names = await getCategoryNamesCloud();
+      setCategories(names.map((name, idx) => ({ id: `cat_${idx}`, label: name })));
+    } catch {
+      setCategories(getCategoryNamesLocalFirst().map((name, idx) => ({ id: `cat_${idx}`, label: name })));
+    }
   };
+
+  useEffect(() => {
+    void reloadCategories();
+  }, []);
 
   // ✅ تحميل الشركاء من Cloud
   const loadPartnersData = async () => {

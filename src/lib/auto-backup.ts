@@ -217,6 +217,48 @@ export const initAutoBackup = (): void => {
   });
 };
 
+// Once per calendar day on app open: write a local backup file (native only).
+// Cloud data is already live, so only the device file is produced here.
+const DAILY_BACKUP_DAY_KEY = 'posflow_daily_backup_day';
+
+export const runDailyLocalBackupOnOpen = async (): Promise<boolean> => {
+  try {
+    const isNative = typeof window !== 'undefined' &&
+      !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+    if (!isNative) return false;
+
+    const config = loadBackupConfig();
+    if (!config.enabled || !config.autoLocalStorage) return false;
+
+    const today = formatLocalDay(new Date());
+    try {
+      if (localStorage.getItem(DAILY_BACKUP_DAY_KEY) === today) return false;
+    } catch {
+      // storage unavailable: still try the backup
+    }
+
+    const saved = await saveBackupLocally();
+    if (saved) {
+      try {
+        localStorage.setItem(DAILY_BACKUP_DAY_KEY, today);
+      } catch {
+        // ignore
+      }
+    }
+    return saved;
+  } catch (error) {
+    console.error('Daily local backup failed:', error);
+    return false;
+  }
+};
+
+const formatLocalDay = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 // Stop auto-backup
 export const stopAutoBackup = (): void => {
   if (backupCheckInterval) {

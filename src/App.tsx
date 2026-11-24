@@ -122,6 +122,14 @@ const AppContent = () => {
     });
   }, []);
 
+  // Daily local backup file, once per day on app open (native only, delayed so startup is not slowed)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void import('@/lib/auto-backup').then(m => m.runDailyLocalBackupOnOpen());
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // تفريغ السلة وحالتها من التخزين عند تشغيل التطبيق بالكامل (Cold Start) لضمان بدء السلة مغلقة دائماً
   useEffect(() => {
     try {

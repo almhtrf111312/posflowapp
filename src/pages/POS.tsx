@@ -389,7 +389,7 @@ export default function POS() {
 
       }
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     let legacyCart: CartItem[] = [];
 
@@ -405,15 +405,15 @@ export default function POS() {
 
       }
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     let legacyCustomer = '';
 
-    try { legacyCustomer = localStorage.getItem(CART_CUSTOMER_KEY) || ''; } catch {}
+    try { legacyCustomer = localStorage.getItem(CART_CUSTOMER_KEY) || ''; } catch { /* intentionally empty */ }
 
     let legacyDiscount = 0;
 
-    try { legacyDiscount = Number(localStorage.getItem(CART_DISCOUNT_KEY)) || 0; } catch {}
+    try { legacyDiscount = Number(localStorage.getItem(CART_DISCOUNT_KEY)) || 0; } catch { /* intentionally empty */ }
 
     return [{
 
@@ -457,7 +457,7 @@ export default function POS() {
 
       }
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     return [];
 
@@ -589,7 +589,7 @@ export default function POS() {
 
         localStorage.removeItem(CART_OPEN_KEY);
 
-      } catch { }
+      } catch { /* intentionally empty */ }
 
     } else {
 
@@ -611,7 +611,7 @@ export default function POS() {
 
         localStorage.removeItem(CART_OPEN_KEY);
 
-      } catch { }
+      } catch { /* intentionally empty */ }
 
     }
 
@@ -635,7 +635,7 @@ export default function POS() {
 
           localStorage.removeItem(CART_OPEN_KEY);
 
-        } catch { }
+        } catch { /* intentionally empty */ }
 
       }
 
@@ -685,7 +685,7 @@ export default function POS() {
 
           localStorage.removeItem(CART_OPEN_KEY);
 
-        } catch { }
+        } catch { /* intentionally empty */ }
 
       } else {
 
@@ -707,7 +707,7 @@ export default function POS() {
 
           }
 
-        } catch { }
+        } catch { /* intentionally empty */ }
 
         // ✅ استعادة حالة السلة المفتوحة فقط أثناء الجلسة الحية (sessionStorage)
 
@@ -721,7 +721,7 @@ export default function POS() {
 
           }
 
-        } catch { }
+        } catch { /* intentionally empty */ }
 
       }
 
@@ -799,7 +799,7 @@ export default function POS() {
 
       if (saved) return Number(saved) || 0;
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     return 0;
 
@@ -815,7 +815,7 @@ export default function POS() {
 
       else localStorage.removeItem(CART_DISCOUNT_KEY);
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
   }, [discount]);
 
@@ -1409,7 +1409,7 @@ export default function POS() {
 
       else localStorage.removeItem(CART_CUSTOMER_KEY);
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
   }, [customerName]);
 
@@ -1601,7 +1601,7 @@ export default function POS() {
 
     // ✅ Clear pending barcode since we're handling it now
 
-    try { localStorage.removeItem(PENDING_BARCODE_KEY); } catch { }
+    try { localStorage.removeItem(PENDING_BARCODE_KEY); } catch { /* intentionally empty */ }
 
 
 
@@ -1831,7 +1831,7 @@ export default function POS() {
 
         setPendingScan(null); // Clear from state
 
-        try { localStorage.removeItem(PENDING_BARCODE_KEY); } catch { }
+        try { localStorage.removeItem(PENDING_BARCODE_KEY); } catch { /* intentionally empty */ }
 
       } else {
 
@@ -1843,7 +1843,7 @@ export default function POS() {
 
         setPendingScan(null); // Clear from state
 
-        try { localStorage.removeItem(PENDING_BARCODE_KEY); } catch { }
+        try { localStorage.removeItem(PENDING_BARCODE_KEY); } catch { /* intentionally empty */ }
 
       }
 
@@ -1993,7 +1993,7 @@ export default function POS() {
 
       localStorage.removeItem(CART_DISCOUNT_KEY);
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
   };
 
@@ -2163,7 +2163,7 @@ export default function POS() {
 
       localStorage.setItem(HELD_CARTS_KEY, JSON.stringify(heldCarts));
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
   }, [heldCarts]);
 

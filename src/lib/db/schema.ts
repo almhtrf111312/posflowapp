@@ -82,8 +82,8 @@ export async function initNativeSchema(db: SQLiteDBConnection): Promise<void> {
   // ترقية تلقائية آمنة للأجهزة التي تمتلك الجدول مسبقاً
   try {
     await db.execute('ALTER TABLE local_products ADD COLUMN image TEXT;');
-  } catch (_) {}
+  } catch (_) { /* intentionally empty */ }
   try {
     await db.execute('ALTER TABLE local_products ADD COLUMN raw_data TEXT;');
-  } catch (_) {}
+  } catch (_) { /* intentionally empty */ }
 }

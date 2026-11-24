@@ -722,7 +722,7 @@ function printOnWeb(rawHtml: string): boolean {
             if (document.body.contains(iframe)) {
               document.body.removeChild(iframe);
             }
-          } catch {}
+          } catch { /* intentionally empty */ }
         }, 3000);
       };
 

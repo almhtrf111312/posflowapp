@@ -169,7 +169,7 @@ export const ProductGrid = memo(function ProductGrid({
     // ✅ Don't call setScannerOpen(false) here — onClose callback handles it
     onSearchChange(barcode);
     onBarcodeScan?.(barcode);
-    try { localStorage.removeItem('posflow_pending_scan'); } catch {}
+    try { localStorage.removeItem('posflow_pending_scan'); } catch { /* intentionally empty */ }
   };
 
   const touchMovedRef = useRef(false);

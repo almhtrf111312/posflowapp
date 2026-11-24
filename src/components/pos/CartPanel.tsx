@@ -1697,7 +1697,7 @@ export function CartPanel({
         storeLogo = settings.storeSettings?.logo || '';
         footer = settings.printSettings?.footer || footer;
       }
-    } catch { }
+    } catch { /* intentionally empty */ }
 
     const currentDate = new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US');
     const currentTime = new Date().toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US');

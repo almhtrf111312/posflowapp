@@ -897,7 +897,7 @@ function GenericDetailsBox({ details }: { details: Record<string, unknown> }) {
   return (
     <div className="p-2.5 rounded-xl bg-muted/40 dark:bg-muted/30 border border-border space-y-1 text-xs">
       {entries.map(([key, val]) => {
-        let displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+        const displayVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
         return (
           <div key={key} className="flex justify-between items-center">
             <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}:</span>

@@ -172,7 +172,7 @@ export const toast = Object.assign(
       }
       try {
         sonnerToast.dismiss(toastId);
-      } catch {}
+      } catch { /* intentionally empty */ }
     },
   }
 );
@@ -186,6 +186,6 @@ try {
     (sonnerToast as any).info = toast.info;
     (sonnerToast as any).dismiss = toast.dismiss;
   }
-} catch {}
+} catch { /* intentionally empty */ }
 
 export { Toaster };

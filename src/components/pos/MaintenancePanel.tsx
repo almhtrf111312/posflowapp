@@ -382,7 +382,7 @@ export function MaintenancePanel({
         storePhone = settings.storeSettings?.phone || '';
         footer = settings.printSettings?.footer || footer;
       }
-    } catch { }
+    } catch { /* intentionally empty */ }
 
     const currentDate = new Date().toLocaleDateString('ar-SA');
     const fullDescription = [getServiceLabel(), getProductLabel(), description].filter(Boolean).join(' - ');

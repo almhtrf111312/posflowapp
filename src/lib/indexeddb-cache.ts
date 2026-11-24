@@ -196,7 +196,7 @@ export async function loadProductsFromIDB<T>(): Promise<{ products: T[]; timesta
             if (p.raw_data) {
               try {
                 baseObj = JSON.parse(p.raw_data);
-              } catch (_) {}
+              } catch (_) { /* intentionally empty */ }
             }
 
             const salePrice = Number(p.price ?? baseObj.salePrice ?? baseObj.price) || 0;
@@ -284,7 +284,7 @@ export async function getProductByBarcodeIDB<T>(barcode: string): Promise<T | nu
           if (p.raw_data) {
             try {
               baseObj = JSON.parse(p.raw_data);
-            } catch (_) {}
+            } catch (_) { /* intentionally empty */ }
           }
 
           const salePrice = Number(p.price ?? baseObj.salePrice ?? baseObj.price) || 0;

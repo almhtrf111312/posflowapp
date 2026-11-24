@@ -284,7 +284,7 @@ function buildStateFromStorage(): MoneyEngineState {
       if (storedReport && (!currencies[storedReport] || !currencies[storedReport].enabled)) {
         window.localStorage.setItem(REPORT_CURRENCY_KEY, safeReport);
       }
-    } catch {}
+    } catch { /* intentionally empty */ }
   }
 
   return {

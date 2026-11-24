@@ -66,7 +66,7 @@ export const showSmartToast = (data: Omit<SmartToastData, 'id'> & { id?: string 
     import('sonner').then(({ toast: sonnerToast }) => {
       sonnerToast.dismiss();
     }).catch(() => {});
-  } catch {}
+  } catch { /* intentionally empty */ }
 
   const defaultDuration = (() => {
     try {
@@ -75,7 +75,7 @@ export const showSmartToast = (data: Omit<SmartToastData, 'id'> & { id?: string 
         const val = Number(saved);
         if (!isNaN(val) && val >= 500 && val <= 10000) return val;
       }
-    } catch {}
+    } catch { /* intentionally empty */ }
     return 2500;
   })();
 
@@ -86,7 +86,6 @@ export const showSmartToast = (data: Omit<SmartToastData, 'id'> & { id?: string 
   const lang = (typeof window !== 'undefined' && localStorage.getItem('posflow_language')) || 'ar';
 
   let {
-    type = 'success',
     title,
     subtitle,
     statusBadge,
@@ -96,6 +95,9 @@ export const showSmartToast = (data: Omit<SmartToastData, 'id'> & { id?: string 
     secondaryValue,
     description,
     pillText,
+  } = data;
+  const {
+    type = 'success',
     invoiceNumber,
     itemName,
     itemCount,

@@ -240,7 +240,7 @@ export const loadQueue = (): QueuedOperation[] => {
           try {
             const op = JSON.parse(localStorage.getItem(key) || 'null');
             if (op && !queue.find(x => x.id === op.id)) queue.push(op);
-          } catch {}
+          } catch { /* intentionally empty */ }
         }
       }
       if (!queue.length) return [];
@@ -638,7 +638,7 @@ export const processQueue = async (
       if (isOperationCancelled(opKey) || (bInv && isOperationCancelled(String(bInv)))) {
         console.warn(`[SyncQueue] Skipping upload for cancelled operation: ${operation.id} (${opKey})`);
         removeFromQueue(operation.id);
-        try { localStorage.removeItem('posflow_sync_pending_' + operation.id); } catch {}
+        try { localStorage.removeItem('posflow_sync_pending_' + operation.id); } catch { /* intentionally empty */ }
         updateHistoryStatus(operation.id, 'failed', 'تم إلغاء العملية محلياً ومنع رفعها للسحابة');
         continue;
       }

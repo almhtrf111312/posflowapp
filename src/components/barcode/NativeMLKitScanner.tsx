@@ -148,8 +148,8 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
     if (e) e.preventDefault();
     const code = manualBarcode.trim();
     if (!code) return;
-    try { localStorage.setItem(PENDING_BARCODE_KEY, code); } catch (e) {}
-    try { playBeep(); } catch {}
+    try { localStorage.setItem(PENDING_BARCODE_KEY, code); } catch (e) { /* intentionally empty */ }
+    try { playBeep(); } catch { /* intentionally empty */ }
     handleClose();
     onScanRef.current(code);
   }, [manualBarcode, handleClose]);
@@ -236,8 +236,8 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
 
           console.log('[MLKit Scanner] Scanned:', barcode);
           try { localStorage.setItem(PENDING_BARCODE_KEY, barcode); } catch (e) { console.warn(e); }
-          try { playBeep(); } catch {}
-          try { if (navigator.vibrate) navigator.vibrate(200); } catch {}
+          try { playBeep(); } catch { /* intentionally empty */ }
+          try { if (navigator.vibrate) navigator.vibrate(200); } catch { /* intentionally empty */ }
 
           await cleanup();
           if (mountedRef.current) {
@@ -271,7 +271,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
             try {
               await BarcodeScanner.setZoomRatio({ zoomRatio: 2 });
               if (mountedRef.current) setCurrentZoom(2);
-            } catch {}
+            } catch { /* intentionally empty */ }
           }
         }, 1800);
 

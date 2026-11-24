@@ -433,7 +433,7 @@ export const discardStuckOperation = async (operationQueueId: string): Promise<D
     removeFromQueue(operation.id);
     try {
       localStorage.removeItem('posflow_sync_pending_' + operation.id);
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     updateHistoryStatus(operation.id, 'failed', 'تم إلغاء البيع وعكس آثاره المحاسبية بنجاح');
 
@@ -522,7 +522,7 @@ export const discardStuckOperation = async (operationQueueId: string): Promise<D
       try {
         const { secureSet } = await import('./secure-storage');
         secureSet('sync_queue', currentQueue, { namespace: 'hp_sync' });
-      } catch {}
+      } catch { /* intentionally empty */ }
     }
 
     emitEvent(EVENTS.SYNC_QUEUE_UPDATED, null);

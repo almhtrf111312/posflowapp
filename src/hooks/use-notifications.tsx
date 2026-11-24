@@ -74,7 +74,7 @@ const loadArchivedFromStorage = (): Notification[] => {
 const saveArchivedToStorage = (items: Notification[]) => {
   try {
     localStorage.setItem(ARCHIVED_STORAGE_KEY, JSON.stringify(items));
-  } catch {}
+  } catch { /* intentionally empty */ }
 };
 
 // حالة "مقروء" لتنبيهات المخزون والديون الآلية تُحفظ محلياً حتى لا تعود غير مقروءة عند كل فحص

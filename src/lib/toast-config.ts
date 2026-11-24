@@ -99,7 +99,7 @@ export function getSavedToastDuration(): number {
       const val = Number(saved);
       if (!isNaN(val) && val >= 500 && val <= 10000) return val;
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
   return 3000;
 }
 

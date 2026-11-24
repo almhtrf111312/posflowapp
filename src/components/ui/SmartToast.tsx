@@ -49,7 +49,7 @@ function playDropSound() {
     gain.connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.09);
-  } catch {}
+  } catch { /* intentionally empty */ }
 }
 
 function playDismissSound() {
@@ -68,7 +68,7 @@ function playDismissSound() {
     gain.connect(ctx.destination);
     osc.start(now);
     osc.stop(now + 0.11);
-  } catch {}
+  } catch { /* intentionally empty */ }
 }
 
 // قراءة مدة بقاء الإشعار بدقة من الإعدادات المخزنة محلياً
@@ -79,7 +79,7 @@ export function getDefaultToastDuration(): number {
       const val = Number(saved);
       if (!isNaN(val) && val >= 500 && val <= 10000) return val;
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
   return 2500;
 }
 
@@ -107,7 +107,7 @@ export interface ParsedToastDetails {
 
 // تنظيف الحشو: إزالة "بنجاح" ورموز ✓ والإيموجي الزائدة والتنقيط الطرفي، لمقارنة النص المكرر
 const stripFiller = (s: string): string =>
-  s.replace(/[✓✔✅🎉]/g, '').replace(/\s*بنجاح\s*/g, ' ').replace(/\s+/g, ' ').replace(/^[\s.:،\-–—]+|[\s.:،\-–—]+$/g, '').trim();
+  s.replace(/[✓✔✅🎉]/gu, '').replace(/\s*بنجاح\s*/g, ' ').replace(/\s+/g, ' ').replace(/^[\s.:،\-–—]+|[\s.:،\-–—]+$/g, '').trim();
 const norm = (s: string): string => stripFiller(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 // هل الوصف يكرر العنوان (متطابق أو أحدهما داخل الآخر)؟
 const isRedundant = (a?: unknown, b?: unknown): boolean => {
@@ -358,7 +358,7 @@ export function SmartToast() {
 
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {}
+    } catch { /* intentionally empty */ }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -386,7 +386,7 @@ export function SmartToast() {
 
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     const deltaX = e.clientX - pointerStartRef.current.x;
     const deltaY = e.clientY - pointerStartRef.current.y;

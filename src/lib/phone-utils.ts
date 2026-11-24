@@ -4,7 +4,7 @@
 export function normalizePhoneNumber(rawPhone?: string | null): string {
   if (!rawPhone) return '';
   // إزالة المسافات والأقواس والرموز غير الرقمية ما عدا +
-  let cleaned = rawPhone.trim().replace(/[^\+0-9]/g, '');
+  let cleaned = rawPhone.trim().replace(/[^+0-9]/g, '');
 
   if (cleaned.startsWith('00')) {
     cleaned = '+' + cleaned.substring(2);

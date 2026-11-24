@@ -110,8 +110,8 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
       console.warn('[Offline Scanner] Could not save pending barcode:', e);
     }
 
-    try { playBeep(); } catch { }
-    try { if (navigator.vibrate) navigator.vibrate(150); } catch { }
+    try { playBeep(); } catch { /* intentionally empty */ }
+    try { if (navigator.vibrate) navigator.vibrate(150); } catch { /* intentionally empty */ }
 
     // ✅ Stop camera FIRST, then notify parent via refs
     stopCamera();
@@ -185,7 +185,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
         try {
           const available = await BarcodeDetectorClass.getSupportedFormats();
           supportedFormats = SUPPORTED_FORMATS.filter(f => available.includes(f));
-        } catch { }
+        } catch { /* intentionally empty */ }
 
         if (supportedFormats.length === 0) {
           throw new Error('NO_SUPPORTED_FORMATS');
@@ -213,7 +213,7 @@ export function OfflineBarcodeScanner({ isOpen, onClose, onScan }: OfflineBarcod
           const track = stream.getVideoTracks()[0];
           const caps = track.getCapabilities?.() as any;
           if (caps?.torch) setHasTorch(true);
-        } catch { }
+        } catch { /* intentionally empty */ }
 
         videoRef.current.srcObject = stream;
         await videoRef.current.play();

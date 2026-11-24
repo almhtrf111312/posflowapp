@@ -87,7 +87,7 @@ const getInitialStoredSettings = (): Record<string, any> | null => {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch { /* intentionally empty */ }
   return null;
 };
 
@@ -412,7 +412,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) prevSettings = JSON.parse(raw);
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     const newSettings = {
       ...prevSettings,
@@ -483,7 +483,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
       try {
         const rawTax = localStorage.getItem(TAX_KEY);
         if (rawTax) prevTax = JSON.parse(rawTax);
-      } catch {}
+      } catch { /* intentionally empty */ }
       localStorage.setItem(TAX_KEY, JSON.stringify({
         ...prevTax,
         enabled: taxEnabled,
@@ -583,7 +583,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
       setThemeMode(themeMode);
     }
 
-    try { localStorage.setItem('posflow_setup_complete', 'true'); } catch {}
+    try { localStorage.setItem('posflow_setup_complete', 'true'); } catch { /* intentionally empty */ }
 
     // 7. Dispatch system events so POS, Sidebar, and Themes update immediately
     emitEvent(EVENTS.SETTINGS_UPDATED, newSettings);

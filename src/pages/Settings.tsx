@@ -697,7 +697,7 @@ export default function Settings() {
     setShowUnpairDialog(false);
     try {
       await PosFlowPrinter.disconnect();
-    } catch {}
+    } catch { /* intentionally empty */ }
     toast({
       title: t('common.saved'),
       description: t('settings.printerDisconnected' as Parameters<typeof t>[0]),
@@ -1315,7 +1315,7 @@ export default function Settings() {
           if (savedReportCur && cleanEnabledCurrencies[savedReportCur] !== true) {
             window.localStorage.setItem('posflow_report_currency', 'USD');
           }
-        } catch {}
+        } catch { /* intentionally empty */ }
       }
 
       // بناء خريطة أسعار الصرف والأسماء والرموز النظيفة مع منع تداخل الخانات القديمة TRY/SYP

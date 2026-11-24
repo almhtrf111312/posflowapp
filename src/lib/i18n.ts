@@ -67,7 +67,7 @@ export function getCurrentLanguage(): Language {
     if (stored && ENABLED_LANGUAGE_CODES.includes(stored as Language)) return stored as Language;
     // أول تشغيل أو لغة معطّلة محفوظة سابقاً: العربية وتُحفظ فوراً
     localStorage.setItem('posflow_language', 'ar');
-  } catch {}
+  } catch { /* intentionally empty */ }
   return 'ar';
 }
 
@@ -75,7 +75,7 @@ export function setLanguage(lang: Language): void {
   void loadLanguage(lang);
   try {
     localStorage.setItem('posflow_language', lang);
-  } catch {}
+  } catch { /* intentionally empty */ }
   const dir = languages.find(l => l.code === lang)?.direction || (lang === 'en' || lang === 'tr' ? 'ltr' : 'rtl');
   if (typeof document !== 'undefined') {
     document.documentElement.dir = dir;

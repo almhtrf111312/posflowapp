@@ -542,7 +542,7 @@ export const injectGuestDemoData = async (): Promise<void> => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('guest-demo-started'));
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
 };
 
 /**
@@ -582,7 +582,7 @@ export const clearGuestDemoData = async (force: boolean = false): Promise<boolea
         }
       }
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
 
   // Remove demo markers
   localStorage.removeItem(DEMO_MODE_KEY);
@@ -612,13 +612,13 @@ export const clearGuestDemoData = async (force: boolean = false): Promise<boolea
   try {
     const { clearProductsIDB } = await import('./indexeddb-cache');
     await clearProductsIDB();
-  } catch {}
+  } catch { /* intentionally empty */ }
 
   // Invalidate memory caches
   try {
     const { invalidateAllCaches } = await import('./cloud');
     await invalidateAllCaches();
-  } catch {}
+  } catch { /* intentionally empty */ }
 
   // Emit events
   try {
@@ -631,7 +631,7 @@ export const clearGuestDemoData = async (force: boolean = false): Promise<boolea
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('guest-demo-ended'));
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
 
   return true;
 };

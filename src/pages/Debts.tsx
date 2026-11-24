@@ -383,7 +383,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
         storePhone = settings.storeSettings?.phone || '';
         currencySymbol = settings.currencySymbol || '$';
       }
-    } catch { }
+    } catch { /* intentionally empty */ }
 
     const shareData: DebtShareData = {
       customerName: debt.customerName,

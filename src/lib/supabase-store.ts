@@ -788,7 +788,7 @@ export async function saveStoreSettingsDirect(settings: Record<string, unknown>)
 
       // Update existing: مهلة زمنية كي لا يبقى الرفع معلقاً، وتجاهل أي عمود غير موجود في مخطط الكاش
       // ثم التحقق من أن الصف تحدّث فعلاً (RLS قد يعيد 0 صفوف دون خطأ)
-      let attemptPayload: Record<string, unknown> = { ...payloadToSave };
+      const attemptPayload: Record<string, unknown> = { ...payloadToSave };
       let error: { message?: string; code?: string } | null = null;
       let updatedRows = 0;
       for (let attempt = 0; attempt < 6; attempt++) {

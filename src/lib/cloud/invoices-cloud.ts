@@ -1345,7 +1345,7 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
           const parsed = JSON.parse(s);
           return parsed.currencySymbols as Record<string, string> | undefined;
         }
-      } catch {}
+      } catch { /* intentionally empty */ }
       return undefined;
     })();
     const queueInvoices: Invoice[] = [];

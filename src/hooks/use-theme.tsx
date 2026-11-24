@@ -392,9 +392,9 @@ export function applyBlurTheme(enabled: boolean, mode: ThemeMode, transparency: 
     let alpha = Math.pow(normalized, 1.2);
     alpha = Math.max(0.12, alpha); // يمنع هبوط العتامة للصفر
 
-    let darkAlpha = Math.max(0.14, alpha * 0.75);
-    let lightAlpha = Math.max(0.18, alpha * 0.85);
-    let glassBg = mode === 'dark' 
+    const darkAlpha = Math.max(0.14, alpha * 0.75);
+    const lightAlpha = Math.max(0.18, alpha * 0.85);
+    const glassBg = mode === 'dark' 
       ? `rgba(15, 23, 42, ${darkAlpha})` 
       : `rgba(255, 255, 255, ${lightAlpha})`;
     

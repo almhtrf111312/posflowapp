@@ -1042,7 +1042,7 @@ export function getReportCurrency(): ResolvedCurrencyMeta {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(REPORT_CURRENCY_KEY, 'USD');
       }
-    } catch {}
+    } catch { /* intentionally empty */ }
   }
 
   return {
@@ -1237,7 +1237,7 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
 
       if (raw) settings = JSON.parse(raw);
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
   }
 
@@ -1247,7 +1247,7 @@ export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrency
 
       settings = JSON.parse(settings);
 
-    } catch {}
+    } catch { /* intentionally empty */ }
 
   }
 

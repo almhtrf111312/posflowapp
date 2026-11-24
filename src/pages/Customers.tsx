@@ -286,7 +286,7 @@ export default function Customers() {
       const statsMap = await loadCustomersStatsMap();
       const stats = getCustomerStatsFrom(statsMap, { id: selectedCustomer.id, name: selectedCustomer.name });
       totalDebt = Math.max(totalDebt, stats.totalDebt || 0);
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     if (totalDebt > 0.001) {
       toast.error(`لا يمكن حذف العميل "${selectedCustomer.name}" لوجود ذمم وديون قائمة بقيمة $${totalDebt.toFixed(2)}`);

@@ -146,7 +146,7 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
 // Remove offline fallback overlay if React mounts successfully
 try {
   document.getElementById('offline-fallback-screen')?.remove();
-} catch {}
+} catch { /* intentionally empty */ }
 
 // تحميل ملف ترجمة اللغة النشطة قبل الرسم الأول (العربية مضمّنة فوراً) لتجنب ظهور نصوص بلغة أخرى لحظياً
 const renderApp = () => {

@@ -444,7 +444,7 @@ export default function Login() {
     try {
       sessionStorage.setItem('posflow_just_signed_up', 'true');
       localStorage.removeItem('posflow_setup_complete');
-    } catch {}
+    } catch { /* intentionally empty */ }
     setIsLoading(false);
     toast.success(t('auth.signupSuccess'));
     navigate('/');

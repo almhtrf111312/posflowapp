@@ -108,7 +108,7 @@ export class NativeSWRCache {
       this.evictOldKeys();
       try {
         localStorage.setItem(`fps_swr_${key}`, JSON.stringify(entry));
-      } catch {}
+      } catch { /* intentionally empty */ }
     }
   }
 
@@ -137,7 +137,7 @@ export class NativeSWRCache {
         const parsed = JSON.parse(raw);
         return Date.now() - parsed.timestamp > maxAgeMs;
       }
-    } catch {}
+    } catch { /* intentionally empty */ }
     return true;
   }
 
@@ -148,7 +148,7 @@ export class NativeSWRCache {
     memoryStore.delete(key);
     try {
       localStorage.removeItem(`fps_swr_${key}`);
-    } catch {}
+    } catch { /* intentionally empty */ }
   }
 
   /**
@@ -160,7 +160,7 @@ export class NativeSWRCache {
       try {
         const keys = Object.keys(localStorage).filter((k) => k.startsWith('fps_swr_'));
         keys.forEach((k) => localStorage.removeItem(k));
-      } catch {}
+      } catch { /* intentionally empty */ }
       return;
     }
 
@@ -182,9 +182,9 @@ export class NativeSWRCache {
               localStorage.removeItem(k);
             }
           }
-        } catch {}
+        } catch { /* intentionally empty */ }
       }
-    } catch {}
+    } catch { /* intentionally empty */ }
   }
 
   /**
@@ -220,6 +220,6 @@ export class NativeSWRCache {
         const memKey = entries[i].key.replace('fps_swr_', '');
         memoryStore.delete(memKey);
       }
-    } catch {}
+    } catch { /* intentionally empty */ }
   }
 }

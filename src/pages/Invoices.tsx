@@ -195,7 +195,7 @@ export function isInvoiceToday(createdAt?: string | null): boolean {
     if (createdAt.startsWith(localToday) || createdAt.startsWith(utcToday)) {
       return true;
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
   return false;
 }
 
@@ -219,7 +219,7 @@ export function isInvoiceThisWeek(createdAt?: string | null): boolean {
     if (invDate >= weekAgo) {
       return true;
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
   return false;
 }
 
@@ -238,7 +238,7 @@ export function isInvoiceThisMonth(createdAt?: string | null): boolean {
     if (invDate.getUTCFullYear() === now.getUTCFullYear() && invDate.getUTCMonth() === now.getUTCMonth()) {
       return true;
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
   return false;
 }
 
@@ -257,7 +257,7 @@ export function isInvoiceThisYear(createdAt?: string | null): boolean {
     if (invDate.getUTCFullYear() === now.getUTCFullYear()) {
       return true;
     }
-  } catch {}
+  } catch { /* intentionally empty */ }
   return false;
 }
 
@@ -272,7 +272,7 @@ export function isInvoiceCustomDate(createdAt?: string | null, targetDate?: stri
     if (isNaN(invDate.getTime())) return false;
     if (getLocalDateString(invDate) === targetDate) return true;
     if (invDate.toISOString().slice(0, 10) === targetDate) return true;
-  } catch {}
+  } catch { /* intentionally empty */ }
   return false;
 }
 
@@ -305,7 +305,7 @@ export default function Invoices() {
     try {
       const val = t(key as Parameters<typeof t>[0]);
       if (val && val !== key && !val.includes('.')) return val;
-    } catch {}
+    } catch { /* intentionally empty */ }
     return arabicFallback;
   }, [t, language]);
 
@@ -342,7 +342,7 @@ export default function Invoices() {
   const [partialRefundQuantities, setPartialRefundQuantities] = useState<Record<string, number>>({});
   const [showRefunded, setShowRefunded] = useState(false);
   // ✅ حالة البضاعة المرتجعة مثبتة دائماً على 'good' (سليم) لتعود الكميات تلقائياً إلى المخزون
-  const refundCondition: 'good' = 'good';
+  const refundCondition = 'good' as const;
   const [refundMeta, setRefundMeta] = useState<Record<string, { condition: 'good' | 'damaged'; at: string; mode: string }>>(() => {
     try { return JSON.parse(localStorage.getItem('posflow_refund_meta_v1') || '{}'); } catch { return {}; }
   });
@@ -874,7 +874,7 @@ export default function Invoices() {
         dates.add(inv.createdAt.slice(0, 10));
         try {
           dates.add(getLocalDateString(new Date(inv.createdAt)));
-        } catch {}
+        } catch { /* intentionally empty */ }
       }
     }
     return Array.from(dates);
@@ -2015,7 +2015,7 @@ export default function Invoices() {
           storeName = settings.storeSettings?.name || storeName;
           storePhone = settings.storeSettings?.phone || '';
         }
-      } catch (e) {}
+      } catch (e) { /* intentionally empty */ }
 
       const localeMap: Record<string, string> = { en: 'en-US', tr: 'tr-TR', fa: 'fa-IR', ku: 'ckb-IQ', ar: 'ar-SA' };
       const date = new Date(invoice.createdAt).toLocaleDateString(localeMap[language] || 'ar-SA');

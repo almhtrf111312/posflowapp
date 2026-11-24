@@ -28,7 +28,7 @@ export default function Signup() {
 
   const validatePhone = (value: string): boolean => {
     // Remove spaces, dashes, parentheses
-    const cleaned = value.replace(/[\s\-\(\)]/g, '');
+    const cleaned = value.replace(/[\s\-()]/g, '');
     // Must only contain digits, optionally starting with +
     if (!/^\+?\d+$/.test(cleaned)) return false;
     // Extract digits only
@@ -84,7 +84,7 @@ export default function Signup() {
     try {
       sessionStorage.setItem('posflow_just_signed_up', 'true');
       localStorage.removeItem('posflow_setup_complete');
-    } catch {}
+    } catch { /* intentionally empty */ }
 
     toast.success(t('auth.signupSuccess'));
     navigate('/');

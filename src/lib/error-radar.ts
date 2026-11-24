@@ -106,7 +106,7 @@ export function scrubSensitiveData(text: string): string {
     // إخفاء رموز JWT
     .replace(/eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}/g, '[TOKEN_REDACTED]')
     // إخفاء رؤوس Bearer
-    .replace(/Bearer\s+[a-zA-Z0-9_\-\.]{15,}/gi, 'Bearer [TOKEN_REDACTED]')
+    .replace(/Bearer\s+[a-zA-Z0-9_\-.]{15,}/gi, 'Bearer [TOKEN_REDACTED]')
     // إخفاء حقول كلمات المرور والرموز السرية
     .replace(/(password|passwd|pwd|secret|token|apikey|api_key|auth_token)\s*[:=]\s*["']?[^"'\s,}&]+/gi, '$1=[REDACTED]')
     // إخفاء عناوين البريد الإلكتروني
@@ -238,7 +238,7 @@ function saveErrorRadarLogs(logs: ErrorRadarLog[]): void {
     }
     // إشعار جميع المشتركين بالواجهة
     listeners.forEach(fn => {
-      try { fn(trimmed); } catch {}
+      try { fn(trimmed); } catch { /* intentionally empty */ }
     });
   } catch (err) {
     console.warn('[ErrorRadar] Failed to save error logs:', err);
@@ -795,7 +795,7 @@ export function clearErrorRadarLogs(): void {
     localStorage.removeItem(FALLBACK_STORAGE_KEY);
     localStorage.removeItem(FALLBACK_QUEUE_KEY);
     listeners.forEach(fn => {
-      try { fn([]); } catch {}
+      try { fn([]); } catch { /* intentionally empty */ }
     });
   } catch (err) {
     console.warn('[ErrorRadar] Failed to clear error logs:', err);
@@ -860,7 +860,7 @@ export function initErrorRadar(): () => void {
         source: 'uncaught_error',
         severity: isNet ? 'warning' : 'error',
       });
-    } catch {}
+    } catch { /* intentionally empty */ }
   };
 
   // 2. التقاط إخفاقات الوعود غير المعالجة (Unhandled Promise Rejections)
@@ -872,7 +872,7 @@ export function initErrorRadar(): () => void {
         source: 'unhandled_rejection',
         severity: isNet ? 'warning' : 'error',
       });
-    } catch {}
+    } catch { /* intentionally empty */ }
   };
 
   // 3. مستمع الإجراءات السريعة (UI Action Breadcrumbs)
@@ -896,7 +896,7 @@ export function initErrorRadar(): () => void {
         const name = scrubSensitiveData(ariaLabel || title || rawText || btn.tagName.toLowerCase());
         addBreadcrumb('ui', `click: ${name}`);
       }
-    } catch {}
+    } catch { /* intentionally empty */ }
   };
 
   // 4. مستمعات التنقل وحالة الشبكة

@@ -24,6 +24,16 @@ const BACKUP_EVENT = 'posflow_backup_updated';
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const DEBOUNCE_MS = 3000;
 
+/** Write the backup list to localStorage. Returns false instead of throwing when the quota is exceeded. */
+function persistBackups(list: LocalBackup[]): boolean {
+  try {
+    localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(list));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Gather all localStorage data for backup
  */
@@ -87,10 +97,20 @@ export function triggerAutoBackup(reason: string): void {
 
       // Load existing backups
       const existing = loadRecentBackups();
-      const updated = [backup, ...existing].slice(0, MAX_BACKUPS);
+      let updated = [backup, ...existing].slice(0, MAX_BACKUPS);
 
-      // Save metadata + data to localStorage
-      localStorage.setItem(BACKUP_STORAGE_KEY, JSON.stringify(updated));
+      // Save metadata + data to localStorage. Full copies can exceed the browser quota: if they do,
+      // keep only the newest backup's data and the older entries' metadata, so the newest backup is never lost.
+      let toSave = updated;
+      if (!persistBackups(toSave)) {
+        toSave = updated.map((b, i) => (i === 0 ? b : { ...b, data: {} }));
+        if (!persistBackups(toSave)) {
+          toSave = toSave.slice(0, 1).map(b => ({ ...b, data: {} }));
+          persistBackups(toSave);
+        }
+        console.warn('[AutoBackup] localStorage is full: older backups keep metadata only');
+      }
+      updated = toSave;
 
       // Also save to native filesystem if available
       if (Capacitor.isNativePlatform()) {

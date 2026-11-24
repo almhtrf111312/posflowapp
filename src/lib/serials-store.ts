@@ -7,7 +7,7 @@ export const getSelectedSerials = (productId: string): string[] | undefined => s
 export const setSelectedSerials = (productId: string, serials: string[]) => { selected.set(productId, serials); };
 export const clearSelectedSerials = (productIds: string[]) => { productIds.forEach(id => selected.delete(id)); };
 
-const db = supabase as any;
+const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, args: Record<string, unknown>) => any };
 
 // ===== كاش محلي للعمل بدون اتصال =====
 const CACHE_KEY = 'posflow_serial_cache_v1';
@@ -104,8 +104,19 @@ export async function loadInStockSerials(productId: string): Promise<string[]> {
   } catch { return fromCache(); }
 }
 
-export async function lookupSerialCloud(serial: string): Promise<any[]> {
+/** One serial as returned by the lookup_serial RPC (fields the serials dialog shows). */
+export interface SerialLookupRow {
+  serial: string;
+  product_name?: string;
+  status?: string;
+  sold_invoice_number?: string | null;
+  customer_name?: string | null;
+  warranty_until?: string | null;
+  events?: Array<{ event: string; at: string }>;
+}
+
+export async function lookupSerialCloud(serial: string): Promise<SerialLookupRow[]> {
   const { data, error } = await db.rpc('lookup_serial', { _serial: serial });
   if (error) throw error;
-  return data || [];
+  return (data || []) as unknown as SerialLookupRow[];
 }

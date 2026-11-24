@@ -71,7 +71,7 @@ export function useUsersManagement() {
       // صلاحية الاسترداد لكل كاشير: استعلام مستقل حتى لا يتعطل جلب المستخدمين إن لم يكن العمود متاحاً بعد
       let refundByUser: Map<string, boolean> | null = null;
       try {
-        const { data: refundRows, error: refundError } = await (supabase as unknown as { from: (table: string) => any })
+        const { data: refundRows, error: refundError } = await supabase
           .from('user_roles')
           .select('user_id, can_refund');
         if (!refundError && Array.isArray(refundRows)) {
@@ -232,15 +232,15 @@ export function useUsersManagement() {
       // Pre-check phone and email availability via database function
       if (normalizedPhone || normalizedEmail) {
         try {
-          const { data: checkResult, error: checkError } = await (supabase.rpc as any)('check_phone_email_availability', {
+          const { data: checkResult, error: checkError } = await supabase.rpc('check_phone_email_availability', {
             _phone: normalizedPhone || '',
             _email: normalizedEmail,
           });
 
-          if (!checkError && checkResult && !checkResult.available) {
+          if (!checkError && checkResult && !(checkResult as { available?: boolean }).available) {
             toast({
               title: 'خطأ في التحقق',
-              description: checkResult.error || 'البريد الإلكتروني أو رقم الهاتف غير متاح',
+              description: (checkResult as { error?: string }).error || 'البريد الإلكتروني أو رقم الهاتف غير متاح',
               variant: 'destructive',
             });
             return false;
@@ -260,8 +260,8 @@ export function useUsersManagement() {
       if (error) {
         console.error('Error calling create-user:', error);
         try {
-          if ((error as any).context && typeof (error as any).context.json === 'function') {
-            const errorBody = await (error as any).context.json();
+          if ((error as { context?: { json?: () => Promise<unknown> } }).context && typeof (error as { context?: { json?: () => Promise<unknown> } }).context.json === 'function') {
+            const errorBody = await (error as { context: { json: () => Promise<unknown> } }).context.json() as { error?: string } | null;
             if (errorBody?.error) {
               errorMessage = errorBody.error;
             }
@@ -399,16 +399,16 @@ export function useUsersManagement() {
 
       if (normalizedPhone) {
         try {
-          const { data: checkResult, error: checkError } = await (supabase.rpc as any)('check_phone_email_availability', {
+          const { data: checkResult, error: checkError } = await supabase.rpc('check_phone_email_availability', {
             _phone: normalizedPhone,
             _email: '',
             _exclude_user_id: userId,
           });
 
-          if (!checkError && checkResult && !checkResult.available) {
+          if (!checkError && checkResult && !(checkResult as { available?: boolean }).available) {
             toast({
               title: 'خطأ في التحقق',
-              description: checkResult.error || 'رقم الهاتف مسجل بالفعل لحساب آخر',
+              description: (checkResult as { error?: string }).error || 'رقم الهاتف مسجل بالفعل لحساب آخر',
               variant: 'destructive',
             });
             return false;
@@ -443,7 +443,7 @@ export function useUsersManagement() {
 
       if (error) {
         console.error('Error updating profile:', error);
-        const isUniqueError = error.message?.includes('unique') || (error as any).code === '23505';
+        const isUniqueError = error.message?.includes('unique') || (error as { code?: string }).code === '23505';
         toast({
           title: 'خطأ',
           description: isUniqueError
@@ -562,7 +562,7 @@ export function useUsersManagement() {
   // منح أو حجب صلاحية الاسترداد لكاشير (تُحفظ في user_roles.can_refund ويتحقق منها الخادم)
   const setUserRefundPermission = async (userId: string, allowed: boolean): Promise<boolean> => {
     try {
-      const { data, error } = await (supabase as unknown as { from: (table: string) => any })
+      const { data, error } = await supabase
         .from('user_roles')
         .update({ can_refund: allowed })
         .eq('user_id', userId)

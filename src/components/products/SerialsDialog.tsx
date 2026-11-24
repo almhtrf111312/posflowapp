@@ -8,12 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/lib/sonner-bridge';
 import { supabase } from '@/integrations/supabase/client';
 import { extractErrorMessage } from '@/lib/sync-queue';
-import { lookupSerialCloud } from '@/lib/serials-store';
+import { lookupSerialCloud, type SerialLookupRow } from '@/lib/serials-store';
 import { cn } from '@/lib/utils';
 
 const STATUS: Record<string, string> = { in_stock: 'في المخزون', sold: 'مباع', defective: 'تالف', returned_to_supplier: 'مرتجع للمورد' };
 const EVENT: Record<string, string> = { received: 'استلام', sold: 'بيع', customer_return: 'مرتجع عميل', returned_to_supplier: 'مرتجع لمورد' };
-const db = supabase as any;
+const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, args: Record<string, unknown>) => any };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   in_stock: 'bg-success/15 text-success border-success/30',
@@ -28,7 +28,7 @@ export function SerialsDialog({ product, onOpenChange }: { product: { id: string
   const [rows, setRows] = useState<Row[]>([]);
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
-  const [found, setFound] = useState<any[] | null>(null);
+  const [found, setFound] = useState<SerialLookupRow[] | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -102,7 +102,7 @@ export function SerialsDialog({ product, onOpenChange }: { product: { id: string
                     ) : ''}
                   </div>
                 )}
-                <div className="text-muted-foreground">{(f.events || []).map((e: any) => `${EVENT[e.event] || e.event} (${new Date(e.at).toLocaleDateString('ar')})`).join(' ← ')}</div>
+                <div className="text-muted-foreground">{(f.events || []).map((e) => `${EVENT[e.event] || e.event} (${new Date(e.at).toLocaleDateString('ar')})`).join(' ← ')}</div>
               </div>
             ))}
           </div>

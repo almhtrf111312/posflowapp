@@ -38,6 +38,8 @@ export interface Notification {
     expiryDate?: string;
     licenseExpiresAt?: string;
     licenseDaysRemaining?: number;
+    category?: string;
+    version?: number;
   };
 }
 
@@ -63,11 +65,23 @@ export const NotificationsContext = createContext<NotificationsContextType | und
 
 const ARCHIVED_STORAGE_KEY = 'posflow_archived_notifications';
 
+/** A row of user_notifications as the cloud and realtime feeds deliver it. */
+type NotificationRow = {
+  id: string;
+  title: string;
+  message: string;
+  type?: string | null;
+  is_read?: boolean | null;
+  is_archived?: boolean | null;
+  created_at: string;
+  action_url?: string | null;
+};
+
 const loadArchivedFromStorage = (): Notification[] => {
   try {
     const raw = localStorage.getItem(ARCHIVED_STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw).map((n: any) => ({ ...n, timestamp: new Date(n.timestamp) }));
+    return (JSON.parse(raw) as Array<Record<string, unknown> & { timestamp: string }>).map((n) => ({ ...n, timestamp: new Date(n.timestamp) })) as unknown as Notification[];
   } catch { return []; }
 };
 
@@ -126,14 +140,14 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         }
 
         if (data && data.length > 0) {
-          const formatted: Notification[] = data.map((n: any) => ({
+          const formatted: Notification[] = (data as unknown as NotificationRow[]).map((n) => ({
             id: n.id,
             title: n.title,
             message: n.message,
-            type: n.type || 'system',
+            type: (n.type || 'system') as Notification['type'],
             read: !!n.is_read,
             timestamp: new Date(n.created_at),
-            actionUrl: n.action_url,
+            actionUrl: n.action_url as string | undefined,
           }));
           setNotifications(prev => {
             const existingIds = new Set(prev.map(p => p.id));
@@ -160,7 +174,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'user_notifications', filter: `user_id=eq.${user.id}` },
         (payload) => {
-          const n = payload.new as any;
+          const n = payload.new as NotificationRow;
           if (!n?.id || n.is_archived) return;
           setNotifications(prev => {
             if (prev.some(p => p.id === n.id)) return prev;
@@ -173,10 +187,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
               id: n.id,
               title: n.title,
               message: n.message,
-              type: n.type || 'system',
+              type: (n.type || 'system') as Notification['type'],
               read: !!n.is_read,
               timestamp: new Date(n.created_at),
-              actionUrl: n.action_url,
+              actionUrl: n.action_url as string | undefined,
             }, ...prev];
           });
           const type = String(n.type || '');

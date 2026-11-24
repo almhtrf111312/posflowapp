@@ -92,7 +92,7 @@ const PeriodClosingPanel = lazy(() => import('@/components/reports/PeriodClosing
 const DebtWriteoffsReport = lazy(() => import('@/components/reports/DebtWriteoffsReport').then(m => ({ default: m.DebtWriteoffsReport })));
 const LibraryReport = lazy(() => import('@/components/reports/LibraryReport').then(m => ({ default: m.LibraryReport })));
 import { downloadJSON } from '@/lib/file-download';
-import { loadPurchaseInvoicesCloud, loadPurchaseInvoicesLocally } from '@/lib/cloud/purchase-invoices-cloud';
+import { loadPurchaseInvoicesCloud, loadPurchaseInvoicesLocally, type PurchaseInvoice } from '@/lib/cloud/purchase-invoices-cloud';
 import {
   exportInvoicesToExcel,
   exportProductsToExcel,
@@ -221,7 +221,7 @@ function ReportsContent() {
   const [cloudCategories, setCloudCategories] = useState<Category[]>([]);
   const [cloudExpenses, setCloudExpenses] = useState<Expense[]>([]);
   const [cloudDebts, setCloudDebts] = useState<Debt[]>([]);
-  const [cloudPurchases, setCloudPurchases] = useState<any[]>([]);
+  const [cloudPurchases, setCloudPurchases] = useState<PurchaseInvoice[]>([]);
   // دفعات الديون المؤرخة والديون المعدومة: يحتاجها تعريف الربح الموحّد
   const [profitLedger, setProfitLedger] = useState<ProfitLedger>(() => loadProfitLedgerLocally());
 

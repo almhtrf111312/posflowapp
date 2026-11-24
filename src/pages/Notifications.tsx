@@ -143,7 +143,7 @@ export default function Notifications() {
         data: {
           category: b.kind,
           version: b.target_version_code,
-        } as any,
+        },
       });
     }
   }, [rawItems, addArchivedNotification]);
@@ -218,7 +218,7 @@ export default function Notifications() {
         data: {
           category: item.rawBroadcast.kind,
           version: item.rawBroadcast.target_version_code,
-        } as any,
+        },
       });
       setRawItems((prev) => prev.filter((x) => x.id !== item.id));
       toast.success('تم نقل الإشعار إلى الأرشيف');

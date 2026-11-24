@@ -38,6 +38,7 @@ import { NativeCameraPreview } from '@/components/camera/NativeCameraPreview';
 import { cn, formatNumber } from '@/lib/utils';
 import { getActiveShift } from '@/lib/cashbox-store';
 import { getCategoryNamesCloud, getCategoryNamesLocalFirst } from '@/lib/cloud/categories-cloud';
+import { loadSuppliersCloud } from '@/lib/cloud/suppliers-cloud';
 
 interface QuickPurchaseDialogProps {
   open: boolean;
@@ -71,6 +72,17 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
 
   // Payment Method: cash (drawer deduction) vs credit (supplier payable)
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
+  // Audit F7 (2026-11-24): a credit purchase must name its supplier
+  const [supplierId, setSupplierId] = useState<string>('');
+  const [supplierOptions, setSupplierOptions] = useState<Array<{ id: string; name: string }>>([]);
+  useEffect(() => {
+    if (paymentMethod !== 'credit') return;
+    let cancelled = false;
+    loadSuppliersCloud()
+      .then(list => { if (!cancelled) setSupplierOptions(list.map(s => ({ id: s.id, name: s.name }))); })
+      .catch(() => { if (!cancelled) setSupplierOptions([]); });
+    return () => { cancelled = true; };
+  }, [paymentMethod]);
 
   // Core Product Info
   const [productName, setProductName] = useState('');
@@ -272,6 +284,11 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
       return;
     }
 
+    if (paymentMethod === 'credit' && !supplierId) {
+      toast.error(language === 'en' ? 'Choose the supplier for a credit purchase' : 'اختر المورد للشراء الآجل');
+      return;
+    }
+
     const shiftId = paymentMethod === 'cash' && totalCost > 0 ? getActiveShift()?.id : undefined;
     if (paymentMethod === 'cash' && totalCost > 0 && !shiftId) {
       toast.error(language === 'en' ? 'Open a cash shift before recording a cash purchase' : 'افتح وردية قبل تسجيل شراء نقدي');
@@ -293,6 +310,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
         costPrice: costNumUSD,
         paymentMethod,
         shiftId,
+        supplierId: paymentMethod === 'credit' ? supplierId : undefined,
         imageUrl: imageUrl || undefined,
         barcode: barcode.trim() || undefined,
         category: category || undefined,
@@ -652,6 +670,26 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
                     <span>{isEn ? "📋 Credit (Supplier Balance)" : "📋 آجل (ذمة مورد)"}</span>
                   </button>
                 </div>
+                {paymentMethod === 'credit' && (
+                  <div className="mt-2 space-y-1">
+                    <Label className="text-xs">{isEn ? 'Supplier (required for credit)' : 'المورد (مطلوب للشراء الآجل)'}</Label>
+                    <Select value={supplierId} onValueChange={setSupplierId}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder={isEn ? 'Choose a supplier' : 'اختر المورد'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {supplierOptions.map(sup => (
+                          <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {supplierOptions.length === 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        {isEn ? 'Add a supplier first from the Purchases screen.' : 'أضف مورداً أولاً من شاشة المشتريات.'}
+                      </p>
+                    )}
+                  </div>
+                )}
                 {paymentMethod === 'cash' && (
                   <p className="text-[11px] text-muted-foreground mt-0.5">
                     {isEn ? "Amount will be deducted automatically from the open shift to keep the cashbox balanced." : "سيتم خصم المبلغ تلقائياً من الوردية الحالية المفتوحة لمنع أي عجز بالصندوق."}

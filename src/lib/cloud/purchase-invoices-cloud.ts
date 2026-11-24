@@ -29,6 +29,8 @@ import { isGuestDemoMode } from '@/lib/demo-data';
   amount_paid?: number;
   paid_from?: 'drawer' | 'external' | null;
   paid_shift_id?: string | null;
+  /** Paid above the new total after an edit: the amount the supplier owes back to the store */
+  supplier_credit?: number;
   replaced_by?: string;
   operation_id?: string;
   edit_reason?: string;

@@ -195,7 +195,11 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
 
       // الربح المحقق اليوم (نقدي + ما حُصّل اليوم من الآجل)، والصافي بعد المصاريف وخسارة الديون المعدومة
       const todayProfit = todaySummary.realizedProfit;
-      const netProfit = todaySummary.netProfit;
+      // F4 (audit 2026-11-24): the FX difference of today's debt collections is a separate line below the net result
+      const todayFxDifference = (profitLedger.fxDifferences || [])
+        .filter(f => toLocalDateString(f.date) === todayLocalYMD)
+        .reduce((sum, f) => sum + f.amountUsd, 0);
+      const netProfit = todaySummary.netProfit + todayFxDifference;
       const pendingProfit = todaySummary.pendingProfit;
       const todayBadDebtLoss = todaySummary.badDebtLoss;
 

@@ -27,6 +27,8 @@ interface QuickPurchaseData {
   costPrice: number;
   paymentMethod?: 'cash' | 'credit';
   shiftId?: string;
+  /** Required for credit purchases (audit F7, 2026-11-24): the supplier the purchase is owed to. */
+  supplierId?: string;
 }
 
 interface PurchaseInvoiceData {

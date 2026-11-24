@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
-import { computeProfitSummary } from '@/lib/profit-engine';
-import type { ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
+import { computeProfitSummary, expenseIsCounted } from '@/lib/profit-engine';
+import { withProfitSnapshots, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { FileText, Download, Calendar, DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatReportAmount } from '@/lib/utils';
@@ -68,7 +68,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
       return d === selectedDate;
     });
 
-    const dayExpenses = expenses.filter(exp => toLocalDateString(exp.date) === selectedDate);
+    const dayExpenses = expenses.filter(exp => toLocalDateString(exp.date) === selectedDate && expenseIsCounted(exp, selectedDate, toLocalDateString));
 
     const dayDebts = debts.filter(d => {
       const date = d.createdAt ? toLocalDateString(d.createdAt) : '';
@@ -82,10 +82,10 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
     const totalMaintenance = maintenanceInvoices.reduce((s, i) => s + i.total, 0);
     // 🎯 تعريف الربح الموحّد: الربح المحقق في هذا اليوم (نقدي + رقمي + ما حُصّل اليوم من الآجل)
     const daySummary = computeProfitSummary({
-      invoices,
+      invoices: withProfitSnapshots(invoices, profitLedger),
       payments: profitLedger?.payments,
       writeoffs: profitLedger?.writeoffs,
-      expenses: expenses.map(exp => ({ amount: Number(exp.amount) || 0, date: String(exp.date) })),
+      expenses: expenses.map(exp => ({ amount: Number(exp.amount) || 0, date: String(exp.date), isReversed: exp.is_reversed, reversedAt: exp.reversedAt ?? null })),
       range: selectedDate ? { from: selectedDate, to: selectedDate } : undefined,
       dayOf: toLocalDateString,
     });
@@ -98,7 +98,11 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
     const newDebts = dayDebts.reduce((s, d) => s + d.totalDebt, 0);
     const debtPayments = debtPaymentsTotal;
     // الصافي = الربح المحقق − المصاريف − خسارة الديون المعدومة في هذا اليوم
-    const netProfit = selectedDate ? daySummary.netProfit : 0;
+    // F4 (audit 2026-11-24): the FX difference of this day's debt collections, below the net result
+    const dayFxDifference = selectedDate
+      ? (profitLedger?.fxDifferences || []).filter(f => toLocalDateString(f.date) === selectedDate).reduce((sum, f) => sum + f.amountUsd, 0)
+      : 0;
+    const netProfit = selectedDate ? daySummary.netProfit + dayFxDifference : 0;
 
     return {
       salesInvoices,

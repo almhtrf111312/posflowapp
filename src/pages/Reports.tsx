@@ -65,13 +65,13 @@ import { loadProductsCloud, loadProductsLocalFirst, Product } from '@/lib/cloud/
 import { loadCustomersCloud, loadCustomersLocally, Customer } from '@/lib/cloud/customers-cloud';
 import { loadPartnersCloud, loadPartnersLocally, Partner } from '@/lib/cloud/partners-cloud';
 import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/cloud/categories-cloud';
-import { loadExpensesCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
+import { loadExpensesCloud, loadExpensesForReportsCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
-import { computeProfitSummary, realizedProfitToDate } from '@/lib/profit-engine';
+import { computeProfitSummary, realizedProfitToDate, expenseIsCounted } from '@/lib/profit-engine';
 import { invoiceNetSales, itemNetRevenue, itemProfit, isSalesInvoice } from '@/lib/report-metrics';
 import { invoicesLink } from '@/lib/report-links';
 import { useUserRole } from '@/hooks/use-user-role';
-import { loadProfitLedgerCloud, loadProfitLedgerLocally, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
+import { loadProfitLedgerCloud, loadProfitLedgerLocally, withProfitSnapshots, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -282,7 +282,7 @@ function ReportsContent() {
         needCustomers ? loadCustomersCloud() : Promise.resolve(null),
         needPartners ? loadPartnersCloud() : Promise.resolve(null),
         needCategories ? loadCategoriesCloud() : Promise.resolve(null),
-        needExpenses ? loadExpensesCloud() : Promise.resolve(null),
+        needExpenses ? loadExpensesForReportsCloud() : Promise.resolve(null),
         needDebts ? loadDebtsCloud() : Promise.resolve(null),
         needPurchases ? loadPurchaseInvoicesCloud().catch(() => []) : Promise.resolve(null),
       ]);
@@ -330,7 +330,7 @@ function ReportsContent() {
       loadPartnersCloud().then(p => { if (p) setCloudPartners(p); }).catch(() => {});
     }
     if (activeReport === 'expenses' || activeReport === 'daily-closing' || activeReport === 'period-closing' || activeReport === 'profits' || activeReport === 'overview') {
-      loadExpensesCloud().then(e => { if (e) setCloudExpenses(e); }).catch(() => {});
+      loadExpensesForReportsCloud().then(e => { if (e) setCloudExpenses(e); }).catch(() => {});
     }
     if (activeReport === 'customers') {
       loadCustomersCloud().then(c => { if (c) setCloudCustomers(c); }).catch(() => {});
@@ -593,7 +593,7 @@ function ReportsContent() {
 
     // 🎯 تعريف الربح الموحّد (profit-engine): نفس أرقام لوحة التحكم وإقفال الفترة
     const profitSummary = computeProfitSummary({
-      invoices: cloudInvoices.map(inv => {
+      invoices: withProfitSnapshots(cloudInvoices, profitLedger).map(inv => {
         const stored = Number(inv.profit);
         return {
           id: inv.id,
@@ -607,6 +607,8 @@ function ReportsContent() {
           paidAtSale: inv.paidAtSale,
           createdAt: inv.createdAt,
           updatedAt: inv.updatedAt,
+          originalProfit: inv.originalProfit,
+          refundedAt: inv.refundedAt,
         };
       }),
       payments: profitLedger.payments,
@@ -759,7 +761,9 @@ function ReportsContent() {
     const partners = cloudPartners;
     const filteredExpenses = allExpenses.filter(exp => {
       const expDate = toLocalDateString(exp.date);
-      return isDateInRange(expDate, dateRange.from, dateRange.to);
+      // An expense reversed after this period still counts for it (audit U6, 2026-11-24)
+      return isDateInRange(expDate, dateRange.from, dateRange.to)
+        && expenseIsCounted(exp, dateRange.to, toLocalDateString);
     });
 
     const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);

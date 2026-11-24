@@ -24,6 +24,8 @@ export interface ProfitLedger {
    * Empty until migration 20261123071000 is applied.
    */
   fxDifferences: Array<{ date: string; amountUsd: number }>;
+  /** Original sale profit and refund day per invoice (audit F5). Empty when the records cannot be read. */
+  profitSnapshots?: Array<{ invoiceId: string; grossProfit: number; recordedAt: string; reversedAt: string | null }>;
   /** When the ledger was last fetched from the server; 0 if never. */
   fetchedAt: number;
 }
@@ -54,6 +56,7 @@ export function loadProfitLedgerLocally(): ProfitLedger {
       payments: parsed.payments,
       writeoffs: parsed.writeoffs,
       fxDifferences: Array.isArray(parsed.fxDifferences) ? parsed.fxDifferences : [],
+      profitSnapshots: Array.isArray(parsed.profitSnapshots) ? parsed.profitSnapshots : [],
       fetchedAt: Number(parsed.fetchedAt) || 0,
     };
   } catch {
@@ -90,6 +93,8 @@ async function fetchAllRows(table: string, columns: string): Promise<Record<stri
 }
 
 async function fetchLedger(userId: string): Promise<ProfitLedger> {
+  // Original profit records: read separately so a failure never blocks the payments and write-offs.
+  const snapshotRows = await fetchAllRows('profit_records', 'invoice_id, gross_profit, recorded_at, is_reversed, reversed_at').catch(() => []);
   const [debts, payments, writeoffs] = await Promise.all([
     fetchAllRows('debts', 'id, invoice_id, is_cash_debt'),
     // '*' on purpose: settled_amount / fx_difference_usd exist only after the FX migration is applied.
@@ -131,6 +136,14 @@ async function fetchLedger(userId: string): Promise<ProfitLedger> {
     fxDifferences: payments
       .map(p => ({ date: String(p.created_at ?? ''), amountUsd: Number(p.fx_difference_usd) || 0 }))
       .filter(f => f.date && f.amountUsd !== 0),
+    profitSnapshots: snapshotRows
+      .map(r => ({
+        invoiceId: String(r.invoice_id ?? ''),
+        grossProfit: Number(r.gross_profit) || 0,
+        recordedAt: String(r.recorded_at ?? ''),
+        reversedAt: r.reversed_at ? String(r.reversed_at) : null,
+      }))
+      .filter(r => r.invoiceId),
     fetchedAt: Date.now(),
   };
 
@@ -159,4 +172,23 @@ export async function loadProfitLedgerCloud(): Promise<ProfitLedger> {
       .finally(() => { inflight = null; });
   }
   return inflight;
+}
+
+/**
+ * Adds the original sale profit and the refund day to each invoice (audit F5, 2026-11-24).
+ * The engine uses them to keep a sale in an earlier period when it was refunded later.
+ */
+export function withProfitSnapshots<T extends { id: string; invoiceNumber?: string }>(
+  invoices: T[],
+  ledger: ProfitLedger | undefined,
+): Array<T & { originalProfit: number | null; refundedAt: string | null }> {
+  const latest = new Map<string, { grossProfit: number; recordedAt: string; reversedAt: string | null }>();
+  for (const snap of ledger?.profitSnapshots ?? []) {
+    const current = latest.get(snap.invoiceId);
+    if (!current || snap.recordedAt > current.recordedAt) latest.set(snap.invoiceId, snap);
+  }
+  return invoices.map(inv => {
+    const snap = latest.get(inv.id) ?? (inv.invoiceNumber ? latest.get(inv.invoiceNumber) : undefined);
+    return { ...inv, originalProfit: snap ? snap.grossProfit : null, refundedAt: snap?.reversedAt ?? null };
+  });
 }

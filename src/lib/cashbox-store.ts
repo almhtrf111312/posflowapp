@@ -416,7 +416,8 @@ export const addSalesToShift = (
   cogs: number = 0,
   currency: ShiftCurrency = 'USD',
   currencyAmount?: number,
-  referenceId?: string
+  referenceId?: string,
+  drawerPostedWithInvoice: boolean = false,
 ): void => {
   const roundedAmount = roundCurrency(amount);
   const roundedProfit = roundCurrency(grossProfit);
@@ -449,7 +450,8 @@ export const addSalesToShift = (
     emitEvent(EVENTS.CASH_SHIFTS_UPDATED, shifts);
 
     // تسجيل المبيعات النقدية في حركات الوردية السحابية: إقفال الوردية في الخادم يحسب الرصيد المتوقع منها
-    if (roundedAmount > 0 && shift.id) {
+    // audit F1: when the sale carries its shift, the server writes this movement with the invoice (no second write)
+    if (roundedAmount > 0 && shift.id && !drawerPostedWithInvoice) {
       const shiftId = shift.id;
       import('./cloud/cashbox-cloud').then(({ addShiftTransactionCloud }) => {
         addShiftTransactionCloud({

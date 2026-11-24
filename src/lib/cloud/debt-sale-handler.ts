@@ -34,6 +34,8 @@ export interface DebtSaleItem {
 
 export interface DebtSaleBundle {
   customerId?: string;
+  /** Time the sale was made; stamped on entry if missing (see saleAtForPosting in pos-sale-atomic.ts) */
+  saleAt?: string | null;
   // Customer info
   customerName: string;
   customerPhone: string;
@@ -123,6 +125,8 @@ export async function processDebtSaleWithOfflineSupport(
   isOnline: boolean,
   existingOperationId?: string,
 ): Promise<DebtSaleResult> {
+  // The sale time is the moment of the sale, not of its posting (kept with the bundle for offline replay)
+  if (!bundle.saleAt) bundle.saleAt = new Date().toISOString();
   const localId = existingOperationId || (typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : `debt_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`);

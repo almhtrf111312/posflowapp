@@ -32,6 +32,8 @@ export interface AtomicSaleBundle {
   drawerShiftId?: string | null;
   /** Amount in the received currency for the drawer movement (optional; the server derives it from the rate). */
   drawerCurrencyAmount?: number | null;
+  /** Time the sale was made (stamped on the client). Sent to the server only for a delayed posting, see saleAtForPosting (2026-11-24). */
+  saleAt?: string | null;
 
   customerPhone?: string;
 
@@ -94,6 +96,18 @@ export interface AtomicSaleBundle {
 
 
 
+
+/**
+ * Original sale time to post with, or null when the sale is posted right away (the server then uses its own time).
+ * Only a sale posted more than 2 minutes after it was made carries its time, so an online sale never depends on the
+ * device clock. Both times come from the same device clock, so a wrong clock cannot shift a sale made on time.
+ */
+export const saleAtForPosting = (saleAt: string | null | undefined, nowMs: number = Date.now()): string | null => {
+  if (!saleAt) return null;
+  const t = Date.parse(saleAt);
+  if (!Number.isFinite(t)) return null;
+  return nowMs - t > 2 * 60 * 1000 ? new Date(t).toISOString() : null;
+};
 
 export interface AtomicSaleResult {
 
@@ -269,9 +283,10 @@ export async function processPosSaleAtomic(
 
   try {
 
-    // audit F1 (2026-11-24): a cash sale with an open shift posts the invoice and its drawer movement in one transaction
+    // audit F1 (2026-11-24): a cash sale with an open shift posts the invoice and its drawer movement in one transaction.
+    // Every sale now uses the wrapper (it also takes the sale time, migration 20261124080600); without a shift it only posts the invoice.
     const useDrawerRpc = paymentType === 'cash' && bundle.paymentMethod !== 'digital' && Boolean(bundle.drawerShiftId);
-    const { data, error } = await sb.rpc(useDrawerRpc ? 'process_pos_sale_with_drawer_atomic' : 'process_pos_sale_atomic', {
+    const { data, error } = await sb.rpc('process_pos_sale_with_drawer_atomic', {
 
       _operation_id: operationId,
 
@@ -310,7 +325,9 @@ export async function processPosSaleAtomic(
       _exchange_rate: Number((bundle as any).exchangeRate) || 1,
 
       _tax_mode: bundle.taxMode || 'exclusive',
-      ...(useDrawerRpc ? { _shift_id: bundle.drawerShiftId, _currency_amount: bundle.drawerCurrencyAmount ?? null } : {}),
+      _shift_id: useDrawerRpc ? (bundle.drawerShiftId ?? null) : null,
+      _currency_amount: useDrawerRpc ? (bundle.drawerCurrencyAmount ?? null) : null,
+      _sale_at: saleAtForPosting(bundle.saleAt),
     });
 
 

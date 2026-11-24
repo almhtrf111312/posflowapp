@@ -919,6 +919,7 @@ export function CartPanel({
           customerName: customerNameSnapshot || 'عميل نقدي',
           paymentMethod: payMethod,
           drawerShiftId,
+          saleAt: new Date().toISOString(),
           items: localItems.map(i => ({ ...i, profit: round8(i.profit - i.total * discountRatio) })),
           subtotal,
           discount: effectiveDiscountAmount,

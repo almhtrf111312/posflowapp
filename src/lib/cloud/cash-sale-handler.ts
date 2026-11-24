@@ -19,6 +19,8 @@ import { emitEvent, EVENTS } from '@/lib/events';
 export interface CashSaleBundle {
   customerId?: string;
   customerName: string;
+  /** Time the sale was made (stamped by CartPanel); see saleAtForPosting in pos-sale-atomic.ts */
+  saleAt?: string | null;
   taxMode?: 'inclusive' | 'exclusive';
   items: Array<{
     id: string;

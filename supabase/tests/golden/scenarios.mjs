@@ -413,6 +413,38 @@ export async function runLawFixes(k, newWorldFn) {
     check('F8 no second drawer movement for the edit', Number((await w.one(`select count(*)::int c from public.shift_transactions where shift_id=$1`, [sh])).c), txBefore);
   }
 
+  // Sale time (2026-11-24, migration 20261124080600): a delayed sale keeps the time it was made.
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'SaleTime',10,6,50) returning id`, [OWNER])).id;
+    const items = (q) => JSON.stringify([{ product_id: prod, product_name: 'SaleTime', quantity: q, unit_price: 10, amount_usd: 10 * q, amount_original: 10 * q, cost_price: 6 }]);
+    const sh = await w.newShift(100);
+    const call = (op, pay, total, shiftId, saleAt) => w.one(
+      `select * from public.process_pos_sale_with_drawer_atomic($1,$2,'ST','',$3,0,0,0,0,$3,0,'USD',null::uuid,$4::jsonb,0,1,null,$5::uuid,null,$6::timestamptz)`,
+      [op, pay, total, items(total / 10), shiftId, saleAt]);
+    const info = (id) => w.one(`select date::text d, created_at::text c from public.invoices where id=$1`, [id]);
+    const a = await call('saletime-A-000001', 'cash', 30, sh, '2026-11-01T10:30:00Z');
+    const ia = await info(a.invoice_id);
+    check('ST delayed cash sale keeps its date (2026-11-01)', ia.d, '2026-11-01');
+    check('ST delayed cash sale keeps its time as created_at', ia.c.startsWith('2026-11-01 10:30:00'), true);
+    const mv = await w.one(`select created_at::text c from public.shift_transactions where shift_id=$1 and type='sale' and reference_id='saletime-A-000001'`, [sh]);
+    check('ST drawer movement takes the sale time', mv.c.startsWith('2026-11-01 10:30:00'), true);
+    check('ST drawer balance counts the delayed sale (100 + 30)', await w.expected(sh), 130);
+    const rep = await call('saletime-A-000001', 'cash', 30, sh, '2026-11-01T10:30:00Z');
+    check('ST replay of the delayed sale is not posted twice', rep.already_processed, true);
+    check('ST replay leaves the drawer balance unchanged', await w.expected(sh), 130);
+    const b = await call('saletime-B-000001', 'debt', 20, null, null);
+    const ib = await info(b.invoice_id);
+    check('ST sale without a sale time uses the posting day', ib.d, (await w.one('select current_date::text d')).d);
+    const c = await call('saletime-C-000001', 'debt', 10, null, '2999-01-01T00:00:00Z');
+    const ic = await info(c.invoice_id);
+    check('ST a future sale time is not used (posted at now)', ic.c.startsWith('2999'), false);
+    await w.one(`select public.close_accounting_period_atomic('2026-01-01','2026-01-31','UTC') r`);
+    const d = await call('saletime-D-000001', 'debt', 10, null, '2026-01-15T09:00:00Z');
+    const id = await info(d.invoice_id);
+    check('ST a sale inside a closed period keeps its posting day, not the closed one', id.d === '2026-01-15', false);
+  }
+
   // F4 (audit): the period closing stores the FX difference of debt collections as its own line (migration 20261124080300).
   {
     const w = await newWorldFn();

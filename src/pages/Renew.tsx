@@ -30,7 +30,14 @@ import { useLanguage } from '@/hooks/use-language';
 import { compressImage } from '@/lib/image-upload';
 import { sendBossTelegramChatAlert } from '@/lib/telegram-alerts';
 
-const DEFAULT_PLANS = [
+import type { Tables } from '@/integrations/supabase/types';
+
+type PlanRow = Tables<'subscription_plans'>;
+type PlanView = Partial<PlanRow> & Pick<PlanRow, 'id' | 'name' | 'price_usd' | 'duration_days' | 'max_products' | 'max_cashiers'>;
+type MethodRow = Tables<'payment_methods'>;
+type RequestRow = Tables<'subscription_requests'>;
+
+const DEFAULT_PLANS: PlanView[] = [
   {
     id: 'plan_standard',
     name: 'الباقة القياسية (Standard)',
@@ -78,10 +85,10 @@ export default function RenewPage() {
   const { user } = useAuth();
   const { direction } = useLanguage();
   const navigate = useNavigate();
-  const [plans, setPlans] = useState<any[]>(DEFAULT_PLANS);
-  const [methods, setMethods] = useState<any[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<any>(DEFAULT_PLANS[1]);
-  const [selectedMethod, setSelectedMethod] = useState<any>(null);
+  const [plans, setPlans] = useState<PlanView[]>(DEFAULT_PLANS);
+  const [methods, setMethods] = useState<MethodRow[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<PlanView>(DEFAULT_PLANS[1]);
+  const [selectedMethod, setSelectedMethod] = useState<MethodRow | null>(null);
   const [contactLinks, setContactLinks] = useState<ContactLinks>({});
   const [payerName, setPayerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -112,7 +119,7 @@ export default function RenewPage() {
     reader.onerror = () => setProofLoading(false);
     reader.readAsDataURL(file);
   };
-  const [activeRequest, setActiveRequest] = useState<any>(null);
+  const [activeRequest, setActiveRequest] = useState<RequestRow | null>(null);
 
   // حوار تأكيد الإرسال للعميل
   const [successDialog, setSuccessDialog] = useState<{
@@ -135,7 +142,7 @@ export default function RenewPage() {
     try {
       // 1. جلب الباقات المفعّلة
       const { data: plansData, error: plansErr } = await supabase
-        .from('subscription_plans' as any)
+        .from('subscription_plans')
         .select('*')
         .eq('enabled', true)
         .order('sort_order', { ascending: true });
@@ -147,14 +154,14 @@ export default function RenewPage() {
 
       // 2. جلب طرق الدفع المفعّلة
       const { data: methodsData, error: methodsErr } = await supabase
-        .from('payment_methods' as any)
+        .from('payment_methods')
         .select('*')
         .eq('enabled', true)
         .order('sort_order', { ascending: true });
 
       if (!methodsErr && methodsData) {
         setMethods(methodsData);
-        setSelectedMethod((prev: any) => methodsData.find((m: any) => m.id === prev?.id) || methodsData[0] || null);
+        setSelectedMethod((prev) => methodsData.find((m) => m.id === prev?.id) || methodsData[0] || null);
       }
 
       // 3. جلب قنوات التواصل من إعدادات النظام
@@ -174,7 +181,7 @@ export default function RenewPage() {
       // 4. التحقق من وجود طلب مفتوح
       if (user?.id) {
         const { data: reqData } = await supabase
-          .from('subscription_requests' as any)
+          .from('subscription_requests')
           .select('*')
           .eq('user_id', user.id)
           .in('status', ['pending', 'paid_claimed'])
@@ -267,7 +274,7 @@ export default function RenewPage() {
       const methodUuid = isValidUUID(selectedMethod.id) ? selectedMethod.id : null;
 
       const { data: insertData, error: insertError } = await supabase
-        .from('subscription_requests' as any)
+        .from('subscription_requests')
         .insert({
           user_id: user?.id,
           plan_id: planUuid,
@@ -289,18 +296,18 @@ export default function RenewPage() {
       if (insertError) {
         // يوجد طلب مفتوح للمستخدم مسبقاً (فهرس idx_one_open_sub_request_per_user):
         // نعيد استخدامه ونرسل الإيصال الجديد بدل إظهار خطأ تقني
-        if ((insertError as any).code === '23505' && user?.id) {
+        if (insertError.code === '23505' && user?.id) {
           const { data: existing } = await supabase
-            .from('subscription_requests' as any)
+            .from('subscription_requests')
             .select('id, ref_code')
             .eq('user_id', user.id)
             .in('status', ['pending', 'paid_claimed'])
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
-          if (existing && (existing as any).ref_code) {
-            refCode = (existing as any).ref_code;
-            requestId = (existing as any).id;
+          if (existing && existing.ref_code) {
+            refCode = existing.ref_code;
+            requestId = existing.id;
           } else {
             throw insertError;
           }
@@ -318,7 +325,7 @@ export default function RenewPage() {
         const { error: proofError } = await supabase.rpc('send_support_message', {
           _message: `[IMAGE]${proofImage}[/IMAGE]\nإشعار تحويل - مرجع ${refCode} - طلب ${requestId} - ${selectedPlan.name} - ${selectedMethod.name}`,
           _conversation_id: null,
-        } as any);
+        });
         if (proofError) throw proofError;
         proofSent = true;
       } catch (e) {
@@ -333,7 +340,7 @@ export default function RenewPage() {
       // إرسال إشعار تليجرام فوري للمدير العام كإشعار احتياطي
       sendBossTelegramChatAlert(
         payerName.trim() || user?.email || 'عميل المتجر',
-        (user as any)?.phone || '',
+        user?.phone || '',
         `طلب تجديد: ${selectedPlan.name} ($${selectedPlan.price_usd}) - طريقة التحويل: ${selectedMethod.name}`,
         refCode
       ).catch(() => {});
@@ -443,7 +450,7 @@ export default function RenewPage() {
                     <span dir="ltr" className="inline-block tabular-nums text-2xl font-bold">${p.price_usd}</span>
                     <span className="text-xs text-muted-foreground ms-1">/ {p.duration_days} يوماً</span>
                   </div>
-                  {Array.isArray(p.equivalents) && p.equivalents.map((eq: any, idx: number) => (
+                  {Array.isArray(p.equivalents) && p.equivalents.map((eq: { text?: string }, idx: number) => (
                     <div key={idx} className="text-xs text-muted-foreground font-medium mt-1">
                       {eq.text}
                     </div>

@@ -93,7 +93,7 @@ const fromB64 = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c
 const deriveKey = async (secret: string, salt: Uint8Array): Promise<CryptoKey> => {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: new Uint8Array(salt), iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     base,
     { name: 'AES-GCM', length: 256 },
     false,

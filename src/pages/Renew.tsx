@@ -285,7 +285,7 @@ export default function RenewPage() {
         .select('id')
         .single();
 
-      let requestId = insertData?.id;
+      let requestId = (insertData as unknown as { id?: string } | null)?.id;
       if (insertError) {
         // يوجد طلب مفتوح للمستخدم مسبقاً (فهرس idx_one_open_sub_request_per_user):
         // نعيد استخدامه ونرسل الإيصال الجديد بدل إظهار خطأ تقني

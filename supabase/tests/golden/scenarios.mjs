@@ -445,6 +445,27 @@ export async function runLawFixes(k, newWorldFn) {
     check('ST a sale inside a closed period keeps its posting day, not the closed one', id.d === '2026-01-15', false);
   }
 
+  // Restaurant (2026-11-24, migration 20261124080700): menu items are not stock. A restaurant sale never refuses for
+  // stock and never deducts it. Bakery keeps the same rule; a general store is still refused.
+  {
+    const w = await newWorldFn();
+    const items = (p) => JSON.stringify([{ product_id: p, product_name: 'Fool', quantity: 2, unit_price: 10, amount_usd: 20, amount_original: 20, cost_price: 4 }]);
+    const sale = async (storeType, op) => {
+      await w.db.exec(`delete from public.stores where user_id='${OWNER}'; insert into public.stores(user_id, name, store_type) values ('${OWNER}', 'R', '${storeType}')`);
+      const p = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Fool',10,4,0) returning id`, [OWNER])).id;
+      const ok = await w.fails(w.one(`select * from public.process_pos_sale_with_drawer_atomic($1,'debt','R','',20,0,0,0,0,20,8,'USD',null::uuid,$2::jsonb,0,1,null,null,null,null)`, [op, items(p)]));
+      const q = await w.one(`select quantity::float8 q from public.products where id=$1`, [p]);
+      return { refused: ok, quantity: q.q };
+    };
+    const r = await sale('restaurant', 'rest-golden-000001');
+    check('RESTAURANT sale with zero stock is accepted', r.refused, null);
+    check('RESTAURANT sale does not deduct stock (stays 0)', r.quantity, 0);
+    const b = await sale('bakery', 'bakery-golden-00001');
+    check('BAKERY sale with zero stock is still accepted', b.refused, null);
+    const g = await sale('general', 'general-golden-0001');
+    check('GENERAL sale with zero stock is still refused', g.refused !== null && g.refused.includes('المخزون المتاح'), true);
+  }
+
   // F4 (audit): the period closing stores the FX difference of debt collections as its own line (migration 20261124080300).
   {
     const w = await newWorldFn();

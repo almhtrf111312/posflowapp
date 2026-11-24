@@ -942,7 +942,7 @@ export const getTerminology = (storeType: string, key: TerminologyKey, language:
 // Check if the store type operates without inventory tracking (e.g., bakery, repair/workshop)
 export const isNoInventoryMode = (storeType?: string): boolean => {
   const type = storeType || getCurrentStoreType();
-  return type === 'bakery' || type === 'repair';
+  return type === 'bakery' || type === 'repair' || type === 'restaurant';
 };
 
 // Get current store type from localStorage

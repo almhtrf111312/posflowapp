@@ -1,5 +1,6 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { round8 } from '@/lib/money-engine';
 import { emitEvent, EVENTS } from '@/lib/events';
 import { getOwnerIdForInsert, getCurrentUserId } from '@/lib/supabase-store';
@@ -377,7 +378,7 @@ export async function finalizePurchaseInvoiceCloud(invoiceId: string): Promise<b
 
   // One atomic server transaction: product linking/creation, WAC, stock, history and status.
   // A thrown error means nothing was applied; a retry on a finalized invoice is a no-op.
-  const { data: rpcData, error: rpcError } = await (supabase as any).rpc('finalize_purchase_invoice_atomic', {
+  const { data: rpcData, error: rpcError } = await supabase.rpc('finalize_purchase_invoice_atomic', {
     _invoice_id: invoiceId,
   });
   if (rpcError) throw rpcError;
@@ -391,8 +392,8 @@ export async function finalizePurchaseInvoiceCloud(invoiceId: string): Promise<b
        if (!item.product_id) continue;
        try {
          const productsCloud = (await import('./products-cloud')) as unknown as {
-           loadProductsFromLocalCache?: () => any[] | null;
-           saveProductsToLocalCache?: (p: any[]) => void;
+           loadProductsFromLocalCache?: () => Record<string, unknown>[] | null;
+           saveProductsToLocalCache?: (p: Record<string, unknown>[]) => void;
            updateProductInIDB?: (id: string, patch: Record<string, unknown>) => Promise<void>;
          };
          const { loadProductsFromLocalCache, saveProductsToLocalCache, updateProductInIDB } = productsCloud;
@@ -451,7 +452,7 @@ export async function cancelPurchaseInvoiceCloud(invoiceId: string, reason?: str
 
     if (!isOfflineInvoice) {
       // 1. استدعاء دالة الإلغاء الذرية في السيرفر
-      const { error } = await (supabase as any).rpc('cancel_purchase_invoice_atomic', {
+      const { error } = await supabase.rpc('cancel_purchase_invoice_atomic', {
         _invoice_id: invoiceId,
         _reason: reason || 'إلغاء فاتورة مشتريات'
       });
@@ -513,7 +514,7 @@ function mergeSyncQueuePurchases(list: PurchaseInvoice[]): PurchaseInvoice[] {
     const pending = getPendingOperations()
       .filter(op => op.type === 'purchase_invoice')
       .map(op => {
-        const d = op.data as Record<string, any>;
+        const d = op.data as Record<string, unknown>;
         return {
           id: `queued-${op.id}`,
           user_id: '',
@@ -567,7 +568,7 @@ export async function editPurchaseInvoiceAtomic(
       const local = loadPurchaseInvoicesLocally();
       const orig = local.find(i => i.id === invoiceId);
       if (!orig) return { success: false, error: 'الفاتورة غير موجودة' };
-      orig.status = 'superseded' as any;
+      orig.status = 'superseded' as PurchaseInvoice['status'];
       const newInv: PurchaseInvoice = {
         ...orig,
         id: `demo_pi_${Date.now()}`,
@@ -586,9 +587,9 @@ export async function editPurchaseInvoiceAtomic(
       return { success: true, newInvoiceId: newInv.id };
     }
 
-    const { data, error } = await (supabase as any).rpc('edit_purchase_invoice_atomic', {
+    const { data, error } = await supabase.rpc('edit_purchase_invoice_atomic', {
       _invoice_id: invoiceId,
-      _new_lines: newLines,
+      _new_lines: newLines as unknown as Json,
       _op_id: finalOpId,
       _reason: reason
     });

@@ -12,6 +12,7 @@ import { emitEvent, EVENTS } from '../events';
 import { isGuestDemoMode } from '../demo-data';
 import { triggerAutoBackup } from '../local-auto-backup';
 import { supabase } from '@/integrations/supabase/client';
+import type { PostgrestSingleResponse } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LooseSupabase = SupabaseClient<any, 'public', any>;
@@ -145,13 +146,13 @@ function toProduct(cloud: CloudProduct): Product {
       )
     ) : undefined,
     // Unit settings
-    laborCost: Number((cloud as any).labor_cost ?? cloud.labor_cost) || 0,
-    bulkUnit: (cloud as any).bulk_unit || cloud.bulk_unit || 'كرتونة',
-    smallUnit: (cloud as any).small_unit || cloud.small_unit || 'قطعة',
-    conversionFactor: (cloud as any).conversion_factor || cloud.conversion_factor || 1,
-    bulkCostPrice: Number((cloud as any).bulk_cost_price ?? cloud.bulk_cost_price) || 0,
-    bulkSalePrice: Number((cloud as any).bulk_sale_price ?? cloud.bulk_sale_price) || 0,
-    trackByUnit: (cloud as any).track_by_unit || cloud.track_by_unit || 'piece',
+    laborCost: Number(cloud.labor_cost ?? cloud.labor_cost) || 0,
+    bulkUnit: cloud.bulk_unit || cloud.bulk_unit || 'كرتونة',
+    smallUnit: cloud.small_unit || cloud.small_unit || 'قطعة',
+    conversionFactor: cloud.conversion_factor || cloud.conversion_factor || 1,
+    bulkCostPrice: Number(cloud.bulk_cost_price ?? cloud.bulk_cost_price) || 0,
+    bulkSalePrice: Number(cloud.bulk_sale_price ?? cloud.bulk_sale_price) || 0,
+    trackByUnit: cloud.track_by_unit || cloud.track_by_unit || 'piece',
     createdAt: cloud.created_at || undefined,
     updatedAt: cloud.updated_at || undefined,
     archived: cloud.archived === true,
@@ -227,8 +228,7 @@ export const getStatus = (quantity: number, minStockLevel?: number): 'in_stock' 
 };
 
 // Helper to check if a product is marked as archived or deleted across various schemas
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const isProductArchivedOrDeleted = (p: any): boolean => {
+export const isProductArchivedOrDeleted = (p: { archived?: unknown; is_archived?: unknown; is_deleted?: unknown } | null | undefined): boolean => {
   if (!p || typeof p !== 'object') return false;
   return p.archived === true || p.is_archived === true || p.is_deleted === true;
 };
@@ -309,7 +309,7 @@ async function fetchProductsInChunks(): Promise<CloudProduct[]> {
     const res = await withTimeout(
       Promise.resolve(query),
       4000,
-      { data: null, error: new Error('Timeout fetching products chunk') } as any
+      { data: null, error: new Error('Timeout fetching products chunk') } as unknown as PostgrestSingleResponse<never[]>
     );
     const data = res?.data;
     const error = res?.error;
@@ -1212,7 +1212,7 @@ export const loadArchivedProductsCloud = async (): Promise<Product[]> => {
     const res = await withTimeout(
       Promise.resolve(query),
       5000,
-      { data: null, error: new Error('Timeout fetching archived products') } as any
+      { data: null, error: new Error('Timeout fetching archived products') } as unknown as PostgrestSingleResponse<never[]>
     );
 
     const data = res?.data;

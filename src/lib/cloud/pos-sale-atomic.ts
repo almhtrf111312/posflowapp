@@ -59,6 +59,8 @@ export interface AtomicSaleBundle {
 
     conversionFactor?: number;
 
+    serials?: string[];
+
   }>;
 
   stockItems: Array<{ productId: string; quantity: number; productName?: string }>;
@@ -215,7 +217,7 @@ function buildRpcItems(bundle: AtomicSaleBundle) {
       unit: item.unit || 'piece',
 
       conversion_factor: item.conversionFactor || 1,
-      ...(((item as any).serials?.length ? (item as any).serials : getSelectedSerials(item.id))?.length ? { serials: ((item as any).serials?.length ? (item as any).serials : getSelectedSerials(item.id)) } : {}),
+      ...((item.serials?.length ? item.serials : getSelectedSerials(item.id))?.length ? { serials: (item.serials?.length ? item.serials : getSelectedSerials(item.id)) } : {}),
 
     };
 
@@ -322,7 +324,7 @@ export async function processPosSaleAtomic(
 
         : 0,
 
-      _exchange_rate: Number((bundle as any).exchangeRate) || 1,
+      _exchange_rate: Number(bundle.exchangeRate) || 1,
 
       _tax_mode: bundle.taxMode || 'exclusive',
       _shift_id: useDrawerRpc ? (bundle.drawerShiftId ?? null) : null,
@@ -358,7 +360,7 @@ export async function processPosSaleAtomic(
 
 
     clearSelectedSerials(bundle.items.map(i => i.id));
-    confirmSerialsSynced(bundle.items.flatMap(i => ((i as any).serials as string[] | undefined) || []));
+    confirmSerialsSynced(bundle.items.flatMap(i => i.serials || []));
     invalidateInvoicesCache();
     invalidatePartnersCache();
 
@@ -366,7 +368,7 @@ export async function processPosSaleAtomic(
 
     if (paymentType === 'debt') emitEvent(EVENTS.DEBTS_UPDATED, null);
     markSaleAsSyncedInNativeSQLite(row.invoice_id, row.invoice_number, operationId).catch(() => {});
-    if ((bundle as any).paymentMethod === 'digital') {
+    if (bundle.paymentMethod === 'digital') {
       try {
         const { error: dErr } = await sb.rpc('mark_invoice_digital', { _invoice_number: row.invoice_number });
         if (dErr) throw dErr;

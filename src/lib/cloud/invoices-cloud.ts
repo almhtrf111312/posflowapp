@@ -13,7 +13,21 @@ import {
 } from '../supabase-store';
 import { supabase } from '@/integrations/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
+// Kept loose on purpose: typing the client strictly exposes ~23 existing mismatches in the sales/money paths (review item).
 type LooseSupabase = SupabaseClient<any, 'public', any>;
+
+/** One line of a queued sale bundle, as the offline replay reads it. */
+type QueuedItem = { id?: string; name?: string; price?: unknown; quantity?: unknown; total?: unknown; costPrice?: unknown; profit?: unknown; category?: string };
+/** A queued sale bundle, as the offline replay reads it (text fields are text; numeric fields go through Number()). */
+type QueuedBundle = {
+  type?: string; customerId?: string; customerName?: string; customerPhone?: string;
+  currency?: string; currencySymbol?: string; exchangeRate?: unknown; totalInCurrency?: unknown;
+  subtotal?: unknown; discount?: unknown; discountPercentage?: unknown; taxRate?: unknown; taxAmount?: unknown; total?: unknown;
+  profit?: unknown; cogs?: unknown; downPayment?: unknown; paymentType?: string; status?: string; notes?: string;
+  cashierId?: string; cashierName?: string; invoiceNumber?: string; items?: QueuedItem[];
+};
+/** The queued operation payload the replay reads. */
+type QueuedData = { operationId?: string; localId?: string; uniqueKey?: string; invoiceNumber?: string; customerId?: string; bundle?: QueuedBundle };
 const sb = supabase as unknown as LooseSupabase;
 import { emitEvent, EVENTS } from '../events';
 import { isGuestDemoMode } from '../demo-data';
@@ -152,7 +166,7 @@ function toInvoice(cloud: CloudInvoice): Invoice {
   const rawExchangeRate = Number(cloud.exchange_rate) || 1;
   const resolved = resolveHistoricalCurrency({
     currency: cloud.currency,
-    currencySymbol: (cloud as any).currency_symbol,
+    currencySymbol: (cloud as { currency_symbol?: string }).currency_symbol,
     exchangeRate: rawExchangeRate,
   });
 
@@ -679,7 +693,7 @@ export const addInvoiceCloud = async (
         totalInCurrency: invoice.totalInCurrency,
         currency: invoice.currency,
         currencySymbol: invoice.currencySymbol,
-        exchangeRate: Number((invoice as any).exchangeRate) || 1,
+        exchangeRate: Number(invoice.exchangeRate) || 1,
         profit: invoice.profit,
         notes: invoice.notes || invoice.serviceDescription,
         cashierId: userId,
@@ -713,7 +727,7 @@ export const addInvoiceCloud = async (
     profit: Math.round((invoice.profit || 0) * 100) / 100,
     currency: invoice.currency,
     currency_symbol: invoice.currencySymbol || null,
-    exchange_rate: Number((invoice as any).exchangeRate) || 1,
+    exchange_rate: Number(invoice.exchangeRate) || 1,
     payment_type: invoice.paymentType,
     status: invoice.status,
     debt_paid: invoice.debtPaid || 0,
@@ -784,7 +798,7 @@ export const addInvoiceCloud = async (
       totalInCurrency: invoice.totalInCurrency,
       currency: invoice.currency,
       currencySymbol: invoice.currencySymbol,
-      exchangeRate: Number((invoice as any).exchangeRate) || 1,
+      exchangeRate: Number(invoice.exchangeRate) || 1,
       profit: invoice.profit,
       notes: invoice.notes || invoice.serviceDescription,
       cashierId: userId,
@@ -1352,12 +1366,12 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
     for (const op of pending) {
       if (op.type === 'invoice_create' || op.type === 'debt_sale_bundle') {
         const opKey = String(op.data.operationId || op.data.localId || op.data.uniqueKey || op.id);
-        const bInvoiceNum = (op.data?.bundle as any)?.invoiceNumber || op.data?.invoiceNumber;
+        const bInvoiceNum = (op.data?.bundle as { invoiceNumber?: string } | undefined)?.invoiceNumber || op.data?.invoiceNumber;
         if (isOperationCancelled(opKey) || (bInvoiceNum && isOperationCancelled(String(bInvoiceNum)))) {
           continue;
         }
-        const data = op.data as Record<string, any>;
-        const bundle = (data?.bundle || {}) as Record<string, any>;
+        const data = op.data as QueuedData;
+        const bundle = (data?.bundle || {}) as QueuedBundle;
         const isFailed = op.status === 'failed';
         const rawExRate = Number(bundle.exchangeRate) || 1;
         const resolved = resolveHistoricalCurrency({
@@ -1369,7 +1383,7 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
         const sym = resolved.symbol;
         const exRate = resolved.rate;
 
-        const items = (bundle.items || []).map((it: any) => ({
+        const items = (bundle.items || []).map((it) => ({
           id: it.id,
           name: it.name,
           price: Number(it.price) || 0,
@@ -1381,11 +1395,11 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
         }));
 
         const discount = Number(bundle.discount) || 0;
-        const totalDiscountedProfit = items.reduce((sum: number, it: any) => sum + (it.profit || 0), 0) - discount;
+        const totalDiscountedProfit = items.reduce((sum: number, it) => sum + (it.profit || 0), 0) - discount;
         const computedProfit = typeof bundle.profit === 'number' ? bundle.profit : totalDiscountedProfit;
         const computedPartsCost = typeof bundle.cogs === 'number'
           ? bundle.cogs
-          : items.reduce((sum: number, it: any) => sum + ((it.costPrice || 0) * (it.quantity || 1)), 0);
+          : items.reduce((sum: number, it) => sum + ((it.costPrice || 0) * (it.quantity || 1)), 0);
 
         const invId = bundle.invoiceNumber || data?.invoiceNumber || data?.operationId || data?.localId || op.id;
 
@@ -1409,7 +1423,8 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
           exchangeRate: exRate,
           profit: computedProfit,
           partsCost: computedPartsCost,
-          paymentType: op.type === 'debt_sale_bundle' ? ((Number(bundle.downPayment) || 0) > 0 ? 'split' : 'debt') : (bundle.paymentType || 'cash'),
+          // NOTE for review: 'split' is not a PaymentType member; the original code also produced it (it was hidden by any).
+          paymentType: (op.type === 'debt_sale_bundle' ? ((Number(bundle.downPayment) || 0) > 0 ? 'split' : 'debt') : (bundle.paymentType || 'cash')) as PaymentType,
           status: op.type === 'debt_sale_bundle' ? ((Number(bundle.downPayment) || 0) >= (Number(bundle.total) || 0) ? 'paid' : 'pending') : (bundle.status as InvoiceStatus || 'paid'),
           serviceDescription: bundle.notes || undefined,
           createdAt: op.timestamp || op.createdAt || new Date().toISOString(),

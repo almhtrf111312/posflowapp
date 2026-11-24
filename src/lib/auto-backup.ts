@@ -191,32 +191,6 @@ export const performAutoBackup = async (): Promise<{ local: boolean; cloud: bool
   return results;
 };
 
-// Initialize auto-backup checker
-let backupCheckInterval: ReturnType<typeof setInterval> | null = null;
-
-export const initAutoBackup = (): void => {
-  // Clear any existing interval
-  if (backupCheckInterval) {
-    clearInterval(backupCheckInterval);
-  }
-
-  // Check every 30 minutes if backup is needed
-  backupCheckInterval = setInterval(async () => {
-    if (isBackupNeeded()) {
-      console.log('Auto-backup triggered');
-      await performAutoBackup();
-    }
-  }, 30 * 60 * 1000); // 30 minutes
-
-  // Also check on visibility change (when app comes to foreground)
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && isBackupNeeded()) {
-      console.log('Auto-backup triggered on app focus');
-      await performAutoBackup();
-    }
-  });
-};
-
 // Once per calendar day on app open: write a local backup file (native only).
 // Cloud data is already live, so only the device file is produced here.
 const DAILY_BACKUP_DAY_KEY = 'posflow_daily_backup_day';
@@ -259,13 +233,6 @@ const formatLocalDay = (d: Date): string => {
   return `${y}-${m}-${day}`;
 };
 
-// Stop auto-backup
-export const stopAutoBackup = (): void => {
-  if (backupCheckInterval) {
-    clearInterval(backupCheckInterval);
-    backupCheckInterval = null;
-  }
-};
 
 // Generate downloadable JSON backup for manual export
 export const generateDownloadableBackup = async (): Promise<{ data: string; fileName: string }> => {

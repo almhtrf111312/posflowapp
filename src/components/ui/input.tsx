@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { clearZeroOnFocus, restoreZeroOnBlur, isNumericInput } from "@/lib/numeric-input";
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
@@ -7,7 +8,9 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
 // no synthetic composition events and no DOM value mutation (both caused
 // stale search results and "ghost" backspaces in the Android app).
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onFocus, onBlur, ...props }, ref) => {
+    // Numeric fields showing only "0" are emptied on focus (so typing 10 never becomes 010 or 100); the zero returns if left empty
+    const numeric = isNumericInput(type, props.inputMode);
     return (
       <input
         type={type}
@@ -18,6 +21,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         autoComplete={props.autoComplete ?? "off"}
         {...props}
+        onFocus={numeric ? (e) => { clearZeroOnFocus(e.currentTarget); onFocus?.(e); } : onFocus}
+        onBlur={numeric ? (e) => { restoreZeroOnBlur(e.currentTarget); onBlur?.(e); } : onBlur}
       />
     );
   }

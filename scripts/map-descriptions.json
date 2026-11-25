@@ -285,6 +285,7 @@
   "src/lib/native-print.ts": "Receipt HTML generation and native/Bluetooth print entry points.",
   "src/lib/native-share.ts": "Native sharing of invoices/images (share sheet, WhatsApp).",
   "src/lib/notification-events-config.ts": "Notification event groups and localized labels.",
+  "src/lib/numeric-input.ts": "Numeric field helpers: empty a lone zero on focus, restore it on blur.",
   "src/lib/offline-image-store.ts": "Persistent IndexedDB store for product images offline.",
   "src/lib/offline-lease.ts": "Signed offline lease verification and trusted-time tracking.",
   "src/lib/offline-protection.ts": "Encrypts local data after prolonged offline; server-contact tracking.",

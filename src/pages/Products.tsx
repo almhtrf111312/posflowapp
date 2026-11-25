@@ -288,7 +288,7 @@ export default function Products() {
     barcode2: '',  // باركود ثاني
     barcode3: '',  // باركود ثالث
     variantLabel: '',  // وصف المتغير
-    category: t('products.defaultCategory'),
+    category: '',  // لا تصنيف افتراضي: يجب أن يختار المستخدم التصنيف
     costPrice: 0 as number | string,
     salePrice: 0 as number | string,
     laborCost: 0 as number | string,  // تكلفة العمالة (وضع ورشة الصيانة)
@@ -643,7 +643,7 @@ export default function Products() {
     }
     if (autoOpenHandledRef.current) return;
     autoOpenHandledRef.current = true;
-    setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: categoryOptions[0] || t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', imei: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
+    setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: categoryOptions.length > 0 ? '' : t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', imei: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
     setShowAddDialog(true);
     const next = new URLSearchParams(searchParams);
     next.delete('action');
@@ -1031,6 +1031,12 @@ export default function Products() {
       return;
     }
 
+    // 1.1 التصنيف إلزامي (لا يوجد تصنيف افتراضي عند الإضافة)
+    if (!formData.category || !String(formData.category).trim()) {
+      toast.error(isEn ? 'Please choose a category' : 'يرجى اختيار التصنيف');
+      return;
+    }
+
     // 2. فحص سعر البيع
     const salePriceNum = Number(formData.salePrice);
     const bulkSalePriceNum = Number(formData.bulkSalePrice);
@@ -1127,7 +1133,7 @@ export default function Products() {
 
       setShowAddDialog(false);
       setImagePreviewBase64('');
-      setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', imei: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
+      setFormData({ name: '', barcode: '', barcode2: '', barcode3: '', variantLabel: '', category: categoryOptions.length > 0 ? '' : t('products.defaultCategory'), costPrice: 0, salePrice: 0, laborCost: 0, quantity: 0, expiryDate: '', image: '', serialNumber: '', imei: '', batchNumber: '', warranty: '', wholesalePrice: 0, size: '', color: '', minStockLevel: 1, weight: '', fabricType: '', tableNumber: '', orderNotes: '', author: '', publisher: '', bulkUnit: t('products.unitCarton'), smallUnit: t('products.unitPiece'), conversionFactor: 1, bulkCostPrice: 0, bulkSalePrice: 0, trackByUnit: 'piece' });
       setShowBarcode2(false);
       setShowBarcode3(false);
       setCustomFieldValues({});
@@ -1498,7 +1504,7 @@ export default function Products() {
       barcode2: '',
       barcode3: '',
       variantLabel: '',
-      category: categoryOptions[0] || t('products.defaultCategory'),
+      category: categoryOptions.length > 0 ? '' : t('products.defaultCategory'),
       costPrice: 0,
       salePrice: 0,
       laborCost: 0,

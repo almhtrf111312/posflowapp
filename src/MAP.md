@@ -32,7 +32,7 @@ Read the MAP.md of the directory you need; do not open source files blindly. 18 
 | `contexts/` | 2 | React contexts (page activity). | — |
 | `hooks/` | 43 | React hooks (auth, currency, network, sync, device…) | [MAP.md](hooks/MAP.md) |
 | `integrations/supabase/` | 2 | Supabase client and generated types.ts (stale vs live DB). | — |
-| `lib/` | 99 | domain logic: *-store.ts (local/offline state), money-engine, sync-queue, utilities | [MAP.md](lib/MAP.md) |
+| `lib/` | 100 | domain logic: *-store.ts (local/offline state), money-engine, sync-queue, utilities | [MAP.md](lib/MAP.md) |
 | `lib/auth/` | 2 | Google sign-in (native/desktop) and phone-claim helpers. | — |
 | `lib/cache/` | 1 | Native stale-while-revalidate (SWR) cache engine. | — |
 | `lib/cloud/` | 28 | Supabase access per domain — every RPC call lives here | [MAP.md](lib/cloud/MAP.md) |

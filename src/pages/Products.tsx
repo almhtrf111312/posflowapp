@@ -29,7 +29,9 @@ import {
   Copy,
   Archive,
   RotateCcw,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { cn, toWesternNumerals, formatNumber, formatMoney } from '@/lib/utils';
 import { useCurrency } from '@/hooks/use-currency';
@@ -836,6 +838,13 @@ export default function Products() {
   const usedCategories = [...new Set(products.map(p => p.category))];
 
   const categories = [t('products.all'), ...categoryOptions];
+  // Show only the first few category chips (plus the selected one) instead of a sideways-scrolling row; "More" reveals the rest
+  const CATEGORY_CHIPS_LIMIT = 4;
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const visibleCategories = showAllCategories || categories.length <= CATEGORY_CHIPS_LIMIT + 1
+    ? categories
+    : categories.filter((c, i) => i < CATEGORY_CHIPS_LIMIT || c === selectedCategory);
+  const hiddenCategoriesCount = categories.length - visibleCategories.length;
 
   // دمج المنتجات المؤرشفة مع المنتجات المنتهية (quantity <= 0) دون تكرار
   const mergedArchivedProducts = useMemo(() => {
@@ -1575,8 +1584,8 @@ export default function Products() {
 
         {/* جسم النموذج الكامل بدون قيود النوافذ */}
         <div className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:gap-4">
+                <div className="col-span-2">
                   <label className="text-sm font-medium mb-1.5 block">{t('products.name')} *</label>
                   <Input
                     placeholder={t('products.exampleName')}
@@ -1586,7 +1595,7 @@ export default function Products() {
                 </div>
                 {!noInventory && !isRestaurant && (
                   <>
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <label className="text-sm font-medium mb-1.5 block">{t('products.barcode')} 1</label>
                       <div className="flex gap-2">
                         <Input
@@ -1611,7 +1620,7 @@ export default function Products() {
                     </div>
                     {/* Barcode 2 */}
                     {showBarcode2 && (
-                      <div className="sm:col-span-2">
+                      <div className="col-span-2">
                         <label className="text-sm font-medium mb-1.5 block">{t('products.barcode')} 2</label>
                         <div className="flex gap-2">
                           <Input
@@ -1643,7 +1652,7 @@ export default function Products() {
                     )}
                     {/* Barcode 3 */}
                     {showBarcode3 && (
-                      <div className="sm:col-span-2">
+                      <div className="col-span-2">
                         <label className="text-sm font-medium mb-1.5 block">{t('products.barcode')} 3</label>
                         <div className="flex gap-2">
                           <Input
@@ -1669,7 +1678,7 @@ export default function Products() {
                       </div>
                     )}
                     {/* Variant Label */}
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <label className="text-sm font-medium mb-1.5 block">{t('products.variantLabel')}</label>
                       <Input
                         placeholder={t('products.variantPlaceholder')}
@@ -1680,7 +1689,7 @@ export default function Products() {
                     </div>
                   </>
                 )}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 col-span-2 sm:col-span-1">
                   <label className="text-sm font-medium block">{t('products.category')}</label>
                   <Select
                     value={formData.category}
@@ -1746,7 +1755,7 @@ export default function Products() {
                   </div>
                 )}
                 {!isRepairMode && (
-                  <div>
+                  <div className="col-span-2 sm:col-span-1">
                     <label className="text-sm font-medium mb-1.5 block">{t('products.salePrice')} ({currencySymbol})</label>
                     <Input
                       type="text"
@@ -1764,7 +1773,7 @@ export default function Products() {
 
                 {/* Unit Settings Collapsible */}
                 {!noInventory && (
-                  <div className="sm:col-span-2">
+                  <div className="col-span-2">
                     <Collapsible open={showUnitSettings} onOpenChange={setShowUnitSettings}>
                       <CollapsibleTrigger asChild>
                         <Button variant="outline" className="w-full justify-between" type="button">
@@ -1800,7 +1809,7 @@ export default function Products() {
 
                 {/* Dynamic Fields based on store type (Fix #16) */}
                 {fieldsConfig.expiryDate && (
-                  <div className="sm:col-span-2">
+                  <div className="col-span-2">
                     <label className="text-sm font-medium mb-1.5 block">{t('products.expiryDate')}</label>
                     <DatePicker
                       value={formData.expiryDate}
@@ -1810,7 +1819,7 @@ export default function Products() {
                   </div>
                 )}
                 {fieldsConfig.batchNumber && (
-                  <div className="sm:col-span-2">
+                  <div className="col-span-2">
                     <label className="text-sm font-medium mb-1.5 block">{t('products.batchNumber')}</label>
                     <Input
                       placeholder={t('products.batchNumber')}
@@ -1820,7 +1829,7 @@ export default function Products() {
                   </div>
                 )}
                 {fieldsConfig.serialNumber && (
-                  <div className="sm:col-span-2">
+                  <div className="col-span-2">
                     <label className="text-sm font-medium mb-1.5 block">{t('products.serialNumber')}</label>
                     <Input
                       placeholder={t('products.exampleSerial')}
@@ -1830,7 +1839,7 @@ export default function Products() {
                   </div>
                 )}
                 {fieldsConfig.imei && (
-                  <div className="sm:col-span-2">
+                  <div className="col-span-2">
                     <label className="text-sm font-medium mb-1.5 block">{isRTL ? 'رقم IMEI' : 'IMEI'}</label>
                     <Input
                       dir="ltr"
@@ -1872,7 +1881,7 @@ export default function Products() {
                 )}
                 {fieldsConfig.sizeColor && (
                   <>
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <label className="text-sm font-medium mb-1.5 block">{t('products.size')}</label>
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {['S', 'M', 'L', 'XL', 'XXL', '36', '38', '40', '42', '44', '46'].map(s => (
@@ -1902,7 +1911,7 @@ export default function Products() {
                         className="text-xs"
                       />
                     </div>
-                    <div className="sm:col-span-2">
+                    <div className="col-span-2">
                       <label className="text-sm font-medium mb-1.5 block">{t('products.color')}</label>
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {[
@@ -1970,7 +1979,7 @@ export default function Products() {
                   </div>
                 )}
                 {fieldsConfig.orderNotes && (
-                  <div className="sm:col-span-2">
+                  <div className="col-span-2">
                     <label className="text-sm font-medium mb-1.5 block">{t('products.orderNotes')}</label>
                     <Input
                       placeholder={t('products.orderNotes')}
@@ -2014,7 +2023,7 @@ export default function Products() {
                 )}
                 {/* Custom Fields */}
                 {customFields.map((field) => (
-                  <div key={field.id} className={field.type === 'text' ? 'sm:col-span-2' : ''}>
+                  <div key={field.id} className={field.type === 'text' ? 'col-span-2' : ''}>
                     <label className="text-sm font-medium mb-1.5 block">
                       {field.name} {field.required && '*'}
                     </label>
@@ -2045,11 +2054,11 @@ export default function Products() {
                     )}
                   </div>
                 ))}
-                <div className="sm:col-span-2">
+                <div className="col-span-2">
                   <label className="text-sm font-medium mb-1.5 block">{t('products.productImage')}</label>
-                  <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
                     {(imagePreviewBase64 || formData.image) ? (
-                      <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border group cursor-pointer" onClick={() => {
+                      <div className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden border border-border group cursor-pointer" onClick={() => {
                         if (imagePreviewBase64) openImagePreview(imagePreviewBase64);
                         else if (formData.image) openImagePreview(formData.image);
                       }}>
@@ -2082,11 +2091,11 @@ export default function Products() {
                         </button>
                       </div>
                     ) : (
-                      <div className="w-24 h-24 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                      <div className="w-24 h-24 shrink-0 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
                         <ImageIcon className="w-10 h-10 text-muted-foreground/50" />
                       </div>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 flex-1 min-w-0">
                       <Button
                         type="button"
                         variant="outline"
@@ -2446,8 +2455,8 @@ export default function Products() {
           </div>
 
           {mainTab === 'archive' ? null : (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {categories.map((category) => (
+            <div className="flex flex-wrap items-center gap-2">
+              {visibleCategories.map((category) => (
                 <Button
                   key={category}
                   type="button"
@@ -2459,6 +2468,20 @@ export default function Products() {
                   {category}
                 </Button>
               ))}
+              {(hiddenCategoriesCount > 0 || showAllCategories) && categories.length > CATEGORY_CHIPS_LIMIT + 1 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-xl shrink-0 whitespace-nowrap"
+                  aria-expanded={showAllCategories}
+                  onClick={() => setShowAllCategories(v => !v)}
+                >
+                  {showAllCategories ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  {t('common.more')}
+                  {!showAllCategories && <span dir="ltr" className="inline-block tabular-nums rounded-md bg-muted px-1.5 text-[11px]">+{hiddenCategoriesCount}</span>}
+                </Button>
+              )}
 
               {/* Unit Filter */}
               <div className="h-6 w-px bg-border mx-1 self-center shrink-0" />
@@ -2762,10 +2785,10 @@ export default function Products() {
                     </div>
 
                     {/* Line 2: Stock on Right + Clean Buy & Sell Price Badges on Left */}
-                    <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-dashed border-border/60 text-[11px]">
+                    <div className="flex flex-wrap items-center justify-between gap-x-1.5 gap-y-1 pt-1 border-t border-dashed border-border/60 text-[11px]">
                       {/* Stock Count (Aligned to Right) */}
                       {!noInventory ? (
-                        <div className="flex items-center gap-1 text-muted-foreground font-bold shrink-0">
+                        <div className="flex flex-wrap items-center gap-1 text-muted-foreground font-bold">
                           <span className="text-muted-foreground/70 text-[11px]">{t('products.stock') || 'المخزون'}:</span>
                           <span dir="ltr" className="inline-block font-mono tabular-nums text-foreground font-bold text-xs">{product.quantity}</span>
                           <span className="text-muted-foreground/70 text-[11px] font-sans">
@@ -2815,15 +2838,15 @@ export default function Products() {
                       )}
 
                       {/* Buy & Sell Pricing (Aligned to Left) */}
-                      <div className="flex items-center gap-1 font-mono font-bold text-[10.5px] shrink-0">
+                      <div className="flex flex-wrap items-center gap-1 font-mono font-bold text-[10.5px] max-w-full">
                         {!noInventory && (
-                          <div className="flex items-center gap-1 bg-muted/40 px-1.5 py-0.5 rounded-md border border-border/70 shadow-2xs">
+                          <div className="flex items-center gap-1 bg-muted/40 px-1.5 py-0.5 rounded-md border border-border/70 shadow-2xs whitespace-nowrap">
                             <span className="text-[8.5px] font-sans text-muted-foreground font-medium">{t('products.buy') || 'شراء'}:</span>
                             <span className="text-foreground">{formatPrice(product.costPrice)}</span>
                           </div>
                         )}
 
-                        <div className="flex items-center gap-1 bg-primary/10 px-1.5 py-0.5 rounded-md border border-primary/20 shadow-2xs text-primary">
+                        <div className="flex items-center gap-1 bg-primary/10 px-1.5 py-0.5 rounded-md border border-primary/20 shadow-2xs text-primary whitespace-nowrap">
                           <span className="text-[8.5px] font-sans text-primary/80 font-medium">{t('products.sell') || 'بيع'}:</span>
                           <span className="text-foreground font-black">{formatPrice(product.salePrice)}</span>
                         </div>
@@ -3100,7 +3123,7 @@ export default function Products() {
                       )}
                   {/* Bottom 3-Metric Price Row (الشراء | البيع | الربح) */}
                   {noInventory ? (
-                    <div className={cn("grid gap-0.5 text-center bg-muted/40 p-0.5 rounded-lg border border-border/80 mt-1", isRepairMode ? "grid-cols-3" : "grid-cols-2")}>
+                    <div className={cn("grid gap-0.5 text-center bg-muted/40 p-0.5 rounded-lg border border-border/80 mt-1", isRepairMode ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2")}>
                       {isRepairMode ? (
                         <>
                           <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
@@ -3111,7 +3134,7 @@ export default function Products() {
                             <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.laborCost')}</span>
                             <span dir="ltr" className="inline-block text-xs font-bold leading-tight text-foreground font-mono tabular-nums">${formatNumber(product.laborCost || 0, 2)}</span>
                           </div>
-                          <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
+                          <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0 col-span-2 sm:col-span-1">
                             <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('common.total')}</span>
                             <span className="text-[11px] font-black leading-tight text-primary font-mono">{formatPrice(product.costPrice + (product.laborCost || 0))}</span>
                           </div>
@@ -3130,7 +3153,7 @@ export default function Products() {
                       )}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-0.5 text-center bg-muted/40 p-0.5 rounded-lg border border-border/80 mt-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-0.5 text-center bg-muted/40 p-0.5 rounded-lg border border-border/80 mt-1">
                       {/* الشراء */}
                       <div className="bg-card px-0.5 py-0.5 rounded-md border border-border/70 min-w-0">
                         <span className="text-[11px] text-muted-foreground font-bold block leading-tight truncate">{t('products.costPrice') || 'الشراء'}</span>
@@ -3143,7 +3166,7 @@ export default function Products() {
                       </div>
                       {/* الربح */}
                       <div className={cn(
-                        "px-0.5 py-0.5 rounded-md border min-w-0",
+                        "px-0.5 py-0.5 rounded-md border min-w-0 col-span-2 sm:col-span-1",
                         profit > 0
                           ? "bg-success/10 text-success border-success/20"
                           : profit < 0

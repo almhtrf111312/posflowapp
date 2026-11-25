@@ -34,7 +34,14 @@ const descOf = (data?: ToastData): string | undefined => {
 const actionOf = (data?: ToastData) =>
   data?.action ? { label: data.action.label, onClick: data.action.onClick } : undefined;
 
-function show(type: SmartType, message: unknown, data?: ToastData, defaultDuration?: number): string {
+function show(type: SmartType, rawMessage: unknown, rawData?: ToastData, defaultDuration?: number): string {
+  // Tolerate the shadcn-style call toast({ title, description }) so an object is never shown as "[object Object]"
+  const objectCall = rawMessage !== null && typeof rawMessage === 'object' && !(rawMessage instanceof Error)
+    && ('title' in rawMessage || 'description' in rawMessage);
+  const message = objectCall ? (rawMessage as { title?: unknown }).title : rawMessage;
+  const data: ToastData | undefined = objectCall
+    ? { ...(rawData ?? {}), description: (rawMessage as { description?: unknown }).description as ToastData['description'] }
+    : rawData;
   const msg = toMessage(message);
   const id = data?.id != null ? String(data.id) : `st_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const duration =

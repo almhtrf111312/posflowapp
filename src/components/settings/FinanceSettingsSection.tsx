@@ -117,8 +117,7 @@ export function FinanceSettingsSection({
                         if (enabledCurrencies.USD !== false) {
                           setPrimaryCurrency('USD');
                         } else {
-                          toast({
-                            title: t('storeSettings.currencyDisabledTitle'),
+                          toast.info(t('storeSettings.currencyDisabledTitle'), {
                             description: t('storeSettings.enableUsdFirstDesc'),
                           });
                         }
@@ -178,8 +177,7 @@ export function FinanceSettingsSection({
                         if (enabledCurrencies[slot1Code]) {
                           setPrimaryCurrency(slot1Code);
                         } else {
-                          toast({
-                            title: t('storeSettings.currencyDisabledTitle'),
+                          toast.info(t('storeSettings.currencyDisabledTitle'), {
                             description: t('storeSettings.enableCurrencyFirstDesc'),
                           });
                         }
@@ -308,8 +306,7 @@ export function FinanceSettingsSection({
                         if (enabledCurrencies[slot2Code]) {
                           setPrimaryCurrency(slot2Code);
                         } else {
-                          toast({
-                            title: t('storeSettings.currencyDisabledTitle'),
+                          toast.info(t('storeSettings.currencyDisabledTitle'), {
                             description: t('storeSettings.enableCurrencyFirstDesc'),
                           });
                         }

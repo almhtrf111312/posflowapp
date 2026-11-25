@@ -3,7 +3,7 @@
 // SECURITY FIX: الثابتة القديمة كانت posflow_cashbox_v1 / posflow_shifts_v1
 // ولم تتضمن userId مما يتسبب في مسح ورديات الكاشير الأول عند تسجيل دخول آخر.
 import { getCurrentUserId } from './supabase-store';
-import { buildAdoptedShift, type CloudShiftLike } from './shift-adopt';
+import { buildAdoptedShift, expectedCashOfShift, type CloudShiftLike } from './shift-adopt';
 import { emitEvent, EVENTS } from './events';
 import { addCurrency, subtractCurrency, round8, round8 as roundCurrency } from './utils';
 import { getEnabledCurrencies, roundForCurrency, fromUsd } from './money-engine';
@@ -712,7 +712,7 @@ export const calculateShiftStatus = (shift: Shift): {
   return {
     cashSales: shift.salesTotal || 0,
     cashExpenses: shift.expensesTotal || 0,
-    expectedCash: shift.openingCash + (shift.salesTotal || 0) - (shift.expensesTotal || 0)
+    expectedCash: expectedCashOfShift(shift)
   };
 };
 

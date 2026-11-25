@@ -86,7 +86,7 @@ Subfolders with their own map: cloud/, db/, locales/, printer/
 | `settings-storage.ts` | Fast local settings storage. | SETTINGS_STORAGE_KEY, getStoredSettingsLocally, saveSettingsLocally, getSettingValue, setSettingValue | events | — |
 | `settings-version.ts` | Forces a settings refresh when the app version changes. | checkSettingsVersion | — | — |
 | `setup-flag.ts` | Per-user setup-wizard completion flag. | setupFlagKey, hasRealConfiguredStore, isSetupCompleteFor, markSetupComplete, isConfiguredStoreRow | — | — |
-| `shift-adopt.ts` | Pure rules for adopting a cloud-open shift on another device (expected cash follows the server). | buildAdoptedShift, expectedFromMovements · 2 types | — | — |
+| `shift-adopt.ts` | Pure rules for adopting a cloud-open shift on another device (expected cash follows the server). | buildAdoptedShift, expectedFromMovements, expectedCashOfShift · 3 types | — | — |
 | `sonner-bridge.ts` | Toast bridge to sonner. | toast, default | hooks/use-smart-toast, toast-config | — |
 | `sound-utils.ts` | UI sound effects. | playBeep, playAddToCart, playSaleComplete, playDebtRecorded, playError | — | — |
 | `splash-screen.ts` | Hide the native splash screen. | hideSplashScreen | — | — |

@@ -73,3 +73,18 @@ export function expectedFromMovements(opening: number | string, movements: Shift
   }
   return round2(total);
 }
+
+export interface ShiftTotalsLike {
+  openingCash: number;
+  salesTotal?: number;
+  depositsTotal?: number;
+  expensesTotal?: number;
+  withdrawalsTotal?: number;
+}
+
+/** Expected drawer cash of a shift: opening + sales + deposits − expenses − withdrawals (same formula as closing, F-18). */
+export function expectedCashOfShift(shift: ShiftTotalsLike): number {
+  const v = (shift.openingCash || 0) + (shift.salesTotal || 0) + (shift.depositsTotal || 0)
+    - (shift.expensesTotal || 0) - (shift.withdrawalsTotal || 0);
+  return Math.round(v * 1e8) / 1e8;
+}

@@ -1,5 +1,5 @@
 // Production-code test: rules for adopting a shift open in the cloud but unknown on this device (cross-device sync).
-import { buildAdoptedShift, expectedFromMovements } from '../shift-adopt';
+import { buildAdoptedShift, expectedFromMovements, expectedCashOfShift } from '../shift-adopt';
 
 let failed = 0;
 let passed = 0;
@@ -42,6 +42,11 @@ eq('SYNC a missing server balance falls back to the opening balance', d ? expect
 eq('SYNC expected from movements counts cash sales and debt payments (508)', expectedFromMovements(500, [{ type: 'sale', amount: 2 }, { type: 'debt_payment', amount: '6.00000000' }]), 508);
 eq('SYNC outflows reduce the drawer (expense 50, refund 10)', expectedFromMovements(100, [{ type: 'debt_payment', amount: 315 }, { type: 'expense', amount: 50 }, { type: 'expense_refund', amount: 50 }, { type: 'refund', amount: 14.5 }]), 400.5);
 eq('SYNC a digital sale never touches the drawer', expectedFromMovements(100, [{ type: 'digital_sale', amount: 40 }]), 100);
+
+// G-12: the shift card showed 502 while the drawer detail showed 508 (the debt payment of 6 is a deposit and was ignored).
+eq('G12 card expected cash includes deposits (500 + 2 sales + 6 deposit = 508)', expectedCashOfShift({ openingCash: 500, salesTotal: 2, depositsTotal: 6, expensesTotal: 0, withdrawalsTotal: 0 }), 508);
+eq('G12 card expected cash subtracts expenses and withdrawals', expectedCashOfShift({ openingCash: 100, salesTotal: 315, depositsTotal: 0, expensesTotal: 50, withdrawalsTotal: 14.5 }), 350.5);
+eq('G12 missing totals count as zero', expectedCashOfShift({ openingCash: 100 }), 100);
 
 console.log(`${failed ? 'FAIL' : 'PASS'} cashbox-shift-adopt: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -887,4 +887,58 @@ export async function runQaFixes(k, newWorldFn) {
     truthy('C11 credit sale of 150 above the limit of 100 is refused', (await w.fails(sell(150, 'c11a'))) !== null);
     check('C11 credit sale of 80 within the limit is accepted', await w.fails(sell(80, 'c11b')), null);
   }
+
+  // Plan D-08 / D-09: partial refund of a discounted, taxed invoice returns the line at total/subtotal (0.945 x 50 = 47.25),
+  // keeps the tax and profit proportional, and leaves product costs untouched.
+  {
+    const w = await newWorldFn();
+    await w.q(`insert into public.stores(user_id,name,tax_enabled,tax_rate) values ($1,'S',true,5) on conflict (user_id) do update set tax_enabled=true, tax_rate=5`, [OWNER]);
+    const pA = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'A',50,20,50) returning id`, [OWNER])).id;
+    const pB = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'B',50,30,50) returning id`, [OWNER])).id;
+    const sh = await w.newShift(100);
+    const items = JSON.stringify([
+      { product_id: pA, product_name: 'A', quantity: 1, unit_price: 50, amount_usd: 50, amount_original: 50, cost_price: 20 },
+      { product_id: pB, product_name: 'B', quantity: 1, unit_price: 50, amount_usd: 50, amount_original: 50, cost_price: 30 }]);
+    const s = await w.one(`select * from public.process_pos_sale_with_drawer_atomic($1,'cash','C','',100,10,10,5,4.5,94.5,40,'USD',null::uuid,$2::jsonb,0,1,'exclusive',$3::uuid,null)`, [w.op('d08'), items, sh]);
+    check('D08 sale total is (100 - 10) x 1.05 = 94.5', s.total, 94.5);
+    const rf = (await w.one(`select public.refund_invoice_partial_atomic($1,$2::jsonb,$3,$4::uuid,null,null,null,'drawer') r`, [s.invoice_number, JSON.stringify([{ product_id: pA, quantity: 1 }]), w.op('d08r'), sh])).r;
+    check('D08 partial refund of A is 0.945 x 50 = 47.25', rf.refund_amount, 47.25);
+    check('D08 the drawer pays out 47.25', await w.txSum(sh, 'refund'), 47.25);
+    const inv = await w.one(`select total::float8 t, profit::float8 p, tax_amount::float8 x from public.invoices where invoice_number=$1`, [s.invoice_number]);
+    check('D08 invoice total after the refund is 47.25', inv.t, 47.25);
+    check('D08 invoice profit after the refund is 15 (50 x 0.9 - 30)', inv.p, 15);
+    check('D08 invoice tax after the refund is 2.25', inv.x, 2.25);
+    const cost = async (id) => Number((await w.one(`select cost_price::float8 c from public.products where id=$1`, [id])).c);
+    check('D09 refund leaves product A cost unchanged', await cost(pA), 20);
+    check('D09 refund leaves product B cost unchanged', await cost(pB), 30);
+  }
+  // Plan C-12: paying a customer's store credit out in cash moves exactly that amount from the drawer, once, and never above the balance.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    const cust = (await w.one(`insert into public.customers(user_id,name,phone) values ($1,'Credit','0500000002') returning id`, [OWNER])).id;
+    await w.q(`insert into public.customer_credit_ledger(user_id,customer_id,entry_type,amount,reason) values ($1,$2,'issue',20,'golden')`, [OWNER, cust]);
+    const o = w.op('c12');
+    check('C12 payout of 20 succeeds', await w.fails(w.q(`select public.payout_store_credit_atomic($1::uuid,20,$2::uuid,$3)`, [cust, sh, o])), null);
+    check('C12 drawer movement is 20', await w.txSum(sh, 'store_credit_refund'), 20);
+    check('C12 balance is 0 afterwards', Number((await w.one(`select coalesce(sum(amount),0)::float8 b from public.customer_credit_ledger where customer_id=$1`, [cust])).b), 0);
+    await w.q(`select public.payout_store_credit_atomic($1::uuid,20,$2::uuid,$3)`, [cust, sh, o]);
+    check('C12 replay does not pay twice', await w.txSum(sh, 'store_credit_refund'), 20);
+    truthy('C12 a payout above the balance is refused', (await w.fails(w.q(`select public.payout_store_credit_atomic($1::uuid,1,$2::uuid,$3)`, [cust, sh, w.op('c12b')]))) !== null);
+  }
+
+  // Plan C-12: store credit issued to a customer settles a debt without touching the drawer; the balance goes down by the same amount.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    const cust = (await w.one(`insert into public.customers(user_id,name,phone) values ($1,'Credit2','0500000003') returning id`, [OWNER])).id;
+    check('C12 issue 20 of store credit succeeds', await w.fails(w.q(`select public.issue_store_credit_atomic($1::uuid,20,'golden',null,$2)`, [cust, w.op('c12i')])), null);
+    const debtId = (await w.one(`insert into public.debts(user_id, customer_id, customer_name, total_debt, total_paid, remaining_debt, status, is_cash_debt) values ($1,$2,'Credit2',50,0,50,'due',true) returning id`, [OWNER, cust])).id;
+    check('C12 applying the 20 credit to the debt succeeds', await w.fails(w.q(`select public.apply_store_credit_to_debt_atomic($1::uuid,20,$2)`, [debtId, w.op('c12a')])), null);
+    const dd = await w.debt(debtId);
+    check('C12 the debt falls by 20 (remaining 30)', dd.remaining, 30);
+    check('C12 the credit balance is 0', Number((await w.one(`select coalesce(sum(amount),0)::float8 b from public.customer_credit_ledger where customer_id=$1`, [cust])).b), 0);
+    check('C12 paying a debt with credit writes no drawer movement', await w.txSum(sh, 'debt_payment'), 0);
+    truthy('C12 applying more credit than the balance is refused', (await w.fails(w.q(`select public.apply_store_credit_to_debt_atomic($1::uuid,1,$2)`, [debtId, w.op('c12c')]))) !== null);
+  }
 }

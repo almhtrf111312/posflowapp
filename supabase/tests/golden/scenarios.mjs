@@ -667,4 +667,138 @@ export async function runQaFixes(k, newWorldFn) {
     check('J10 exactly one refund movement of 5 in the drawer', await w.txSum(sh, 'refund'), 5);
     check('J10 drawer expected is 100 + 13 - 5 = 108', await w.expected(sh), 108);
   }
+
+  // Plan sweep (C-15, C-08, D-04/D-06/D-07, G-14, G-07): representative cases that were not covered by a golden case yet.
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'P',90,40,50) returning id`, [OWNER])).id;
+    const items = JSON.stringify([{ product_id: prod, product_name: 'P', quantity: 1, unit_price: 90, amount_usd: 90, amount_original: 90, cost_price: 40 }]);
+    // C-15: three fractional payments on a 100 debt settle it exactly (33.33 + 33.33 + 33.34).
+    {
+      const sh = await w.newShift(100);
+      const d = await w.newDebt({ total: 100, isCash: true });
+      for (const a of [33.33, 33.33, 33.34]) await w.one(`select public.record_debt_payment_atomic($1,$2,$3,$4,'USD',$2,1,'cash')`, [d, a, w.op('c15'), sh]);
+      const dd = await w.debt(d);
+      check('C15 fractional payments: paid 100', dd.paid, 100);
+      check('C15 fractional payments: remaining 0', dd.remaining, 0);
+      check('C15 fractional payments: fully_paid', dd.status, 'fully_paid');
+      check('C15 fractional payments: sum(settled) = 100', (await w.one(`select sum(settled_amount)::float8 s from public.debt_payments where debt_id=$1`, [d])).s, 100);
+    }
+    // C-08: a transfer payment credits the debt but never touches the drawer.
+    {
+      const sh = await w.newShift(100);
+      const d = await w.newDebt({ total: 50, isCash: true });
+      check('C08 transfer payment accepted', await w.fails(w.one(`select public.record_debt_payment_atomic($1,20,$2,$3,'USD',20,1,'transfer')`, [d, w.op('c08'), null])), null);
+      check('C08 transfer payment credits the debt', (await w.debt(d)).paid, 20);
+      check('C08 transfer payment writes no drawer movement', await w.txSum(sh, 'debt_payment'), 0);
+    }
+    // D-04 + D-07: refund of a taxed invoice returns the tax too, and lands in the CURRENT shift when the original one is closed.
+    {
+      await w.q(`insert into public.stores(user_id,name,tax_enabled,tax_rate) values ($1,'S',true,5) on conflict (user_id) do update set tax_enabled=true, tax_rate=5`, [OWNER]);
+      const old = await w.newShift(100);
+      const s = await w.one(`select * from public.process_pos_sale_atomic($1,'cash','C','',90,0,0,5,4.5,94.5,50,'USD',null::uuid,$2::jsonb,0,1,'exclusive')`, [w.op('d04'), items]);
+      check('D04 taxed sale total is 94.5', s.total, 94.5);
+      await w.q(`insert into public.shift_transactions(shift_id,user_id,type,amount,currency,currency_amount,exchange_rate,reference_id) values ($1,$2,'sale',94.5,'USD',94.5,1,$3)`, [old, OWNER, s.invoice_number]);
+      const cur = await w.newShift(200);
+      check('D04 refund of a taxed invoice succeeds', await w.fails(w.q(`select * from public.refund_invoice_atomic($1,'drawer',$2::uuid,'USD',null,1,'drawer')`, [s.invoice_number, cur])), null);
+      check('D04 refund returns 94.5 including tax', await w.txSum(cur, 'refund'), 94.5);
+      check('D07 the refund lands in the current shift, not the closed one', await w.txSum(old, 'refund'), 0);
+      check('D04 stock is restored', Number((await w.one(`select quantity::float8 q from public.products where id=$1`, [prod])).q), 50);
+    }
+    // D-06: a refund settled outside the drawer posts no drawer movement.
+    {
+      await w.q(`update public.stores set tax_enabled=false where user_id=$1`, [OWNER]);
+      const sh = await w.newShift(100);
+      const s = await w.one(`select * from public.process_pos_sale_atomic($1,'cash','C','',90,0,0,0,0,90,50,'USD',null::uuid,$2::jsonb,0,1,null)`, [w.op('d06'), items]);
+      await w.q(`update public.invoices set payment_method='digital' where invoice_number=$1`, [s.invoice_number]);
+      check('D06 digital refund succeeds', await w.fails(w.q(`select * from public.refund_invoice_atomic($1,'external_cash',null::uuid,'USD',null,1,'external_cash')`, [s.invoice_number])), null);
+      check('D06 digital refund writes no drawer movement', await w.txSum(sh, 'refund'), 0);
+    }
+    // G-14: 25 fractional movements leave no cumulative drift (F-18) and the shift closes with a zero difference.
+    {
+      const sh = await w.newShift(100);
+      for (let i = 0; i < 10; i++) await w.one(`select public.post_shift_sale_atomic($1,$2,0.1,'USD',0.1,1) r`, [sh, w.op('g14a')]);
+      for (let i = 0; i < 10; i++) await w.one(`select public.post_shift_sale_atomic($1,$2,0.33,'USD',0.33,1) r`, [sh, w.op('g14b')]);
+      for (let i = 0; i < 5; i++) await w.one(`select public.add_expense_atomic($1,'rent',0.33,'rent','2026-11-23',null,$2,'drawer','USD',0.33,1)`, ['22222222-2222-4222-8222-' + String(1000 + i).padStart(12, '0'), sh]);
+      const f = await w.one(`select 100::float8 + coalesce((select sum(amount) from public.shift_transactions where shift_id=$1 and type='sale'),0)::float8 - coalesce((select sum(amount) from public.shift_transactions where shift_id=$1 and type='expense'),0)::float8 e`, [sh]);
+      check('G14 drawer = 100 + 1 + 3.3 - 1.65 with no drift', f.e, 102.65, 1e-9);
+      check('G14 close with the exact count succeeds', await w.fails(w.one(`select public.close_cash_shift_atomic($1, 102.65, 'g14') r`, [sh])), null);
+      check('G14 variance is zero', (await w.one(`select variance::float8 v from public.cash_shifts where id=$1`, [sh])).v, 0);
+    }
+    // G-07: a shortage of 5 is stored as variance -5; without a reason it stays unmatched, with a reason it is matched.
+    {
+      const a = await w.newShift(100);
+      await w.one(`select public.close_cash_shift_atomic($1, 95, 'counted short') r`, [a]);
+      const ra = await w.one(`select variance::float8 v, reconciliation_status s from public.cash_shifts where id=$1`, [a]);
+      check('G07 shortage variance is -5', ra.v, -5);
+      check('G07 shortage with a reason is matched', ra.s, 'matched');
+      const b = await w.newShift(100);
+      await w.one(`select public.close_cash_shift_atomic($1, 95, null) r`, [b]);
+      check('G07 shortage without a reason stays unmatched', (await w.one(`select reconciliation_status s from public.cash_shifts where id=$1`, [b])).s, 'unmatched');
+    }
+  }
+
+  // Plan H-03 / H-08 / H-19: profit shares on a cash sale (category partner first, general partners on the rest), the refund
+  // takes them back, and fractional profits keep 8 decimals with the shares never exceeding the profit.
+  {
+    const w = await newWorldFn();
+    const partner = (name, share, all, cs = '[]') => w.one(
+      `insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares)
+       values ($1,$2,$3,0,$4,0,0,0,$5::jsonb) returning id`, [OWNER, name, share, all, cs]);
+    const bal = async (id) => Number((await w.one(`select current_balance::float8 b from public.partners where id=$1`, [id])).b);
+    const Z = await partner('Z', 0, false, '[{"categoryName":"Electronics","enabled":true,"percentage":10}]');
+    const X = await partner('X', 30, true);
+    const Y = await partner('Y', 20, true);
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity,category) values ($1,'Phone',150,100,50,'Electronics') returning id`, [OWNER])).id;
+    const sh = await w.newShift(100);
+    const sellAt = (price, profit, tag) => w.one(
+      `select * from public.process_pos_sale_with_drawer_atomic($1,'cash','C','',$2,0,0,0,0,$2,$3,'USD',null::uuid,$4::jsonb,0,1,null,$5::uuid,null)`,
+      [w.op(tag), price, profit, JSON.stringify([{ product_id: prod, product_name: 'Phone', quantity: 1, unit_price: price, amount_usd: price, amount_original: price, cost_price: 100 }]), sh]);
+    const s1 = await sellAt(150, 50, 'h03');
+    check('H03 category partner takes 10% of 50 = 5', await bal(Z.id), 5);
+    check('H03 general partner X takes 30% of the remaining 45 = 13.5', await bal(X.id), 13.5);
+    check('H03 general partner Y takes 20% of the remaining 45 = 9', await bal(Y.id), 9);
+    check('H08 refund succeeds', await w.fails(w.q(`select * from public.refund_invoice_atomic($1,'drawer',$2::uuid,'USD',null,1,'drawer')`, [s1.invoice_number, sh])), null);
+    check('H08 refund takes back the category partner share', await bal(Z.id), 0);
+    check('H08 refund takes back X share', await bal(X.id), 0);
+    check('H08 refund takes back Y share', await bal(Y.id), 0);
+    // H-19: fractional profits (33.33 and 0.07): shares keep 8 decimals and never exceed the profit.
+    for (const [price, profit, tag] of [[133.33, 33.33, 'h19a'], [100.07, 0.07, 'h19b']]) {
+      const before = (await bal(Z.id)) + (await bal(X.id)) + (await bal(Y.id));
+      await sellAt(price, profit, tag);
+      const got = Math.round(((await bal(Z.id)) + (await bal(X.id)) + (await bal(Y.id)) - before) * 1e8) / 1e8;
+      const z = Math.round(profit * 0.1 * 1e8) / 1e8;
+      const expectShares = Math.round((z + (profit - z) * 0.5) * 1e8) / 1e8;
+      check(`H19 profit ${profit}: partner shares total ${expectShares} (never above the profit)`, got, expectShares, 0.00000002);
+      truthy(`H19 profit ${profit}: shares do not exceed the profit`, got <= profit + 1e-9);
+    }
+  }
+
+  // Plan I-01 / I-15: weighted average cost keeps 8 decimals, also with fractional costs and large quantities.
+  {
+    const w = await newWorldFn();
+    const cost = async (id) => Number((await w.one(`select cost_price::float8 c from public.products where id=$1`, [id])).c);
+    const qty = async (id) => Number((await w.one(`select quantity::float8 q from public.products where id=$1`, [id])).q);
+    const a = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'WAC1',9,2,88) returning id`, [OWNER])).id;
+    await w.one(`select * from public.receive_stock_wac($1,10,10,'wac-i01')`, [a]);
+    // (88 x 2 + 10 x 10) / 98 = 276 / 98 = 2.81632653
+    check('I01 weighted average after buying 10 at 10', await cost(a), 2.81632653, 0.000000006);
+    check('I01 quantity is 98', await qty(a), 98);
+    const b = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'WAC2',9,3.333,10000) returning id`, [OWNER])).id;
+    await w.one(`select * from public.receive_stock_wac($1,10000,6.667,'wac-i15')`, [b]);
+    // (10000 x 3.333 + 10000 x 6.667) / 20000 = 5
+    check('I15 large quantities with fractional costs average to 5', await cost(b), 5, 0.000000006);
+    check('I15 quantity is 20000', await qty(b), 20000);
+  }
+
+  // Plan J-01 / J-02 (F-24): an expense dated inside a closed period is refused; one dated after it is accepted.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    await w.one(`select public.close_accounting_period_atomic('2026-01-01','2026-01-31','UTC') r`);
+    const exp = (day, tag) => w.one(`select public.add_expense_atomic($1,'rent',10,'rent',$2,null,$3,'drawer','USD',10,1) r`, [tag, day, sh]);
+    truthy('J02 expense dated inside the closed period is refused', (await w.fails(exp('2026-01-15', '33333333-3333-4333-8333-000000000001'))) !== null);
+    check('J02 refused expense wrote no drawer movement', await w.txSum(sh, 'expense'), 0);
+    check('J02 expense dated after the closed period is accepted', await w.fails(exp('2026-02-05', '33333333-3333-4333-8333-000000000002')), null);
+  }
 }

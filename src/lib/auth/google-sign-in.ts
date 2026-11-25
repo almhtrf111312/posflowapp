@@ -8,6 +8,7 @@
  */
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
+import { isConfiguredStoreRow } from '../setup-flag';
 
 /** مفتاح التشغيل الرئيسي */
 export const GOOGLE_SIGN_IN_ENABLED = true;
@@ -96,6 +97,23 @@ export async function nativeGoogleSignOut(): Promise<void> {
   try { await NativeGoogle.signOut(); } catch { /* ignore */ }
 }
 
+/** هل لهذا الحساب متجر مهيّأ في السحابة؟ أي فشل = غير مهيّأ (يبقى سلوك الحساب الجديد). */
+async function hasConfiguredCloudStore(userId: string): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from('stores')
+      .select('name, store_type')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    return isConfiguredStoreRow(data as { name?: string | null; store_type?: string | null } | null);
+  } catch {
+    return false;
+  }
+}
+
+
 /**
  * يُسمح فقط لحساب موجود مسبقاً (له دور في user_roles) وبدور مسموح.
  * حساب جوجل جديد بلا متجر يُرفض حتى يقرر المالك مسار التسجيل.
@@ -104,9 +122,13 @@ export async function checkGoogleAccountAllowed(
   userId: string,
   identities?: ReadonlyArray<{ provider?: string | null }> | null,
 ): Promise<{ allowed: boolean; reason?: 'no_account' | 'role' | 'new_account' }> {
-  // حساب جوجل جديد (هوية جوجل فقط): يُعامل كتسجيل حساب جديد → إدخال الهاتف ثم معالج الإعداد
+  // حساب جوجل جديد (هوية جوجل فقط): يُعامل كتسجيل حساب جديد → إدخال الهاتف ثم معالج الإعداد.
+  // استثناء: إن كان متجر الحساب مهيّأً في السحابة فهو حساب قديم، فلا يُعاد المعالج عند كل دخول (ولا تُستبدل إعداداته).
+  // (وجود الدور وحده لا يكفي: يُنشأ دور افتراضي تلقائياً لكل حساب جوجل جديد.)
   if (identities && identities.length > 0 && !identities.some((i) => i?.provider === 'email')) {
-    return { allowed: false, reason: 'new_account' };
+    if (!(await hasConfiguredCloudStore(userId))) {
+      return { allowed: false, reason: 'new_account' };
+    }
   }
   const { data, error } = await supabase
     .from('user_roles')

@@ -56,3 +56,20 @@ export function buildAdoptedShift(
     exchange_rate: 1,
   };
 }
+
+// Same direction table as close_cash_shift_atomic (F-18): the drawer is opening + inflows − outflows.
+const INFLOW_TYPES = ['sale', 'deposit', 'deposit_capital', 'deposit_revenue', 'deposit_purchase_cover', 'debt_payment', 'surplus', 'expense_refund', 'supplier_refund', 'fx_in', 'transfer_in'];
+const OUTFLOW_TYPES = ['expense', 'refund', 'withdrawal', 'supplier_payment', 'store_credit_refund', 'shortage', 'fx_out', 'transfer_out'];
+
+export interface ShiftMovement { type: string; amount: number | string; }
+
+/** Expected drawer balance from the shift's movements. Other types (e.g. digital_sale) never touch the drawer. */
+export function expectedFromMovements(opening: number | string, movements: ShiftMovement[]): number {
+  let total = Number(opening) || 0;
+  for (const m of movements) {
+    const amt = Number(m.amount) || 0;
+    if (INFLOW_TYPES.includes(m.type)) total += amt;
+    else if (OUTFLOW_TYPES.includes(m.type)) total -= amt;
+  }
+  return round2(total);
+}

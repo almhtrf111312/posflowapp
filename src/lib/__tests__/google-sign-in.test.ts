@@ -6,9 +6,12 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: () => ({ signIn: vi.fn(), signOut: vi.fn() }),
 }));
 const roleRow: { value: { role: string } | null } = { value: null };
+const storeRow: { value: { name?: string; store_type?: string } | null } = { value: null };
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: roleRow.value, error: null }) }) }) }),
+    from: (table: string) => table === 'stores'
+      ? { select: () => ({ eq: () => ({ order: () => ({ limit: () => ({ maybeSingle: async () => ({ data: storeRow.value, error: null }) }) }) }) }) }
+      : { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: roleRow.value, error: null }) }) }) },
     auth: { signInWithOAuth: vi.fn(async () => ({ error: null })) },
   },
 }));
@@ -16,7 +19,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 import { isGoogleSignInAvailable, checkGoogleAccountAllowed, googleErrorMessage, isValidSignupPhone, isGoogleOnlyUser } from '../auth/google-sign-in';
 
 describe('google sign-in (removable module)', () => {
-  beforeEach(() => { platform.native = false; platform.name = 'web'; roleRow.value = null; });
+  beforeEach(() => { platform.native = false; platform.name = 'web'; roleRow.value = null; storeRow.value = null; });
 
   it('shows on web', () => {
     expect(isGoogleSignInAvailable()).toBe(true);
@@ -42,6 +45,14 @@ describe('google sign-in (removable module)', () => {
     roleRow.value = { role: 'admin' };
     expect(await checkGoogleAccountAllowed('u1', [{ provider: 'google' }])).toEqual({ allowed: false, reason: 'new_account' });
     expect((await checkGoogleAccountAllowed('u1', [{ provider: 'email' }, { provider: 'google' }])).allowed).toBe(true);
+  });
+
+  it('a Google-only account whose cloud store is already configured is an existing account (no wizard at every login)', async () => {
+    roleRow.value = { role: 'admin' };
+    storeRow.value = { name: 'متجري', store_type: 'grocery' };
+    expect((await checkGoogleAccountAllowed('u1', [{ provider: 'google' }])).allowed).toBe(true);
+    storeRow.value = { name: 'PosFlow Store', store_type: 'general' };
+    expect(await checkGoogleAccountAllowed('u1', [{ provider: 'google' }])).toEqual({ allowed: false, reason: 'new_account' });
   });
 
   it('validates signup phone like the signup page', () => {

@@ -41,3 +41,11 @@ export function markSetupComplete(uid?: string | null): void {
     localStorage.setItem(LEGACY_KEY, 'true');
   } catch { /* ignore */ }
 }
+
+/** هل صف المتجر السحابي مهيّأً فعلاً؟ (نوع نشاط غير general، أو اسم غير افتراضي) */
+export function isConfiguredStoreRow(row: { name?: string | null; store_type?: string | null } | null | undefined): boolean {
+  if (!row) return false;
+  const type = String(row.store_type || '').trim();
+  const name = String(row.name || '').trim();
+  return (type.length > 0 && type !== 'general') || (name.length > 0 && !DEFAULT_STORE_NAMES.includes(name));
+}

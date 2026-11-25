@@ -1,15 +1,8 @@
 name: Build PosFlow APK
 
+# Manual only (owner decision 2026-11-26): pushing or merging to main no longer starts a build.
+# Run it from the Actions tab (Run workflow) or on explicit request.
 on:
-  push:
-    branches: [ main ]
-    tags: ['v*']
-    paths-ignore:
-      - '**.md'
-      - '.github/workflows/build-windows.yml'
-      - '.github/workflows/telegram-public-release.yml'
-      - '.github/workflows/sync-version-to-cloud.yml'
-      - '.github/workflows/auto-version-bump.yml'
   workflow_dispatch:
     inputs:
       publish_telegram:

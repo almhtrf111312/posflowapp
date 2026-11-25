@@ -20,7 +20,7 @@ import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
 import { getEnabledCurrencies, toUsd, fromUsd, round8, roundForCurrency } from '@/lib/money-engine';
-import { openShiftCloud, closeShiftCloud, loadCloudShifts, loadShiftVarianceTolerance, loadDeferredShiftVariances, resolveShiftVarianceCloud, DeferredShiftVariance } from '@/lib/cloud/cashbox-cloud';
+import { openShiftCloud, closeShiftCloud, loadCloudShifts, loadShiftExpectedFromMovements, loadShiftVarianceTolerance, loadDeferredShiftVariances, resolveShiftVarianceCloud, DeferredShiftVariance } from '@/lib/cloud/cashbox-cloud';
 import { useUserRole } from '@/hooks/user-role-context';
 import { addActivityLog } from '@/lib/activity-log';
 import { Button } from '@/components/ui/button';
@@ -152,12 +152,17 @@ export default function CashShifts() {
     }
 
     // خلفي: دمج الورديات السحابية
-    loadCloudShifts().then((cloudShifts) => {
+    loadCloudShifts().then(async (cloudShifts) => {
       if (cloudShifts && cloudShifts.length > 0) {
         // وردية مفتوحة في السحابة وغير معروفة على هذا الجهاز: نعتمدها كوردية نشطة (مزامنة بين الأجهزة)
         const cloudOpen = cloudShifts.find(cs => !cs.closed_at);
         if (cloudOpen && !getActiveShift()) {
-          const adopted = adoptCloudOpenShift(cloudOpen, user?.id);
+          // الرصيد من حركات الوردية (F-18) وليس من الرصيد المخزّن الذي لا يشمل مبيعات الصندوق (KD-06)
+          const fromMovements = await loadShiftExpectedFromMovements(cloudOpen.id, cloudOpen.opening_balance);
+          const adopted = adoptCloudOpenShift(
+            fromMovements === null ? cloudOpen : { ...cloudOpen, expected_balance: fromMovements },
+            user?.id
+          );
           if (adopted) {
             setOpenShift(adopted);
             setShiftStatus(calculateShiftStatus(adopted));

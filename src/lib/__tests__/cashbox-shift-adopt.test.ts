@@ -1,5 +1,5 @@
 // Production-code test: rules for adopting a shift open in the cloud but unknown on this device (cross-device sync).
-import { buildAdoptedShift } from '../shift-adopt';
+import { buildAdoptedShift, expectedFromMovements } from '../shift-adopt';
 
 let failed = 0;
 let passed = 0;
@@ -37,6 +37,11 @@ eq('SYNC a device that already has an open shift keeps it', buildAdoptedShift(cl
 // A missing server balance falls back to the opening balance.
 const d = buildAdoptedShift({ ...cloud, expected_balance: null }, USER, false, base);
 eq('SYNC a missing server balance falls back to the opening balance', d ? expectedCash(d) : null, 500);
+
+// Expected from movements (F-18). Live case: opening 500, cash sale 2, debt payment 6 -> 508 (the stored cache says 506 because KD-06).
+eq('SYNC expected from movements counts cash sales and debt payments (508)', expectedFromMovements(500, [{ type: 'sale', amount: 2 }, { type: 'debt_payment', amount: '6.00000000' }]), 508);
+eq('SYNC outflows reduce the drawer (expense 50, refund 10)', expectedFromMovements(100, [{ type: 'debt_payment', amount: 315 }, { type: 'expense', amount: 50 }, { type: 'expense_refund', amount: 50 }, { type: 'refund', amount: 14.5 }]), 400.5);
+eq('SYNC a digital sale never touches the drawer', expectedFromMovements(100, [{ type: 'digital_sale', amount: 40 }]), 100);
 
 console.log(`${failed ? 'FAIL' : 'PASS'} cashbox-shift-adopt: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

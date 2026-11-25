@@ -249,6 +249,21 @@ export const loadCloudShifts = async (limit = 50): Promise<CloudShift[]> => {
 };
 
 
+/** الرصيد المتوقع لوردية من حركاتها في السحابة (F-18)؛ null عند الفشل فيُستعمل رصيد الخادم المخزّن. */
+export const loadShiftExpectedFromMovements = async (shiftId: string, opening: number | string): Promise<number | null> => {
+  try {
+    const { data, error } = await sb
+      .from('shift_transactions')
+      .select('type, amount')
+      .eq('shift_id', shiftId);
+    if (error) throw error;
+    const { expectedFromMovements } = await import('../shift-adopt');
+    return expectedFromMovements(opening, (data || []) as { type: string; amount: number | string }[]);
+  } catch {
+    return null;
+  }
+};
+
 /** حد سماح فروقات الصندوق بالدولار (من إعدادات المتجر) */
 export const loadShiftVarianceTolerance = async (): Promise<number> => {
   try {

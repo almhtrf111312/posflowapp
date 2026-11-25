@@ -2552,6 +2552,7 @@ const en: TranslationDict = {
   'pos.switchUnit': 'Switch Unit',
   'reports.selectDay': 'Select Day:',
   'reports.daySummary': 'Summary of',
+  'reports.digitalSales': 'Digital sales',
   'reports.totalRevenue': 'Total Revenue',
   'reports.productSales': 'Product Sales',
   'reports.maintenanceRevenue': 'Maintenance Revenue',

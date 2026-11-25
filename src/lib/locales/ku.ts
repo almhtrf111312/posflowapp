@@ -2371,6 +2371,7 @@ const ku: TranslationDict = {
     'pos.switchUnit': 'گۆڕینی یەکە',
   'reports.selectDay': 'ڕۆژ هەڵبژێرە:',
   'reports.daySummary': 'پوختەی ڕۆژی',
+  'reports.digitalSales': 'فرۆشتنی دیجیتاڵ',
   'reports.totalRevenue': 'کۆی گشتی داهات',
   'reports.productSales': 'فرۆشتنی کاڵاکان',
   'reports.maintenanceRevenue': 'داهاتی چاککردنەوە',

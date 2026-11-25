@@ -30,13 +30,14 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
   const { t } = useLanguage();
   const [selectedDate, setSelectedDate] = useState('');
 
-  // keep selectedDate in sync with the global range; default to "from" so the
-  // user doesn't have to re-enter the day when switching tabs.
+  // keep selectedDate in sync with the global range. The daily close opens on the LAST day of the range
+  // (today for the usual ranges): opening on the first day of a month-long range showed an empty day.
   useEffect(() => {
-    if (dateRange.from) {
-      setSelectedDate(dateRange.from);
+    const day = dateRange.to || dateRange.from;
+    if (day) {
+      setSelectedDate(day);
     }
-  }, [dateRange.from]);
+  }, [dateRange.from, dateRange.to]);
 
   const [debtPaymentsTotal, setDebtPaymentsTotal] = useState<number>(0);
 
@@ -68,7 +69,7 @@ export function DailyClosingReport({ invoices, expenses, debts, isLoading, dateR
       return d === selectedDate;
     });
 
-    const dayExpenses = expenses.filter(exp => toLocalDateString(exp.date) === selectedDate && expenseIsCounted(exp, selectedDate, toLocalDateString));
+    const dayExpenses = expenses.filter(exp => toLocalDateString(exp.date) === selectedDate && expenseIsCounted({ isReversed: exp.is_reversed, reversedAt: exp.reversedAt ?? null }, selectedDate, toLocalDateString));
 
     const dayDebts = debts.filter(d => {
       const date = d.createdAt ? toLocalDateString(d.createdAt) : '';

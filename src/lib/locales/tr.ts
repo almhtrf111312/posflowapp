@@ -2517,6 +2517,7 @@ const tr: TranslationDict = {
     'pos.switchUnit': 'Birimi Değiştir',
   'reports.selectDay': 'Gün Seçin:',
   'reports.daySummary': 'Günlük Özet:',
+  'reports.digitalSales': 'Dijital satışlar',
   'reports.totalRevenue': 'Toplam Gelir',
   'reports.productSales': 'Ürün Satışları',
   'reports.maintenanceRevenue': 'Bakım Geliri',

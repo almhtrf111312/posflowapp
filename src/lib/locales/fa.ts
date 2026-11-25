@@ -2962,6 +2962,7 @@ const fa: TranslationDict = {
     'pos.switchUnit': 'تغییر واحد',
   'reports.selectDay': 'انتخاب روز:',
   'reports.daySummary': 'خلاصه روز',
+  'reports.digitalSales': 'فروش دیجیتال',
   'reports.totalRevenue': 'مجموع درآمد',
   'reports.productSales': 'فروش محصولات',
   'reports.maintenanceRevenue': 'درآمد تعمیرات',

@@ -2630,6 +2630,7 @@ const ar = {
   'pos.switchUnit': 'تبديل الوحدة',
   'reports.selectDay': 'اختر اليوم:',
   'reports.daySummary': 'ملخص يوم',
+  'reports.digitalSales': 'المبيعات الرقمية',
   'reports.totalRevenue': 'إجمالي الإيرادات',
   'reports.productSales': 'مبيعات المنتجات',
   'reports.maintenanceRevenue': 'إيرادات الصيانة',

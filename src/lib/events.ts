@@ -9,6 +9,7 @@ export const EVENTS = {
   DEBTS_UPDATED: 'posflow:debts-updated',
   MAINTENANCE_UPDATED: 'posflow:maintenance-updated',
   INVOICES_UPDATED: 'posflow:invoices-updated',
+  INVOICE_NUMBER_ASSIGNED: 'posflow:invoice-number-assigned',
   SETTINGS_UPDATED: 'posflow:settings-updated',
   PARTNERS_UPDATED: 'posflow:partners-updated',
   EXPENSES_UPDATED: 'posflow:expenses-updated',

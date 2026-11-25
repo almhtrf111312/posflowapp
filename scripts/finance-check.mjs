@@ -35,7 +35,7 @@ const REGISTERED = [
 ];
 // Not financial: allowed to exist outside the gate. Anything else unlisted fails the gate.
 const OUT_OF_SCOPE = [
-  'export-semantics.test.ts', 'product-fields-defaults.test.ts', 'google-sign-in.test.ts', 'setup-flag.test.ts',
+  'export-semantics.test.ts', 'product-fields-defaults.test.ts', 'google-sign-in.test.ts', 'setup-flag.test.ts', 'invoice-number.test.ts',
   'remote-updates.test.ts', 'offline-lease-signature.test.ts', 'telegram-public-release.test.ts',
 ];
 

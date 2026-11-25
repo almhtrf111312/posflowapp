@@ -48,6 +48,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { showToast } from '@/lib/toast-config';
 import { isNotificationEventAllowed } from '@/lib/notification-events-config';
 import { showSmartToast } from '@/hooks/use-smart-toast';
+import { EVENTS } from '@/lib/events';
 import { loadCustomers, Customer } from '@/lib/customers-store';
 import { getNextInvoiceNumber } from '@/lib/invoices-store';
 import { addActivityLog } from '@/lib/activity-log';
@@ -377,6 +378,19 @@ export function CartPanel({
       setLastSale(null);
     }
   }, [cart.length]);
+
+  // عند وصول الرقم الرسمي من الخادم نستبدل الرقم المحلي المؤقت في آخر عملية بيع (للطباعة والمشاركة)
+  useEffect(() => {
+    const onAssigned = (e: Event) => {
+      const detail = (e as CustomEvent<{ localNumber?: string; serverNumber?: string } | null>).detail;
+      const current = lastSaleRef.current;
+      if (!detail?.localNumber || !detail.serverNumber || !current?.invoiceNumber) return;
+      if (current.invoiceNumber.replace(/^#/, '') !== detail.localNumber.replace(/^#/, '')) return;
+      setLastSale({ ...current, invoiceNumber: detail.serverNumber });
+    };
+    window.addEventListener(EVENTS.INVOICE_NUMBER_ASSIGNED, onAssigned);
+    return () => window.removeEventListener(EVENTS.INVOICE_NUMBER_ASSIGNED, onAssigned);
+  }, []);
 
   const getItemPrice = (item: CartItem) => {
     if (item.manualPrice !== undefined && Number.isFinite(item.manualPrice) && item.manualPrice >= 0) {

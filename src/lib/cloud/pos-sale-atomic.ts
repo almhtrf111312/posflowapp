@@ -19,6 +19,8 @@ const sb = supabase;
 
 
 export interface AtomicSaleBundle {
+  /** Local number shown on the device before the server assigns the official one. */
+  invoiceNumber?: string;
 
   customerId?: string;
 
@@ -362,6 +364,10 @@ export async function processPosSaleAtomic(
     invalidatePartnersCache();
 
     emitEvent(EVENTS.INVOICES_UPDATED, null);
+    // الرقم الرسمي من الخادم يحلّ محل الرقم المحلي المؤقت على الشاشة (الطباعة والمشاركة)
+    if (bundle.invoiceNumber && row.invoice_number && bundle.invoiceNumber !== row.invoice_number) {
+      emitEvent(EVENTS.INVOICE_NUMBER_ASSIGNED, { localNumber: bundle.invoiceNumber, serverNumber: row.invoice_number });
+    }
 
     if (paymentType === 'debt') emitEvent(EVENTS.DEBTS_UPDATED, null);
     markSaleAsSyncedInNativeSQLite(row.invoice_id, row.invoice_number, operationId).catch(() => {});

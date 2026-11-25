@@ -15,6 +15,7 @@ import {
 import { useSmartToastListener, hideSmartToast, SmartToastData } from '@/hooks/use-smart-toast';
 import { cn } from '@/lib/utils';
 import { getCurrentLanguage } from '@/lib/i18n';
+import { markIfProvisional } from '@/lib/invoice-number';
 import { getDefaultToastDuration } from '@/components/ui/toast-duration';
 
 // =========================================================================
@@ -579,7 +580,7 @@ export function SmartToast() {
                 </h4>
                 {details.invoiceNumber && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted font-mono font-bold text-muted-foreground shrink-0 border border-border/40 mt-0.5">
-                    #{details.invoiceNumber}
+                    {markIfProvisional(`#${String(details.invoiceNumber).replace(/^#/, '')}`, getCurrentLanguage())}
                   </span>
                 )}
               </div>

@@ -1421,8 +1421,9 @@ function mergeSyncQueueInvoices(invoices: Invoice[]): Invoice[] {
           exchangeRate: exRate,
           profit: computedProfit,
           partsCost: computedPartsCost,
-          // NOTE for review: 'split' is not a PaymentType member; the original code also produced it (it was hidden by any).
-          paymentType: (op.type === 'debt_sale_bundle' ? ((Number(bundle.downPayment) || 0) > 0 ? 'split' : 'debt') : (bundle.paymentType || 'cash')) as PaymentType,
+          // A credit sale with a down payment is still a 'debt' sale (the server stores it that way, with debt_paid = the down payment),
+          // so an unsynced one must be classified like a synced one in reports ('split' is only a receipt label in the POS).
+          paymentType: (op.type === 'debt_sale_bundle' ? 'debt' : (bundle.paymentType || 'cash')) as PaymentType,
           status: op.type === 'debt_sale_bundle' ? ((Number(bundle.downPayment) || 0) >= (Number(bundle.total) || 0) ? 'paid' : 'pending') : (bundle.status as InvoiceStatus || 'paid'),
           serviceDescription: bundle.notes || undefined,
           createdAt: op.timestamp || op.createdAt || new Date().toISOString(),

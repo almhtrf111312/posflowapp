@@ -493,6 +493,38 @@ export async function runLawFixes(k, newWorldFn) {
     check('N3 a received amount that does not match the sale is refused', refused !== null && refused.includes('لا يطابق'), true);
   }
 
+  // PREC8 (migration 20261125090000): USD amounts and cached drawer balances keep 8 decimals (F-02). 5,000 LBP at 89,500 = 0.0558659... USD.
+  {
+    const w = await newWorldFn();
+    const RATE = 89500, LBP = 5000, USD = LBP / RATE;
+    const sh = await w.newShift(100);
+    const opId = '33333333-3333-4333-8333-' + String(Date.now()).slice(-12);
+    await w.one(`select public.add_expense_atomic($1,'rent',$2,'rent','2026-11-25',null,$3,'drawer','LBP',$4,$5)`, [opId, USD, sh, LBP, RATE]);
+    check('PREC8 expense of 5,000 LBP keeps 8 decimals in the expense row (not 0.06)', (await w.one(`select amount::float8 a from public.expenses where user_id=$1 order by created_at desc limit 1`, [OWNER])).a, 0.05586592, 0.000000005);
+    check('PREC8 expense drawer movement keeps 8 decimals', await w.txSum(sh, 'expense'), 0.05586592, 0.000000005);
+    check('PREC8 expected balance = 100 - 0.05586592', await w.expected(sh), 99.94413408, 0.000000005);
+    await w.one(`select public.delete_expense_atomic($1,'undo',$2)`, [opId, sh]);
+    check('PREC8 reversing the expense returns the balance to exactly 100', await w.expected(sh), 100, 0.000000005);
+
+    const sh2 = await w.newShift(100);
+    const inv = await w.newInvoice({ number: 'INV-PREC8', total: 10, currency: 'LBP', rate: RATE });
+    const d = await w.newDebt({ total: 10, invoice: inv.invoice_number });
+    await w.one(`select public.record_debt_payment_atomic($1,$2,$3,$4,'LBP',$5,$6,'cash')`, [d, USD, w.op('prec8'), sh2, LBP, RATE]);
+    check('PREC8 debt payment of 5,000 LBP: drawer movement keeps 8 decimals', await w.txSum(sh2, 'debt_payment'), 0.05586592, 0.000000005);
+    check('PREC8 debt payment: expected balance = 100 + 0.05586592', await w.expected(sh2), 100.05586592, 0.000000005);
+
+    // _supplier_drawer_tx requires a valid open shift of this store (strict, as live): nothing is posted to a shift nobody chose.
+    const sh3 = await w.newShift(100);
+    const noShift = await w.fails(w.one(`select public._supplier_drawer_tx($1::uuid,null::uuid,'supplier_payment',1,'USD',1,1,'prec8-ref','x') r`, [OWNER]));
+    truthy('PREC8 supplier drawer movement without a shift is refused', noShift !== null && noShift.includes('يجب تحديد وردية'), noShift || '');
+    await w.db.exec(`update public.cash_shifts set closed_at = now() where id = '${sh3}'`);
+    const closed = await w.fails(w.one(`select public._supplier_drawer_tx($1::uuid,$2::uuid,'supplier_payment',1,'USD',1,1,'prec8-ref2','x') r`, [OWNER, sh3]));
+    truthy('PREC8 supplier drawer movement on a closed shift is refused', closed !== null, closed || '');
+    const sh4 = await w.newShift(100);
+    await w.one(`select public._supplier_drawer_tx($1::uuid,$2::uuid,'supplier_payment',0.0559,'LBP',5004,89500,'prec8-ref3','x') r`, [OWNER, sh4]);
+    check('PREC8 supplier drawer movement: balance 100 - 0.0559 (not rounded to cents)', await w.expected(sh4), 99.9441, 0.000000005);
+  }
+
   // F4 (audit): the period closing stores the FX difference of debt collections as its own line (migration 20261124080300).
   {
     const w = await newWorldFn();

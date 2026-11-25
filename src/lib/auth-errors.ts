@@ -97,6 +97,11 @@ export function getAuthErrorMessage(error: unknown, mode: 'login' | 'signup' = '
     return 'تعذر الاتصال بالخادم. يرجى التحقق من اتصال الإنترنت';
   }
 
+  // 7b. فشل حفظ المستخدم الجديد في قاعدة البيانات (غالباً رقم هاتف أو بريد مستخدم سابقاً)
+  if (lower.includes('database error saving new user')) {
+    return 'تعذر إنشاء الحساب. قد يكون رقم الهاتف أو البريد الإلكتروني مستخدماً مسبقاً';
+  }
+
   // 8. عدم وجود الحساب
   if (lower.includes('user not found') || lower.includes('no user')) {
     return 'لا يوجد حساب مسجل بهذا البريد الإلكتروني';

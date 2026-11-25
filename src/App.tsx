@@ -495,6 +495,7 @@ const PageFallback = () => {
           <Route path="/dashboard" element={<Navigate to="/reports" replace />} />
           <Route path="/invoice-tracking" element={<FeatureErrorBoundary featureName="تتبع الفواتير"><InvoiceTracking /></FeatureErrorBoundary>} />
           <Route path="/cash-shifts" element={<FeatureErrorBoundary featureName="ورديات الصندوق"><CashShifts /></FeatureErrorBoundary>} />
+          <Route path="/shifts" element={<Navigate to="/cash-shifts" replace />} />
           <Route path="/library" element={<StoreTypeRoute types={["bookstore"]}><FeatureErrorBoundary featureName="المكتبة"><LibraryMembers /></FeatureErrorBoundary></StoreTypeRoute>} />
           <Route path="/notifications" element={<FeatureErrorBoundary featureName="الإشعارات"><Notifications /></FeatureErrorBoundary>} />
           <Route path="/contact" element={<FeatureErrorBoundary featureName="تواصل مع المطور"><ContactDeveloper /></FeatureErrorBoundary>} />

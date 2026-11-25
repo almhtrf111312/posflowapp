@@ -104,7 +104,8 @@ export function ExitConfirmDialog() {
 
       event.preventDefault();
       window.history.pushState(null, '', window.location.href);
-      handleBackPress();
+      // على الويب لا يوجد "خروج من التطبيق": نُبقي المستخدم في الصفحة بصمت بدل إظهار رسالة Android
+      if (Capacitor.isNativePlatform()) handleBackPress();
     };
 
     // Push initial state to enable popstate handling (web only)

@@ -29,6 +29,18 @@ async function assertSuccess(request: PromiseLike<{ error: { message?: string; d
 const isUuid = (value: unknown): value is string =>
   typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
+// A queued shift open that the server refuses (a shift is already open for this cashier) must not retry forever:
+// the operation is treated as handled and the local copy is dropped, so the device adopts the server's open shift.
+async function dropRejectedShiftOpen(shiftId: string, error: unknown): Promise<boolean> {
+  const { isShiftAlreadyOpenError } = await import('../shift-adopt');
+  if (!isShiftAlreadyOpenError(error)) throw error;
+  try {
+    const { dropLocalShift } = await import('../cashbox-store');
+    if (shiftId) dropLocalShift(shiftId);
+  } catch { /* best-effort */ }
+  return true;
+}
+
 export async function processGenericQueuedOperation(operation: QueuedOperation): Promise<boolean> {
   const data = operation.data;
 
@@ -46,18 +58,26 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       const cleanData = filterTablePayload('cash_shifts', data);
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');
-      return assertSuccess(sb.from('cash_shifts').insert(asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId })));
+      try {
+        return await assertSuccess(sb.from('cash_shifts').insert(asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId })));
+      } catch (e) {
+        return dropRejectedShiftOpen(String(cleanData.id ?? ''), e);
+      }
     }
     case 'cash_shift_upsert': {
       const cleanData = filterTablePayload('cash_shifts', data);
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');
-      return assertSuccess(
-        sb.from('cash_shifts').upsert(
-          asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId }),
-          { onConflict: 'id' }
-        )
-      );
+      try {
+        return await assertSuccess(
+          sb.from('cash_shifts').upsert(
+            asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId }),
+            { onConflict: 'id' }
+          )
+        );
+      } catch (e) {
+        return dropRejectedShiftOpen(String(cleanData.id ?? ''), e);
+      }
     }
     case 'shift_close': {
       const shiftId = String(data.shiftId || '');

@@ -621,5 +621,36 @@ export async function runQaFixes(k, newWorldFn) {
     check('SHIFT another cashier can have an open shift at the same time', otherShift, null);
     await w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [first]);
     check('SHIFT after closing, the same cashier can open a new shift', await w.fails(insertOpen(500)), null);
+    // Replaying the SAME queued open (same shift id) is idempotent; a different id is refused with the unique violation.
+    const keep = (await w.one(`select id from public.cash_shifts where user_id=$1 and closed_at is null`, [OWNER])).id;
+    const replay = await w.fails(w.q(`insert into public.cash_shifts(id, user_id, opening_balance, expected_balance) values ($1,$2,500,500) on conflict (id) do update set opening_balance = excluded.opening_balance`, [keep, OWNER]));
+    check('SHIFT a replay of the same queued open (same shift id) is accepted', replay, null);
+    const other2 = await w.fails(w.q(`insert into public.cash_shifts(id, user_id, opening_balance, expected_balance) values (gen_random_uuid(),$1,50,50) on conflict (id) do nothing`, [OWNER]));
+    truthy('SHIFT a different shift id for the same cashier is refused with the unique violation', other2 && /uq_cash_shifts_one_open_per_cashier|duplicate key/.test(other2), other2 || 'no error');
+  }
+
+  // J-10: a partial refund is counted once. The invoice is rewritten to the net values, the accounting ledger gets a
+  // negative event for the refunded part, and the drawer gets one refund movement. Nothing is subtracted twice.
+  {
+    const w = await newWorldFn();
+    const pA = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'A',5,2,50) returning id`, [OWNER])).id;
+    const pB = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'B',8,3,50) returning id`, [OWNER])).id;
+    const sh = await w.newShift(100);
+    const both = JSON.stringify([
+      { product_id: pA, product_name: 'A', quantity: 1, unit_price: 5, amount_usd: 5, amount_original: 5, cost_price: 2 },
+      { product_id: pB, product_name: 'B', quantity: 1, unit_price: 8, amount_usd: 8, amount_original: 8, cost_price: 3 }]);
+    const sold = await w.one(`select * from public.process_pos_sale_with_drawer_atomic($1,'cash','C','',13,0,0,0,0,13,0,'USD',null::uuid,$2::jsonb,0,1,null,$3::uuid,null)`, [w.op('j10'), both, sh]);
+    check('J10 sale total is 13', sold.total, 13);
+    const rf = (await w.one(`select public.refund_invoice_partial_atomic($1,$2::jsonb,$3,$4::uuid,null,null,null,'drawer') r`,
+      [sold.invoice_number, JSON.stringify([{ product_id: pA, quantity: 1 }]), w.op('j10r'), sh])).r;
+    check('J10 refunded amount is 5', rf.refund_amount, 5);
+    const inv = await w.one(`select total::float8 t, profit::float8 p from public.invoices where invoice_number=$1`, [sold.invoice_number]);
+    check('J10 invoice is rewritten to the net total (8)', inv.t, 8);
+    check('J10 invoice is rewritten to the net profit (5)', inv.p, 5);
+    const led = await w.one(`select coalesce(sum(revenue_delta),0)::float8 rev, coalesce(sum(realized_delta),0)::float8 realized from public.invoice_accounting_events where user_id=$1 and not is_opening`, [OWNER]);
+    check('J10 ledger revenue equals the net invoice total (13 - 5 = 8, not 3)', led.rev, 8);
+    check('J10 ledger realized profit equals the net invoice profit (8 - 3 = 5)', led.realized, 5);
+    check('J10 exactly one refund movement of 5 in the drawer', await w.txSum(sh, 'refund'), 5);
+    check('J10 drawer expected is 100 + 13 - 5 = 108', await w.expected(sh), 108);
   }
 }

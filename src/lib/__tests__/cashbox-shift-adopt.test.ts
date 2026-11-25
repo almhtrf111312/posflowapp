@@ -1,5 +1,5 @@
 // Production-code test: rules for adopting a shift open in the cloud but unknown on this device (cross-device sync).
-import { buildAdoptedShift, expectedFromMovements, expectedCashOfShift } from '../shift-adopt';
+import { buildAdoptedShift, expectedFromMovements, expectedCashOfShift, isShiftAlreadyOpenError } from '../shift-adopt';
 
 let failed = 0;
 let passed = 0;
@@ -47,6 +47,13 @@ eq('SYNC a digital sale never touches the drawer', expectedFromMovements(100, [{
 eq('G12 card expected cash includes deposits (500 + 2 sales + 6 deposit = 508)', expectedCashOfShift({ openingCash: 500, salesTotal: 2, depositsTotal: 6, expensesTotal: 0, withdrawalsTotal: 0 }), 508);
 eq('G12 card expected cash subtracts expenses and withdrawals', expectedCashOfShift({ openingCash: 100, salesTotal: 315, depositsTotal: 0, expensesTotal: 50, withdrawalsTotal: 14.5 }), 350.5);
 eq('G12 missing totals count as zero', expectedCashOfShift({ openingCash: 100 }), 100);
+
+// Offline queue: a refused shift open (unique violation) is recognised so it is dropped instead of retried forever.
+eq('QUEUE a unique violation code is a refused shift open', isShiftAlreadyOpenError({ code: '23505' }), true);
+eq('QUEUE the index name in the message is a refused shift open', isShiftAlreadyOpenError({ message: 'duplicate key value violates unique constraint "uq_cash_shifts_one_open_per_cashier"' }), true);
+eq('QUEUE a network error is not a refused shift open (it keeps retrying)', isShiftAlreadyOpenError(new Error('Failed to fetch')), false);
+eq('QUEUE another constraint is not a refused shift open', isShiftAlreadyOpenError({ code: '23503' }), false);
+eq('QUEUE null is not a refused shift open', isShiftAlreadyOpenError(null), false);
 
 console.log(`${failed ? 'FAIL' : 'PASS'} cashbox-shift-adopt: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -49,3 +49,19 @@ export function isConfiguredStoreRow(row: { name?: string | null; store_type?: s
   const name = String(row.name || '').trim();
   return (type.length > 0 && type !== 'general') || (name.length > 0 && !DEFAULT_STORE_NAMES.includes(name));
 }
+
+/** Google-only identity (no email/password identity). */
+export function isGoogleOnlyIdentities(identities?: ReadonlyArray<{ provider?: string | null }> | null): boolean {
+  return !!identities && identities.length > 0 && !identities.some((i) => i?.provider === 'email');
+}
+
+/**
+ * A Google sign-in is a NEW account (phone + setup wizard) only when it is Google-only AND its cloud store is not
+ * configured yet. A default role is created for every Google signup, so the role alone cannot tell them apart.
+ */
+export function isNewGoogleAccount(
+  identities: ReadonlyArray<{ provider?: string | null }> | null | undefined,
+  storeConfigured: boolean
+): boolean {
+  return isGoogleOnlyIdentities(identities) && !storeConfigured;
+}

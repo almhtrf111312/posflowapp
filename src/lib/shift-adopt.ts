@@ -88,3 +88,11 @@ export function expectedCashOfShift(shift: ShiftTotalsLike): number {
     - (shift.expensesTotal || 0) - (shift.withdrawalsTotal || 0);
   return Math.round(v * 1e8) / 1e8;
 }
+
+/** The server refused to open a second shift for the same cashier (unique violation on the one-open-shift index). */
+export function isShiftAlreadyOpenError(error: unknown): boolean {
+  const e = error as { code?: unknown; message?: unknown } | null | undefined;
+  if (!e) return false;
+  if (String(e.code ?? '') === '23505') return true;
+  return /uq_cash_shifts_one_open_per_cashier/.test(String(e.message ?? ''));
+}

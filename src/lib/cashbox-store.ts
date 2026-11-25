@@ -299,6 +299,22 @@ export const adoptCloudOpenShift = (
   return adopted;
 };
 
+// The server refused a shift this device opened (another one is already open for the cashier): forget the local one
+// so the device adopts the server's open shift on the next load of the shifts page.
+export const dropLocalShift = (shiftId: string): void => {
+  const shifts = loadShifts();
+  if (!shifts.some(s => s.id === shiftId)) return;
+  const kept = shifts.filter(s => s.id !== shiftId);
+  saveShifts(kept);
+  const state = loadCashboxState();
+  if (state.activeShiftId === shiftId) {
+    state.activeShiftId = undefined as unknown as typeof state.activeShiftId;
+    state.lastUpdated = new Date().toISOString();
+    saveCashboxState(state);
+  }
+  emitEvent(EVENTS.CASH_SHIFTS_UPDATED, kept);
+};
+
 // Close the current shift
 export const closeShift = (
   closingCash: number,

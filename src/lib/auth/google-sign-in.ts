@@ -8,7 +8,7 @@
  */
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { isConfiguredStoreRow } from '../setup-flag';
+import { isConfiguredStoreRow, isGoogleOnlyIdentities, isNewGoogleAccount } from '../setup-flag';
 
 /** مفتاح التشغيل الرئيسي */
 export const GOOGLE_SIGN_IN_ENABLED = true;
@@ -125,8 +125,8 @@ export async function checkGoogleAccountAllowed(
   // حساب جوجل جديد (هوية جوجل فقط): يُعامل كتسجيل حساب جديد → إدخال الهاتف ثم معالج الإعداد.
   // استثناء: إن كان متجر الحساب مهيّأً في السحابة فهو حساب قديم، فلا يُعاد المعالج عند كل دخول (ولا تُستبدل إعداداته).
   // (وجود الدور وحده لا يكفي: يُنشأ دور افتراضي تلقائياً لكل حساب جوجل جديد.)
-  if (identities && identities.length > 0 && !identities.some((i) => i?.provider === 'email')) {
-    if (!(await hasConfiguredCloudStore(userId))) {
+  if (isGoogleOnlyIdentities(identities)) {
+    if (isNewGoogleAccount(identities, await hasConfiguredCloudStore(userId))) {
       return { allowed: false, reason: 'new_account' };
     }
   }

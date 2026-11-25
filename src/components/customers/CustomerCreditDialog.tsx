@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,9 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  // ONE operation id per user action, reused on every retry (a lost reply never posts twice); renewed after a success (plan T-1).
+  const newOpId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const opIdRef = useRef<string>(newOpId());
   const payCurrencies = getEnabledCurrencies();
   const [payCcy, setPayCcy] = useState(() => payCurrencies[0]?.code || 'USD');
 
@@ -40,13 +43,21 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
     setAmount('');
     setReason('');
     setPayCcy(payCurrencies[0]?.code || 'USD');
+    opIdRef.current = newOpId();
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
-  const run = async (fn: () => Promise<void>, ok: string) => {
+  const run = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true);
-    try { await fn(); toast.success(ok); setAmount(''); await refresh(); }
+    try {
+      const r = await fn();
+      opIdRef.current = newOpId();
+      if (r === 'queued') toast.success('سُجّلت العملية وستُرسل تلقائياً عند عودة الاتصال');
+      else toast.success(ok);
+      setAmount('');
+      await refresh();
+    }
     catch (e) { toast.error(extractErrorMessage(e) || 'حدث خطأ'); }
     finally { setBusy(false); }
   };
@@ -116,15 +127,13 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
                   <Input placeholder="السبب / رقم الفاتورة (للإصدار)" value={reason} onChange={e => setReason(e.target.value)} />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button disabled={busy || !valid} onClick={() => run(() => issueStoreCredit(customer.id, usdVal, reason), 'تم إصدار الرصيد')}>
+                  <Button disabled={busy || !valid} onClick={() => run(() => issueStoreCredit(customer.id, usdVal, reason, undefined, opIdRef.current), 'تم إصدار الرصيد')}>
                     {busy && <Loader2 className="w-4 h-4 animate-spin" />}
                     إصدار رصيد
                   </Button>
                   <Button variant="outline" disabled={busy || !valid || sum.storeCredit <= 0 || !getActiveShift()}
-                    onClick={() => run(async () => {
-                      await payoutStoreCredit(customer.id, usdVal, getActiveShift()!.id, payCcy, val);
-                      addWithdrawalFromShift(usdVal, payCcy, val);
-                    }, 'تم صرف الرصيد نقداً')}>
+                    onClick={() => run(() => payoutStoreCredit(customer.id, usdVal, getActiveShift()!.id, opIdRef.current, payCcy, val,
+                      () => addWithdrawalFromShift(usdVal, payCcy, val)), 'تم صرف الرصيد نقداً')}>
                     {busy && <Loader2 className="w-4 h-4 animate-spin" />}
                     صرف نقدي من الصندوق
                   </Button>
@@ -134,7 +143,7 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
                     <div className="text-xs text-muted-foreground">تسديد دين من الرصيد:</div>
                     {debts.map(d => (
                       <Button key={d.id} variant="secondary" className="w-full justify-between" disabled={busy || !valid}
-                        onClick={() => run(() => applyCreditToDebt(d.id, Math.min(usdVal, d.remaining_debt)), 'تم تسديد الدين من الرصيد')}>
+                        onClick={() => run(() => applyCreditToDebt(d.id, Math.min(usdVal, d.remaining_debt), opIdRef.current), 'تم تسديد الدين من الرصيد')}>
                         <span>دين <span dir="ltr" className="inline-block tabular-nums">{d.invoice_id || ''}</span></span>
                         <span dir="ltr" className="inline-block tabular-nums font-mono">{formatMoney(d.remaining_debt)}</span>
                       </Button>

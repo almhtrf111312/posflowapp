@@ -1,5 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { emitEvent, EVENTS } from '@/lib/events';
+import { addUniqueOperation } from '@/lib/sync-queue';
+import { isAppOffline } from '@/hooks/use-network-status';
+import { submitCreditOperation, STORE_CREDIT_QUEUE_TYPE, type CreditOpData, type CreditOpResult } from '@/lib/store-credit-op';
 
 export interface CreditSummary { storeCredit: number; creditLimit: number | null; totalDebt: number }
 export interface CreditLedgerRow { id: string; entry_type: 'issue' | 'spend' | 'payout' | 'adjustment'; amount: number; reason?: string | null; invoice_number?: string | null; created_at: string }
@@ -27,18 +30,31 @@ export async function setCreditLimit(customerId: string, limit: number | null) {
   if (error) throw error;
   done();
 }
-export async function issueStoreCredit(customerId: string, amount: number, reason: string, invoiceNumber?: string) {
-  const { error } = await supabase.rpc('issue_store_credit_atomic', { _customer_id: customerId, _amount: amount, _reason: reason || null, _invoice_number: invoiceNumber || null, _operation_id: crypto.randomUUID() });
-  if (error) throw error;
-  done();
+// Store-credit writes (plan T-1): the caller passes ONE operation id per user action and reuses it on retry; offline or when the
+// request never reached the server the operation is queued with that same id (sync-queue type 'store_credit_op').
+function creditDeps(onLocalPayout?: (d: CreditOpData) => void) {
+  return {
+    offline: () => isAppOffline(),
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      const { error } = await (supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: unknown }>)(fn, args);
+      return { error };
+    },
+    enqueue: (d: CreditOpData) => { addUniqueOperation(STORE_CREDIT_QUEUE_TYPE, { ...d }, `store_credit:${d.operationId}`); },
+    onLocalPayout,
+  };
 }
-export async function applyCreditToDebt(debtId: string, amount: number) {
-  const { error } = await supabase.rpc('apply_store_credit_to_debt_atomic', { _debt_id: debtId, _amount: amount, _operation_id: crypto.randomUUID() });
-  if (error) throw error;
+export async function issueStoreCredit(customerId: string, amount: number, reason: string, invoiceNumber: string | undefined, operationId: string): Promise<CreditOpResult> {
+  const r = await submitCreditOperation({ kind: 'issue', operationId, customerId, amount, reason: reason || null, invoiceNumber: invoiceNumber || null }, creditDeps());
   done();
+  return r;
 }
-export async function payoutStoreCredit(customerId: string, amount: number, shiftId: string, currency = 'USD', currencyAmount?: number) {
-  const { error } = await supabase.rpc('payout_store_credit_atomic', { _customer_id: customerId, _amount: amount, _shift_id: shiftId, _operation_id: crypto.randomUUID(), _currency: currency, _currency_amount: currencyAmount ?? amount, _rate: currencyAmount && amount > 0 ? currencyAmount / amount : null });
-  if (error) throw error;
+export async function applyCreditToDebt(debtId: string, amount: number, operationId: string): Promise<CreditOpResult> {
+  const r = await submitCreditOperation({ kind: 'apply', operationId, debtId, amount }, creditDeps());
   done();
+  return r;
+}
+export async function payoutStoreCredit(customerId: string, amount: number, shiftId: string, operationId: string, currency = 'USD', currencyAmount?: number, onLocalPayout?: (d: CreditOpData) => void): Promise<CreditOpResult> {
+  const r = await submitCreditOperation({ kind: 'payout', operationId, customerId, amount, shiftId, currency, currencyAmount: currencyAmount ?? amount }, creditDeps(onLocalPayout));
+  done();
+  return r;
 }

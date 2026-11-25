@@ -393,6 +393,7 @@
   "supabase/functions/trigger-public-release/": "Triggers the public release workflow.",
   "supabase/functions/update-boss-email/": "Updates the Boss email.",
   "supabase/functions/validate-activation-code/": "Validates an activation code.",
+  "src/lib/store-credit-op.ts": "Store-credit operations (issue, pay debt from credit, cash payout): stable operation id, offline queue path, RPC mapping",
   "scripts/db-drift-sql.mjs": "Prints one read-only SQL query that lists every live-vs-repo difference (functions, columns, triggers, indexes); npm run db:drift-sql",
   "scripts/finance-sql-check.mjs": "Finance SQL gate (part of G1; npm run finance:sql): builds in-memory Postgres from migrations, runs golden scenarios + reconciliation queries",
   "src/lib/debt-fx.ts": "Debt FX policy (F-27): credit foreign-currency debt payments at the invoice rate, FX difference, max payable",

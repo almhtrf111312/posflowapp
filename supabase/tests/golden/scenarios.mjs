@@ -941,4 +941,28 @@ export async function runQaFixes(k, newWorldFn) {
     check('C12 paying a debt with credit writes no drawer movement', await w.txSum(sh, 'debt_payment'), 0);
     truthy('C12 applying more credit than the balance is refused', (await w.fails(w.q(`select public.apply_store_credit_to_debt_atomic($1::uuid,1,$2)`, [debtId, w.op('c12c')]))) !== null);
   }
+
+  // T-2: store credit keeps 8 decimals (F-02) end to end, the balance view exists in the repo, and replays never double.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    const cust = (await w.one(`insert into public.customers(user_id,name,phone) values ($1,'Prec','0500000009') returning id`, [OWNER])).id;
+    const view = async () => Number((await w.one(`select store_credit::float8 s from public.customer_credit_balances where customer_id=$1`, [cust])).s);
+    const issueOp = w.op('t2i');
+    await w.q(`select public.issue_store_credit_atomic($1::uuid,1.23456789,'prec',null,$2)`, [cust, issueOp]);
+    check('T2 the balance view shows 1.23456789 (8 decimals, not 1.2346)', await view(), 1.23456789, 1e-10);
+    await w.q(`select public.issue_store_credit_atomic($1::uuid,1.23456789,'prec',null,$2)`, [cust, issueOp]);
+    check('T2 replaying the same issue does not add credit twice', await view(), 1.23456789, 1e-10);
+    const payOp = w.op('t2p');
+    await w.q(`select public.payout_store_credit_atomic($1::uuid,1.23456789,$2::uuid,$3)`, [cust, sh, payOp]);
+    check('T2 paying the whole credit out leaves exactly 0', await view(), 0, 1e-10);
+    check('T2 the drawer movement keeps 8 decimals', await w.txSum(sh, 'store_credit_refund'), 1.23456789, 1e-10);
+    const debtId = (await w.one(`insert into public.debts(user_id, customer_id, customer_name, total_debt, total_paid, remaining_debt, status, is_cash_debt) values ($1,$2,'Prec',10,0,10,'due',true) returning id`, [OWNER, cust])).id;
+    await w.q(`select public.issue_store_credit_atomic($1::uuid,2.5,'prec2',null,$2)`, [cust, w.op('t2i2')]);
+    const applyOp = w.op('t2a');
+    await w.q(`select public.apply_store_credit_to_debt_atomic($1::uuid,2.5,$2)`, [debtId, applyOp]);
+    await w.q(`select public.apply_store_credit_to_debt_atomic($1::uuid,2.5,$2)`, [debtId, applyOp]);
+    check('T2 replaying the same credit-to-debt operation pays the debt once (remaining 7.5)', (await w.debt(debtId)).remaining, 7.5);
+    check('T2 the credit is spent once (balance 0)', await view(), 0, 1e-10);
+  }
 }

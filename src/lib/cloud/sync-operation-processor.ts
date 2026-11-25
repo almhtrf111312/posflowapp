@@ -168,6 +168,14 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       if (error) throw new Error(error.message);
       return true;
     }
+    case 'store_credit_op': {
+      // Replays the user's store-credit action with its ORIGINAL operation id: the server returns the first result for a repeated id.
+      const { creditRpcCall } = await import('../store-credit-op');
+      const call = creditRpcCall(data as unknown as import('../store-credit-op').CreditOpData);
+      const { error } = await (sb.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: { message?: string } | null }>)(call.fn, call.args);
+      if (error) throw new Error(error.message || 'فشلت عملية رصيد العميل');
+      return true;
+    }
     case 'partner_withdrawal': {
       if (!data.partnerId || !data.operationId) throw new Error('Invalid partner withdrawal');
       // _operation_id يمنع تكرار السحب إن أُعيدت المحاولة (الخادم يرد already_processed)

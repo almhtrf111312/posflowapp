@@ -69,6 +69,7 @@ export type OperationType =
   | 'category_delete'
   | 'expense_reverse'
   | 'partner_withdrawal' // Offline partner withdrawal (idempotent via operationId)
+  | 'store_credit_op' // Store credit issue / pay a debt from credit / cash payout (idempotent via operationId)
   | 'maintenance_upsert'
   | 'maintenance_delete';
 

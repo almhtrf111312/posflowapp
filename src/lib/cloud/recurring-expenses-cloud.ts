@@ -283,9 +283,10 @@ export const addRecurringExpenseCloud = async (data: {
     expense_type: data.type,
     custom_type: data.customType || null,
     amount: data.amount,
-    original_currency: data.currency || 'USD',
+    // The table's real columns are `currency` and `original_amount` (it has no original_currency / exchange_rate);
+    // the exchange rate travels in the [CURRENCY:code:rate] tag of the notes.
+    currency: data.currency || 'USD',
     original_amount: origAmt,
-    exchange_rate: data.exchangeRate || 1,
     interval: intervalInfo.interval,
     interval_days: data.intervalDays,
     next_due_date: data.startDate,
@@ -311,9 +312,7 @@ export const addRecurringExpenseCloud = async (data: {
 
   // 3. Cloud insert
   try {
-    // NOTE (review): payload also carries original_currency / exchange_rate, which the table does not have (it has `currency`
-    // and `original_amount`); the cast keeps the behaviour unchanged. See the finance review notes.
-    const { error } = await sb.from('recurring_expenses').insert(payload as unknown as Database['public']['Tables']['recurring_expenses']['Insert']);
+    const { error } = await sb.from('recurring_expenses').insert(payload);
     if (error) {
       console.warn('[addRecurringExpenseCloud] Supabase insert failed, queueing offline:', error);
       addToQueue('recurring_expense_create', payload, 10);
@@ -367,6 +366,7 @@ export const updateRecurringExpenseCloud = async (
       payload.notes = baseNotes || null;
     }
   }
+  if (updates.currency !== undefined) payload.currency = updates.currency;
   if (updates.isActive !== undefined) payload.is_active = updates.isActive;
   payload.updated_at = new Date().toISOString();
 

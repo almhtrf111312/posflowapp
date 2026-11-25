@@ -20,6 +20,7 @@
     "maps:check": "node scripts/gen-maps.mjs --check",
     "finance:check": "node scripts/finance-check.mjs",
     "finance:sql": "node scripts/finance-sql-check.mjs",
+    "db:drift-sql": "node scripts/db-drift-sql.mjs",
     "preview": "vite preview",
     "version:bump": "node scripts/bump-version.js",
     "version:bump:minor": "node scripts/bump-version.js --minor",

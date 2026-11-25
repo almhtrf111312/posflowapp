@@ -7,6 +7,7 @@ Build, release, maintenance and test scripts. Role per file.
 |---|---|
 | `apply-migrations-api.mjs` | Applies supabase/migrations to a Supabase project via the Management API. |
 | `bump-version.js` | Bumps version.json/package.json build number (used by hook and CI). |
+| `db-drift-sql.mjs` | Prints one read-only SQL query that lists every live-vs-repo difference (functions, columns, triggers, indexes); npm run db:drift-sql |
 | `download-fonts.mjs` | Downloads fonts into public/fonts for offline use. |
 | `e2e/flowpos-e2e.mjs` | Playwright end-to-end check of purchases and sales against the database. |
 | `e2e/flowpos-stress.mjs` | Strict stress test (~1000 interleaved operations) over an open Chrome session. |

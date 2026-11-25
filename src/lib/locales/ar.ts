@@ -1309,6 +1309,8 @@ const ar = {
   'pos.tax': 'الضريبة',
   'pos.taxExclusive': 'بدون ضريبة',
   'pos.taxInclusive': 'شامل الضريبة',
+  'pos.taxModeExclusive': 'غير شامل (تُضاف على المبلغ)',
+  'pos.taxModeInclusive': 'شامل (داخل المبلغ)',
   'pos.receivedAmount': 'المبلغ المقبوض',
   'pos.balance': 'الباقي',
   'pos.discountsDisabled': 'الخصومات معطلة من الإعدادات',

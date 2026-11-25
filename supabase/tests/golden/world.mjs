@@ -16,8 +16,12 @@ export async function newWorld() {
   const one = async (sql, params) => (await q(sql, params))[0];
   let seq = 0;
   const op = (p = 'op') => `${p}-${String(++seq).padStart(6, '0')}-golden`;
-  const newShift = async (opening = 100) =>
-    (await one(`insert into public.cash_shifts(user_id, opening_balance, expected_balance) values ($1,$2,$2) returning id`, [OWNER, opening])).id;
+  // The server allows one open shift per cashier (20261125173000): opening a new one closes the previous
+  // test shift first, like a real device would after closing its drawer.
+  const newShift = async (opening = 100) => {
+    await db.query(`update public.cash_shifts set closed_at = now() where user_id = $1 and closed_at is null`, [OWNER]);
+    return (await one(`insert into public.cash_shifts(user_id, opening_balance, expected_balance) values ($1,$2,$2) returning id`, [OWNER, opening])).id;
+  };
   const newInvoice = async ({ number, total, currency = 'USD', rate = 1, paymentType = 'credit', status = 'pending' }) =>
     one(`insert into public.invoices(user_id, invoice_number, total, subtotal, payment_type, payment_method, status, currency, exchange_rate, invoice_type)
          values ($1,$2,$3,$3,$4,'cash',$5,$6,$7,'sale') returning id, invoice_number`, [OWNER, number, total, paymentType, status, currency, rate]);

@@ -3,6 +3,7 @@
 // SECURITY FIX: الثابتة القديمة كانت posflow_cashbox_v1 / posflow_shifts_v1
 // ولم تتضمن userId مما يتسبب في مسح ورديات الكاشير الأول عند تسجيل دخول آخر.
 import { getCurrentUserId } from './supabase-store';
+import { buildAdoptedShift, type CloudShiftLike } from './shift-adopt';
 import { emitEvent, EVENTS } from './events';
 import { addCurrency, subtractCurrency, round8, round8 as roundCurrency } from './utils';
 import { getEnabledCurrencies, roundForCurrency, fromUsd } from './money-engine';
@@ -271,6 +272,31 @@ export const openShift = (
   saveCashboxState(state);
 
   return newShift;
+};
+
+// Adopt a shift that is open in the cloud but unknown on this device (opened from another device,
+// or local data was cleared). Without this the device shows "no open shift" while the cloud has one.
+// The local totals are seeded from the server's expected balance (F-18) so the expected cash matches it.
+export const adoptCloudOpenShift = (
+  cloudShift: CloudShiftLike,
+  currentUserId?: string | null
+): Shift | null => {
+  const opening = roundCurrency(Number(cloudShift.opening_balance) || 0);
+  const adopted = buildAdoptedShift(cloudShift, currentUserId, !!getActiveShift(), initShiftCurrencies(opening));
+  if (!adopted) return null;
+
+  const shifts = loadShifts().filter(s => s.id !== adopted.id);
+  shifts.unshift(adopted);
+  saveShifts(shifts);
+
+  const state = loadCashboxState();
+  state.activeShiftId = adopted.id;
+  state.currentBalance = roundCurrency(adopted.openingCash + adopted.salesTotal - adopted.expensesTotal);
+  state.lastUpdated = new Date().toISOString();
+  saveCashboxState(state);
+
+  emitEvent(EVENTS.CASH_SHIFTS_UPDATED, shifts);
+  return adopted;
 };
 
 // Close the current shift

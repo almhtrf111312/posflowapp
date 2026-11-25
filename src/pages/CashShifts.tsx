@@ -4,10 +4,12 @@ import { useLanguage } from '@/hooks/language-context';
 import { ListPageSkeleton } from '@/components/ui/page-skeleton';
 import {
   loadShifts,
+  saveShifts,
   getActiveShift,
   openShift as openShiftFn,
   closeShift as closeShiftFn,
   calculateShiftStatus,
+  adoptCloudOpenShift,
   Shift
 } from '@/lib/cashbox-store';
 import { EVENTS } from '@/lib/events';
@@ -152,6 +154,15 @@ export default function CashShifts() {
     // خلفي: دمج الورديات السحابية
     loadCloudShifts().then((cloudShifts) => {
       if (cloudShifts && cloudShifts.length > 0) {
+        // وردية مفتوحة في السحابة وغير معروفة على هذا الجهاز: نعتمدها كوردية نشطة (مزامنة بين الأجهزة)
+        const cloudOpen = cloudShifts.find(cs => !cs.closed_at);
+        if (cloudOpen && !getActiveShift()) {
+          const adopted = adoptCloudOpenShift(cloudOpen, user?.id);
+          if (adopted) {
+            setOpenShift(adopted);
+            setShiftStatus(calculateShiftStatus(adopted));
+          }
+        }
         setShifts(prev => {
           const localIds = new Set(prev.map(s => s.id));
           const newFromCloud = cloudShifts
@@ -265,6 +276,15 @@ export default function CashShifts() {
         cashierName: userName,
         openingBalance: totalOpeningUSD,
         openingByCurrency: currencyOpeningsRecord,
+      }).then(async (res) => {
+        if (res !== 'conflict') return;
+        // الخادم رفض: توجد وردية مفتوحة لهذا الكاشير. نلغي الوردية المحلية ونعتمد الوردية المفتوحة في السحابة
+        saveShifts(loadShifts().filter(s => s.id !== newShift.id));
+        const cloud = await loadCloudShifts();
+        const cloudOpen = cloud.find(cs => !cs.closed_at);
+        if (cloudOpen) adoptCloudOpenShift(cloudOpen, user?.id);
+        toast.warning(isEn ? 'A shift is already open on the server; it was loaded on this device.' : 'توجد وردية مفتوحة مسبقاً على الخادم، تم تحميلها على هذا الجهاز.');
+        loadData();
       });
     }
 

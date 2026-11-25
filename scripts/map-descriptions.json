@@ -211,6 +211,7 @@
   "src/lib/cancellation-registry.ts": "Registry of cancelled operations so queued ops are not replayed.",
   "src/lib/capital-store.ts": "Local capital and partner-investment ledger state.",
   "src/lib/cashbox-store.ts": "Local cashbox and shift state: balances, per-currency totals, sale/refund/expense updates.",
+  "src/lib/shift-adopt.ts": "Pure rules for adopting a cloud-open shift on another device (expected cash follows the server).",
   "src/lib/categories-store.ts": "Local product categories CRUD.",
   "src/lib/clear-demo-data.ts": "Demo/user data clearing helpers for IndexedDB and localStorage (manual resets only).",
   "src/lib/cloud-backup.ts": "Cloud backups in Supabase Storage: upload, list, download, delete.",

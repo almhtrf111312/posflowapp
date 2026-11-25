@@ -1093,6 +1093,8 @@ const tr: TranslationDict = {
   'pos.tax': 'Vergi',
   'pos.taxExclusive': 'Vergi Hariç',
   'pos.taxInclusive': 'Vergi Dahil',
+  'pos.taxModeExclusive': 'Dahil değil (üstüne eklenir)',
+  'pos.taxModeInclusive': 'Fiyata dahil',
   'pos.receivedAmount': 'Alınan Tutar',
   'pos.balance': 'Para Üstü',
   'pos.discountsDisabled': 'İndirimler ayarlardan devre dışı',

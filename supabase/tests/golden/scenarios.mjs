@@ -562,3 +562,64 @@ export async function runLawFixes(k, newWorldFn) {
     check('F7 replayed cash quick purchase does not reduce the drawer balance twice', await w.expected(shCash), 495);
   }
 }
+
+
+// 2026-11-25 (QA round): down payment on a credit sale (M-3) and one open shift per cashier.
+export async function runQaFixes(k, newWorldFn) {
+  const { check, truthy } = k;
+  const items = (p, price) => JSON.stringify([{ product_id: p, product_name: 'Notebook', quantity: 1, unit_price: price, amount_usd: price, amount_original: price, cost_price: 3 }]);
+  const sale = (w, p, op, dp) => w.one(
+    `select * from public.process_pos_sale_atomic($1,'debt','Cust','',8,0,0,0,0,8,0,'USD',null::uuid,$2::jsonb,$3,1,null)`,
+    [op, items(p, 8), dp]);
+
+  // M-3: the down payment is a real payment row on the new debt; payments always match debts.total_paid.
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Notebook',8,3,50) returning id`, [OWNER])).id;
+    const opA = w.op('m3a');
+    const a = await sale(w, prod, opA, 2);
+    const debt = await w.one(`select id, total_paid::float8 paid, remaining_debt::float8 remaining, status from public.debts where invoice_id=$1`, [a.invoice_number]);
+    check('M3 down payment is stored on the debt (paid 2)', debt.paid, 2);
+    check('M3 debt remaining is 6', debt.remaining, 6);
+    check('M3 down payment writes exactly one debt_payments row', Number((await w.one(`select count(*)::int n from public.debt_payments where debt_id=$1`, [debt.id])).n), 1);
+    const pay = await w.one(`select amount::float8 amount, settled_amount::float8 settled, payment_method, operation_id from public.debt_payments where debt_id=$1`, [debt.id]);
+    check('M3 payment row amount is 2', pay.amount, 2);
+    check('M3 payment row settled amount is 2', pay.settled, 2);
+    check('M3 payment row is cash', pay.payment_method, 'cash');
+    truthy('M3 payment row operation id is the sale operation plus :down', String(pay.operation_id).startsWith(opA) && String(pay.operation_id).endsWith(':down'));
+    // A replay of the same operation does not add a second payment row.
+    await sale(w, prod, opA, 2);
+    check('M3 replayed sale does not duplicate the payment row', Number((await w.one(`select count(*)::int n from public.debt_payments where debt_id=$1`, [debt.id])).n), 1);
+    // A credit sale without a down payment writes no payment row.
+    const b = await sale(w, prod, w.op('m3b'), 0);
+    const debtB = await w.one(`select id from public.debts where invoice_id=$1`, [b.invoice_number]);
+    check('M3 a debt without a down payment has no payment row', Number((await w.one(`select count(*)::int n from public.debt_payments where debt_id=$1`, [debtB.id])).n), 0);
+    // Reconciliation: sum(settled) equals sum(total_paid) for the whole store.
+    const tot = await w.one(`select coalesce(sum(settled_amount),0)::float8 s from public.debt_payments where user_id=$1`, [OWNER]);
+    const paid = await w.one(`select coalesce(sum(total_paid),0)::float8 s from public.debts where user_id=$1`, [OWNER]);
+    check('M3 sum(debt_payments.settled_amount) equals sum(debts.total_paid)', tot.s, paid.s);
+    // A later payment on the same debt keeps the two sides equal.
+    const shiftForPay = await w.newShift(100);
+    await w.q(`select * from public.record_debt_payment_atomic($1,3,$2,$3::uuid,null,null,null,'cash')`, [debt.id, w.op('m3p'), shiftForPay]);
+    const tot2 = await w.one(`select coalesce(sum(settled_amount),0)::float8 s from public.debt_payments where user_id=$1`, [OWNER]);
+    const paid2 = await w.one(`select coalesce(sum(total_paid),0)::float8 s from public.debts where user_id=$1`, [OWNER]);
+    check('M3 a later payment keeps payments equal to total_paid', tot2.s, paid2.s);
+  }
+
+  // One open shift per cashier: the server refuses a second open shift; closing allows a new one;
+  // another cashier can keep a shift open at the same time.
+  {
+    const w = await newWorldFn();
+    const first = await w.newShift(100);
+    truthy('SHIFT first open shift is created', first);
+    const insertOpen = (opening) => w.q(`insert into public.cash_shifts(user_id, opening_balance, expected_balance) values ($1,$2,$2)`, [OWNER, opening]);
+    truthy('SHIFT a second open shift for the same cashier is refused', (await w.fails(insertOpen(500))) !== null);
+    check('SHIFT only one open shift exists', Number((await w.one(`select count(*)::int n from public.cash_shifts where user_id=$1 and closed_at is null`, [OWNER])).n), 1);
+    const other = 'bbbbbbbb-0000-4000-8000-000000000002';
+    await w.db.exec(`insert into auth.users(id, email) values ('${other}', 'cashier@test.local') on conflict do nothing;`);
+    const otherShift = await w.fails(w.q(`insert into public.cash_shifts(user_id, cashier_id, opening_balance, expected_balance) values ($1,$2,50,50)`, [OWNER, other]));
+    check('SHIFT another cashier can have an open shift at the same time', otherShift, null);
+    await w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [first]);
+    check('SHIFT after closing, the same cashier can open a new shift', await w.fails(insertOpen(500)), null);
+  }
+}

@@ -56,7 +56,7 @@ export const openShiftCloud = async (params: {
   openingBalance: number;
   /** مبالغ الافتتاح بكل عملة (بعملتها) — يعتمد عليها الخادم لحساب المتوقع لكل عملة */
   openingByCurrency?: Record<string, number>;
-}): Promise<string | null> => {
+}): Promise<string | null | 'conflict'> => {
   const userId = await ensureUserId();
   if (!userId) return null;
 
@@ -89,6 +89,11 @@ export const openShiftCloud = async (params: {
     if (error) throw error;
     return data?.id || (payload.id as string);
   } catch (e) {
+    // الخادم يسمح بوردية مفتوحة واحدة لكل كاشير: وردية أخرى مفتوحة مسبقاً (من جهاز آخر) ← لا نُدرجها في الطابور
+    if ((e as { code?: string } | null)?.code === '23505') {
+      console.warn('[cashbox-cloud] a shift is already open for this cashier on the server');
+      return 'conflict';
+    }
     console.warn('[cashbox-cloud] open shift failed, queued:', e);
     try { addToQueue('cash_shift_upsert', payload); } catch { /* noop */ }
     return (payload.id as string);

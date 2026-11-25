@@ -1274,6 +1274,8 @@ const ku: TranslationDict = {
   'pos.tax': 'باج',
   'pos.taxExclusive': 'بێ باج',
   'pos.taxInclusive': 'لەگەڵ باج',
+  'pos.taxModeExclusive': 'نەخراوەتە نرخەوە (دەخرێتە سەر)',
+  'pos.taxModeInclusive': 'لەناو نرخەکەدایە',
   'pos.receivedAmount': 'بڕی وەرگیراو',
   'pos.balance': 'باقی',
   'pos.discountsDisabled': 'داشکاندنەکان لە ڕێکخستنەکان ناچالاک کراون',

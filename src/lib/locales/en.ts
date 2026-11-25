@@ -1193,6 +1193,8 @@ const en: TranslationDict = {
   'pos.tax': 'Tax',
   'pos.taxExclusive': 'Tax Exclusive',
   'pos.taxInclusive': 'Tax Inclusive',
+  'pos.taxModeExclusive': 'Not included (added on top)',
+  'pos.taxModeInclusive': 'Included in price',
   'pos.receivedAmount': 'Amount Received',
   'pos.balance': 'Change',
   'pos.discountsDisabled': 'Discounts are disabled from settings',

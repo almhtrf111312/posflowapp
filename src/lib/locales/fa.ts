@@ -2066,6 +2066,8 @@ const fa: TranslationDict = {
   'pos.price': 'قیمت',
   'pos.taxExclusive': 'بدون مالیات',
   'pos.taxInclusive': 'شامل مالیات',
+  'pos.taxModeExclusive': 'غیر شامل (به مبلغ اضافه می‌شود)',
+  'pos.taxModeInclusive': 'شامل (داخل مبلغ)',
   'pos.receivedAmount': 'مبلغ دریافتی',
   'pos.balance': 'باقیمانده',
   'pos.discountsDisabled': 'تخفیف‌ها از تنظیمات غیرفعال شده‌اند',

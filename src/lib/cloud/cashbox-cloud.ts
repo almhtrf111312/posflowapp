@@ -5,10 +5,8 @@
  * يعمل بشكل تكاملي مع cashbox-store المحلي (cache).
  */
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+import type { Database } from '@/integrations/supabase/types';
+const sb = supabase;
 import { getCurrentUserId, setCurrentUserId, getOwnerIdForInsert } from '../supabase-store';
 import { addToQueue } from '../sync-queue';
 import { roundCurrency } from '../utils';
@@ -85,7 +83,7 @@ export const openShiftCloud = async (params: {
   try {
     const { data, error } = await sb
       .from('cash_shifts')
-      .upsert(payload, { onConflict: 'id' })
+      .upsert(payload as unknown as Database['public']['Tables']['cash_shifts']['Insert'], { onConflict: 'id' })
       .select('id')
       .single();
     if (error) throw error;
@@ -142,7 +140,7 @@ export const closeShiftCloud = async (params: {
  */
 export const writeShiftTransactionRow = async (row: Record<string, unknown>): Promise<void> => {
   const attempt = (payload: Record<string, unknown>) =>
-    sb.from('shift_transactions').upsert(payload, { onConflict: 'id', ignoreDuplicates: true });
+    sb.from('shift_transactions').upsert(payload as unknown as Database['public']['Tables']['shift_transactions']['Insert'], { onConflict: 'id', ignoreDuplicates: true });
 
   const { error } = await attempt(row);
   if (!error) return;

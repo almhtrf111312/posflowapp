@@ -20,10 +20,7 @@ import { addToQueue } from '../sync-queue';
 import { round8 } from '../utils';
 import { toLocalDateString, getLocalDayUtcRange } from '../date-utils';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 export type DebtStatus = 'due' | 'partially_paid' | 'overdue' | 'fully_paid';
 
 export interface CloudDebt {

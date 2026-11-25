@@ -1,8 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+import type { Database } from '@/integrations/supabase/types';
+const sb = supabase;
 import { getCurrentUserId } from '../supabase-store';
 
 export interface LibraryMember {
@@ -105,7 +103,7 @@ export const addMemberCloud = async (member: Partial<LibraryMember>): Promise<Li
     phone: data.phone || '',
     email: data.email || '',
     registrationDate: data.registration_date || '',
-    membershipStatus: data.membership_status,
+    membershipStatus: data.membership_status as LibraryMember['membershipStatus'],
     lateFees: data.late_fees || 0,
     notes: data.notes || '',
     createdAt: data.created_at,
@@ -123,7 +121,7 @@ export const updateMemberCloud = async (id: string, updates: Partial<LibraryMemb
 
   const { error } = await sb
     .from('library_members')
-    .update(updateData)
+    .update(updateData as unknown as Database['public']['Tables']['library_members']['Update'])
     .eq('id', id);
 
   if (error) {
@@ -238,7 +236,7 @@ export const addLoanCloud = async (loan: {
     loanDate: data.loan_date,
     dueDate: data.due_date,
     returnDate: data.return_date,
-    status: data.status,
+    status: data.status as BookLoan['status'],
     lateFee: data.late_fee || 0,
     notes: data.notes || '',
     createdAt: data.created_at,

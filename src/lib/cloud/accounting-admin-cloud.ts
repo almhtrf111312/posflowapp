@@ -11,10 +11,7 @@ import { isLocalDataMode } from '@/hooks/use-network-status';
 import { getCurrentUserId } from '../supabase-store';
 import { isCloudWriteBlocked } from '../subscription-lock';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 
 export interface PeriodClosure {
   id: string;

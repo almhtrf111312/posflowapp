@@ -12,6 +12,7 @@ import { isLocalDataMode } from '@/hooks/use-network-status';
 
 import { secureSet, secureGet, secureRemove } from './secure-storage';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export type ErrorRadarType = 
   | 'react_boundary'
@@ -388,8 +389,7 @@ async function sendErrorLogToServer(log: QueuedErrorRadarLog): Promise<SendResul
       return { success: false, serverConfirmed: false, error: 'Not signed in' };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error, status } = await (supabase as any)
+    const { error, status } = await supabase
       .from('error_logs')
       .insert({
         occurred_at: log.lastSeenAt || new Date().toISOString(),
@@ -414,7 +414,7 @@ async function sendErrorLogToServer(log: QueuedErrorRadarLog): Promise<SendResul
           user_role: log.userRole,
           occurrences: log.occurrences,
           breadcrumbs: log.breadcrumbs || [],
-        },
+        } as unknown as Json,
         is_resolved: false,
       });
 
@@ -701,10 +701,9 @@ export async function markErrorResolved(id: string): Promise<boolean> {
     // تحديث الخادم صامتاً إذا كان متاحاً
     if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const query = (supabase as any)
+        const query = supabase
           .from('error_logs')
-          .update({ is_resolved: true, resolved_at: target.resolvedAt });
+          .update({ is_resolved: true }); // the table has no resolved_at column (it was rejected by the server)
 
         // Update either by database primary id or by client_error_id in extra_context
         if (id.length === 36 && !id.startsWith('ERR-')) {
@@ -738,10 +737,9 @@ export async function markErrorUnresolved(id: string): Promise<boolean> {
 
     if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const query = (supabase as any)
+        const query = supabase
           .from('error_logs')
-          .update({ is_resolved: false, resolved_at: null });
+          .update({ is_resolved: false });
 
         if (id.length === 36 && !id.startsWith('ERR-')) {
           await query.eq('id', id);

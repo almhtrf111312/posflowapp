@@ -1,8 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 import { logActivity } from '@/lib/activity-log';
 
 export interface StockDamage {

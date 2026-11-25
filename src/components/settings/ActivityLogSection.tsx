@@ -101,8 +101,7 @@ export function ActivityLogSection() {
         if (!ownerId) return;
 
         // جلب الأرشيف المحفوظ على السحابة ومطابقة الحقول الحقيقية
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: cloudLogs, error } = await (supabase as any)
+        const { data: cloudLogs, error } = await supabase
           .from('activity_log')
           .select('*')
           .eq('user_id', ownerId)
@@ -113,8 +112,7 @@ export function ActivityLogSection() {
           setLogs(prev => {
             const existingIds = new Set(prev.map(l => l.id));
             const merged = [...prev];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            cloudLogs.forEach((item: any) => {
+            cloudLogs.forEach((item) => {
               if (!existingIds.has(item.id)) {
                 merged.push({
                   id: item.id,

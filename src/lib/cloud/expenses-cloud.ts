@@ -9,10 +9,7 @@ import {
   isCashierUser
 } from '../supabase-store';
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 import { emitEvent, EVENTS } from '../events';
 import { addToQueue } from '../sync-queue';
 import { triggerAutoBackup } from '../local-auto-backup';
@@ -184,7 +181,7 @@ const fetchFresh_loadExpensesCloud = async (opts: { includeReversed?: boolean } 
       console.error('Error fetching cashier expenses:', error);
       cloudExpenses = [];
     } else {
-      cloudExpenses = data || [];
+      cloudExpenses = (data || []) as unknown as CloudExpense[];
     }
   } else {
     // Owners see all expenses (via RLS)
@@ -422,11 +419,16 @@ export const reverseExpenseWithResultCloud = async (
     addToQueue('expense_reverse', { id, reason, shiftId: shiftId ?? null });
     result = { queued: true, alreadyReversed: false, cashRefunded: false };
   } else {
-    const { data, error } = await sb.rpc('delete_expense_atomic', {
+    const { data: rpcData, error } = await sb.rpc('delete_expense_atomic', {
       _expense_id: id,
       _reason: reason,
       _shift_id: shiftId ?? null,
     });
+    // The function returns a JSON object; read it through its known shape
+    const data = rpcData as {
+      success?: boolean; error?: string; already_reversed?: boolean; cash_refunded?: boolean; shift_id?: string | null;
+      cash_amount?: number | string | null; cash_currency?: string | null; cash_currency_amount?: number | string | null;
+    } | null;
     if (error || !data?.success) {
       throw new Error(error?.message || data?.error || 'رفض الخادم التراجع عن المصروف');
     }
@@ -500,7 +502,7 @@ export const loadReversedExpensesCloud = async (): Promise<Expense[]> => {
       .order('created_at', { ascending: false })
       .limit(200);
     if (error) throw error;
-    return ((data || []) as CloudExpense[]).map(toExpense);
+    return ((data || []) as unknown as CloudExpense[]).map(toExpense);
   } catch (e) {
     console.warn('[expenses-cloud] loadReversedExpensesCloud failed:', e);
     return [];

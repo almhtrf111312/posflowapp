@@ -6,14 +6,12 @@
  * a failed fetch never replaces a good cache with an empty one.
  */
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { isLocalDataMode } from '@/hooks/use-network-status';
 import { getCurrentUserId } from '../supabase-store';
 import type { ProfitPaymentInput, ProfitWriteoffInput } from '../profit-engine';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 
 export interface ProfitLedger {
   payments: ProfitPaymentInput[];
@@ -83,7 +81,7 @@ async function fetchAllRows(table: string, columns: string): Promise<Record<stri
   const rows: Record<string, unknown>[] = [];
   for (let page = 0; page < MAX_PAGES; page++) {
     const from = page * PAGE_SIZE;
-    const { data, error } = await sb.from(table).select(columns).range(from, from + PAGE_SIZE - 1);
+    const { data, error } = await sb.from(table as keyof Database['public']['Tables']).select(columns).range(from, from + PAGE_SIZE - 1);
     if (error) throw error;
     const batch = (data ?? []) as unknown as Record<string, unknown>[];
     rows.push(...batch);

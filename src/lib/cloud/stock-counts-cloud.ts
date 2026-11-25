@@ -1,8 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 import { logActivity } from '@/lib/activity-log';
 
 export interface StockCountItem {
@@ -53,7 +50,7 @@ export async function getStockCountWithItems(id: string): Promise<{ count: Stock
   const { data: count } = await sb.from('stock_counts').select('*').eq('id', id).maybeSingle();
   if (!count) return null;
   const { data: items } = await sb.from('stock_count_items').select('*').eq('count_id', id);
-  return { count, items: (items || []) as StockCountItem[] };
+  return { count: count as StockCount, items: (items || []) as StockCountItem[] };
 }
 
 export async function saveStockCount(params: {

@@ -35,6 +35,18 @@ const TYPE_META: Record<MovementRow['type'], { label: string; icon: typeof Arrow
   damage:   { label: 'إتلاف', icon: Trash2, color: 'text-destructive', bg: 'bg-destructive/10' },
 };
 
+/** A purchase entry as it may appear on a product (the field names differ between local and cloud data). */
+interface PurchaseHistoryEntry {
+  date?: string;
+  created_at?: string;
+  quantity?: number | string;
+  cost_price?: number | string;
+  costPrice?: number | string;
+  unit_cost?: number | string;
+  invoice_number?: string;
+  invoiceNumber?: string;
+}
+
 export function ProductMovementReport({ dateRange }: Props) {
   const { t } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]);
@@ -77,8 +89,8 @@ export function ProductMovementReport({ dateRange }: Props) {
     const toTs = new Date(dateRange.to + 'T23:59:59').getTime();
 
     // 1) Purchases from product.purchaseHistory
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pHist: any[] = (product as any).purchaseHistory || (product as any).purchase_history || [];
+    const productHistory = product as unknown as { purchaseHistory?: PurchaseHistoryEntry[]; purchase_history?: PurchaseHistoryEntry[] };
+    const pHist: PurchaseHistoryEntry[] = productHistory.purchaseHistory || productHistory.purchase_history || [];
     pHist.forEach((h, idx) => {
       const ts = new Date(h.date || h.created_at || 0).getTime();
       if (!ts || ts < fromTs || ts > toTs) return;

@@ -6,7 +6,7 @@ import {
   getCurrentUserId 
 } from '../supabase-store';
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 import { emitEvent, EVENTS } from '../events';
 import { addToQueue } from '../sync-queue';
 import { toLocalDateString } from '../date-utils';
@@ -17,9 +17,7 @@ import {
   recurringIntervals 
 } from '../recurring-expenses-store';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 
 export const RECURRING_EXPENSES_KEY = 'posflow_recurring_expenses_v1';
 
@@ -313,7 +311,9 @@ export const addRecurringExpenseCloud = async (data: {
 
   // 3. Cloud insert
   try {
-    const { error } = await sb.from('recurring_expenses').insert(payload);
+    // NOTE (review): payload also carries original_currency / exchange_rate, which the table does not have (it has `currency`
+    // and `original_amount`); the cast keeps the behaviour unchanged. See the finance review notes.
+    const { error } = await sb.from('recurring_expenses').insert(payload as unknown as Database['public']['Tables']['recurring_expenses']['Insert']);
     if (error) {
       console.warn('[addRecurringExpenseCloud] Supabase insert failed, queueing offline:', error);
       addToQueue('recurring_expense_create', payload, 10);
@@ -376,7 +376,7 @@ export const updateRecurringExpenseCloud = async (
   }
 
   try {
-    const { error } = await sb.from('recurring_expenses').update(payload).eq('id', id);
+    const { error } = await sb.from('recurring_expenses').update(payload as unknown as Database['public']['Tables']['recurring_expenses']['Update']).eq('id', id);
     if (error) {
       console.warn('[updateRecurringExpenseCloud] Supabase update failed, queueing offline:', error);
       addToQueue('recurring_expense_update', { id, ...payload }, 10);

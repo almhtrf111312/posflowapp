@@ -139,7 +139,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraResult {
       fileInputRef.current.removeAttribute('capture');
       fileInputRef.current.click();
     });
-  }, [isNative, maxSize, quality, compressBase64]);
+  }, [compressBase64]);
 
   /**
    * Keep a stable ref to onPhotoRestored.

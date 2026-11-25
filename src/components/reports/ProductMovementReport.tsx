@@ -10,7 +10,7 @@ import { listStockDamages, type StockDamage } from '@/lib/cloud/stock-damages-cl
 import { formatReportAmount, formatNumber, cn } from '@/lib/utils';
 import { exportGenericToExcel, exportGenericToPDF } from '@/lib/reports/dataset-builder';
 import { toast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface MovementRow {
   date: string;

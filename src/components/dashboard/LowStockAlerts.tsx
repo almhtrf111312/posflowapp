@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getLowStockProducts, getCriticalStockAlerts } from '@/lib/products-store';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 export function LowStockAlerts() {
   const { t, tDynamic } = useLanguage();

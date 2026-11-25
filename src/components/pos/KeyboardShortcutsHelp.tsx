@@ -9,7 +9,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { POS_SHORTCUTS } from '@/hooks/use-keyboard-shortcuts';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 export function KeyboardShortcutsHelp() {
   const { t } = useLanguage();

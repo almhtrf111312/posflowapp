@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { ListPageSkeleton } from '@/components/ui/page-skeleton';
 import {
   loadShifts,
@@ -19,7 +19,7 @@ import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
 import { getEnabledCurrencies, toUsd, fromUsd, round8, roundForCurrency } from '@/lib/money-engine';
 import { openShiftCloud, closeShiftCloud, loadCloudShifts, loadShiftVarianceTolerance, loadDeferredShiftVariances, resolveShiftVarianceCloud, DeferredShiftVariance } from '@/lib/cloud/cashbox-cloud';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useUserRole } from '@/hooks/user-role-context';
 import { addActivityLog } from '@/lib/activity-log';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -183,10 +183,14 @@ export default function CashShifts() {
     });
   };
 
-  useEffect(() => {
-    loadData();
+  // Always call the latest loadData without re-subscribing every render
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
 
-    const handleUpdate = () => loadData();
+  useEffect(() => {
+    loadDataRef.current();
+
+    const handleUpdate = () => loadDataRef.current();
     window.addEventListener(EVENTS.CASH_SHIFTS_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.INVOICES_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.EXPENSES_UPDATED, handleUpdate);

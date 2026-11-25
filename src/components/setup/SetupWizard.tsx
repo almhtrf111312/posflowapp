@@ -46,8 +46,8 @@ import {
 } from '@/components/ui/select';
 import { cn, formatNumber } from '@/lib/utils';
 import { toast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
-import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/hooks/language-context';
+import { useTheme } from '@/hooks/theme-context';
 import { Partner } from '@/lib/partners-store';
 import { savePartnersCloud } from '@/lib/cloud/partners-cloud';
 import { APP_FONTS, AppFontId, getStoredAppFont, setStoredAppFont } from '@/lib/app-font-config';
@@ -83,7 +83,35 @@ const SETTINGS_KEY = 'posflow_settings_v1';
 const STORE_TYPE_KEY = 'posflow_store_type';
 const TAX_KEY = 'posflow_tax_settings';
 
-const getInitialStoredSettings = (): Record<string, any> | null => {
+type BarcodeDeviceType = 'camera' | 'scanner' | 'manual';
+
+/** Shape of the settings JSON the wizard reads from localStorage (extra keys are preserved as-is). */
+interface StoredSettings {
+  primaryCurrency?: string;
+  slot1Code?: string;
+  slot2Code?: string;
+  exchangeRates?: Record<string, unknown>;
+  enabledCurrencies?: Record<string, boolean>;
+  currencyNames?: Record<string, string>;
+  currencySymbols?: Record<string, string>;
+  taxRate?: number;
+  taxEnabled?: boolean;
+  discountPercentEnabled?: boolean;
+  discountFixedEnabled?: boolean;
+  barcodeScanMode?: 'add' | 'search';
+  barcodeDeviceType?: BarcodeDeviceType;
+  storeSettings?: { type?: string; name?: string; phone?: string; address?: string; logo?: string; [key: string]: unknown };
+  printSettings?: { paperSize?: '80mm' | '57mm'; footerText?: string; autoPrint?: boolean; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
+interface StoredTaxSettings {
+  inclusive?: boolean;
+  name?: string;
+  [key: string]: unknown;
+}
+
+const getInitialStoredSettings = (): StoredSettings | null => {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) return JSON.parse(raw);
@@ -96,7 +124,7 @@ const getInitialCurrencies = (language?: string) => {
   const enabledMap = (settings?.enabledCurrencies || {}) as Record<string, boolean>;
   const namesMap = (settings?.currencyNames || {}) as Record<string, string>;
   const symbolsMap = (settings?.currencySymbols || {}) as Record<string, string>;
-  const ratesMap = (settings?.exchangeRates || {}) as Record<string, any>;
+  const ratesMap = (settings?.exchangeRates || {}) as Record<string, unknown>;
 
   // 1. Identify non-USD currencies that are explicitly enabled (true)
   const activeNonUsd = Object.keys(enabledMap).filter(code => code !== 'USD' && enabledMap[code] === true);
@@ -251,7 +279,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
   });
   const [barcodeDevice, setBarcodeDevice] = useState<'camera' | 'scanner' | 'manual'>(() => {
     const s = getInitialStoredSettings();
-    return s?.barcodeDeviceType || (localStorage.getItem('posflow_barcode_device') as any) || 'camera';
+    return s?.barcodeDeviceType || (localStorage.getItem('posflow_barcode_device') as BarcodeDeviceType | null) || 'camera';
   });
   const [paperSize, setPaperSize] = useState<'80mm' | '57mm'>(() => {
     const s = getInitialStoredSettings();
@@ -365,7 +393,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     setPartners(partners.filter(p => p.id !== id));
   };
 
-  const handlePartnerChange = (id: string, field: keyof PartnerItem, value: any) => {
+  const handlePartnerChange = (id: string, field: keyof PartnerItem, value: PartnerItem[keyof PartnerItem]) => {
     setPartners(partners.map(p => {
       if (p.id !== id) return p;
       return { ...p, [field]: value };
@@ -408,7 +436,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
     }
 
     // 2. Read previous settings to safely merge
-    let prevSettings: Record<string, any> = {};
+    let prevSettings: StoredSettings = {};
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) prevSettings = JSON.parse(raw);
@@ -479,7 +507,7 @@ export function SetupWizard({ onComplete, isPreview }: SetupWizardProps) {
       // تفعيل حقول المنتجات الخاصة بنوع المتجر تلقائياً (مقاس/لون للملابس، صلاحية للأغذية، IMEI للهواتف...)
       // وحفظها للمتجر حتى لا تبقى إعدادات حقول قديمة على الجهاز
       saveProductFieldsConfig(getDefaultFieldsByStoreType(storeType as StoreType)).catch(() => {});
-      let prevTax: Record<string, any> = {};
+      let prevTax: StoredTaxSettings = {};
       try {
         const rawTax = localStorage.getItem(TAX_KEY);
         if (rawTax) prevTax = JSON.parse(rawTax);

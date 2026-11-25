@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, Package, FileX, Loader2 } from 'lucide-react';
 import { loadInvoicesCloud } from '@/lib/cloud/invoices-cloud';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { formatNumber } from '@/lib/utils';
 import { EVENTS } from '@/lib/events';
 

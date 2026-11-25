@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useUserRole } from '@/hooks/user-role-context';
+import { useLanguage } from '@/hooks/language-context';
 import { toast as sonnerToast } from '@/lib/sonner-bridge';
-import { useLicense } from '@/hooks/use-license';
+import { useLicense } from '@/hooks/license-context';
 import { useUsersManagement, UserData } from '@/hooks/use-users-management';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { PasswordChangeDialog } from '@/components/settings/PasswordChangeDialog';

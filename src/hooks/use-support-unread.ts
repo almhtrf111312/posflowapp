@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 
 /**
  * هوك تتبع عدد الرسائل غير المقروءة في الدعم الفني بالوقت الفعلي

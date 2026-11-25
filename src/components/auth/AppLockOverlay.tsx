@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAppLock } from '@/hooks/use-app-lock';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAppLock } from '@/hooks/app-lock-context';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import {

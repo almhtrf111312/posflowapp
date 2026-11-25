@@ -1,6 +1,6 @@
 import { AlertTriangle, Wifi } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
-import { useLicense } from '@/hooks/use-license';
+import { useLanguage } from '@/hooks/language-context';
+import { useLicense } from '@/hooks/license-context';
 
 const SHOW_OFFLINE_WARNING_BANNER: boolean = false;
 

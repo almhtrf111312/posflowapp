@@ -46,14 +46,14 @@ import { addDebtFromInvoiceCloud } from '@/lib/cloud/debts-cloud';
 import { getCurrencySymbolByCode, resolveInvoiceCurrencySymbol } from '@/lib/currencies';
 import { loadCustomersCloud } from '@/lib/cloud/customers-cloud';
 import { addActivityLog } from '@/lib/activity-log';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import { printHTML, getStoreSettings, getPrintSettings } from '@/lib/print-utils';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { playSaleComplete, playDebtRecorded } from '@/lib/sound-utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface Currency {
-  code: 'USD' | 'TRY' | 'SYP';
+  code: string;
   symbol: string;
   name: string;
   rate: number;

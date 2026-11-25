@@ -1,5 +1,5 @@
 import { RoleGuard } from '@/components/auth/RoleGuard';
-import type { AppRole } from '@/hooks/use-user-role';
+import type { AppRole } from '@/hooks/user-role-context';
 
 // HOC for pages that require specific roles
 export function withRoleGuard<P extends object>(

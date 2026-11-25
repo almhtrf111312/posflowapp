@@ -44,8 +44,20 @@ const RESTORE_ORDER: string[] = (() => {
 const NO_ID_TABLES = new Set(['invoice_sequences', 'store_settings']);
 
 type Row = Record<string, unknown>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const db = supabase as unknown as { from: (t: string) => any; storage: typeof supabase.storage };
+// Table names are dynamic here (backup/restore walks a list), so the typed client cannot be used;
+// this describes only the query methods this file calls.
+type DbError = { message: string } | null;
+interface LooseQuery extends PromiseLike<{ data: unknown[] | null; error: DbError }> {
+  in(column: string, values: string[]): LooseQuery;
+  eq(column: string, value: string): LooseQuery;
+  order(column: string, options: { ascending: boolean }): LooseQuery;
+  range(from: number, to: number): LooseQuery;
+}
+interface LooseTable {
+  select(columns: string): LooseQuery;
+  upsert(rows: Row | Row[], options?: { onConflict: string }): PromiseLike<{ error: DbError }>;
+}
+const db = supabase as unknown as { from: (t: string) => LooseTable; storage: typeof supabase.storage };
 
 export interface BackupImage { type: string; b64: string }
 export interface FullBackup {
@@ -67,7 +79,7 @@ export interface RestoreReport {
 
 const PAGE = 1000;
 
-async function fetchAll(table: string, apply: (q: any) => any): Promise<Row[]> {
+async function fetchAll(table: string, apply: (q: LooseQuery) => LooseQuery): Promise<Row[]> {
   const out: Row[] = [];
   for (let from = 0; ; from += PAGE) {
     let q = apply(db.from(table).select('*'));

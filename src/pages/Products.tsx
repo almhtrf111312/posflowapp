@@ -108,12 +108,12 @@ import {
 } from '@/lib/cloud/warehouses-cloud';
 import { useImageUpload } from '@/hooks/use-image-upload';
 import { addActivityLog, diffFields } from '@/lib/activity-log';
-import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useAuth } from '@/hooks/auth-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { getEffectiveFieldsConfig, ProductFieldsConfig } from '@/lib/product-fields-config';
 import { getEnabledCustomFields, CustomField } from '@/lib/custom-fields-config';
 import { EVENTS } from '@/lib/events';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useDebounce } from '@/hooks/use-debounce';
 import { getLocalizedUnit as localizeProductUnit } from '@/lib/product-units';
 import { useCamera } from '@/hooks/use-camera';
@@ -121,7 +121,7 @@ import { NativeCameraPreview } from '@/components/camera/NativeCameraPreview';
 import { isNoInventoryMode, getCurrentStoreType, getVisibleSections } from '@/lib/store-type-config';
 import { ProductImage } from '@/components/products/ProductImage';
 import { getSignedImageUrl } from '@/lib/image-upload';
-import { useDeferWhileHidden, usePageActivity } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden, usePageActivity } from '@/contexts/page-activity-context';
 
 export default function Products() {
   const navigate = useNavigate();
@@ -493,6 +493,8 @@ export default function Products() {
     } catch (e) {
       console.error('Failed to restore form state', e);
     }
+    // Mount-only on purpose: restores the saved form draft once when the page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load data - Local-First (0ms instant display) + non-blocking background refresh
@@ -710,6 +712,8 @@ export default function Products() {
       clearTimeout(timer);
       window.removeEventListener('barcode-restored', handleBarcodeRestored);
     };
+    // Mount-only on purpose: processes the pending scanned barcode once and registers the restore listener once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Handle gallery selection using Capacitor Camera plugin
@@ -1515,7 +1519,7 @@ export default function Products() {
     });
     setImagePreviewBase64('');
     setShowAddDialog(true);
-  }, [categoryOptions, t]);
+  }, [categoryOptions, t, setShowAddDialog]);
 
   // حالة نافذة تأكيد الإلغاء
   const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
@@ -1534,13 +1538,14 @@ export default function Products() {
     closeFormDirectly();
   }, [formData.name, closeFormDirectly]);
 
-  const handleSaveProductSubmit = useCallback(() => {
+  // Plain function: it depends on handleAddProduct/handleEditProduct, which are re-created every render, so memoizing it never helped.
+  const handleSaveProductSubmit = () => {
     if (activeView === 'add') {
       handleAddProduct();
     } else if (activeView === 'edit') {
       handleEditProduct();
     }
-  }, [activeView, handleAddProduct, handleEditProduct]);
+  };
 
   if (activeView !== 'list') {
     return (

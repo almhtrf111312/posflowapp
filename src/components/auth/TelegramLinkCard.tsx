@@ -5,8 +5,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, RefreshCw, Send, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { fetchTelegramLinked, getTelegramBotLink } from '@/lib/auth/phone-claim';
 import { cn } from '@/lib/utils';
 

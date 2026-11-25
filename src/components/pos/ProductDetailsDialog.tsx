@@ -17,8 +17,8 @@ import { toast } from '@/lib/sonner-bridge';
 import { ProductImage } from '@/components/products/ProductImage';
 import { loadAllWarehouseStocksLocalFirst } from '@/lib/cloud/warehouses-cloud';
 import { cn, formatMoney } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useLanguage } from '@/hooks/language-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { getLocalizedUnit } from '@/lib/product-units';
 
 export interface Product {
@@ -69,12 +69,13 @@ export function ProductDetailsDialog({
   const touchStartY = useRef(0);
   const isDragging = useRef(false);
 
+  const hasProduct = !!product;
   useEffect(() => {
-    if (product) {
+    if (hasProduct) {
       setQty(1);
       setActiveTab('pricing');
     }
-  }, [product?.id]);
+  }, [product?.id, hasProduct]);
 
   // مخزون المستودع الإضافي إن وجد
   const warehouseStockQty = useMemo(() => {

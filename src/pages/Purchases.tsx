@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { useState, useEffect, useCallback } from 'react';
 import { FileText, Plus, Truck, Calendar, DollarSign, Loader2, ShoppingBag, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useMoney } from '@/hooks/use-money';
 import { formatNumber } from '@/lib/utils';
 import { loadPurchaseInvoicesCloud, PurchaseInvoice } from '@/lib/cloud/purchase-invoices-cloud';
@@ -15,7 +15,7 @@ import { PurchaseInvoiceViewDialog } from '@/components/purchases/PurchaseInvoic
 import { EVENTS } from '@/lib/events';
 import { format } from 'date-fns';
 import { ar, enUS, tr } from 'date-fns/locale';
-import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden } from '@/contexts/page-activity-context';
 
 export default function Purchases() {
   const deferWhileHidden = useDeferWhileHidden();
@@ -53,7 +53,7 @@ export default function Purchases() {
       window.removeEventListener(EVENTS.PRODUCTS_UPDATED, handler);
       window.removeEventListener(EVENTS.PURCHASES_UPDATED, handler);
     };
-  }, [loadData]);
+  }, [loadData, deferWhileHidden]);
 
   const totalPurchases = invoices.reduce((sum, invoice) => {
     const isPosted = ['finalized', 'completed'].includes(invoice.status);

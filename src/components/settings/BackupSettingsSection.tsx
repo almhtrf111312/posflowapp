@@ -12,7 +12,7 @@ import {
   RefreshCw,
   Trash2
 } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { LocalBackupSection } from '@/components/settings/LocalBackupSection';
 
 /** Backup-related settings as the parent screen keeps them. */

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth, type SignInResult } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth, type SignInResult } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog';
 import { toast } from '@/lib/sonner-bridge';
 import { markSetupComplete } from '@/lib/setup-flag';
-import { applyTheme } from '@/hooks/use-theme';
+import { applyTheme } from '@/hooks/theme-context';
 import { Loader2, Store, Eye, EyeOff, Smartphone, RefreshCw, AlertTriangle, Mail, Sparkles, Send, KeyRound, ShieldCheck, ShieldAlert, CheckCircle2, ArrowRight, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FunctionsHttpError } from '@supabase/supabase-js';
@@ -67,6 +67,9 @@ export default function Login() {
   // Telegram Password Recovery State
   const [telegramStep, setTelegramStep] = useState<1 | 2>(1);
   const [tgIdentifier, setTgIdentifier] = useState('');
+  // The dialog effect reads the current text without re-fetching on every keystroke
+  const tgIdentifierRef = useRef(tgIdentifier);
+  tgIdentifierRef.current = tgIdentifier;
   const [tgCode, setTgCode] = useState('');
   const [tgNewPassword, setTgNewPassword] = useState('');
   const [tgConfirmPassword, setTgConfirmPassword] = useState('');
@@ -145,7 +148,7 @@ export default function Login() {
     fetchContactLinks();
 
     // Auto-fill identifier from login email if available
-    if (email && !tgIdentifier) {
+    if (email && !tgIdentifierRef.current) {
       setTgIdentifier(email);
     }
 

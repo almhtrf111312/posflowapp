@@ -3,7 +3,7 @@ import { forwardRef } from 'react';
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCloudSyncContext } from '@/providers/CloudSyncProvider';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface NetworkStatusIndicatorProps {
   compact?: boolean;

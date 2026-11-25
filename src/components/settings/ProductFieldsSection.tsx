@@ -4,7 +4,7 @@ import { Settings2, Package, RotateCcw, ChevronDown, ChevronUp } from 'lucide-re
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import type { TranslationKey } from '@/lib/i18n';
 import {
   ProductFieldsConfig,

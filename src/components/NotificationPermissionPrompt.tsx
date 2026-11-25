@@ -11,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import { checkNotificationPermissionNative } from '@/lib/native-notifications';
 
 /**

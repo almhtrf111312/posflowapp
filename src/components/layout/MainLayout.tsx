@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-react';
 import { Sidebar, MobileMenuTrigger } from './Sidebar';
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile';
 import { useOrientationChange } from '@/hooks/use-app-lifecycle';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useCloudSyncContext } from '@/providers/CloudSyncProvider';
 import { cn } from '@/lib/utils';
 

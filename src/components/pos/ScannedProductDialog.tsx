@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { getLocalizedUnit } from '@/lib/product-units';
 import { getCurrentStoreType } from '@/lib/store-type-config';
 

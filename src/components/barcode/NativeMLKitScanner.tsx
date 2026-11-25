@@ -269,7 +269,7 @@ export function NativeMLKitScanner({ isOpen, onClose, onScan, onFallback }: Nati
         scanningRef.current = false;
       }
     };
-  }, [isOpen, retryTrigger, safeStopScan]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, retryTrigger, safeStopScan]);
 
   const toggleTorch = async () => {
     if (!hasTorch) return;

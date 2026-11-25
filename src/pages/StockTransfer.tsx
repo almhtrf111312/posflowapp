@@ -27,9 +27,9 @@ import {
   RotateCcw,
   Loader2
 } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useActionGuard } from '@/hooks/use-action-guard';
-import { useWarehouse } from '@/hooks/use-warehouse';
+import { useWarehouse } from '@/hooks/warehouse-context';
 import { 
   StockTransfer as StockTransferType,
   StockTransferItem,

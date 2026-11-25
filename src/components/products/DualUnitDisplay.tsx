@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Boxes } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { getLocalizedUnit } from '@/lib/product-units';
 
 interface DualUnitDisplayProps {

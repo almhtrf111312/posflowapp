@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,10 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
     setLoading(false);
   }, [selected?.id]);
 
-  useEffect(() => { if (open) { setMode(null); void refresh(); } /* eslint-disable-next-line */ }, [open]);
+  // Refresh only when the dialog opens (not whenever the selected supplier changes)
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  useEffect(() => { if (open) { setMode(null); void refreshRef.current(); } }, [open]);
 
   const pick = async (s: SupplierBalance) => {
     setSelected(s); setMode(null);

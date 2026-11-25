@@ -108,7 +108,7 @@ import { checkNotificationPermissionNative, requestNotificationPermissionNative,
 import { cn, formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useLicense } from '@/hooks/use-license';
+import { useLicense } from '@/hooks/license-context';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -121,10 +121,10 @@ import { StorePhoneVerificationDialog } from '@/components/settings/StorePhoneVe
 import { RestoreWarningDialog } from '@/components/settings/RestoreWarningDialog';
 import { TelegramLinkCard } from '@/components/auth/TelegramLinkCard';
 import { toast as sonnerToast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
-import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useAuth } from '@/hooks/auth-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { emitEvent, EVENTS } from '@/lib/events';
 import { saveStoreSettings, fetchStoreSettings } from '@/lib/supabase-store';
@@ -942,9 +942,10 @@ export default function Settings() {
           syncSettings: restoredSync,
           primaryCurrency: merged.primaryCurrency,
           enabledCurrencies: { ...merged.enabledCurrencies },
-          exchangeRates: { ...merged.exchangeRates } as any,
-          currencyNames: { ...merged.currencyNames } as any,
-          currencySymbols: { ...merged.currencySymbols } as any,
+          // Same text form the inputs hold, so the unsaved-changes comparison and Revert see identical data
+          exchangeRates: { ...loadedRates },
+          currencyNames: { ...loadedNames },
+          currencySymbols: { ...loadedSymbols },
           currencyDisplayMode: { ...merged.currencyDisplayMode },
           notificationSettings: { ...(merged.notificationSettings as unknown as typeof notificationSettings) },
           printSettings: { ...(merged.printSettings as typeof printSettings) },
@@ -970,6 +971,8 @@ export default function Settings() {
       isMounted = false;
       clearTimeout(timer);
     };
+    // Mount-only on purpose: one silent cloud sync using the local timestamp at mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Capture snapshot on first render only
@@ -1136,7 +1139,7 @@ export default function Settings() {
       badge: 'v1.0.68',
       keywords: t('settings.tabKeywords.about' as Parameters<typeof t>[0]).split(','),
     },
-  ], [t, isRTL, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationPerm, notificationSettings.masterEnabled, printSettings?.paperSize]);
+  ], [t, isBoss, isOwnerAdmin, primaryCurrency, syncSettings?.lastSync, notificationSettings.masterEnabled, printSettings?.paperSize]);
 
   // Independent tabs that have no saveable settings form state
   const INDEPENDENT_TABS = ['activity', 'archive', 'license', 'contact', 'reset', 'about', 'users', 'partners', 'profile'];
@@ -1393,7 +1396,7 @@ export default function Settings() {
         storeSettings: { ...storeSettings },
         primaryCurrency,
         enabledCurrencies: { ...cleanEnabledCurrencies },
-        exchangeRates: { ...exchangeRates, ...cleanExchangeRates } as any,
+        exchangeRates: { ...exchangeRates },
         currencyNames: { ...cleanCurrencyNames },
         currencySymbols: { ...cleanCurrencySymbols },
         currencyDisplayMode: { ...currencyDisplayMode },
@@ -1785,7 +1788,7 @@ export default function Settings() {
                 setPrimaryCurrency={setPrimaryCurrency}
                 enabledCurrencies={enabledCurrencies}
                 setEnabledCurrencies={setEnabledCurrencies}
-                exchangeRates={exchangeRates as any}
+                exchangeRates={exchangeRates}
                 setExchangeRates={setExchangeRates}
                 currencyNames={currencyNames}
                 setCurrencyNames={setCurrencyNames}
@@ -1858,7 +1861,7 @@ export default function Settings() {
                     setPrimaryCurrency={setPrimaryCurrency}
                     enabledCurrencies={enabledCurrencies}
                     setEnabledCurrencies={setEnabledCurrencies}
-                    exchangeRates={exchangeRates as any}
+                    exchangeRates={exchangeRates}
                     setExchangeRates={setExchangeRates}
                     currencyNames={currencyNames}
                     setCurrencyNames={setCurrencyNames}

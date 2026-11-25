@@ -1,5 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   AlertTriangle, 
@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast as sonnerToast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 
@@ -183,7 +183,10 @@ export function SystemDiagnostics() {
     }
   };
 
-  useEffect(() => { fetchDiagnostics(); }, []);
+  // Load once on mount, using the latest fetchDiagnostics
+  const fetchDiagnosticsRef = useRef(fetchDiagnostics);
+  fetchDiagnosticsRef.current = fetchDiagnostics;
+  useEffect(() => { fetchDiagnosticsRef.current(); }, []);
 
   const handleDeleteUser = async (user: DiagnosticUser) => {
     setIsDeleting(true);

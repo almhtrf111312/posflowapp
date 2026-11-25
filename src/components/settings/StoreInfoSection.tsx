@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LanguageSection } from '@/components/settings/LanguageSection';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { getDefaultFieldsByStoreType, StoreType } from '@/lib/product-fields-config';
 import type { StoreInfo } from '@/lib/store-settings-sync';
 import type { ProductFieldsConfig } from '@/lib/product-fields-config';

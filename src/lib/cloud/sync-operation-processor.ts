@@ -1,12 +1,19 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 import type { QueuedOperation } from '@/lib/sync-queue';
 import { filterTablePayload, getOwnerIdForInsert } from '@/lib/supabase-store';
 import { invalidatePartnersCache } from './partners-cloud';
 import { writeShiftTransactionRow } from './cashbox-cloud';
 
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
+
+type Tables = Database['public']['Tables'];
+type RpcArgs<F extends keyof Database['public']['Functions']> = Database['public']['Functions'][F]['Args'];
+
+// Queued payloads are untyped JSON that filterTablePayload has already reduced to the table's known columns,
+// so these two helpers are the single place where the queue's data is read as a typed table row.
+const asInsert = <T extends keyof Tables>(row: Record<string, unknown>) => row as unknown as Tables[T]['Insert'];
+const asUpdate = <T extends keyof Tables>(row: Record<string, unknown>) => row as unknown as Tables[T]['Update'];
 
 async function assertSuccess(request: PromiseLike<{ error: { message?: string; details?: string; hint?: string; code?: string } | null }>): Promise<boolean> {
   const { error } = await request;
@@ -28,7 +35,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
   switch (operation.type) {
     case 'profit_record': {
       const cleanData = filterTablePayload('profit_records', data);
-      return assertSuccess(sb.from('profit_records').insert(cleanData));
+      return assertSuccess(sb.from('profit_records').insert(asInsert<'profit_records'>(cleanData)));
     }
     case 'profit_reverse':
       return assertSuccess(sb.from('profit_records').update({
@@ -39,7 +46,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       const cleanData = filterTablePayload('cash_shifts', data);
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');
-      return assertSuccess(sb.from('cash_shifts').insert({ ...cleanData, user_id: ownerId }));
+      return assertSuccess(sb.from('cash_shifts').insert(asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId })));
     }
     case 'cash_shift_upsert': {
       const cleanData = filterTablePayload('cash_shifts', data);
@@ -47,7 +54,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       if (!ownerId) throw new Error('No owner id');
       return assertSuccess(
         sb.from('cash_shifts').upsert(
-          { ...cleanData, user_id: ownerId },
+          asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId }),
           { onConflict: 'id' }
         )
       );
@@ -106,13 +113,13 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');
       if (cleanData.id) {
-        return assertSuccess(sb.from('debts').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id', ignoreDuplicates: true }));
+        return assertSuccess(sb.from('debts').upsert(asInsert<'debts'>({ ...cleanData, user_id: ownerId }), { onConflict: 'id', ignoreDuplicates: true }));
       }
-      return assertSuccess(sb.from('debts').insert({ ...cleanData, user_id: ownerId }));
+      return assertSuccess(sb.from('debts').insert(asInsert<'debts'>({ ...cleanData, user_id: ownerId })));
     }
     case 'expense_atomic': {
       const { uniqueKey: _u, ...args } = data;
-      const { error } = await sb.rpc('add_expense_atomic', args);
+      const { error } = await sb.rpc('add_expense_atomic', args as unknown as RpcArgs<'add_expense_atomic'>);
       if (error) throw new Error(error.message);
       return true;
     }
@@ -184,7 +191,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       if (!ownerId) throw new Error('No owner id');
       const cleanData = filterTablePayload('customers', data);
       // Idempotent: same client UUID never inserted twice
-      return assertSuccess(sb.from('customers').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id', ignoreDuplicates: true }));
+      return assertSuccess(sb.from('customers').upsert(asInsert<'customers'>({ ...cleanData, user_id: ownerId }), { onConflict: 'id', ignoreDuplicates: true }));
     }
     case 'customer_delete': {
       if (!data.id) throw new Error('Missing customer id');
@@ -194,7 +201,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       const { id, ...updates } = data;
       if (!id) throw new Error('Missing customer id');
       const cleanUpdates = filterTablePayload('customers', updates);
-      return assertSuccess(sb.from('customers').update(cleanUpdates).eq('id', String(id)));
+      return assertSuccess(sb.from('customers').update(asUpdate<'customers'>(cleanUpdates)).eq('id', String(id)));
     }
     case 'sale': {
       if (data._operation === 'product_add') {
@@ -204,13 +211,13 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         if (!ownerId) throw new Error('No owner id');
         const cleanProduct = filterTablePayload('products', product as Record<string, unknown>);
         return assertSuccess(
-          sb.from('products').upsert({ ...cleanProduct, user_id: ownerId }, { onConflict: 'id' })
+          sb.from('products').upsert(asInsert<'products'>({ ...cleanProduct, user_id: ownerId }), { onConflict: 'id' })
         );
       }
       if (data._operation === 'product_update') {
         if (!data.id || !data.updates || typeof data.updates !== 'object') throw new Error('Invalid product update');
         const cleanUpdates = filterTablePayload('products', data.updates as Record<string, unknown>);
-        return assertSuccess(sb.from('products').update(cleanUpdates).eq('id', String(data.id)));
+        return assertSuccess(sb.from('products').update(asUpdate<'products'>(cleanUpdates)).eq('id', String(data.id)));
       }
       if (data._operation === 'product_delete') {
         if (!data.id) throw new Error('Missing product id for deletion');
@@ -233,13 +240,13 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');
       const cleanData = filterTablePayload('recurring_expenses', data);
-      return assertSuccess(sb.from('recurring_expenses').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id', ignoreDuplicates: true }));
+      return assertSuccess(sb.from('recurring_expenses').upsert(asInsert<'recurring_expenses'>({ ...cleanData, user_id: ownerId }), { onConflict: 'id', ignoreDuplicates: true }));
     }
     case 'recurring_expense_update': {
       const { id, ...updates } = data;
       if (!id) throw new Error('Missing recurring expense id');
       const cleanUpdates = filterTablePayload('recurring_expenses', updates);
-      return assertSuccess(sb.from('recurring_expenses').update(cleanUpdates).eq('id', String(id)));
+      return assertSuccess(sb.from('recurring_expenses').update(asUpdate<'recurring_expenses'>(cleanUpdates)).eq('id', String(id)));
     }
     case 'recurring_expense_delete': {
       if (!data.id) throw new Error('Missing recurring expense id');
@@ -249,13 +256,13 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) throw new Error('No owner id');
       const cleanData = filterTablePayload('categories', data);
-      return assertSuccess(sb.from('categories').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id', ignoreDuplicates: true }));
+      return assertSuccess(sb.from('categories').upsert(asInsert<'categories'>({ ...cleanData, user_id: ownerId }), { onConflict: 'id', ignoreDuplicates: true }));
     }
     case 'category_update': {
       const { id, ...updates } = data;
       if (!id) throw new Error('Missing category id');
       const cleanUpdates = filterTablePayload('categories', updates);
-      return assertSuccess(sb.from('categories').update(cleanUpdates).eq('id', String(id)));
+      return assertSuccess(sb.from('categories').update(asUpdate<'categories'>(cleanUpdates)).eq('id', String(id)));
     }
     case 'category_delete': {
       if (!data.id) throw new Error('Missing category id');
@@ -281,7 +288,7 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       if (!ownerId) throw new Error('No owner id');
       const cleanData = filterTablePayload('maintenance_services', data);
       return assertSuccess(
-        sb.from('maintenance_services').upsert({ ...cleanData, user_id: ownerId }, { onConflict: 'id' })
+        sb.from('maintenance_services').upsert(asInsert<'maintenance_services'>({ ...cleanData, user_id: ownerId }), { onConflict: 'id' })
       );
     }
     case 'maintenance_delete': {

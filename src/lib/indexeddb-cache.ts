@@ -110,7 +110,7 @@ export async function saveProductsToIDB(products: unknown[]): Promise<void> {
       if (nativeDb) {
         await nativeDb.execute('BEGIN TRANSACTION;');
         for (const product of products) {
-          const p = product as any;
+          const p = product as Record<string, unknown>;
           if (!p || !p.id) continue;
 
           const salePrice = Number(p.salePrice ?? p.price ?? p.sale_price) || 0;
@@ -489,7 +489,7 @@ export async function isIDBCacheFresh(maxAgeMs: number = 86400000): Promise<bool
 }
 
 // Compatibility helper aliases for Hybrid Store bridge
-export async function getCachedProducts<T = any>(): Promise<T[]> {
+export async function getCachedProducts<T = unknown>(): Promise<T[]> {
   const result = await loadProductsFromIDB<T>();
   return result?.products || [];
 }

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useUserRole, AppRole } from '@/hooks/use-user-role';
-import { useAuth } from '@/hooks/use-auth';
+import { useUserRole, AppRole } from '@/hooks/user-role-context';
+import { useAuth } from '@/hooks/auth-context';
 import { Loader2 } from 'lucide-react';
 import { isGuestDemoMode } from '@/lib/demo-data';
 

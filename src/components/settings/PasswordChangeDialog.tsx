@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ResponsiveDialog } from '@/components/ui/ResponsiveDialog';
 import { toast as sonnerToast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
-import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useLanguage } from '@/hooks/language-context';
+import { useAuth } from '@/hooks/auth-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PasswordChangeDialogProps {

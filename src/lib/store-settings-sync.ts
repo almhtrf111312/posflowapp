@@ -29,7 +29,7 @@ import {
   setStoredUIScale,
   getStoredUIScale,
 } from '@/lib/ui-scale-config';
-import { applyTheme, applyBlurTheme, applyThemeStyle, normalizeThemeStyle, ThemeMode, ThemeColor, ThemeStyle, getThemeStorageKey, THEME_STORAGE_KEY } from '@/hooks/use-theme';
+import { applyTheme, applyBlurTheme, applyThemeStyle, normalizeThemeStyle, ThemeMode, ThemeColor, ThemeStyle, getThemeStorageKey, THEME_STORAGE_KEY } from '@/hooks/theme-context';
 import { Language, setLanguage, getCurrentLanguage } from '@/lib/i18n';
 import type { ProductFieldsConfig } from '@/lib/product-fields-config';
 import type { CustomField } from '@/lib/custom-fields-config';
@@ -61,6 +61,12 @@ export interface FullThemeSettings {
 }
 
 export type CurrencyDisplayMode = 'symbol' | 'name' | 'both';
+
+/** The sync_settings blob stored in the cloud row: any subset of the unified settings (rates are read leniently). */
+type CloudSyncSettings = Partial<Omit<UnifiedStoreSettings, 'updatedAt' | 'exchangeRates'>> & {
+  updatedAt?: number | string;
+  exchangeRates?: Record<string, unknown>;
+};
 
 export interface UnifiedStoreSettings {
   updatedAt?: number;
@@ -364,7 +370,7 @@ export function mergeStoreSettings(
 
   const cloudSync = (cloud.sync_settings && typeof cloud.sync_settings === 'object'
     ? cloud.sync_settings as Record<string, unknown>
-    : {}) as Record<string, any>;
+    : {}) as CloudSyncSettings;
 
   const cloudUpdatedAt = Number(cloudSync.updatedAt) || (cloud.updated_at ? new Date(cloud.updated_at as string).getTime() : 0);
   const localUpdatedAt = Number(base.updatedAt) || 0;
@@ -460,12 +466,12 @@ export function mergeStoreSettings(
 
   // 6. أسعار الصرف (مع احترام الطابع الزمني الأحدث بين المحلي والسحابي)
   const rawCloudRates = (cloud.exchange_rates && typeof cloud.exchange_rates === 'object')
-    ? (cloud.exchange_rates as Record<string, any>)
+    ? (cloud.exchange_rates as Record<string, unknown>)
     : {};
   const syncCloudRates = (cloudSync.exchangeRates && typeof cloudSync.exchangeRates === 'object')
-    ? (cloudSync.exchangeRates as Record<string, any>)
+    ? (cloudSync.exchangeRates as Record<string, unknown>)
     : {};
-  const cloudRates: Record<string, any> = { ...rawCloudRates, ...syncCloudRates };
+  const cloudRates: Record<string, unknown> = { ...rawCloudRates, ...syncCloudRates };
   const localRates = base.exchangeRates || DEFAULT_UNIFIED_SETTINGS.exchangeRates;
 
   const pickRate = (code: string, fallback: number): number => {
@@ -735,7 +741,23 @@ export function buildCloudStorePayload(
 }
 
 
-export const applyCloudStoreSettings = (cloudSettings: any) => {
+/** Per-platform appearance profile stored inside the cloud sync_settings blob. */
+interface CloudAppearanceProfile {
+  fullTheme?: Partial<FullThemeSettings>;
+  appFont?: string;
+  uiScale?: string;
+  appearanceSettings?: { settingsLayout?: unknown; posViewMode?: unknown; [key: string]: unknown };
+}
+
+interface CloudSettingsForApply {
+  sync_settings?: {
+    reportCurrency?: unknown;
+    moneyInputPrefs?: unknown;
+    appearanceProfiles?: Record<string, CloudAppearanceProfile | undefined>;
+  } | null;
+}
+
+export const applyCloudStoreSettings = (cloudSettings: CloudSettingsForApply | null | undefined) => {
   if (typeof window === 'undefined' || !cloudSettings) return;
   // استعادة عملة عرض التقارير وتفضيلات عملة الإدخال المحفوظة سحابياً
   try {
@@ -816,7 +838,7 @@ export async function pullStoreSettingsWithGuard(): Promise<UnifiedStoreSettings
 
         const cloudSync = (cloudSettings.sync_settings && typeof cloudSettings.sync_settings === 'object'
           ? cloudSettings.sync_settings as Record<string, unknown>
-          : {}) as Record<string, any>;
+          : {}) as CloudSyncSettings;
 
         const cloudUpdatedAt = Number(cloudSync.updatedAt) || (cloudSettings.updated_at ? new Date(cloudSettings.updated_at as string).getTime() : 0);
         const currentLocal = loadUnifiedStoreSettings();

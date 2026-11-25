@@ -1,5 +1,5 @@
-import { themeColors, ThemeColor, ThemeMode } from '@/hooks/use-theme';
-import { useLanguage } from '@/hooks/use-language';
+import { themeColors, ThemeColor, ThemeMode } from '@/hooks/theme-context';
+import { useLanguage } from '@/hooks/language-context';
 import { cn } from '@/lib/utils';
 
 interface ThemeLivePreviewProps {

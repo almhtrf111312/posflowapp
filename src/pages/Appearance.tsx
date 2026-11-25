@@ -4,10 +4,10 @@ import { Palette, Type, Maximize2 } from 'lucide-react';
 import { ThemeSection, PendingTheme } from '@/components/settings/ThemeSection';
 import { UIScaleSelector } from '@/components/settings/UIScaleSelector';
 import { FontSelector } from '@/components/settings/FontSelector';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { cn } from '@/lib/utils';
 import { FloatingSaveBar } from '@/components/ui/FloatingSaveBar';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/theme-context';
 import { useAppFont } from '@/hooks/use-app-font';
 import { useUIScale } from '@/hooks/use-ui-scale';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -15,7 +15,7 @@ import { showSmartToast } from '@/hooks/use-smart-toast';
 import { applyAppFontToDOM, AppFontId } from '@/lib/app-font-config';
 import { applyUIScaleToDOM, UIScaleId } from '@/lib/ui-scale-config';
 import { saveUnifiedStoreSettings } from '@/lib/store-settings-sync';
-import { usePageActivity } from '@/contexts/PageActivityContext';
+import { usePageActivity } from '@/contexts/page-activity-context';
 
 export type AppearanceTab = 'theme' | 'fonts' | 'scale';
 
@@ -85,11 +85,15 @@ export default function Appearance() {
     };
   }, [isActive, previewTheme]);
 
+  // Re-apply the current draft preview when this page becomes active (not on every draft change, the handlers already apply those).
+  const draftRef = useRef({ draftTheme, draftFont, draftScale, previewTheme });
+  draftRef.current = { draftTheme, draftFont, draftScale, previewTheme };
   useEffect(() => {
     if (!isActive || isCommittedRef.current) return;
-    if (draftTheme) previewTheme(draftTheme.mode, draftTheme.color, draftTheme.blur, draftTheme.transparency, draftTheme.style);
-    if (draftFont !== savedFontRef.current) applyAppFontToDOM(draftFont);
-    if (draftScale !== savedScaleRef.current) applyUIScaleToDOM(draftScale);
+    const { draftTheme: theme, draftFont: font, draftScale: scale, previewTheme: preview } = draftRef.current;
+    if (theme) preview(theme.mode, theme.color, theme.blur, theme.transparency, theme.style);
+    if (font !== savedFontRef.current) applyAppFontToDOM(font);
+    if (scale !== savedScaleRef.current) applyUIScaleToDOM(scale);
   }, [isActive]);
 
   // Commit all draft changes (Optimistic UI - 0ms immediate local apply)

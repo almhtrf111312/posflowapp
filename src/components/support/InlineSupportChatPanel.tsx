@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Headphones, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ChatMessages, InputBar } from './SupportChat';

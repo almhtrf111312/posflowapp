@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, Table
 import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
 import { exportGenericToPDF, exportGenericToExcel } from '@/lib/reports/dataset-builder';
 import { toast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useNavigate } from 'react-router-dom';
 import { invoicesLink, clickableClass } from '@/lib/report-links';
 

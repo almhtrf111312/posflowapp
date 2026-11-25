@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Key, Loader2, CheckCircle, AlertCircle, Calendar, Shield } from 'lucide-react';
-import { useLicense } from '@/hooks/use-license';
-import { useLanguage } from '@/hooks/use-language';
+import { useLicense } from '@/hooks/license-context';
+import { useLanguage } from '@/hooks/language-context';
 
 export function ActivationCodeInput() {
   const { activateCode, isTrial, isExpired, expiresAt, remainingDays } = useLicense();

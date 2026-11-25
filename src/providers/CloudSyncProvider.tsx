@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { hasRealConfiguredStore, markSetupComplete } from '@/lib/setup-flag';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import { setCurrentUserId, fetchStoreSettings, saveStoreSettings, saveStoreSettingsDirect } from '@/lib/supabase-store';
 import { refundInvoiceCloud, refundInvoicePartialCloud, loadCachedInvoicesSync } from '@/lib/cloud/invoices-cloud';
 import type { PartialRefundItem } from '@/lib/cloud/invoices-cloud';
@@ -129,6 +129,7 @@ const PAUSE_KEY = 'posflow_sync_paused';
 
 export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   const { user, isLoading: authLoading } = useAuth();
+  const userId = user?.id;
   const [isReady, setIsReady] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
@@ -171,11 +172,11 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
 
   // مفتاح تشفير الحساب: يُضمن عند كل جلسة متصلة (الحساب الجديد يحصل عليه عند التسجيل)
   useEffect(() => {
-    if (!user || isGuestDemoMode() || isAppOffline()) return;
-    ensureAccountEncryptionKey(user.id).then((ok) => {
+    if (!userId || isGuestDemoMode() || isAppOffline()) return;
+    ensureAccountEncryptionKey(userId).then((ok) => {
       if (!ok) console.warn('[CloudSync] Encryption key not ensured yet (migration may be pending)');
     }).catch(() => {});
-  }, [user?.id]);
+  }, [userId]);
 
   // عند انتهاء وضع التجربة المحلي (الاشتراك) تبدأ المزامنة الأولى لكل البيانات المحلية
   useEffect(() => {

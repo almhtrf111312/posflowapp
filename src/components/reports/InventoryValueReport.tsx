@@ -8,7 +8,7 @@ import { loadProductsLocalFirst, refreshProductsFromCloud, type Product } from '
 import { exportGenericToExcel, exportGenericToPDF } from '@/lib/reports/dataset-builder';
 import { formatNumber, formatReportAmount, cn } from '@/lib/utils';
 import { ReportCurrencyBanner } from './ReportCurrencyBanner';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 export interface InventoryValueReportProps {
   dateRange: { from: string; to: string };

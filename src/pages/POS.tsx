@@ -43,7 +43,7 @@ import { getCurrentStoreType, isNoInventoryMode, getVisibleSections } from '@/li
 
 import { playAddToCart } from '@/lib/sound-utils';
 
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 import { loadCurrencySymbols, loadCurrencyNames } from '@/hooks/use-currency';
 
@@ -51,9 +51,9 @@ import { loadNormalizedCurrencySettings } from '@/lib/currencies';
 
 import { getLocalizedUnit } from '@/lib/product-units';
 
-import { useWarehouse } from '@/hooks/use-warehouse';
+import { useWarehouse } from '@/hooks/warehouse-context';
 
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 
 import { App } from '@capacitor/app';
 
@@ -1815,7 +1815,10 @@ export default function POS() {
 
 
 
-  // ✅ Process pending scan once products are loaded
+  // ✅ Process pending scan once products are loaded (always calls the latest handleBarcodeScan)
+
+  const handleBarcodeScanRef = useRef(handleBarcodeScan);
+  handleBarcodeScanRef.current = handleBarcodeScan;
 
   useEffect(() => {
 
@@ -1827,7 +1830,7 @@ export default function POS() {
 
         console.log('[POS] Processing pending scan after load:', pendingScan);
 
-        handleBarcodeScan(pendingScan);
+        handleBarcodeScanRef.current(pendingScan);
 
         setPendingScan(null); // Clear from state
 
@@ -1839,7 +1842,7 @@ export default function POS() {
 
         console.log('[POS] Processing pending scan (no local products):', pendingScan);
 
-        handleBarcodeScan(pendingScan);
+        handleBarcodeScanRef.current(pendingScan);
 
         setPendingScan(null); // Clear from state
 
@@ -1849,7 +1852,6 @@ export default function POS() {
 
     }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
 
   }, [pendingScan, isLoadingProducts, products.length]);
 

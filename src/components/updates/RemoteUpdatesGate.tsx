@@ -1,8 +1,8 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 import { useEffect, useState, useCallback } from 'react';
 import { Download, X, Lock, AlertTriangle, Megaphone, Send } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useAuth } from '@/hooks/auth-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { Button } from '@/components/ui/button';
 import { sendLocalNotification } from '@/lib/native-notifications';
 import {

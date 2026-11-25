@@ -461,9 +461,23 @@ export const exportInvoicesToExcel = async (
   });
 };
 
+/** The product fields the Excel products export reads. */
+export interface ExportableProduct {
+  id?: string;
+  barcode?: string;
+  name?: string;
+  category?: string;
+  unit?: string;
+  costPrice: number;
+  salePrice: number;
+  wholesalePrice?: number;
+  quantity: number;
+  minStockLevel?: number;
+}
+
 // Export products to Excel with full details
 export const exportProductsToExcel = async (
-  products: Array<any>,
+  products: Array<ExportableProduct>,
   customSummary?: { label: string; value: string | number }[]
 ): Promise<void> => {
   const columns: ExcelColumn[] = [

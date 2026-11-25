@@ -7,14 +7,14 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps | rpc · tables |
 |---|---|---|---|---|
-| `AppLockOverlay.tsx` | App PIN lock overlay. | AppLockOverlay | hooks/use-app-lock, hooks/use-auth, hooks/use-language, ui/* | — |
+| `AppLockOverlay.tsx` | App PIN lock overlay. | AppLockOverlay | hooks/app-lock-context, hooks/auth-context, hooks/language-context, ui/* | — |
 | `DeviceBanGate.tsx` | Gate showing only the ban screen for banned devices. | DeviceBanGate, default | lib/device-ban, ui/* | tbl: app_settings |
-| `DeviceBlockedScreen.tsx` | Device blocked screen. | DeviceBlockedScreen | components/license/ActivationScreen, components/settings/ContactLinksSection, hooks/use-auth, hooks/use-language, ui/* | — |
-| `GoogleSignInButton.tsx` | Google sign-in button (removable, standalone). | GoogleSignInButton, default | hooks/use-auth, lib/auth/google-sign-in, lib/sonner-bridge, ui/* | — |
-| `LanguageQuickSelector.tsx` | Quick language selector. | LanguageQuickSelector | hooks/use-language, lib/i18n, ui/* | — |
-| `MandatoryPinSetupModal.tsx` | Mandatory PIN setup modal. | MandatoryPinSetupModal | hooks/use-app-lock, hooks/use-auth, hooks/use-language, lib/sonner-bridge, ui/* | — |
-| `ProtectedRoute.tsx` | Route guard requiring a signed-in user. | ProtectedRoute | hooks/use-auth, lib/demo-data, lib/sonner-bridge | — |
-| `RoleGuard.tsx` | Role-based guard component and HOC. | RoleGuard | hooks/use-auth, hooks/use-user-role, lib/demo-data | — |
-| `TelegramLinkCard.tsx` | Telegram link status card for the account. | TelegramLinkCard | hooks/use-auth, hooks/use-language, lib/auth/phone-claim, ui/* | — |
-| `TelegramLinkPrompt.tsx` | Telegram link prompt shown after sign-up. | TelegramLinkPrompt, default | hooks/use-auth, hooks/use-language, lib/auth/phone-claim, ui/* | — |
+| `DeviceBlockedScreen.tsx` | Device blocked screen. | DeviceBlockedScreen | components/license/ActivationScreen, components/settings/ContactLinksSection, hooks/auth-context, hooks/language-context, ui/* | — |
+| `GoogleSignInButton.tsx` | Google sign-in button (removable, standalone). | GoogleSignInButton, default | hooks/auth-context, lib/auth/google-sign-in, lib/sonner-bridge, ui/* | — |
+| `LanguageQuickSelector.tsx` | Quick language selector. | LanguageQuickSelector | hooks/language-context, lib/i18n, ui/* | — |
+| `MandatoryPinSetupModal.tsx` | Mandatory PIN setup modal. | MandatoryPinSetupModal | hooks/app-lock-context, hooks/auth-context, hooks/language-context, lib/sonner-bridge, ui/* | — |
+| `ProtectedRoute.tsx` | Route guard requiring a signed-in user. | ProtectedRoute | hooks/auth-context, lib/demo-data, lib/sonner-bridge | — |
+| `RoleGuard.tsx` | Role-based guard component and HOC. | RoleGuard | hooks/auth-context, hooks/user-role-context, lib/demo-data | — |
+| `TelegramLinkCard.tsx` | Telegram link status card for the account. | TelegramLinkCard | hooks/auth-context, hooks/language-context, lib/auth/phone-claim, ui/* | — |
+| `TelegramLinkPrompt.tsx` | Telegram link prompt shown after sign-up. | TelegramLinkPrompt, default | hooks/auth-context, hooks/language-context, lib/auth/phone-claim, ui/* | — |
 | `with-role-guard.tsx` | Higher-order role guard wrapper for pages. | withRoleGuard | RoleGuard | — |

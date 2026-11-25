@@ -7,7 +7,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps |
 |---|---|---|---|
-| `PurchaseInvoiceViewDialog.tsx` | Purchase invoice view dialog. | PurchaseInvoiceViewDialog | PurchaseReturnDialog, hooks/use-language, hooks/use-money, hooks/use-user-role, lib/cloud/purchase-invoices-cloud, lib/events, lib/native-share, lib/sonner-bridge (+1) |
+| `PurchaseInvoiceViewDialog.tsx` | Purchase invoice view dialog. | PurchaseInvoiceViewDialog | PurchaseReturnDialog, hooks/language-context, hooks/use-money, hooks/user-role-context, lib/cloud/purchase-invoices-cloud, lib/events, lib/native-share, lib/sonner-bridge (+1) |
 | `PurchaseInvoicesListTab.tsx` | Purchase invoices list tab. | PurchaseInvoicesListTab | components/products/PurchaseInvoiceDialog, PurchaseInvoiceViewDialog, lib/cloud/purchase-invoices-cloud, lib/events, ui/* |
 | `PurchaseReturnDialog.tsx` | Purchase return dialog. | PurchaseReturnDialog | lib/cloud/suppliers-cloud, lib/serials-store, lib/sonner-bridge, lib/sync-queue, ui/* |
 | `SuppliersDialog.tsx` | Suppliers management dialog. | SuppliersDialog | lib/cashbox-store, lib/cloud/suppliers-cloud, lib/money-engine, lib/sonner-bridge, lib/sync-queue, ui/* |

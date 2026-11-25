@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getDeviceId, getStableDeviceId } from '@/lib/device-fingerprint';
 import { isAppOffline } from '@/hooks/use-network-status';
-import { useAuth } from './use-auth';
+import { useAuth } from './auth-context';
 import { secureSet, secureGet, secureRemove, getDeviceKey } from '@/lib/secure-storage';
 
 // Encrypted storage key — data is XOR-encrypted with device key via secure-storage

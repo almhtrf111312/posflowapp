@@ -1219,15 +1219,29 @@ export function detectCurrencyCodeFromMeta(
 
 
 
+/** The parts of the persisted settings JSON that currency normalization reads (extra keys are ignored). */
+export interface RawCurrencySettings {
+  enabledCurrencies?: Record<string, unknown>;
+  currencyNames?: Record<string, string>;
+  currencySymbols?: Record<string, string>;
+  exchangeRates?: Record<string, number | string>;
+  primaryCurrency?: string;
+  slot1Code?: string;
+  slot2Code?: string;
+  syncSettings?: { slot1Code?: string; slot2Code?: string };
+}
+
+
+
 /**
 
  * تطبيع إعدادات العملة وتحرير هوية العملات من فرض TRY و SYP
 
  */
 
-export function normalizeCurrencySettings(rawSettings?: any): NormalizedCurrencySettings {
+export function normalizeCurrencySettings(rawSettings?: RawCurrencySettings | string): NormalizedCurrencySettings {
 
-  let settings = rawSettings;
+  let settings = rawSettings as RawCurrencySettings | undefined;
 
   if (!settings && typeof window !== 'undefined') {
 

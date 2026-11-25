@@ -6,8 +6,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Send, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { fetchTelegramLinked, getTelegramBotLink } from '@/lib/auth/phone-claim';
 
 const DISMISS_KEY = 'posflow_telegram_prompt_dismissed';

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Sun, Moon, Palette, Check, Blend, Sparkles, Zap, Cpu } from 'lucide-react';
 import { usePerformanceMode, PerformanceModePref } from '@/lib/performance-mode';
-import { useTheme, themeColors, ThemeColor, ThemeMode, ThemeStyle } from '@/hooks/use-theme';
-import { useLanguage } from '@/hooks/use-language';
+import { useTheme, themeColors, ThemeColor, ThemeMode, ThemeStyle } from '@/hooks/theme-context';
+import { useLanguage } from '@/hooks/language-context';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { ThemeLivePreview } from './ThemeLivePreview';

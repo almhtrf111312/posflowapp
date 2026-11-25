@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Maximize2 } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import {
   UIScaleId,
   UI_SCALE_OPTIONS,

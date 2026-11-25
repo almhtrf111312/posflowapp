@@ -53,8 +53,8 @@ import { getNextInvoiceNumber } from '@/lib/invoices-store';
 import { addActivityLog } from '@/lib/activity-log';
 import { addGrossProfit } from '@/lib/profits-store';
 import { distributeDetailedProfitCloud } from '@/lib/cloud/partners-cloud';
-import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useAuth } from '@/hooks/auth-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { printHTML, printInvoice, PrintableInvoice, getStoreSettings, getPrintSettings } from '@/lib/native-print';
 import { isNativeAndroid } from '@/lib/printer/posflow-printer';
 import { getStoredPrinterConfig } from '@/lib/printer/printer-config';
@@ -62,13 +62,13 @@ import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { playSaleComplete, playDebtRecorded } from '@/lib/sound-utils';
 import { addSalesToShift, addDigitalSaleToShift, getActiveShift } from '@/lib/cashbox-store';
 import { recordActivity } from '@/lib/auto-backup';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { getLocalizedUnit } from '@/lib/product-units';
 import {
   loadCustomersCloud,
   addCustomerCloud,
 } from '@/lib/cloud/customers-cloud';
-import { useWarehouse } from '@/hooks/use-warehouse';
+import { useWarehouse } from '@/hooks/warehouse-context';
 import { BackgroundSyncIndicator } from './BackgroundSyncIndicator';
 import { useSyncState } from './use-sync-state';
 import { addUniqueOperation } from '@/lib/sync-queue';
@@ -369,8 +369,11 @@ export function CartPanel({
   }, []);
 
   // ✅ مسح بيانات آخر عملية بيع عند إضافة منتج جديد
+  // (يُشغَّل عند تغيّر عدد عناصر السلة فقط، ويقرأ آخر عملية بيع الحالية)
+  const lastSaleRef = useRef(lastSale);
+  lastSaleRef.current = lastSale;
   useEffect(() => {
-    if (cart.length > 0 && lastSale) {
+    if (cart.length > 0 && lastSaleRef.current) {
       setLastSale(null);
     }
   }, [cart.length]);
@@ -2076,9 +2079,9 @@ export function CartPanel({
         {showMaintenance ? (
           <div className="flex-1 overflow-y-auto p-2 sm:p-3">
             <MaintenancePanel
-              currencies={currencies as any}
-              selectedCurrency={selectedCurrency as any}
-              onCurrencyChange={onCurrencyChange as any}
+              currencies={currencies}
+              selectedCurrency={selectedCurrency}
+              onCurrencyChange={onCurrencyChange}
               onClose={() => setShowMaintenance(false)}
               isMobile={isMobile}
               fullWidth={true}

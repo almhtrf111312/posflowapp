@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { loadWarehousesCloud, loadWarehouseStockCloud, loadStockTransfersCloud, getStockTransferItemsCloud } from '@/lib/cloud/warehouses-cloud';
 import { loadProductsCloud, Product } from '@/lib/cloud/products-cloud';
 import { supabase } from '@/integrations/supabase/client';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/sonner-bridge';
 

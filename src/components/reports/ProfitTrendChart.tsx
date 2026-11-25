@@ -5,7 +5,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDailyProfitStats } from '@/lib/profits-store';
 import { formatReportAmount, cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export type ProfitTrendDisplayMode = 'chart' | 'table';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Type, Check } from 'lucide-react';
 import { useAppFont } from '@/hooks/use-app-font';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { AppFontId } from '@/lib/app-font-config';
 import { toast as showToast } from '@/lib/sonner-bridge';
 import { cn } from '@/lib/utils';

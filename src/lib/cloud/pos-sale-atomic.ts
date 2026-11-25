@@ -1,6 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { emitEvent, EVENTS } from '@/lib/events';
 import { getSelectedSerials, clearSelectedSerials, confirmSerialsSynced } from '@/lib/serials-store';
@@ -15,9 +14,7 @@ import { markSaleAsSyncedInNativeSQLite } from '@/lib/db/sales-storage-bridge';
 
 
 
-type LooseSupabase = SupabaseClient<any, 'public', any>;
-
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 
 
 
@@ -417,7 +414,7 @@ export async function processPosSaleAtomic(
       import('@/lib/activity-log').then(({ logActivity }) => logActivity(
         'sale_total_mismatch',
         `فاتورة ${row.invoice_number}: إجمالي الجهاز ${round8(bundle.total)} والخادم ${serverTotal}`,
-        { invoiceNumber: row.invoice_number, deviceTotal: round8(bundle.total), serverTotal, taxRate: row.tax_rate ?? null },
+        { invoiceNumber: row.invoice_number, deviceTotal: round8(bundle.total), serverTotal, taxRate: (row as { tax_rate?: number | null }).tax_rate ?? null },
       )).catch(() => {});
     }
 

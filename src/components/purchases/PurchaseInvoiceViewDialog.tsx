@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogBody,
@@ -56,8 +56,8 @@ import {
   PurchaseInvoiceItem,
   EditPurchaseInvoiceLine
 } from '@/lib/cloud/purchase-invoices-cloud';
-import { useUserRole } from '@/hooks/use-user-role';
-import { useLanguage } from '@/hooks/use-language';
+import { useUserRole } from '@/hooks/user-role-context';
+import { useLanguage } from '@/hooks/language-context';
 import { formatNumber, formatCurrency } from '@/lib/utils';
 import { useMoney } from '@/hooks/use-money';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
@@ -138,9 +138,13 @@ export function PurchaseInvoiceViewDialog({
       });
   };
 
+  // Reload only when the dialog opens or the invoice changes, using the latest fetchInvoice
+  const fetchInvoiceRef = useRef(fetchInvoice);
+  fetchInvoiceRef.current = fetchInvoice;
+
   useEffect(() => {
     if (open && invoiceId) {
-      fetchInvoice(invoiceId);
+      fetchInvoiceRef.current(invoiceId);
     } else {
       setInvoice(null);
       setItems([]);

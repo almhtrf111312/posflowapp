@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, CheckCircle, Phone, FileX, Loader2 } from 'lucide
 import { cn, formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { loadDebtsCloud } from '@/lib/cloud/debts-cloud';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { EVENTS } from '@/lib/events';
 
 interface DebtAlert {

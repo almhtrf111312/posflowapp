@@ -21,8 +21,8 @@ import {
   MapPin,
   Phone
 } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
-import { useWarehouse } from '@/hooks/use-warehouse';
+import { useLanguage } from '@/hooks/language-context';
+import { useWarehouse } from '@/hooks/warehouse-context';
 import { 
   Warehouse as WarehouseType,
   addWarehouseCloud,

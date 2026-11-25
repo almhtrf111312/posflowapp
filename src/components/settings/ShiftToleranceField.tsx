@@ -3,8 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/sonner-bridge';
 import { loadShiftVarianceTolerance, saveShiftVarianceTolerance } from '@/lib/cloud/cashbox-cloud';
-import { useUserRole } from '@/hooks/use-user-role';
-import { useLanguage } from '@/hooks/use-language';
+import { useUserRole } from '@/hooks/user-role-context';
+import { useLanguage } from '@/hooks/language-context';
 
 /** Shift closing variance tolerance (in USD) — read by server on shift close */
 export function ShiftToleranceField() {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import { addActivityLog } from '@/lib/activity-log';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { normalizePhoneNumber } from '@/lib/phone-utils';

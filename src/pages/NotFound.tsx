@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/hooks/use-language";
+import { useLanguage } from "@/hooks/language-context";
 
 const NotFound = () => {
   const location = useLocation();

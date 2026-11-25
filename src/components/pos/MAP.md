@@ -7,15 +7,15 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps |
 |---|---|---|---|
-| `BackgroundSyncIndicator.tsx` | Background sync state indicator and hook. | BackgroundSyncIndicator · 1 types | hooks/use-language, hooks/use-network-status, lib/events, lib/notification-events-config, lib/sonner-bridge, lib/subscription-lock, lib/sync-queue, providers/CloudSyncProvider (+1) |
-| `CartPanel.tsx` | POS cart panel: items, discounts, checkout, held carts. | CartPanel · 1 types | BackgroundSyncIndicator, MaintenancePanel, SerialPickerDialog, use-sync-state, components/settings/surplus-profit-sync, hooks/use-auth, hooks/use-language, hooks/use-network-status (+33) |
-| `KeyboardShortcutsHelp.tsx` | POS keyboard shortcuts help. | KeyboardShortcutsHelp | hooks/use-keyboard-shortcuts, hooks/use-language, ui/* |
-| `LoanQuickDialog.tsx` | Quick library loan dialog. | LoanQuickDialog | hooks/use-language, hooks/use-smart-toast, lib/cloud/library-cloud, lib/sonner-bridge, ui/* |
-| `MaintenancePanel.tsx` | POS maintenance (repair) job panel. | MaintenancePanel | hooks/use-auth, hooks/use-language, lib/activity-log, lib/cloud/customers-cloud, lib/cloud/debts-cloud, lib/cloud/invoices-cloud, lib/cloud/partners-cloud, lib/currencies (+7) |
-| `POSHeader.tsx` | POS screen header and search. | POSHeader | KeyboardShortcutsHelp, hooks/use-language, hooks/use-mobile, hooks/use-support-unread, hooks/use-user-role, ui/* |
-| `ProductDetailsDialog.tsx` | Product details dialog. | ProductDetailsDialog · 1 types | components/products/ProductImage, hooks/use-language, hooks/use-user-role, lib/cloud/warehouses-cloud, lib/product-units, lib/sonner-bridge, ui/* |
-| `ProductGrid.tsx` | POS product grid (incrementally rendered). | ProductGrid | components/BarcodeScanner, ProductDetailsDialog, components/products/DualUnitDisplay, components/products/ProductImage, hooks/use-language, lib/demo-data, lib/money-engine, lib/serials-store (+4) |
-| `ScannedProductDialog.tsx` | Dialog for a scanned product. | ScannedProductDialog | hooks/use-language, lib/product-units, lib/store-type-config, ui/* |
+| `BackgroundSyncIndicator.tsx` | Background sync state indicator and hook. | BackgroundSyncIndicator · 1 types | hooks/language-context, hooks/use-network-status, lib/events, lib/notification-events-config, lib/sonner-bridge, lib/subscription-lock, lib/sync-queue, providers/CloudSyncProvider (+1) |
+| `CartPanel.tsx` | POS cart panel: items, discounts, checkout, held carts. | CartPanel · 1 types | BackgroundSyncIndicator, MaintenancePanel, SerialPickerDialog, use-sync-state, components/settings/surplus-profit-sync, hooks/auth-context, hooks/language-context, hooks/use-network-status (+33) |
+| `KeyboardShortcutsHelp.tsx` | POS keyboard shortcuts help. | KeyboardShortcutsHelp | hooks/language-context, hooks/use-keyboard-shortcuts, ui/* |
+| `LoanQuickDialog.tsx` | Quick library loan dialog. | LoanQuickDialog | hooks/language-context, hooks/use-smart-toast, lib/cloud/library-cloud, lib/sonner-bridge, ui/* |
+| `MaintenancePanel.tsx` | POS maintenance (repair) job panel. | MaintenancePanel | hooks/auth-context, hooks/language-context, lib/activity-log, lib/cloud/customers-cloud, lib/cloud/debts-cloud, lib/cloud/invoices-cloud, lib/cloud/partners-cloud, lib/currencies (+7) |
+| `POSHeader.tsx` | POS screen header and search. | POSHeader | KeyboardShortcutsHelp, hooks/language-context, hooks/use-mobile, hooks/use-support-unread, hooks/user-role-context, ui/* |
+| `ProductDetailsDialog.tsx` | Product details dialog. | ProductDetailsDialog · 1 types | components/products/ProductImage, hooks/language-context, hooks/user-role-context, lib/cloud/warehouses-cloud, lib/product-units, lib/sonner-bridge, ui/* |
+| `ProductGrid.tsx` | POS product grid (incrementally rendered). | ProductGrid | components/BarcodeScanner, ProductDetailsDialog, components/products/DualUnitDisplay, components/products/ProductImage, hooks/language-context, lib/demo-data, lib/money-engine, lib/serials-store (+4) |
+| `ScannedProductDialog.tsx` | Dialog for a scanned product. | ScannedProductDialog | hooks/language-context, lib/product-units, lib/store-type-config, ui/* |
 | `SerialPickerDialog.tsx` | Serial-number picker for a sale line. | SerialPickerDialog · 1 types | lib/serials-store, ui/* |
-| `VariantPickerDialog.tsx` | Product variant picker. | VariantPickerDialog | hooks/use-language, lib/product-units, ui/* |
+| `VariantPickerDialog.tsx` | Product variant picker. | VariantPickerDialog | hooks/language-context, lib/product-units, ui/* |
 | `use-sync-state.ts` | Sync state hook used by the POS cart panel. | useSyncState | lib/notification-events-config, lib/sonner-bridge, lib/subscription-lock, lib/sync-queue |

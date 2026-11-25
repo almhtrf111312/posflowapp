@@ -17,9 +17,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { useLanguage } from '@/hooks/use-language';
-import { useNotifications, type Notification } from '@/hooks/use-notifications';
-import { useAuth } from '@/hooks/use-auth';
+import { useLanguage } from '@/hooks/language-context';
+import { useNotifications, type Notification } from '@/hooks/notifications-context';
+import { useAuth } from '@/hooks/auth-context';
 import { toast } from '@/lib/sonner-bridge';
 import {
   fetchActiveBroadcasts,

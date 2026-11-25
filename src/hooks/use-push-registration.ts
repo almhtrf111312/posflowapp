@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 
 interface PosFlowPushPlugin {
   getFcmToken(): Promise<{ token: string }>;

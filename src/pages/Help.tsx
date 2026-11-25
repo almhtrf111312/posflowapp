@@ -6,8 +6,8 @@ import {
   BarChart3, Receipt, Wrench, HelpCircle, Sparkles, Search
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { useLanguage } from '@/hooks/use-language';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useLanguage } from '@/hooks/language-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
-import { useLicense } from '@/hooks/use-license';
+import { useAuth } from '@/hooks/auth-context';
+import { useLicense } from '@/hooks/license-context';
 import { loadProductsCloud } from '@/lib/cloud/products-cloud';
 
 export interface ProductLimitStatus {

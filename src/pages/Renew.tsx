@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { toast as showToast } from '@/lib/sonner-bridge';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { compressImage } from '@/lib/image-upload';
 import { sendBossTelegramChatAlert } from '@/lib/telegram-alerts';
 
@@ -134,8 +134,12 @@ export default function RenewPage() {
     messageText: '',
   });
 
+  // Reload when the user changes, always using the latest loadData
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
   useEffect(() => {
-    loadData();
+    loadDataRef.current();
   }, [user]);
 
   async function loadData() {

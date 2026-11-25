@@ -11,7 +11,7 @@ import { loadInvoicesCloud, Invoice } from '@/lib/cloud/invoices-cloud';
 import { loadReversedExpensesCloud, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadPurchaseInvoicesCloud, PurchaseInvoice } from '@/lib/cloud/purchase-invoices-cloud';
 import { supabase } from '@/integrations/supabase/client';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { formatNumber } from '@/lib/utils';
 
 type GeneralSubTab = 'invoices' | 'debts' | 'products' | 'expenses' | 'purchases' | 'deleted';

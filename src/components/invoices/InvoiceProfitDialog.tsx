@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle2, Package, Percent, TrendingUp } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useLanguage } from '@/hooks/language-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { fromUsd, getCurrencyDef, roundForCurrency } from '@/lib/money-engine';
 import { calculateInvoiceProfitMetrics } from '@/lib/invoice-profit';
 import type { Invoice } from '@/lib/cloud/invoices-cloud';

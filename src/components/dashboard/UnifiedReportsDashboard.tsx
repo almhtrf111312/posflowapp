@@ -41,15 +41,33 @@ import {
   CheckCircle2 as IconCheckCircle2,
 } from 'lucide-react';
 import { formatCurrency, cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { exportToExcel } from '@/lib/excel-export';
 import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
 
+/** The dashboard figures this view reads (the page may supply more). */
+interface UnifiedDashboardStats {
+  todaySales: number;
+  weekSales?: number;
+  monthSales?: number;
+  todayCount?: number;
+  todayProfit?: number;
+  todayCOGS?: number;
+  todayExpenses?: number;
+  netProfit?: number;
+  profitMargin?: number;
+  totalDebtAmount?: number;
+  debtCustomers?: number;
+  inventoryValue?: number;
+  totalPurchases?: number;
+  weekDailySales?: number[];
+}
+
 interface UnifiedReportsDashboardProps {
-  stats: any;
+  stats: UnifiedDashboardStats;
   isLoading: boolean;
   onRefresh: () => void;
 }

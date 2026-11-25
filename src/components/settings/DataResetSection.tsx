@@ -16,11 +16,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import { clearAllDataCompletely } from '@/lib/clear-demo-data';
 import { toast } from '@/lib/sonner-bridge';
 import { t } from '@/lib/i18n';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 // KD-08: the owner waits this long after entering the password before the final button is enabled
 const RESET_COUNTDOWN_SECONDS = 10;

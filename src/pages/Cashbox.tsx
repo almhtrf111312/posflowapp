@@ -1,5 +1,5 @@
 // Cash Box (الصندوق) Page - Shift Management & Reconciliation
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Wallet, Clock, Play, Square, AlertTriangle, CheckCircle,
   TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight,
@@ -14,8 +14,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/lib/sonner-bridge';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { useMoney } from '@/hooks/use-money';
 import { addActivityLog } from '@/lib/activity-log';
 import { formatNumber, formatCurrency, formatDateTime, formatDate, formatTime } from '@/lib/utils';
@@ -90,11 +90,15 @@ export default function Cashbox() {
     }).catch(() => {});
   };
 
+  // Always call the latest loadData (it closes over the current language) without re-subscribing every render
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
   useEffect(() => {
-    loadData();
+    loadDataRef.current();
 
     // Listen for updates
-    const handleUpdate = () => loadData();
+    const handleUpdate = () => loadDataRef.current();
     window.addEventListener(EVENTS.CASHBOX_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.SHIFTS_UPDATED, handleUpdate);
     window.addEventListener(EVENTS.INVOICES_UPDATED, handleUpdate);
@@ -116,6 +120,8 @@ export default function Cashbox() {
   }, [activeShift]);
 
   // Stats
+  // `shifts` is an intentional refresh trigger: getShiftStats() reads the shifts store directly.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const stats = useMemo(() => getShiftStats(), [shifts]);
 
   // Handlers

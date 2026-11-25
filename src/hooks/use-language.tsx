@@ -1,43 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import {
-  Language,
-  getCurrentLanguage,
-  setLanguage as setLangStorage,
-  t as translate,
-  TranslationKey,
-  initializeLanguage,
-  languages,
-  LanguageInfo
-} from '@/lib/i18n';
+import { useState, useEffect, ReactNode, useCallback } from 'react';
+import { Language, getCurrentLanguage, setLanguage as setLangStorage, t as translate, TranslationKey, initializeLanguage, languages } from '@/lib/i18n';
 import { getSystemLanguage, mapSystemLanguage, setupSystemLanguageListener } from '@/lib/system-language';
 import { getTerminology, getCurrentStoreType, TerminologyKey } from '@/lib/store-type-config';
 import { subscribeToEvent, EVENTS } from '@/lib/events';
-
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: (key: TranslationKey, lang?: Language) => string;
-  tDynamic: (key: TerminologyKey) => string;
-  storeType: string;
-  languages: LanguageInfo[];
-  direction: 'ltr' | 'rtl';
-  isRTL: boolean;
-}
-
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
-
-// RTL languages from the supported list
-const RTL_LANGUAGES: Language[] = ['ar', 'fa', 'ku'];
-
-// Synchronous DOM setup on module evaluation to guarantee immediate RTL layout on first launch
-if (typeof document !== 'undefined') {
-  const initLang = getCurrentLanguage();
-  const isRtl = RTL_LANGUAGES.includes(initLang);
-  document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
-  document.documentElement.lang = initLang;
-  document.documentElement.classList.remove('rtl', 'ltr');
-  document.documentElement.classList.add(isRtl ? 'rtl' : 'ltr');
-}
+import { LanguageContext, RTL_LANGUAGES } from '@/hooks/language-context';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => getCurrentLanguage());
@@ -170,24 +136,4 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       {children}
     </LanguageContext.Provider>
   );
-}
-
-export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (context === undefined) {
-    // Fallback for components rendered outside LanguageProvider
-    // (e.g. during hot-reload or provider hierarchy issues)
-    const fallbackT = (key: string) => key;
-    return {
-      language: getCurrentLanguage() as Language,
-      setLanguage: (_lang: Language) => {},
-      t: fallbackT as (key: TranslationKey) => string,
-      tDynamic: (key: TerminologyKey) => key,
-      storeType: getCurrentStoreType(),
-      languages,
-      direction: 'rtl' as const,
-      isRTL: true,
-    };
-  }
-  return context;
 }

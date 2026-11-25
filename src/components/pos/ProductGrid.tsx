@@ -10,7 +10,7 @@ import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { DualUnitDisplayCompact } from '@/components/products/DualUnitDisplay';
 import { ProductDetailsDialog } from '@/components/pos/ProductDetailsDialog';
 import { toast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { saveUnifiedStoreSettings } from '@/lib/store-settings-sync';
 import { isGuestDemoMode } from '@/lib/demo-data';
 import { getCurrentStoreType, isNoInventoryMode } from '@/lib/store-type-config';

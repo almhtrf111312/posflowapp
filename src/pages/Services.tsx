@@ -46,9 +46,9 @@ import {
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/lib/sonner-bridge';
 import { EVENTS, emitEvent } from '@/lib/events';
-import { useLanguage } from '@/hooks/use-language';
-import { useAuth } from '@/hooks/use-auth';
-import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
+import { useLanguage } from '@/hooks/language-context';
+import { useAuth } from '@/hooks/auth-context';
+import { useDeferWhileHidden } from '@/contexts/page-activity-context';
 
 interface RepairRequest {
   id: string;
@@ -302,7 +302,7 @@ export default function Services() {
     return () => {
       window.removeEventListener(EVENTS.MAINTENANCE_UPDATED, handleMaintenanceUpdate);
     };
-  }, []);
+  }, [deferWhileHidden]);
 
   // Dialogs & Views
   const [activeView, setActiveView] = useState<'list' | 'add' | 'edit'>('list');

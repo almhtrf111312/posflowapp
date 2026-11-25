@@ -3,7 +3,7 @@ import { BookOpen, Users, AlertTriangle, Clock, DollarSign, TrendingUp } from 'l
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { loadLoansCloud, loadMembersCloud, BookLoan, LibraryMember } from '@/lib/cloud/library-cloud';
 import { formatNumber } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { toLocalDateString, isDateInRange, getTodayLocal } from '@/lib/date-utils';
 
 interface LibraryReportProps {

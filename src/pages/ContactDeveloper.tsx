@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle, Headphones, AlertCircle, ArrowLeft, ArrowRight, Shield } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
-import { useLicense } from '@/hooks/use-license';
+import { useLanguage } from '@/hooks/language-context';
+import { useLicense } from '@/hooks/license-context';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

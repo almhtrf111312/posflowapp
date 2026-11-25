@@ -3,7 +3,7 @@ import { FileX2 } from 'lucide-react';
 import { formatReportAmount } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toLocalDateString } from '@/lib/date-utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import {
   loadDebtWriteoffsCloud,
   loadDebtWriteoffsLocally,

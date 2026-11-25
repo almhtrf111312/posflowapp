@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Globe, Check, Save } from 'lucide-react';

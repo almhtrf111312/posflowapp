@@ -1,4 +1,4 @@
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Language } from '@/lib/i18n';
 import { Globe } from 'lucide-react';

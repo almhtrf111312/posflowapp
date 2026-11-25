@@ -1,9 +1,9 @@
-import React, { memo, ReactNode, useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { memo, ReactNode, useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { FeatureErrorBoundary } from '@/components/debug/FeatureErrorBoundary';
 import { PageActivityProvider } from '@/contexts/PageActivityContext';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import { Loader2 } from 'lucide-react';
 import { performanceMetrics } from '@/lib/performance-metrics';
 import { getBaseTabPath } from '@/components/layout/tab-paths';
@@ -112,10 +112,12 @@ export const NativeTabHost = memo(() => {
     });
   }, [activeTab]);
 
-  // إعادة ضبط التبويبات المركبة فور تغيير المستخدم لعزل الحسابات
+  // إعادة ضبط التبويبات المركبة فور تغيير المستخدم لعزل الحسابات (يقرأ التبويب النشط الحالي دون أن يُعاد التشغيل عند كل تبديل تبويب)
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
   useEffect(() => {
-    if (activeTab) {
-      setTabLRU([activeTab]);
+    if (activeTabRef.current) {
+      setTabLRU([activeTabRef.current]);
     } else {
       setTabLRU([]);
     }

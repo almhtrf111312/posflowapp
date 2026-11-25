@@ -12,9 +12,7 @@ import {
   isCashierUser
 } from '../supabase-store';
 import { supabase } from '@/integrations/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
-// Kept loose on purpose: typing the client strictly exposes ~23 existing mismatches in the sales/money paths (review item).
-type LooseSupabase = SupabaseClient<any, 'public', any>;
+import type { Database } from '@/integrations/supabase/types';
 
 /** One line of a queued sale bundle, as the offline replay reads it. */
 type QueuedItem = { id?: string; name?: string; price?: unknown; quantity?: unknown; total?: unknown; costPrice?: unknown; profit?: unknown; category?: string };
@@ -28,7 +26,7 @@ type QueuedBundle = {
 };
 /** The queued operation payload the replay reads. */
 type QueuedData = { operationId?: string; localId?: string; uniqueKey?: string; invoiceNumber?: string; customerId?: string; bundle?: QueuedBundle };
-const sb = supabase as unknown as LooseSupabase;
+const sb = supabase;
 import { emitEvent, EVENTS } from '../events';
 import { isGuestDemoMode } from '../demo-data';
 import { roundCurrency, addCurrency, subtractCurrency, formatMoney } from '../utils';
@@ -1329,7 +1327,7 @@ export const updateInvoiceByNumberCloud = async (
   const userId = getCurrentUserId();
   if (!userId) return false;
 
-  const cloudUpdates: Record<string, unknown> = {};
+  const cloudUpdates: Database['public']['Tables']['invoices']['Update'] = {};
   if (updates.status !== undefined) cloudUpdates.status = updates.status;
   if (updates.paymentType !== undefined) cloudUpdates.payment_type = updates.paymentType;
   if (updates.debtPaid !== undefined) cloudUpdates.debt_paid = updates.debtPaid;

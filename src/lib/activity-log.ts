@@ -2,6 +2,7 @@ import { isLocalDataMode } from '@/hooks/use-network-status';
 // Activity Log Store - Secure encrypted activity tracking
 import { secureSet, secureGet, secureRemove } from './secure-storage';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 
 export type ActivityType = 
   | 'login'
@@ -156,13 +157,13 @@ export function addActivityLog(
     import('./supabase-store').then(async ({ getOwnerIdForInsert }) => {
       const ownerId = await getOwnerIdForInsert();
       if (!ownerId) return;
-      await (supabase as any).from('activity_log').insert({
+      await supabase.from('activity_log').insert({
         user_id: ownerId,
         actor_id: userId && /^[0-9a-f-]{36}$/i.test(userId) ? userId : null,
         actor_name: userName,
         action_type: type,
         description,
-        metadata: (details ? { ...details, deviceInfo: log.deviceInfo } : { deviceInfo: log.deviceInfo }) as any,
+        metadata: (details ? { ...details, deviceInfo: log.deviceInfo } : { deviceInfo: log.deviceInfo }) as unknown as Json,
       });
     }).catch(() => {});
   }
@@ -259,8 +260,7 @@ export async function logActivity(
     if (!user) return;
     let userName = user.email || 'مستخدم';
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
+      const { data: profile } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('user_id', user.id)
@@ -272,16 +272,14 @@ export async function logActivity(
     try {
       let actorRole: string | null = null;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: roleRow } = await (supabase as any)
+        const { data: roleRow } = await supabase
           .from('user_roles')
           .select('role, owner_id')
           .eq('user_id', user.id)
           .maybeSingle();
         actorRole = roleRow?.role || null;
         const ownerId = roleRow?.owner_id || user.id;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('activity_log').insert({
+        await supabase.from('activity_log').insert({
           user_id: ownerId,
           actor_id: user.id,
           actor_name: userName,
@@ -291,7 +289,7 @@ export async function logActivity(
           entity_id: (details?.entityId as string) || null,
           entity_name: (details?.entityName as string) || null,
           description,
-          metadata: details || {},
+          metadata: (details || {}) as Json,
         });
       } catch { /* offline — local log is enough */ }
     } catch { /* ignore */ }

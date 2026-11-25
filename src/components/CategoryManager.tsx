@@ -1,4 +1,4 @@
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, X, Save, Tag, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';

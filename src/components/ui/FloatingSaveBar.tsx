@@ -2,7 +2,7 @@ import { Save, Undo2, Loader2, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useSidebarOpenState } from '@/hooks/use-scroll-visibility';
 import { floatingSideClass, floatingBottomClass } from '@/components/ui/floating-classes';
 

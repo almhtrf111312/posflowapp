@@ -26,8 +26,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { compressImage } from '@/lib/image-upload';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

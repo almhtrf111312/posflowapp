@@ -34,11 +34,11 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/hooks/use-auth';
-import { useLicense } from '@/hooks/use-license';
-import { useLanguage } from '@/hooks/use-language';
-import { useUserRole } from '@/hooks/use-user-role';
-import { useNotifications } from '@/hooks/use-notifications';
+import { useAuth } from '@/hooks/auth-context';
+import { useLicense } from '@/hooks/license-context';
+import { useLanguage } from '@/hooks/language-context';
+import { useUserRole } from '@/hooks/user-role-context';
+import { useNotifications } from '@/hooks/notifications-context';
 import { useSupportUnread } from '@/hooks/use-support-unread';
 import { toast } from '@/lib/sonner-bridge';
 import { TranslationKey } from '@/lib/i18n';

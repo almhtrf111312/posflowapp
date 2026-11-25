@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/sonner-bridge';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth, type SignInResult } from '@/hooks/use-auth';
+import { useAuth, type SignInResult } from '@/hooks/auth-context';
 import {
   GOOGLE_WEB_RETURN_FLAG,
   checkGoogleAccountAllowed,

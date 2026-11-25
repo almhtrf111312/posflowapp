@@ -9,7 +9,7 @@ import { exportToExcel } from '@/lib/excel-export';
 import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
 import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface Props {
   dateRange: { from: string; to: string };

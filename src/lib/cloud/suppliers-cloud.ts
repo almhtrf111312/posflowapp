@@ -21,16 +21,14 @@ export interface SupplierLedgerRow {
 
 export type SupplierMoneySource = 'drawer' | 'external';
 
-const db = supabase as any;
-
 export async function loadSuppliersCloud(): Promise<SupplierBalance[]> {
-  const { data, error } = await db.from('supplier_balances').select('*').order('name');
+  const { data, error } = await supabase.from('supplier_balances').select('*').order('name');
   if (error) {
     console.error('loadSuppliersCloud', error);
     return [];
   }
-  return (data || []).map((r: any) => ({
-    id: r.supplier_id ?? r.id,
+  return (data || []).map((r) => ({
+    id: (r as { supplier_id?: string }).supplier_id ?? r.id,
     name: r.name,
     company: r.company,
     phone: r.phone,
@@ -39,7 +37,7 @@ export async function loadSuppliersCloud(): Promise<SupplierBalance[]> {
 }
 
 export async function createSupplierCloud(input: { name: string; company?: string; phone?: string; notes?: string }): Promise<string> {
-  const { data, error } = await db.rpc('create_supplier_atomic', {
+  const { data, error } = await supabase.rpc('create_supplier_atomic', {
     _name: input.name.trim(),
     _company: input.company?.trim() || null,
     _phone: input.phone?.trim() || null,
@@ -51,7 +49,7 @@ export async function createSupplierCloud(input: { name: string; company?: strin
 }
 
 export async function loadSupplierLedgerCloud(supplierId: string): Promise<SupplierLedgerRow[]> {
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from('supplier_ledger_entries')
     .select('id, entry_type, amount, payment_method, payment_source, note, created_at')
     .eq('supplier_id', supplierId)
@@ -61,7 +59,7 @@ export async function loadSupplierLedgerCloud(supplierId: string): Promise<Suppl
     console.error('loadSupplierLedgerCloud', error);
     return [];
   }
-  return (data || []).map((r: any) => ({ ...r, amount: Number(r.amount) || 0 }));
+  return (data || []).map((r) => ({ ...r, amount: Number(r.amount) || 0 })) as SupplierLedgerRow[];
 }
 
 interface MoneyArgs {
@@ -91,21 +89,21 @@ const moneyParams = (a: MoneyArgs) => ({
 });
 
 export async function paySupplierCloud(a: MoneyArgs): Promise<string> {
-  const { data, error } = await db.rpc('pay_supplier_atomic', moneyParams(a));
+  const { data, error } = await supabase.rpc('pay_supplier_atomic', moneyParams(a));
   if (error) throw error;
   emitEvent(EVENTS.PURCHASES_UPDATED);
   return data as string;
 }
 
 export async function refundFromSupplierCloud(a: MoneyArgs): Promise<string> {
-  const { data, error } = await db.rpc('supplier_refund_atomic', moneyParams(a));
+  const { data, error } = await supabase.rpc('supplier_refund_atomic', moneyParams(a));
   if (error) throw error;
   emitEvent(EVENTS.PURCHASES_UPDATED);
   return data as string;
 }
 
 export async function purchaseReturnCloud(invoiceId: string, lines: Array<{ item_id: string; quantity: number }>, reason: string, operationId?: string): Promise<unknown> {
-  const { data, error } = await db.rpc('purchase_return_atomic', {
+  const { data, error } = await supabase.rpc('purchase_return_atomic', {
     _invoice_id: invoiceId,
     _lines: lines,
     _reason: reason,
@@ -129,8 +127,8 @@ export interface ShiftSupplierMoney {
 export async function loadShiftSupplierMoney(shiftId: string, openedAt: string): Promise<ShiftSupplierMoney> {
   const out: ShiftSupplierMoney = { drawerPaid: 0, drawerRefunded: 0, externalPaid: 0, externalRefunded: 0 };
   const [{ data: tx }, { data: led }] = await Promise.all([
-    db.from('shift_transactions').select('type, amount').eq('shift_id', shiftId).in('type', ['supplier_payment', 'supplier_refund']),
-    db.from('supplier_ledger_entries').select('entry_type, amount').eq('payment_source', 'external').in('entry_type', ['payment', 'refund']).gte('created_at', openedAt),
+    supabase.from('shift_transactions').select('type, amount').eq('shift_id', shiftId).in('type', ['supplier_payment', 'supplier_refund']),
+    supabase.from('supplier_ledger_entries').select('entry_type, amount').eq('payment_source', 'external').in('entry_type', ['payment', 'refund']).gte('created_at', openedAt),
   ]);
   for (const r of tx || []) {
     if (r.type === 'supplier_payment') out.drawerPaid += Number(r.amount) || 0;

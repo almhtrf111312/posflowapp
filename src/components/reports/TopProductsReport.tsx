@@ -8,7 +8,7 @@ import { loadProductsLocalFirst, type Product } from '@/lib/cloud/products-cloud
 import { isSalesInvoice, itemNetRevenue, itemProfit, itemUnitCost } from '@/lib/report-metrics';
 import { exportGenericToExcel, exportGenericToPDF } from '@/lib/reports/dataset-builder';
 import { formatReportAmount, formatNumber, cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface Props { dateRange: { from: string; to: string } }
 

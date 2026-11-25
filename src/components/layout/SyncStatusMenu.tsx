@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/sheet';
 import { cn, formatCurrency } from '@/lib/utils';
 import { getDueExpenses, RecurringExpense } from '@/lib/recurring-expenses-store';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { CloudSyncContext } from '@/providers/CloudSyncProvider';
 import { getQueueStatus, SyncQueueStatus } from '@/lib/sync-queue';
 import { loadHistory, SyncHistoryItem, SYNC_HISTORY_UPDATED, cleanupSyncedItems } from '@/lib/sync-history';

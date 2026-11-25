@@ -7,10 +7,10 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps | rpc · tables |
 |---|---|---|---|---|
-| `ActivationScreen.tsx` | License activation screen. | ActivationScreen | components/settings/ContactLinksSection, hooks/use-auth, hooks/use-language, hooks/use-license, ui/* | tbl: app_settings |
-| `DataEncryptedScreen.tsx` | Screen shown when local data is encrypted after offline lockout. | DataEncryptedScreen | hooks/use-language, hooks/use-license, ui/* | — |
-| `LicenseGuard.tsx` | License guard wrapper. | LicenseGuard | components/auth/DeviceBlockedScreen, ActivationScreen, DataEncryptedScreen, TrialNoticeDialog, components/settings/ContactLinksSection, hooks/use-auth, hooks/use-device-binding, hooks/use-language (+6) | tbl: app_settings |
-| `LicenseWarningBadge.tsx` | License warning badge. | LicenseWarningBadge | hooks/use-auth, hooks/use-language, hooks/use-license | — |
-| `OfflineProtectionBanner.tsx` | Offline protection warning banner. | OfflineProtectionBanner | hooks/use-language, hooks/use-license | — |
-| `SubscriptionLockNotice.tsx` | Notice replacing sections that require an active subscription. | SubscriptionLockNotice, default | hooks/use-language, ui/* | — |
-| `TrialNoticeDialog.tsx` | Trial mode notice dialog. | TrialNoticeDialog | hooks/use-language, ui/* | — |
+| `ActivationScreen.tsx` | License activation screen. | ActivationScreen | components/settings/ContactLinksSection, hooks/auth-context, hooks/language-context, hooks/license-context, ui/* | tbl: app_settings |
+| `DataEncryptedScreen.tsx` | Screen shown when local data is encrypted after offline lockout. | DataEncryptedScreen | hooks/language-context, hooks/license-context, ui/* | — |
+| `LicenseGuard.tsx` | License guard wrapper. | LicenseGuard | components/auth/DeviceBlockedScreen, ActivationScreen, DataEncryptedScreen, TrialNoticeDialog, components/settings/ContactLinksSection, hooks/auth-context, hooks/language-context, hooks/license-context (+6) | tbl: app_settings |
+| `LicenseWarningBadge.tsx` | License warning badge. | LicenseWarningBadge | hooks/auth-context, hooks/language-context, hooks/license-context | — |
+| `OfflineProtectionBanner.tsx` | Offline protection warning banner. | OfflineProtectionBanner | hooks/language-context, hooks/license-context | — |
+| `SubscriptionLockNotice.tsx` | Notice replacing sections that require an active subscription. | SubscriptionLockNotice, default | hooks/language-context, ui/* | — |
+| `TrialNoticeDialog.tsx` | Trial mode notice dialog. | TrialNoticeDialog | hooks/language-context, ui/* | — |

@@ -4,9 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 const CACHE_KEY = 'hp_can_refund';
 
-// العمود can_refund يُضاف بـ migration المرحلة 1 وغير موجود في الأنواع المولّدة بعد
-const db = supabase as unknown as { from: (table: string) => any };
-
 function readCache(userId: string): boolean | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -41,7 +38,7 @@ export async function getOwnRefundPermission(): Promise<boolean> {
   if (!userId) return false;
 
   try {
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from('user_roles')
       .select('can_refund')
       .eq('user_id', userId)

@@ -7,11 +7,11 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps |
 |---|---|---|---|
-| `DebtAlerts.tsx` | Debt alerts widget. | DebtAlerts | hooks/use-language, lib/cloud/debts-cloud, lib/events, ui/* |
-| `LowStockAlerts.tsx` | Low-stock alerts widget. | LowStockAlerts | hooks/use-language, lib/products-store, ui/* |
+| `DebtAlerts.tsx` | Debt alerts widget. | DebtAlerts | hooks/language-context, lib/cloud/debts-cloud, lib/events, ui/* |
+| `LowStockAlerts.tsx` | Low-stock alerts widget. | LowStockAlerts | hooks/language-context, lib/products-store, ui/* |
 | `MiniSparkline.tsx` | Mini sparkline chart. | MiniSparkline | — |
-| `QuickActions.tsx` | Dashboard quick actions. | QuickActions | hooks/use-language, lib/i18n, lib/store-type-config |
-| `RecentInvoices.tsx` | Recent invoices widget. | RecentInvoices | hooks/use-action-guard, hooks/use-language, lib/cloud/invoices-cloud, lib/currencies, lib/events, lib/native-share, lib/print-utils, lib/sonner-bridge (+1) |
+| `QuickActions.tsx` | Dashboard quick actions. | QuickActions | hooks/language-context, lib/i18n, lib/store-type-config |
+| `RecentInvoices.tsx` | Recent invoices widget. | RecentInvoices | hooks/language-context, hooks/use-action-guard, lib/cloud/invoices-cloud, lib/currencies, lib/events, lib/native-share, lib/print-utils, lib/sonner-bridge (+1) |
 | `StatCard.tsx` | KPI stat card. | StatCard | MiniSparkline, hooks/use-count-up |
-| `TopProducts.tsx` | Top products widget. | TopProducts | hooks/use-language, lib/cloud/invoices-cloud, lib/events |
-| `UnifiedReportsDashboard.tsx` | Unified reports dashboard. | UnifiedReportsDashboard | components/layout/PageHeader, hooks/use-language, lib/excel-export, lib/pdf-export, lib/sonner-bridge, ui/* |
+| `TopProducts.tsx` | Top products widget. | TopProducts | hooks/language-context, lib/cloud/invoices-cloud, lib/events |
+| `UnifiedReportsDashboard.tsx` | Unified reports dashboard. | UnifiedReportsDashboard | components/layout/PageHeader, hooks/language-context, lib/excel-export, lib/pdf-export, lib/sonner-bridge, ui/* |

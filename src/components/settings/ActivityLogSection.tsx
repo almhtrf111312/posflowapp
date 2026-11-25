@@ -14,10 +14,59 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Badge } from '@/components/ui/badge';
 import { loadActivityLogs, clearActivityLogs, ActivityLog, ActivityType, activityTypeLabels, getActivityTypeLabel } from '@/lib/activity-log';
 import { cn, formatMoney } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { supabase } from '@/integrations/supabase/client';
 
 type FilterCategory = 'all' | 'sales' | 'invoices' | 'invoiceEdits' | 'debts' | 'shifts' | 'expenses' | 'partners' | 'pricing' | 'auth';
+
+// دوال التحقق من الفئات
+const isPricingLog = (log: ActivityLog) => {
+  if (log.type === 'product_updated') {
+    const details = (log.details as Record<string, unknown>) || {};
+    const changes = (details.changes as Record<string, unknown>) || {};
+    return !!(changes.salePrice || changes.costPrice || changes.price);
+  }
+  return false;
+};
+
+const isSalesLog = (log: ActivityLog) => {
+  return ['sale', 'invoice_created', 'invoice_refunded', 'invoice_refund', 'partial_refund', 'refund'].includes(log.type);
+};
+
+const isDebtsLog = (log: ActivityLog) => {
+  return ['debt_created', 'debt_paid', 'debt_payment', 'debt_writeoff', 'debt_deleted'].includes(log.type);
+};
+
+const isPartnerLog = (log: ActivityLog) => {
+  return [
+    'partner_investment', 'partner_withdrawal', 'capital_added',
+    'capital_withdrawn', 'partner_added', 'partner_updated', 'partner_deleted'
+  ].includes(log.type);
+};
+
+const isExpenseLog = (log: ActivityLog) => {
+  return ['expense_added', 'expense_deleted', 'expense_refund', 'expense'].includes(log.type);
+};
+
+const isAuthLog = (log: ActivityLog) => {
+  return ['login', 'logout', 'shift_opened', 'shift_closed', 'password_changed', 'user_added', 'user_deleted'].includes(log.type);
+};
+
+const isInvoiceLog = (log: ActivityLog) => ['invoice_created', 'invoice_deleted', 'invoice_refunded'].includes(log.type);
+const isInvoiceEditLog = (log: ActivityLog) => log.type === 'invoice_updated';
+const isShiftLog = (log: ActivityLog) => ['shift_opened', 'shift_closed'].includes(log.type);
+
+const CATEGORY_TESTS: Record<Exclude<FilterCategory, 'all'>, (l: ActivityLog) => boolean> = {
+  sales: (l) => ['sale', 'partial_refund', 'refund'].includes(l.type),
+  invoices: isInvoiceLog,
+  invoiceEdits: isInvoiceEditLog,
+  debts: isDebtsLog,
+  shifts: isShiftLog,
+  expenses: isExpenseLog,
+  partners: isPartnerLog,
+  pricing: isPricingLog,
+  auth: (l) => ['login', 'logout', 'password_changed', 'user_added', 'user_deleted'].includes(l.type),
+};
 
 export function ActivityLogSection() {
   const { t, isRTL, language } = useLanguage();
@@ -101,55 +150,6 @@ export function ActivityLogSection() {
     } catch (e) {
       console.error('[ActivityLogSection] Failed to clear logs:', e);
     }
-  };
-
-  // دوال التحقق من الفئات
-  const isPricingLog = (log: ActivityLog) => {
-    if (log.type === 'product_updated') {
-      const details = (log.details as Record<string, unknown>) || {};
-      const changes = (details.changes as Record<string, unknown>) || {};
-      return !!(changes.salePrice || changes.costPrice || changes.price);
-    }
-    return false;
-  };
-
-  const isSalesLog = (log: ActivityLog) => {
-    return ['sale', 'invoice_created', 'invoice_refunded', 'invoice_refund', 'partial_refund', 'refund'].includes(log.type);
-  };
-
-  const isDebtsLog = (log: ActivityLog) => {
-    return ['debt_created', 'debt_paid', 'debt_payment', 'debt_writeoff', 'debt_deleted'].includes(log.type);
-  };
-
-  const isPartnerLog = (log: ActivityLog) => {
-    return [
-      'partner_investment', 'partner_withdrawal', 'capital_added',
-      'capital_withdrawn', 'partner_added', 'partner_updated', 'partner_deleted'
-    ].includes(log.type);
-  };
-
-  const isExpenseLog = (log: ActivityLog) => {
-    return ['expense_added', 'expense_deleted', 'expense_refund', 'expense'].includes(log.type);
-  };
-
-  const isAuthLog = (log: ActivityLog) => {
-    return ['login', 'logout', 'shift_opened', 'shift_closed', 'password_changed', 'user_added', 'user_deleted'].includes(log.type);
-  };
-
-  const isInvoiceLog = (log: ActivityLog) => ['invoice_created', 'invoice_deleted', 'invoice_refunded'].includes(log.type);
-  const isInvoiceEditLog = (log: ActivityLog) => log.type === 'invoice_updated';
-  const isShiftLog = (log: ActivityLog) => ['shift_opened', 'shift_closed'].includes(log.type);
-
-  const CATEGORY_TESTS: Record<Exclude<FilterCategory, 'all'>, (l: ActivityLog) => boolean> = {
-    sales: (l) => ['sale', 'partial_refund', 'refund'].includes(l.type),
-    invoices: isInvoiceLog,
-    invoiceEdits: isInvoiceEditLog,
-    debts: isDebtsLog,
-    shifts: isShiftLog,
-    expenses: isExpenseLog,
-    partners: isPartnerLog,
-    pricing: isPricingLog,
-    auth: (l) => ['login', 'logout', 'password_changed', 'user_added', 'user_deleted'].includes(l.type),
   };
 
   const CATEGORY_PILLS: { id: Exclude<FilterCategory, 'all'>; labelKey: string; dot: string; on: string }[] = [

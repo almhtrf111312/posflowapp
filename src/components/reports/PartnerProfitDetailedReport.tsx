@@ -32,7 +32,7 @@ import { formatNumber, formatMoney, formatReportAmount } from '@/lib/utils';
 import { getReportCurrency } from '@/lib/currencies';
 import { roundForCurrency } from '@/lib/money-engine';
 import { shareReport } from '@/lib/native-share';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { toLocalDateString, isDateInRange } from '@/lib/date-utils';
 
 interface DateRange {

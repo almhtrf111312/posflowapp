@@ -43,8 +43,30 @@ export const loadRecurringExpensesLocally = (): RecurringExpense[] => {
   return [];
 };
 
+/** Row as read from the recurring_expenses table (some columns only exist on newer or older schemas, hence all optional). */
+interface RecurringExpenseRow {
+  id: string;
+  name?: string | null;
+  description?: string | null;
+  expense_type?: string | null;
+  custom_type?: string | null;
+  amount?: number | string | null;
+  original_amount?: number | string | null;
+  original_currency?: string | null;
+  currency?: string | null;
+  exchange_rate?: number | string | null;
+  notes?: string | null;
+  interval?: string | null;
+  interval_days?: number | string | null;
+  next_due_date?: string | null;
+  last_paid_date?: string | null;
+  auto_pay?: boolean | null;
+  is_active?: boolean | null;
+  created_at?: string | null;
+}
+
 // Transform Supabase row to RecurringExpense
-export function toRecurringExpense(row: any): RecurringExpense {
+export function toRecurringExpense(row: RecurringExpenseRow): RecurringExpense {
   const originalCurrency = row.original_currency || row.currency || (typeof row.notes === 'string' ? row.notes.match(/\[CURRENCY:([A-Za-z]+)(?::([0-9.]+))?\]/)?.[1] : undefined);
   const exchangeRate = row.exchange_rate ? Number(row.exchange_rate) : (typeof row.notes === 'string' && row.notes.match(/\[CURRENCY:([A-Za-z]+)(?::([0-9.]+))?\]/)?.[2] ? Number(row.notes.match(/\[CURRENCY:([A-Za-z]+)(?::([0-9.]+))?\]/)[2]) : undefined);
   const originalAmount = row.original_amount !== undefined && row.original_amount !== null ? Number(row.original_amount) : undefined;
@@ -97,7 +119,7 @@ const fetchFresh_loadRecurringExpensesCloud = async (): Promise<RecurringExpense
     return local;
   }
 
-  let cloudRows: any[] = [];
+  let cloudRows: RecurringExpenseRow[] = [];
   try {
     const effectiveOwner = ownerId || currentUid;
     // Query directly with user_id filter
@@ -109,13 +131,13 @@ const fetchFresh_loadRecurringExpensesCloud = async (): Promise<RecurringExpense
 
     if (error) {
       console.warn('[RecurringExpenses] Filtered select error, falling back to RLS fetch:', error);
-      cloudRows = await fetchFromSupabase('recurring_expenses', { column: 'created_at', ascending: false });
+      cloudRows = await fetchFromSupabase<RecurringExpenseRow>('recurring_expenses', { column: 'created_at', ascending: false });
     } else {
       cloudRows = data || [];
     }
   } catch (err) {
     console.warn('[RecurringExpenses] Exception fetching from cloud, falling back to RLS:', err);
-    cloudRows = await fetchFromSupabase('recurring_expenses', { column: 'created_at', ascending: false });
+    cloudRows = await fetchFromSupabase<RecurringExpenseRow>('recurring_expenses', { column: 'created_at', ascending: false });
   }
 
   // If cloud returns rows, map and cache
@@ -321,7 +343,7 @@ export const updateRecurringExpenseCloud = async (
   saveRecurringExpensesLocally(localList);
   emitEvent(EVENTS.RECURRING_EXPENSES_UPDATED, localList);
 
-  const payload: Record<string, any> = {};
+  const payload: Record<string, unknown> = {};
   if (updates.name !== undefined) {
     payload.name = updates.name;
     payload.description = updates.name;

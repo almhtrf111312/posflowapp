@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Key, MessageCircle, Loader2, CheckCircle, AlertCircle, LogOut } from 'lucide-react';
-import { useLicense } from '@/hooks/use-license';
-import { useLanguage } from '@/hooks/use-language';
-import { useAuth } from '@/hooks/use-auth';
+import { useLicense } from '@/hooks/license-context';
+import { useLanguage } from '@/hooks/language-context';
+import { useAuth } from '@/hooks/auth-context';
 import { supabase } from '@/integrations/supabase/client';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 

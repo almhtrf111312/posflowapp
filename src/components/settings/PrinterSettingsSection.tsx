@@ -14,7 +14,7 @@ import {
   Unlink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import type { PrinterConfig } from '@/lib/printer/printer-config';
 
 /** Receipt print toggles as the parent screen keeps them. */

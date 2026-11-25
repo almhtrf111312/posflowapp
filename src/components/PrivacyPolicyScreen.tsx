@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { useLanguage } from '@/hooks/use-language';
-import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/hooks/language-context';
+import { useTheme } from '@/hooks/theme-context';
 import { useUIScale } from '@/hooks/use-ui-scale';
 import { UIScaleId } from '@/lib/ui-scale-config';
 import { Language } from '@/lib/i18n';

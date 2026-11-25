@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/auth-context';
 import {
   sendLocalNotification,
   checkNotificationPermissionNative,

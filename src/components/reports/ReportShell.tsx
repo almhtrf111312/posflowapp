@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { FileText, Download } from 'lucide-react';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface Props {
   icon: ReactNode;

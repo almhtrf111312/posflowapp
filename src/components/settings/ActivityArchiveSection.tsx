@@ -1,9 +1,9 @@
 import { useState, lazy, Suspense } from 'react';
 import { Activity, Archive, ShieldCheck, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useUserRole } from '@/hooks/user-role-context';
 import { isGuestDemoMode } from '@/lib/demo-data';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 const ActivityLogSection = lazy(() => import('./ActivityLogSection').then(m => ({ default: m.ActivityLogSection })));
 const IntegrityCheckSection = lazy(() => import('./IntegrityCheckSection').then(m => ({ default: m.IntegrityCheckSection })));

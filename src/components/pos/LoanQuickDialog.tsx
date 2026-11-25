@@ -14,7 +14,7 @@ import { loadMembersCloud, addLoanCloud, LibraryMember } from '@/lib/cloud/libra
 import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/lib/sonner-bridge';
 import { showSmartToast } from '@/hooks/use-smart-toast';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { format } from 'date-fns';
 
 interface LoanQuickDialogProps {

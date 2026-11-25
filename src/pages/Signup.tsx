@@ -2,8 +2,8 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { useState } from 'react';
 import appIconUrl from '@/assets/app-icon.png'; // bundled: يعمل على file:// في نسخة الكمبيوتر
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

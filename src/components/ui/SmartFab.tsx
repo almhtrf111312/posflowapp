@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useScrollDirectionVisibility, useSidebarOpenState } from '@/hooks/use-scroll-visibility';
 import { floatingSideClass, floatingBottomClass } from '@/components/ui/floating-classes';
 

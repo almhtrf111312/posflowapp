@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useLanguage } from '@/hooks/use-language';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useLanguage } from '@/hooks/language-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { useSupportUnread } from '@/hooks/use-support-unread';
 import { cn } from '@/lib/utils';
 

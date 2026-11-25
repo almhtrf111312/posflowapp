@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Plus, Users, CreditCard, Wrench, Package, Receipt } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { TranslationKey } from '@/lib/i18n';
 import { getVisibleSections } from '@/lib/store-type-config';
 

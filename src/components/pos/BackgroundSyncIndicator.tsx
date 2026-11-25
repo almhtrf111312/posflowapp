@@ -6,7 +6,7 @@ import { isSyncPendingSubscription, SYNC_PENDING_SUBSCRIPTION_MESSAGE } from '@/
 import { useEffect, useState, useContext } from 'react';
 import { Cloud, CloudOff, Loader2, Check, AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { EVENTS } from '@/lib/events';
 import { getQueueStatus, SyncQueueStatus, loadQueue, resetOperationForRetry, QueuedOperation } from '@/lib/sync-queue';
 import { toast } from '@/lib/sonner-bridge';

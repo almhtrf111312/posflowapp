@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { loadWarehousesCloud, loadWarehouseStockCloud } from '@/lib/cloud/warehouses-cloud';
 import { loadProductsCloud, Product } from '@/lib/cloud/products-cloud';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { cn, formatReportAmount } from '@/lib/utils';
 import { toast } from '@/lib/sonner-bridge';
 

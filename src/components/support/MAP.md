@@ -7,6 +7,6 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps | rpc · tables |
 |---|---|---|---|---|
-| `InlineSupportChatPanel.tsx` | Inline support chat panel. | InlineSupportChatPanel | SupportChat, hooks/use-auth, hooks/use-language, ui/* | tbl: support_conversations, support_messages |
-| `SupportChat.tsx` | Support chat UI (FAB, chat window, message parts). | ChatMessages, InputBar · 2 types | support-helpers, hooks/use-auth, hooks/use-language, lib/image-upload, ui/* | rpc: send_support_message · tbl: support_messages |
+| `InlineSupportChatPanel.tsx` | Inline support chat panel. | InlineSupportChatPanel | SupportChat, hooks/auth-context, hooks/language-context, ui/* | tbl: support_conversations, support_messages |
+| `SupportChat.tsx` | Support chat UI (FAB, chat window, message parts). | ChatMessages, InputBar · 2 types | support-helpers, hooks/auth-context, hooks/language-context, lib/image-upload, ui/* | rpc: send_support_message · tbl: support_messages |
 | `support-helpers.ts` | Support chat formatting and message parsing helpers. | formatTime, parseMessageContent | — | — |

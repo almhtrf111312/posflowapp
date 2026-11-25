@@ -7,7 +7,6 @@ export const getSelectedSerials = (productId: string): string[] | undefined => s
 export const setSelectedSerials = (productId: string, serials: string[]) => { selected.set(productId, serials); };
 export const clearSelectedSerials = (productIds: string[]) => { productIds.forEach(id => selected.delete(id)); };
 
-const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, args: Record<string, unknown>) => any };
 
 // ===== كاش محلي للعمل بدون اتصال =====
 const CACHE_KEY = 'posflow_serial_cache_v1';
@@ -53,7 +52,7 @@ export async function warmSerialCache(force = false): Promise<void> {
   if (!force && Date.now() - lastWarm < 10 * 60 * 1000) return;
   lastWarm = Date.now();
   try {
-    const { data: prods, error } = await db.from('products').select('id').eq('track_serials', true).limit(1000);
+    const { data: prods, error } = await supabase.from('products').select('id').eq('track_serials', true).limit(1000);
     if (error) return;
     const c = readCache();
     const p = pendingSold();
@@ -61,7 +60,7 @@ export async function warmSerialCache(force = false): Promise<void> {
     for (const pr of prods || []) { c.tracked[pr.id] = true; grouped[pr.id] = []; }
     // استعلام مجمّع واحد (صفحات 1000) بدل استعلام لكل منتج
     for (let from = 0; from < 20000; from += 1000) {
-      const { data, error: e2 } = await db.from('product_serials').select('product_id, serial').eq('status', 'in_stock').order('product_id').range(from, from + 999);
+      const { data, error: e2 } = await supabase.from('product_serials').select('product_id, serial').eq('status', 'in_stock').order('product_id').range(from, from + 999);
       if (e2) return;
       for (const r of (data || []) as { product_id: string; serial: string }[]) {
         if (grouped[r.product_id] && !p.has(r.serial) && grouped[r.product_id].length < 500) grouped[r.product_id].push(r.serial);
@@ -80,7 +79,7 @@ export async function loadTrackedProducts(ids: string[]): Promise<Record<string,
   const fromCache = () => { const o: Record<string, boolean> = {}; ids.forEach(i => { if (cache.tracked[i]) o[i] = true; }); return o; };
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return fromCache();
   try {
-    const { data, error } = await db.from('products').select('id, track_serials').in('id', ids);
+    const { data, error } = await supabase.from('products').select('id, track_serials').in('id', ids);
     if (error) return fromCache();
     const out: Record<string, boolean> = {};
     for (const r of data || []) { out[r.id] = !!r.track_serials; cache.tracked[r.id] = !!r.track_serials; }
@@ -95,7 +94,7 @@ export async function loadInStockSerials(productId: string): Promise<string[]> {
   const fromCache = () => (cache.inStock[productId] || []).filter(x => !p.has(x));
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return fromCache();
   try {
-    const { data, error } = await db
+    const { data, error } = await supabase
       .from('product_serials').select('serial').eq('product_id', productId).eq('status', 'in_stock').order('serial').limit(500);
     if (error) return fromCache();
     const list = (data || []).map((r: { serial: string }) => r.serial);
@@ -116,7 +115,7 @@ export interface SerialLookupRow {
 }
 
 export async function lookupSerialCloud(serial: string): Promise<SerialLookupRow[]> {
-  const { data, error } = await db.rpc('lookup_serial', { _serial: serial });
+  const { data, error } = await supabase.rpc('lookup_serial', { _serial: serial });
   if (error) throw error;
   return (data || []) as unknown as SerialLookupRow[];
 }

@@ -13,7 +13,7 @@ import { exportGenericToExcel, exportGenericToPDF } from '@/lib/reports/dataset-
 import { formatNumber, formatReportAmount, cn } from '@/lib/utils';
 import { ReportCurrencyBanner } from './ReportCurrencyBanner';
 import { toast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface Props { dateRange: { from: string; to: string } }
 

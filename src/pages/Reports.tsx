@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useLicense } from '@/hooks/use-license';
+import { useLicense } from '@/hooks/license-context';
 import { SubscriptionLockNotice } from '@/components/license/SubscriptionLockNotice';
-import { useDeferWhileHidden, usePageActivity } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden, usePageActivity } from '@/contexts/page-activity-context';
 import {
   BarChart3,
   BookOpen,
@@ -59,7 +59,7 @@ import { getReportCurrency } from '@/lib/currencies';
 import { getCurrencyDef, roundForCurrency, round8 } from '@/lib/money-engine';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/sonner-bridge';
-import { useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/theme-context';
 import { loadInvoicesCloud, loadCachedInvoicesSync, Invoice, isValidActiveInvoice } from '@/lib/cloud/invoices-cloud';
 import { loadProductsCloud, loadProductsLocalFirst, Product } from '@/lib/cloud/products-cloud';
 import { loadCustomersCloud, loadCustomersLocally, Customer } from '@/lib/cloud/customers-cloud';
@@ -70,7 +70,7 @@ import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud'
 import { computeProfitSummary, realizedProfitToDate, expenseIsCounted } from '@/lib/profit-engine';
 import { invoiceNetSales, itemNetRevenue, itemProfit, isSalesInvoice } from '@/lib/report-metrics';
 import { invoicesLink } from '@/lib/report-links';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useUserRole } from '@/hooks/user-role-context';
 import { loadProfitLedgerCloud, loadProfitLedgerLocally, withProfitSnapshots, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -110,7 +110,7 @@ import {
   exportCustomersToPDF,
   exportToPDF,
 } from '@/lib/pdf-export';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { EVENTS } from '@/lib/events';
 import { getCurrentStoreType, getVisibleSections, isNoInventoryMode } from '@/lib/store-type-config';
 import { ReportFiltersBar, ReportFilters } from '@/components/reports/ReportFiltersBar';
@@ -418,7 +418,7 @@ function ReportsContent() {
     { id: 'cashier-performance', category: 'admin', label: t('reports.cashierPerformance'), icon: Users, availability: 'ready' },
     ...(visibleSections.maintenance ? [{ id: 'maintenance', category: 'admin', label: t('reports.maintenanceServices'), icon: ClipboardList, availability: 'ready' as const }] : []),
     ...(storeType === 'bookstore' ? [{ id: 'library', category: 'admin', label: t('reports.libraryReport'), icon: BookOpen, availability: 'ready' as const }] : []),
-  ], [noInventory, visibleSections.maintenance, storeType, isDistributorStore, t]);
+  ], [noInventory, visibleSections.maintenance, storeType, t]);
 
   const visibleReports = useMemo(() => {
     if (activeCategory === 'all') return allReports;
@@ -452,7 +452,7 @@ function ReportsContent() {
       if (!map.has(name)) map.set(name, name);
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [cloudInvoices]);
+  }, [cloudInvoices, t]);
 
   const uniqueCategories = useMemo(() => {
     return cloudCategories.map(c => ({ id: c.name, name: c.name }));
@@ -490,7 +490,7 @@ function ReportsContent() {
       default:
         return {};
     }
-  }, [activeReport, uniqueCashiers, uniqueCategories]);
+  }, [activeReport, uniqueCashiers, uniqueCategories, t]);
 
   // ========== DATA CALCULATIONS ==========
 
@@ -887,7 +887,7 @@ function ReportsContent() {
       }
       return true;
     });
-  }, [cloudInvoices, dateRange, filters]);
+  }, [cloudInvoices, dateRange, filters, t]);
 
   const getFilteredProductsForReport = useCallback(() => {
     return cloudProducts.filter(p => {
@@ -1580,6 +1580,9 @@ function ReportsContent() {
     dateRange,
     cloudInvoices,
     getFilteredInvoicesForReport,
+    isEn,
+    isRTL,
+    t,
   ]);
 
   const handleExportPDF = useCallback(async () => {
@@ -1908,6 +1911,7 @@ function ReportsContent() {
     getFilteredDebtsForReport,
     getFilteredPurchasesForReport,
     getFilteredExpensesForReport,
+    isEn,
   ]);
 
   const handleExportExcel = useCallback(async () => {
@@ -2207,6 +2211,7 @@ function ReportsContent() {
     getFilteredDebtsForReport,
     getFilteredPurchasesForReport,
     getFilteredExpensesForReport,
+    isEn,
   ]);
 
   const handleShareExpenseReport = (partnerName: string) => {
@@ -2338,7 +2343,7 @@ function ReportsContent() {
         ...(storeType === 'bookstore' ? [{ id: 'library', name: t('reports.libraryReport'), icon: BookOpen, bg: 'bg-info/15 text-info' }] : []),
       ]
     }
-  ], [t, noInventory, visibleSections.maintenance, storeType, isDistributorStore]);
+  ], [t, noInventory, visibleSections.maintenance, storeType]);
 
   // ========== RENDER ==========
 

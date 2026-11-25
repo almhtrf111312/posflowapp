@@ -9,8 +9,8 @@ Subfolders with their own map: auth/, barcode/, dashboard/, debug/, layout/, lic
 | file | role | exports | local deps |
 |---|---|---|---|
 | `BarcodeScanner.tsx` | Camera barcode scanner component. | BarcodeScanner | components/barcode/NativeMLKitScanner, components/barcode/OfflineBarcodeScanner |
-| `CategoryManager.tsx` | Category management dialog. | CategoryManager | hooks/use-language, lib/cloud/categories-cloud, lib/sonner-bridge, ui/* |
+| `CategoryManager.tsx` | Category management dialog. | CategoryManager | hooks/language-context, lib/cloud/categories-cloud, lib/sonner-bridge, ui/* |
 | `ExitConfirmDialog.tsx` | Exit confirmation dialog. | ExitConfirmDialog | lib/toast-config, ui/* |
 | `NavLink.tsx` | Router NavLink wrapper. | NavLink | — |
-| `NotificationPermissionPrompt.tsx` | Notification permission prompt. | NotificationPermissionPrompt | hooks/use-auth, lib/native-notifications, ui/* |
-| `PrivacyPolicyScreen.tsx` | First-launch privacy policy screen. | PrivacyPolicyScreen | hooks/use-language, hooks/use-theme, hooks/use-ui-scale, lib/i18n, lib/ui-scale-config, ui/* |
+| `NotificationPermissionPrompt.tsx` | Notification permission prompt. | NotificationPermissionPrompt | hooks/auth-context, lib/native-notifications, ui/* |
+| `PrivacyPolicyScreen.tsx` | First-launch privacy policy screen. | PrivacyPolicyScreen | hooks/language-context, hooks/theme-context, hooks/use-ui-scale, lib/i18n, lib/ui-scale-config, ui/* |

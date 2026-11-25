@@ -1,7 +1,7 @@
 // Realtime Sync Hook - Enables instant data synchronization across devices
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './use-auth';
+import { useAuth } from './auth-context';
 import { EVENTS, emitEvent } from '@/lib/events';
 import { getOwnerIdForInsert } from '@/lib/supabase-store';
 import { isGuestDemoMode } from '@/lib/demo-data';
@@ -32,6 +32,7 @@ const SYNC_TABLES = [
 
 export function useRealtimeSync() {
   const { user } = useAuth();
+  const userId = user?.id;
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const debounceTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -53,12 +54,13 @@ export function useRealtimeSync() {
   };
 
   useEffect(() => {
+    const debounceTimers = debounceTimersRef.current;
     // In Guest Demo Mode, do not connect to Supabase realtime channels
     if (isGuestDemoMode() || isLocalOnlyMode()) {
       return;
     }
 
-    if (!user) {
+    if (!userId) {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -144,9 +146,9 @@ export function useRealtimeSync() {
     return () => {
       isMounted = false;
       window.removeEventListener('online', handleOnline);
-      // إلغاء أي مؤقتات تخميد معلقة
-      debounceTimersRef.current.forEach(timer => clearTimeout(timer));
-      debounceTimersRef.current.clear();
+      // إلغاء أي مؤقتات تخميد معلقة (نفس الخريطة دائماً؛ تُنسخ هنا لأن المرجع نفسه لا يُستبدل)
+      debounceTimers.forEach(timer => clearTimeout(timer));
+      debounceTimers.clear();
       if (channelRef.current) {
         try {
           supabase.removeChannel(channelRef.current);
@@ -156,6 +158,6 @@ export function useRealtimeSync() {
         channelRef.current = null;
       }
     };
-  }, [user?.id]);
+  }, [userId]);
 }
 

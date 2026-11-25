@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils';
 
 const STATUS: Record<string, string> = { in_stock: 'في المخزون', sold: 'مباع', defective: 'تالف', returned_to_supplier: 'مرتجع للمورد' };
 const EVENT: Record<string, string> = { received: 'استلام', sold: 'بيع', customer_return: 'مرتجع عميل', returned_to_supplier: 'مرتجع لمورد' };
-const db = supabase as unknown as { from: (t: string) => any; rpc: (fn: string, args: Record<string, unknown>) => any };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   in_stock: 'bg-success/15 text-success border-success/30',
@@ -33,7 +32,7 @@ export function SerialsDialog({ product, onOpenChange }: { product: { id: string
 
   const load = useCallback(async () => {
     if (!product) return;
-    const { data } = await db.from('product_serials').select('serial, status, sold_invoice_number, customer_name, warranty_until').eq('product_id', product.id).order('created_at', { ascending: false }).limit(300);
+    const { data } = await supabase.from('product_serials').select('serial, status, sold_invoice_number, customer_name, warranty_until').eq('product_id', product.id).order('created_at', { ascending: false }).limit(300);
     setRows(data || []);
   }, [product]);
 
@@ -45,7 +44,7 @@ export function SerialsDialog({ product, onOpenChange }: { product: { id: string
     if (list.length === 0) return;
     setBusy(true);
     try {
-      const { error } = await db.rpc('register_serials_atomic', { _product_id: product.id, _serials: list });
+      const { error } = await supabase.rpc('register_serials_atomic', { _product_id: product.id, _serials: list });
       if (error) throw error;
       toast.success(`تم تسجيل ${list.length} رقم`);
       setText(''); await load();

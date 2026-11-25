@@ -65,7 +65,7 @@ import { getInvoiceByIdCloud, InvoiceItem } from '@/lib/cloud/invoices-cloud';
 import { confirmPendingProfit } from '@/lib/partners-store';
 import { updateCustomerStatsCloud } from '@/lib/cloud/customers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useUserRole } from '@/hooks/user-role-context';
 import { invalidateProfitLedgerCache } from '@/lib/cloud/profit-ledger-cloud';
 import { writeOffDebtNowCloud } from '@/lib/cloud/accounting-admin-cloud';
 import { invalidatePartnersCache } from '@/lib/cloud/partners-cloud';
@@ -80,8 +80,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { addActivityLog } from '@/lib/activity-log';
-import { useAuth } from '@/hooks/use-auth';
-import { useLanguage } from '@/hooks/use-language';
+import { useAuth } from '@/hooks/auth-context';
+import { useLanguage } from '@/hooks/language-context';
 import { useMoney } from '@/hooks/use-money';
 import { processDebtPayment } from '@/lib/unified-transactions';
 import { shareDebt, DebtShareData } from '@/lib/native-share';
@@ -191,11 +191,13 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
     };
   }, []);
 
-  // Sync embedded add debt dialog
+  // Sync embedded add debt dialog (runs only when the onAddDebt prop changes; reads the latest callbacks)
+  const addDebtSyncRef = useRef({ rejectIfLocked, onAddDebtChange });
+  addDebtSyncRef.current = { rejectIfLocked, onAddDebtChange };
   useEffect(() => {
     if (onAddDebt !== undefined) {
-      if (onAddDebt && rejectIfLocked()) {
-        onAddDebtChange?.(false);
+      if (onAddDebt && addDebtSyncRef.current.rejectIfLocked()) {
+        addDebtSyncRef.current.onAddDebtChange?.(false);
         return;
       }
       setShowAddDebtDialog(onAddDebt);
@@ -260,7 +262,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       const targetDebt = list.find(d => d.invoiceId === invoiceId || d.id === invoiceId);
       if (targetDebt && targetDebt.remainingDebt > 0) {
         autoOpenProcessedRef.current = invoiceId;
-        openPaymentDialog(targetDebt);
+        openPaymentDialogRef.current(targetDebt);
         setSearchParams({}, { replace: true });
       }
     };
@@ -363,6 +365,9 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
     setPaymentAmount(0);
     setShowPaymentDialog(true);
   };
+  // The auto-open effect above calls the latest version without re-running on every render
+  const openPaymentDialogRef = useRef(openPaymentDialog);
+  openPaymentDialogRef.current = openPaymentDialog;
 
   const openViewDialog = (debt: Debt) => {
     setSelectedDebt(debt);

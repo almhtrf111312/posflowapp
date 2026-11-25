@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Shield, AlertTriangle, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLanguage } from '@/hooks/use-language';
-import { useAuth } from '@/hooks/use-auth';
+import { useLanguage } from '@/hooks/language-context';
+import { useAuth } from '@/hooks/auth-context';
 import { ContactLinksSection } from '@/components/settings/ContactLinksSection';
 import { ActivationScreen } from '@/components/license/ActivationScreen';
 

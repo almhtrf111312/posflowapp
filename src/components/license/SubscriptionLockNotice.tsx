@@ -2,7 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Lock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface SubscriptionLockNoticeProps {
   sectionName?: string;

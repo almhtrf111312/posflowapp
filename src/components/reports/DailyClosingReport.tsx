@@ -13,7 +13,7 @@ import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
 import { Input } from '@/components/ui/input';
 import { toLocalDateString } from '@/lib/date-utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface Props {
   invoices: Invoice[];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { useMoney } from '@/hooks/use-money';
 import { CurrencySnapshot, roundForCurrency } from '@/lib/money-engine';
@@ -55,14 +55,20 @@ export const MoneyInput: React.FC<MoneyInputProps> = ({
     return String(roundForCurrency(inSelected, selectedCode));
   });
 
+  // Re-sync the text only when the value, currency or rate change (not on every keystroke); reads the latest text and money helpers.
+  const rawTextRef = useRef(rawText);
+  rawTextRef.current = rawText;
+  const moneyRef = useRef(m);
+  moneyRef.current = m;
   useEffect(() => {
-    const currentNumeric = parseFloat(rawText) || 0;
-    const currentUsd = m.toUsd(currentNumeric, selectedCode, selectedDef.rate);
+    const money = moneyRef.current;
+    const currentNumeric = parseFloat(rawTextRef.current) || 0;
+    const currentUsd = money.toUsd(currentNumeric, selectedCode, selectedDef.rate);
     if (Math.abs(currentUsd - (valueUsd || 0)) > 0.0001) {
       if (!valueUsd || valueUsd === 0) {
         setRawText('');
       } else {
-        const converted = m.fromUsd(valueUsd, selectedCode, selectedDef.rate);
+        const converted = money.fromUsd(valueUsd, selectedCode, selectedDef.rate);
         setRawText(String(roundForCurrency(converted, selectedCode)));
       }
     }

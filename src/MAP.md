@@ -29,8 +29,8 @@ Read the MAP.md of the directory you need; do not open source files blindly. 18 
 | `components/support/` | 3 | Support chat UI. | [MAP.md](components/support/MAP.md) |
 | `components/ui/` | 65 | shadcn/Radix primitives — import by name, do not read | — |
 | `components/updates/` | 1 | Remote update gate/UI. | — |
-| `contexts/` | 1 | React contexts (page activity). | — |
-| `hooks/` | 35 | React hooks (auth, currency, network, sync, device…) | [MAP.md](hooks/MAP.md) |
+| `contexts/` | 2 | React contexts (page activity). | — |
+| `hooks/` | 43 | React hooks (auth, currency, network, sync, device…) | [MAP.md](hooks/MAP.md) |
 | `integrations/supabase/` | 2 | Supabase client and generated types.ts (stale vs live DB). | — |
 | `lib/` | 99 | domain logic: *-store.ts (local/offline state), money-engine, sync-queue, utilities | [MAP.md](lib/MAP.md) |
 | `lib/auth/` | 2 | Google sign-in (native/desktop) and phone-claim helpers. | — |

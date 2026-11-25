@@ -72,7 +72,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { getCategoryNamesCloud, getCategoryNamesLocalFirst } from '@/lib/cloud/categories-cloud';
 import { CategoryManager } from '@/components/CategoryManager';
 import { loadProducts } from '@/lib/products-store';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 interface CategoryShare {
   categoryId: string;

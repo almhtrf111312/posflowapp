@@ -32,7 +32,7 @@ import { loadPartnersCloud } from '@/lib/cloud/partners-cloud';
 import { loadExpensesCloud } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud } from '@/lib/cloud/debts-cloud';
 import { loadPurchaseInvoicesCloud } from '@/lib/cloud/purchase-invoices-cloud';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { EVENTS } from '@/lib/events';
 import { isNoInventoryMode } from '@/lib/store-type-config';
 import { toLocalDateString } from '@/lib/date-utils';
@@ -390,7 +390,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [noInventory]);
 
   useEffect(() => {
     loadStats();

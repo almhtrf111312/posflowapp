@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Switch } from '@/components/ui/switch';
-import { useUserRole } from '@/hooks/use-user-role';
-import { useLanguage } from '@/hooks/use-language';
+import { useUserRole } from '@/hooks/user-role-context';
+import { useLanguage } from '@/hooks/language-context';
 import { supabase } from '@/integrations/supabase/client';
 import { getOwnerIdForInsert } from '@/lib/supabase-store';
 

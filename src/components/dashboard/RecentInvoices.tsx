@@ -33,7 +33,7 @@ import { getStoreSettings, getPrintSettings } from '@/lib/print-utils';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { EVENTS } from '@/lib/events';
 import { useActionGuard } from '@/hooks/use-action-guard';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 
 const statusStyles: Record<string, string> = {
   paid: 'bg-success/10 text-success',

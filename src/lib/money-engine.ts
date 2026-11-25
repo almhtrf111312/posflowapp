@@ -108,6 +108,33 @@ function ensureSettingsBackup(rawSettingsJson: string | null): void {
   }
 }
 
+/** A custom currency entry as persisted in the settings JSON. */
+interface StoredCustomCurrency {
+  code?: string;
+  symbol?: string;
+  name?: string;
+  rate?: number | string;
+  exchangeRate?: number | string;
+  decimals?: unknown;
+  symbolPosition?: 'before' | 'after';
+  enabled?: unknown;
+}
+
+/** The parts of the persisted settings JSON the money engine reads. */
+interface StoredMoneySettings {
+  primaryCurrency?: string;
+  currency?: string;
+  exchangeRates?: Record<string, unknown>;
+  currencySymbols?: Record<string, unknown>;
+  currencyNames?: Record<string, unknown>;
+  enabledCurrencies?: Record<string, unknown>;
+  currencyDisplayMode?: Record<string, unknown>;
+  slot1Code?: string;
+  slot2Code?: string;
+  syncSettings?: { slot1Code?: string; slot2Code?: string };
+  customCurrencies?: unknown;
+}
+
 function buildStateFromStorage(): MoneyEngineState {
   stateVersion += 1;
   const currencies: Record<string, CurrencyDefinition> = {};
@@ -130,14 +157,14 @@ function buildStateFromStorage(): MoneyEngineState {
       ensureSettingsBackup(raw);
 
       if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, any>;
+        const parsed = JSON.parse(raw) as StoredMoneySettings;
         let primary = normalizeCurrencyCode(parsed.primaryCurrency || parsed.currency || 'USD');
         activeCode = primary;
 
-        const rates: Record<string, any> = { ...(parsed.exchangeRates || {}) };
-        const symbols: Record<string, any> = { ...(parsed.currencySymbols || {}) };
-        const names: Record<string, any> = { ...(parsed.currencyNames || {}) };
-        const enabledMap: Record<string, any> = { ...(parsed.enabledCurrencies || {}) };
+        const rates: Record<string, unknown> = { ...(parsed.exchangeRates || {}) };
+        const symbols: Record<string, unknown> = { ...(parsed.currencySymbols || {}) };
+        const names: Record<string, unknown> = { ...(parsed.currencyNames || {}) };
+        const enabledMap: Record<string, unknown> = { ...(parsed.enabledCurrencies || {}) };
         const slot1Code = normalizeCurrencyCode(parsed.slot1Code || parsed.syncSettings?.slot1Code || '');
         const slot2Code = normalizeCurrencyCode(parsed.slot2Code || parsed.syncSettings?.slot2Code || '');
         const allowedActiveSlots = new Set<string>(['USD']);
@@ -149,7 +176,7 @@ function buildStateFromStorage(): MoneyEngineState {
             currencyDisplayMode[normalizeCurrencyCode(code)] = mode;
           }
         }
-        const customList: Array<Record<string, any>> = Array.isArray(parsed.customCurrencies)
+        const customList: StoredCustomCurrency[] = Array.isArray(parsed.customCurrencies)
           ? parsed.customCurrencies
           : [];
 

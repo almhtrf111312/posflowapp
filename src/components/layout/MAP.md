@@ -7,11 +7,11 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps | rpc · tables |
 |---|---|---|---|---|
-| `MainLayout.tsx` | Main app layout. | MainLayout | Sidebar, hooks/use-app-lifecycle, hooks/use-language, hooks/use-mobile, providers/CloudSyncProvider | — |
-| `NativeTabKeepAlive.tsx` | Keep-alive tab host that keeps pages mounted for instant navigation. | KeepAliveTab, NativeTabHost · 1 types | components/auth/RoleGuard, components/debug/FeatureErrorBoundary, tab-paths, contexts/PageActivityContext, hooks/use-auth, lib/performance-metrics, pages/Appearance*, pages/Customers* (+7) | — |
-| `NetworkStatusIndicator.tsx` | Offline/online status indicator. | NetworkStatusIndicator | hooks/use-language, providers/CloudSyncProvider | — |
+| `MainLayout.tsx` | Main app layout. | MainLayout | Sidebar, hooks/language-context, hooks/use-app-lifecycle, hooks/use-mobile, providers/CloudSyncProvider | — |
+| `NativeTabKeepAlive.tsx` | Keep-alive tab host that keeps pages mounted for instant navigation. | KeepAliveTab, NativeTabHost · 1 types | components/auth/RoleGuard, components/debug/FeatureErrorBoundary, tab-paths, contexts/PageActivityContext, hooks/auth-context, lib/performance-metrics, pages/Appearance*, pages/Customers* (+7) | — |
+| `NetworkStatusIndicator.tsx` | Offline/online status indicator. | NetworkStatusIndicator | hooks/language-context, providers/CloudSyncProvider | — |
 | `PageHeader.tsx` | Page header. | PageHeader | — | — |
-| `Sidebar.tsx` | Sidebar and mobile menu trigger. | Sidebar, MobileMenuTrigger | NetworkStatusIndicator, SyncStatusMenu, hooks/use-auth, hooks/use-language, hooks/use-license, hooks/use-mobile, hooks/use-notifications, hooks/use-support-unread (+5) | tbl: app_settings |
+| `Sidebar.tsx` | Sidebar and mobile menu trigger. | Sidebar, MobileMenuTrigger | NetworkStatusIndicator, SyncStatusMenu, hooks/auth-context, hooks/language-context, hooks/license-context, hooks/notifications-context, hooks/use-mobile, hooks/use-support-unread (+5) | tbl: app_settings |
 | `StuckOperationsList.tsx` | List of stuck sync-queue operations with retry/discard. | StuckOperationsList | lib/events, lib/sonner-bridge, lib/sync-recovery, providers/CloudSyncProvider, ui/* | — |
-| `SyncStatusMenu.tsx` | Sync status menu. | SyncStatusMenu | StuckOperationsList, hooks/use-language, hooks/use-network-status, lib/events, lib/recurring-expenses-store, lib/sonner-bridge, lib/subscription-lock, lib/sync-history (+4) | — |
+| `SyncStatusMenu.tsx` | Sync status menu. | SyncStatusMenu | StuckOperationsList, hooks/language-context, hooks/use-network-status, lib/events, lib/recurring-expenses-store, lib/sonner-bridge, lib/subscription-lock, lib/sync-history (+4) | — |
 | `tab-paths.ts` | Maps a pathname to its primary keep-alive tab path. | getBaseTabPath | — | — |

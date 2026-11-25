@@ -76,15 +76,15 @@ import {
   filterCustomerInvoices,
   remainingDebtOf,
 } from '@/lib/cloud/customer-stats';
-import { useUserRole } from '@/hooks/use-user-role';
-import { useLanguage } from '@/hooks/use-language';
+import { useUserRole } from '@/hooks/user-role-context';
+import { useLanguage } from '@/hooks/language-context';
 import { useCurrency, formatInCurrency } from '@/hooks/use-currency';
 import { useMoney } from '@/hooks/use-money';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { EVENTS } from '@/lib/events';
 import Debts from '@/pages/Debts';
 import { CustomerCreditDialog } from '@/components/customers/CustomerCreditDialog';
-import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden } from '@/contexts/page-activity-context';
 
 export default function Customers() {
   const deferWhileHidden = useDeferWhileHidden();
@@ -174,7 +174,7 @@ export default function Customers() {
       window.removeEventListener(EVENTS.CUSTOMERS_UPDATED, handleUpdate);
       window.removeEventListener(EVENTS.APP_REFRESH, handleUpdate);
     };
-  }, [loadData]);
+  }, [loadData, deferWhileHidden]);
 
   // Auto-open add dialog from URL params
   useEffect(() => {

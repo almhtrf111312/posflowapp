@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Lock, Wifi, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLanguage } from '@/hooks/use-language';
-import { useLicense } from '@/hooks/use-license';
+import { useLanguage } from '@/hooks/language-context';
+import { useLicense } from '@/hooks/license-context';
 
 export function DataEncryptedScreen() {
   const { t, direction } = useLanguage();

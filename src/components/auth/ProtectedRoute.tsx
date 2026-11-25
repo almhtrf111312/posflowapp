@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth, checkUserAccountStatus } from '@/hooks/use-auth';
+import { useAuth, checkUserAccountStatus } from '@/hooks/auth-context';
 import { Loader2, Smartphone } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
 import { isGuestDemoMode } from '@/lib/demo-data';

@@ -7,9 +7,6 @@ const ALGORITHM = { name: 'AES-GCM', length: 256 } as const;
 const ENVELOPE_PREFIX = 'HPE2_';
 const IV_BYTES = 12;
 
-// الجدول غير مُدرج في الأنواع المولّدة قبل تطبيق الـ migration، لذلك نستخدم عميلاً مكتوباً بشكل عام
-const db = supabase as unknown as { from: (table: string) => any };
-
 let cached: { userId: string; key: CryptoKey } | null = null;
 
 const bytesToBase64 = (bytes: Uint8Array): string => {
@@ -32,7 +29,7 @@ const base64ToBytes = (b64: string): Uint8Array => {
 export async function ensureAccountEncryptionKey(userId: string): Promise<boolean> {
   if (typeof crypto === 'undefined' || !crypto.subtle) return false;
 
-  const { data, error } = await db.from(TABLE).select('key_material').eq('user_id', userId).maybeSingle();
+  const { data, error } = await supabase.from(TABLE).select('key_material').eq('user_id', userId).maybeSingle();
   if (error) {
     console.warn('[EncryptionKey] Could not read key:', error.message);
     return false;
@@ -41,7 +38,7 @@ export async function ensureAccountEncryptionKey(userId: string): Promise<boolea
 
   const key = await crypto.subtle.generateKey(ALGORITHM, true, ['encrypt', 'decrypt']);
   const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
-  const { error: insertError } = await db.from(TABLE).insert({
+  const { error: insertError } = await supabase.from(TABLE).insert({
     user_id: userId,
     key_material: bytesToBase64(raw),
   });
@@ -58,7 +55,7 @@ export async function ensureAccountEncryptionKey(userId: string): Promise<boolea
 export async function loadAccountEncryptionKey(userId: string): Promise<CryptoKey | null> {
   if (cached && cached.userId === userId) return cached.key;
 
-  const { data, error } = await db.from(TABLE).select('key_material').eq('user_id', userId).maybeSingle();
+  const { data, error } = await supabase.from(TABLE).select('key_material').eq('user_id', userId).maybeSingle();
   if (error || !data?.key_material) return null;
 
   const key = await crypto.subtle.importKey(
@@ -105,7 +102,7 @@ export async function decryptWithAccountKey(key: CryptoKey, envelope: string): P
 export async function getAccountKeyMaterial(userId: string): Promise<string | null> {
   try {
     await ensureAccountEncryptionKey(userId);
-    const { data, error } = await db.from(TABLE).select('key_material').eq('user_id', userId).maybeSingle();
+    const { data, error } = await supabase.from(TABLE).select('key_material').eq('user_id', userId).maybeSingle();
     if (error || !data?.key_material) return null;
     return String(data.key_material);
   } catch {

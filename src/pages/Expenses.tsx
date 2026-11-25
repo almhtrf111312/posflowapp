@@ -86,12 +86,12 @@ import {
   RecurringExpense
 } from '@/lib/recurring-expenses-store';
 import { emitEvent, EVENTS } from '@/lib/events';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { processExpense, reverseExpenseTransaction, restoreExpenseCash } from '@/lib/unified-transactions';
 import { toLocalDateString } from '@/lib/date-utils';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ListPageSkeleton } from '@/components/ui/page-skeleton';
-import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden } from '@/contexts/page-activity-context';
 
 export default function Expenses() {
   const deferWhileHidden = useDeferWhileHidden();
@@ -201,7 +201,7 @@ export default function Expenses() {
       window.removeEventListener(EVENTS.EXPENSES_UPDATED, handleUpdate);
       window.removeEventListener(EVENTS.RECURRING_EXPENSES_UPDATED, handleRecurringUpdate);
     };
-  }, []);
+  }, [deferWhileHidden]);
 
   // Auto-open add dialog from URL params
   useEffect(() => {

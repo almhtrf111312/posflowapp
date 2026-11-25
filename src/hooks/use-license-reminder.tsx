@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { showToast } from '@/lib/toast';
-import { useLicense } from './use-license';
-import { useAuth } from './use-auth';
+import { useLicense } from './license-context';
+import { useAuth } from './auth-context';
 
 const MILESTONES = [30, 10, 3, 1, 0];
 

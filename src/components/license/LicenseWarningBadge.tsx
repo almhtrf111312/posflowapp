@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
-import { useLicense } from '@/hooks/use-license';
-import { useLanguage } from '@/hooks/use-language';
-import { useAuth } from '@/hooks/use-auth';
+import { useLicense } from '@/hooks/license-context';
+import { useLanguage } from '@/hooks/language-context';
+import { useAuth } from '@/hooks/auth-context';
 import { cn } from '@/lib/utils';
 
 export function LicenseWarningBadge() {

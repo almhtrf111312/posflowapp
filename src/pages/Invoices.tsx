@@ -89,7 +89,7 @@ import { toast } from '@/lib/sonner-bridge';
 import { showSmartToast } from '@/hooks/use-smart-toast';
 import { isNotificationEventAllowed } from '@/lib/notification-events-config';
 import { cn, formatNumber, formatCurrency, formatMoney, formatDateTime, roundCurrency } from '@/lib/utils';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import { useCurrency, loadDefaultCurrencyCode } from '@/hooks/use-currency';
 import { useDebounce } from '@/hooks/use-debounce';
 import { getCurrencySymbolByCode, resolveHistoricalCurrency, resolveInvoiceCurrencySymbol, resolveInvoiceCurrencyName, PREDEFINED_CURRENCIES, toEnglishCurrencySymbol } from '@/lib/currencies';
@@ -121,8 +121,8 @@ import {
   Debt,
 } from '@/lib/cloud/debts-cloud';
 import { debtCreditUsd, maxPayableInCurrency, type DebtFxPolicy } from '@/lib/debt-fx';
-import { useAuth } from '@/hooks/use-auth';
-import { useUserRole } from '@/hooks/use-user-role';
+import { useAuth } from '@/hooks/auth-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { getOwnRefundPermission } from '@/lib/refund-permission';
 import { addActivityLog } from '@/lib/activity-log';
 import { confirmPendingProfit } from '@/lib/partners-store';
@@ -141,7 +141,7 @@ import { getActiveShift } from '@/lib/cashbox-store';
 import { PurchaseInvoicesListTab } from '@/components/purchases/PurchaseInvoicesListTab';
 import { InvoiceProfitDialog } from '@/components/invoices/InvoiceProfitDialog';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { useDeferWhileHidden } from '@/contexts/PageActivityContext';
+import { useDeferWhileHidden } from '@/contexts/page-activity-context';
 import { getLocalDateString, DateQuickFilter, isInvoiceToday, isInvoiceThisWeek, isInvoiceThisMonth, isInvoiceThisYear, isInvoiceCustomDate, isInvoiceInRange } from '@/lib/invoice-date-filters';
 
 // مفتاح موحّد لبنود الاسترداد (يُستخدم في الاختيار والإرسال معًا)
@@ -673,7 +673,6 @@ export default function Invoices() {
       handleView(found);
     }, 350);
     setTimeout(() => setFocusedInvoiceId(null), 4000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredInvoices]);
 
   const displayedInvoices = useMemo(() =>

@@ -1,27 +1,9 @@
-import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
-import { useAuth } from './use-auth';
-import { useUserRole } from './use-user-role';
-import { 
-  Warehouse, 
-  loadWarehousesCloud, 
-  getMainWarehouseCloud,
-  getWarehouseForCashierCloud,
-  addWarehouseCloud,
-  invalidateWarehousesCache
-} from '@/lib/cloud/warehouses-cloud';
+import { useState, useEffect, useCallback, ReactNode } from 'react';
+import { useAuth } from './auth-context';
+import { useUserRole } from './user-role-context';
+import { Warehouse, loadWarehousesCloud, getMainWarehouseCloud, getWarehouseForCashierCloud, addWarehouseCloud, invalidateWarehousesCache } from '@/lib/cloud/warehouses-cloud';
 import { subscribeToEvent, EVENTS } from '@/lib/events';
-
-interface WarehouseContextType {
-  warehouses: Warehouse[];
-  activeWarehouse: Warehouse | null;
-  mainWarehouse: Warehouse | null;
-  isLoading: boolean;
-  setActiveWarehouse: (warehouse: Warehouse | null) => void;
-  refreshWarehouses: () => Promise<void>;
-  ensureMainWarehouse: () => Promise<Warehouse | null>;
-}
-
-const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
+import { WarehouseContext } from '@/hooks/warehouse-context';
 
 export function WarehouseProvider({ children }: { children: ReactNode }) {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -132,12 +114,4 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
       {children}
     </WarehouseContext.Provider>
   );
-}
-
-export function useWarehouse() {
-  const context = useContext(WarehouseContext);
-  if (context === undefined) {
-    throw new Error('useWarehouse must be used within a WarehouseProvider');
-  }
-  return context;
 }

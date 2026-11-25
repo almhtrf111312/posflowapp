@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { usePageActivity } from '@/contexts/PageActivityContext';
+import { usePageActivity } from '@/contexts/page-activity-context';
 
 /**
  * يُرجع true عند التمرير للأعلى أو قرب أعلى الصفحة، وfalse عند التمرير للأسفل (أسلوب Google).

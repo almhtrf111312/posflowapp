@@ -1,6 +1,6 @@
 import { useTheme } from "next-themes";
 import { Toaster as Sonner, toast as sonnerToast } from "sonner";
-import { useLanguage } from "@/hooks/use-language";
+import { useLanguage } from "@/hooks/language-context";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { showSmartToast, hideSmartToast, hideSmartToastById } from "@/hooks/use-smart-toast";

@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/lib/sonner-bridge';
-import { useLanguage } from '@/hooks/use-language';
+import { useLanguage } from '@/hooks/language-context';
 import {
   loadMembersCloud, addMemberCloud, updateMemberCloud, deleteMemberCloud,
   loadLoansCloud, addLoanCloud, returnLoanCloud, markLoanLostCloud,

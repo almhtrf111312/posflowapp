@@ -11,7 +11,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { initErrorRadar, captureError } from "./lib/error-radar";
 import { wipeTrialDataOnBoot, initTrialLifecycle } from "./lib/trial-wipe";
-import { applyStoredThemeEarly } from "./hooks/use-theme";
+import { applyStoredThemeEarly } from "./hooks/theme-context";
 import { initSafeArea } from "./lib/safe-area";
 
 // Initialize Error Radar listeners as early as possible

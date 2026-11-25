@@ -598,6 +598,20 @@ export async function runQaFixes(k, newWorldFn) {
     const tot = await w.one(`select coalesce(sum(settled_amount),0)::float8 s from public.debt_payments where user_id=$1`, [OWNER]);
     const paid = await w.one(`select coalesce(sum(total_paid),0)::float8 s from public.debts where user_id=$1`, [OWNER]);
     check('M3 sum(debt_payments.settled_amount) equals sum(debts.total_paid)', tot.s, paid.s);
+    // Regression (found by the plan's D-05): refunding a credit invoice that had a down payment must still work.
+    // The down payment is the sale-time receipt (the client writes its 'sale' drawer movement); the ':down' payment row
+    // must not be demanded as a documented debt payment by the refund.
+    {
+      const w2 = await newWorldFn();
+      const p2 = (await w2.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Notebook',8,3,50) returning id`, [OWNER])).id;
+      const sh2 = await w2.newShift(100);
+      const s2 = await sale(w2, p2, w2.op('m3r'), 2);
+      await w2.q(`insert into public.shift_transactions(shift_id,user_id,type,amount,currency,currency_amount,exchange_rate,reference_id,notes) values ($1,$2,'sale',2,'USD',2,1,$3,'down payment')`, [sh2, OWNER, s2.invoice_number]);
+      const refund = await w2.fails(w2.q(`select * from public.refund_invoice_atomic($1,'drawer',$2::uuid,'USD',null,1,'drawer')`, [s2.invoice_number, sh2]));
+      check('M3 refunding a credit invoice that had a down payment succeeds', refund, null);
+      check('M3 the refund returns the 2 paid at sale to the drawer', await w2.txSum(sh2, 'refund'), 2);
+      check('M3 stock is restored after the refund', Number((await w2.one(`select quantity::float8 q from public.products where id=$1`, [p2])).q), 50);
+    }
     // A later payment on the same debt keeps the two sides equal.
     const shiftForPay = await w.newShift(100);
     await w.q(`select * from public.record_debt_payment_atomic($1,3,$2,$3::uuid,null,null,null,'cash')`, [debt.id, w.op('m3p'), shiftForPay]);

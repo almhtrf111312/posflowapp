@@ -801,4 +801,90 @@ export async function runQaFixes(k, newWorldFn) {
     check('J02 refused expense wrote no drawer movement', await w.txSum(sh, 'expense'), 0);
     check('J02 expense dated after the closed period is accepted', await w.fails(exp('2026-02-05', '33333333-3333-4333-8333-000000000002')), null);
   }
+
+  // Plan I-14 / I-09 / C-10: purchase return lowers stock, a cancelled paid purchase refunds into the chosen open shift,
+  // a purchase with returns cannot be cancelled, and a written-off debt moves no drawer money.
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'PP',20,10,10) returning id`, [OWNER])).id;
+    const stock = async () => Number((await w.one(`select quantity::float8 q from public.products where id=$1`, [prod])).q);
+    const sup = (await w.one(`insert into public.suppliers(user_id,name) values ($1,'Sup') returning id`, [OWNER])).id;
+    const buy = async (number, shift) => {
+      const inv = (await w.one(`insert into public.purchase_invoices(id,user_id,invoice_number,supplier_name,supplier_id,status,payment_method,payment_status,amount_paid,paid_from,paid_shift_id,paid_currency,paid_currency_amount,paid_rate,invoice_date,actual_items_count,actual_total_quantity,actual_grand_total,expected_items_count,expected_total_quantity,expected_grand_total) values (gen_random_uuid(),$1,$2,'Sup',$3,'draft','cash','paid',100,'drawer',$4,'USD',100,1,'2026-11-23',1,10,100,1,10,100) returning id`, [OWNER, number, sup, shift])).id;
+      const item = (await w.one(`insert into public.purchase_invoice_items(invoice_id,product_id,product_name,quantity,cost_price,total_cost) values ($1,$2,'PP',10,10,100) returning id`, [inv, prod])).id;
+      await w.q(`select public.finalize_purchase_invoice_atomic($1)`, [inv]);
+      return { inv, item };
+    };
+    const sh = await w.newShift(500);
+    const a = await buy('PI-RET', sh);
+    check('I14 stock after the purchase is 20', await stock(), 20);
+    check('I14 purchase return of 4 succeeds', await w.fails(w.q(`select public.purchase_return_atomic($1,$2::jsonb,$3,'ret')`, [a.inv, JSON.stringify([{ item_id: a.item, quantity: 4 }]), w.op('ret')])), null);
+    check('I14 stock falls to 16', await stock(), 16);
+    truthy('I09 a purchase with returns cannot be cancelled', (await w.fails(w.q(`select public.cancel_purchase_invoice_atomic($1,'x reason',$2::uuid)`, [a.inv, sh]))) !== null);
+    const b = await buy('PI-CANCEL', sh);
+    const before = await stock();
+    const sh2 = await w.newShift(200);
+    check('I09 cancel of a paid purchase settles into the chosen open shift', await w.fails(w.q(`select public.cancel_purchase_invoice_atomic($1,'تسوية إلغاء',$2::uuid)`, [b.inv, sh2])), null);
+    check('I09 stock of the cancelled purchase is taken back', await stock(), before - 10);
+    check('I09 the paid amount returns to the open shift (200 + 100)', await w.txSum(sh2, 'supplier_refund'), 100);
+    const d = await w.newDebt({ total: 60, isCash: true });
+    check('C10 write-off succeeds', await w.fails(w.q(`select public.writeoff_debt_atomic($1,'bad debt',$2)`, [d, w.op('wo')])), null);
+    check('C10 debt is written off', (await w.debt(d)).status, 'written_off');
+    check('C10 write-off moves no drawer money', Number((await w.one(`select count(*)::int n from public.shift_transactions where shift_id=$1 and type not in ('supplier_refund')`, [sh2])).n), 0);
+  }
+
+  // Plan H-05 / H-06 / H-07: a credit sale gives partners nothing until it is paid; each payment confirms the same share of
+  // every partner profit; the last payment brings every share to the exact original.
+  {
+    const w = await newWorldFn();
+    const partner = (name, share, all, cs = '[]') => w.one(
+      `insert into public.partners(user_id,name,share_percentage,expense_share_percentage,access_all,current_balance,current_capital,initial_capital,category_shares)
+       values ($1,$2,$3,0,$4,0,0,0,$5::jsonb) returning id`, [OWNER, name, share, all, cs]);
+    const bal = async (id) => Number((await w.one(`select current_balance::float8 b from public.partners where id=$1`, [id])).b);
+    const Z = await partner('Z', 0, false, '[{"categoryName":"Electronics","enabled":true,"percentage":10}]');
+    const X = await partner('X', 30, true);
+    const Y = await partner('Y', 20, true);
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity,category) values ($1,'Phone',150,100,50,'Electronics') returning id`, [OWNER])).id;
+    const sh = await w.newShift(100);
+    const items = JSON.stringify([{ product_id: prod, product_name: 'Phone', quantity: 1, unit_price: 150, amount_usd: 150, amount_original: 150, cost_price: 100 }]);
+    const s = await w.one(`select * from public.process_pos_sale_atomic($1,'debt','C','',150,0,0,0,0,150,50,'USD',null::uuid,$2::jsonb,0,1,null)`, [w.op('h05'), items]);
+    check('H05 credit sale: Z has nothing yet', await bal(Z.id), 0);
+    check('H05 credit sale: X has nothing yet', await bal(X.id), 0);
+    const d = (await w.one(`select id from public.debts where invoice_id=$1`, [s.invoice_number])).id;
+    await w.one(`select public.record_debt_payment_atomic($1,75,$2,$3,'USD',75,1,'cash')`, [d, w.op('h06'), sh]);
+    check('H06 after paying half: Z share 2.5', await bal(Z.id), 2.5);
+    check('H06 after paying half: X share 6.75', await bal(X.id), 6.75);
+    check('H06 after paying half: Y share 4.5', await bal(Y.id), 4.5);
+    await w.one(`select public.record_debt_payment_atomic($1,75,$2,$3,'USD',75,1,'cash')`, [d, w.op('h07'), sh]);
+    check('H07 after the last payment: Z share exactly 5', await bal(Z.id), 5, 1e-9);
+    check('H07 after the last payment: X share exactly 13.5', await bal(X.id), 13.5, 1e-9);
+    check('H07 after the last payment: Y share exactly 9', await bal(Y.id), 9, 1e-9);
+  }
+
+  // Plan G-09: closing a multi-currency drawer compares each currency, then totals the difference in USD.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    await w.one(`select public.post_shift_sale_atomic($1,$2,10,'SYP',150000,15000) r`, [sh, w.op('g09')]);
+    // Expected: USD 100 and SYP 150,000 (= 10 USD at 15000). Count both exactly: no difference.
+    const counts = (usd, syp) => JSON.stringify([{ code: 'USD', counted: usd, rate: 1 }, { code: 'SYP', counted: syp, rate: 15000 }]);
+    const r = await w.one(`select public.close_cash_shift_atomic($1::uuid, null::numeric, 'g09', 'accept', $2::jsonb) r`, [sh, counts(100, 150000)]);
+    check('G09 exact counts in two currencies: variance 0', (await w.one(`select variance::float8 v from public.cash_shifts where id=$1`, [sh])).v, 0);
+    const sh2 = await w.newShift(100);
+    await w.one(`select public.post_shift_sale_atomic($1,$2,10,'SYP',150000,15000) r`, [sh2, w.op('g09b')]);
+    await w.one(`select public.close_cash_shift_atomic($1::uuid, null::numeric, 'short in SYP', 'accept', $2::jsonb) r`, [sh2, counts(100, 135000)]);
+    // 15,000 SYP short at 15000 = -1 USD
+    check('G09 a 15,000 SYP shortage is a -1 USD variance', (await w.one(`select variance::float8 v from public.cash_shifts where id=$1`, [sh2])).v, -1);
+  }
+  // Plan C-11: a credit sale above the customer's limit is refused; one within the limit is accepted.
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Lim',150,100,50) returning id`, [OWNER])).id;
+    const cust = (await w.one(`insert into public.customers(user_id,name,phone,credit_limit,total_debt) values ($1,'Limited','0500000001',100,0) returning id`, [OWNER])).id;
+    const sell = (amount, tag) => w.one(
+      `select * from public.process_pos_sale_atomic($1,'debt','Limited','0500000001',$2,0,0,0,0,$2,0,'USD',null::uuid,$3::jsonb,0,1,null)`,
+      [w.op(tag), amount, JSON.stringify([{ product_id: prod, product_name: 'Lim', quantity: 1, unit_price: amount, amount_usd: amount, amount_original: amount, cost_price: 100 }])]);
+    truthy('C11 credit sale of 150 above the limit of 100 is refused', (await w.fails(sell(150, 'c11a'))) !== null);
+    check('C11 credit sale of 80 within the limit is accepted', await w.fails(sell(80, 'c11b')), null);
+  }
 }

@@ -419,6 +419,7 @@ const fa: TranslationDict = {
   'expenses.payExpenseConfirm': 'آیا می‌خواهید هزینه "{name}" به مبلغ {amount} را پرداخت کنید؟',
   'expenses.confirmDelete': 'آیا از حذف اطمینان دارید؟',
   'expenses.deleteConfirmDesc': 'هزینه "{name}" به مبلغ {amount} برای همیشه حذف خواهد شد.',
+  'expenses.reverseConfirmDesc': 'هزینه "{name}" به مبلغ {amount} برگشت داده می‌شود و مبلغ به صندوق بازمی‌گردد؛ سابقه هزینه به‌عنوان برگشت‌خورده باقی می‌ماند.',
   'expenses.delete': 'حذف',
   'services.notes': 'یادداشت‌ها',
   'services.notesPlaceholder': 'هرگونه یادداشت تکمیلی...',

@@ -1719,6 +1719,7 @@ const ar = {
   'expenses.payNow': 'دفع الآن',
   'expenses.confirmDelete': 'هل أنت متأكد من الحذف؟',
   'expenses.deleteConfirmDesc': 'سيتم حذف المصروف "{name}" بقيمة ${amount} نهائياً.',
+  'expenses.reverseConfirmDesc': 'سيتم التراجع عن المصروف "{name}" بقيمة ${amount} واسترداد المبلغ إلى الصندوق، ويبقى سجل المصروف معكوساً.',
   'expenses.delete': 'حذف',
   'expenses.enterValidAmount': 'يرجى إدخال مبلغ صحيح',
   'expenses.specifyExpenseType': 'يرجى تحديد نوع المصروف',

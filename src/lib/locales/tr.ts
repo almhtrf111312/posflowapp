@@ -1449,6 +1449,7 @@ const tr: TranslationDict = {
   'expenses.payNow': 'Şimdi Öde',
   'expenses.confirmDelete': 'Silmek istediğinizden emin misiniz?',
   'expenses.deleteConfirmDesc': '"{name}" gideri ${amount} tutarında kalıcı olarak silinecek.',
+  'expenses.reverseConfirmDesc': '"{name}" gideri ${amount} tutarıyla geri alınacak ve tutar kasaya iade edilecek; gider kaydı geri alınmış olarak kalacak.',
   'expenses.delete': 'Sil',
   'expenses.confirmPay': 'Ödemeyi Onayla',
   'expenses.confirmPayDesc': 'Bu gideri ödemek istediğinizden emin misiniz?',

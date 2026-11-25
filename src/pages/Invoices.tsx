@@ -2111,6 +2111,26 @@ export default function Invoices() {
                 </span>
               )}
             </Button>
+
+            {/* قسم الفواتير المستردة: الفواتير لا تُحذف، تبقى هنا بعد الاسترداد */}
+            <Button
+              type="button"
+              onClick={() => setShowRefunded(v => !v)}
+              variant="outline"
+              size="default"
+              aria-pressed={showRefunded}
+              className={cn(
+                "shrink-0 gap-1.5",
+                showRefunded
+                  ? "bg-destructive/10 border-destructive text-destructive hover:bg-destructive/15"
+                  : "bg-card border-border hover:bg-muted/60 text-foreground"
+              )}
+            >
+              <span>{tx('invoices.refundedSection', 'الفواتير المستردة')}</span>
+              <span dir="ltr" className="font-mono tabular-nums text-xs font-bold">
+                {invoices.filter(i => i.status === 'refunded').length}
+              </span>
+            </Button>
           </div>
 
           {/* 3. شريط بطاقات الفلاتر النشطة (Active Filter Chips Strip) */}

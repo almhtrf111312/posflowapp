@@ -1477,7 +1477,7 @@ export default function Expenses() {
               <span>{t('expenses.reverseExpense')}</span>
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs text-muted-foreground pt-2">
-              {t('expenses.deleteConfirmDesc').replace('{name}', selectedExpense ? getLocalizedExpenseType(selectedExpense.type, selectedExpense.typeLabel) : '').replace('{amount}', formatNumber(selectedExpense?.amount || 0))}
+              {t('expenses.reverseConfirmDesc').replace('{name}', selectedExpense ? getLocalizedExpenseType(selectedExpense.type, selectedExpense.typeLabel) : '').replace('{amount}', formatNumber(selectedExpense?.amount || 0))}
               <span className="block mt-2 font-medium text-success">
                 💰 {t('expenses.reverseExpenseNote')}
               </span>

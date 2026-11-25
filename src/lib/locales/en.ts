@@ -1558,6 +1558,7 @@ const en: TranslationDict = {
   'expenses.payNow': 'Pay Now',
   'expenses.confirmDelete': 'Are you sure you want to delete?',
   'expenses.deleteConfirmDesc': 'Expense "{name}" worth ${amount} will be permanently deleted.',
+  'expenses.reverseConfirmDesc': 'Expense "{name}" worth ${amount} will be reversed and the amount refunded to the register; the expense record stays marked as reversed.',
   'expenses.delete': 'Delete',
   'expenses.enterValidAmount': 'Please enter a valid amount',
   'expenses.specifyExpenseType': 'Please specify expense type',

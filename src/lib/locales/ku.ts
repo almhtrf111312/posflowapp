@@ -537,6 +537,7 @@ const ku: TranslationDict = {
   'expenses.payExpenseConfirm': 'ئایا دەتەوێت "{name}" بدەیت بە بڕی ${amount}؟',
   'expenses.confirmDelete': 'ئایا دڵنیایت لە سڕینەوە؟',
   'expenses.deleteConfirmDesc': 'خەرجی "{name}" بە بڕی ${amount} بۆ هەمیشە دەسڕدرێتەوە.',
+  'expenses.reverseConfirmDesc': 'خەرجی "{name}" بە بڕی ${amount} دەگەڕێتەوە و بڕەکە دەگەڕێتەوە بۆ صندوق؛ تۆمارەکە وەک گەڕاوەتەوە دەمێنێتەوە.',
   'expenses.delete': 'سڕینەوە',
   'services.addNewRequestDesc': 'زانیارییەکانی داواکاری چاککردنەوەی نوێ بنووسە',
   'services.customerNamePlaceholder': 'ناوی کڕیار',

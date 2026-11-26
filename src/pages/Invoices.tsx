@@ -103,7 +103,6 @@ import {
   refundInvoicePartialCloud,
   markInvoiceRefundedLocally,
   PartialRefundItem,
-  updateInvoiceCloud,
   getInvoiceStatsCloud,
   Invoice,
   InvoiceType,
@@ -126,7 +125,6 @@ import { useUserRole } from '@/hooks/user-role-context';
 import { getOwnRefundPermission } from '@/lib/refund-permission';
 import { addActivityLog } from '@/lib/activity-log';
 import { confirmPendingProfit } from '@/lib/partners-store';
-import { confirmPendingProfitCloud } from '@/lib/cloud/partners-cloud';
 import { processDebtPayment } from '@/lib/unified-transactions';
 import { logActivity } from '@/lib/activity-log';
 import { printHTML, printInvoice, PrintableInvoice } from '@/lib/native-print';
@@ -1250,7 +1248,6 @@ export default function Invoices() {
       toast.error(err instanceof Error ? err.message : 'فشل تسجيل الدفعة');
       return;
     }
-    await updateInvoiceCloud(invoice.id, { status: 'paid', debtPaid: invoice.total, debtRemaining: 0 });
     if (paidAmount > 0) {
       processDebtPayment(paidAmount);
       logActivity('debt_paid', `تسديد كامل لفاتورة ${invoice.id} بقيمة ${formatMoney(paidAmount)} - ${invoice.customerName}`, {
@@ -1260,8 +1257,8 @@ export default function Invoices() {
         remainingAfter: 0,
       }).catch(() => undefined);
       confirmPendingProfit(invoice.id);
-      await confirmPendingProfitCloud(invoice.id).catch(err => console.warn('[handleMarkPaid] confirm profit failed:', err));
     }
+    invalidateInvoicesCache();
     const invoicesData = await loadInvoicesCloud();
     setInvoices(invoicesData);
     toast.success(t('invoices.statusUpdated'));
@@ -2282,7 +2279,7 @@ export default function Invoices() {
                             <span>{t('common.share') || 'مشاركة'}</span>
                             <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
                           </DropdownMenuItem>
-                          {invoice.paymentType === 'debt' && invoice.status !== 'paid' && invoice.status !== 'refunded' && invoice.status !== 'cancelled' && (
+                          {invoice.paymentType === 'debt' && invoice.status !== 'paid' && invoice.status !== 'refunded' && invoice.status !== 'cancelled' && invoice.status !== 'written_off' && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => handlePayDebt(invoice)} className="justify-between cursor-pointer">

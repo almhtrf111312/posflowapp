@@ -1141,6 +1141,41 @@ export async function runQaFixes(k, newWorldFn) {
     await w.one(`select public.post_shift_sale_atomic($1,$2,0.123456789,'USD',0.123456789,1)`, [sh, w.op('p8')]);
     check('F02 drawer sale posting keeps 8 decimals', await w.txSum(sh, 'sale'), 0.12345679, 1e-12);
   }
+  // Full cash settlement from the invoices menu.
+  {
+    const w = await newWorldFn();
+    const shift = await w.newShift(10);
+    const inv = await w.newInvoice({ number: 'INV-MARK-PAID', total: 0.004, paymentType: 'debt' });
+    const settle = (number, op, sh = shift) => w.one(
+      'select public.settle_invoice_debts_atomic($1,$2,$3) paid', [number, sh, op]);
+    const uuid = async () => (await w.one('select gen_random_uuid() id')).id;
+    const operation = await uuid();
+    truthy('FULL missing linked debt refuses payment', !!await w.fails(settle(inv.invoice_number, operation)));
+    check('FULL missing debt leaves invoice pending', (await w.one('select status from public.invoices where id=$1', [inv.id])).status, 'pending');
+    const debt = await w.newDebt({ total: 0.004, invoice: inv.id });
+    const received = await settle(inv.invoice_number, operation);
+    check('FULL collects sub-cent balance via invoice UUID', received.paid, 0.004, 1e-10);
+    check('FULL debt is paid', (await w.debt(debt)).remaining, 0, 1e-10);
+    check('FULL invoice carries ledger amount', (await w.one('select debt_paid from public.invoices where id=$1', [inv.id])).debt_paid, 0.004, 1e-10);
+    check('FULL fresh request after settlement receives zero', (await settle(inv.invoice_number, await uuid())).paid, 0);
+    check('FULL same operation has no new receipt', (await settle(inv.invoice_number, operation)).paid, 0);
+    check('FULL only one payment', (await w.one('select count(*)::int n from public.debt_payments where debt_id=$1', [debt])).n, 1);
+    check('FULL drawer receives exactly 0.004', await w.txSum(shift, 'debt_payment'), 0.004, 1e-10);
+    const multi = await w.newInvoice({ number: 'INV-MARK-MULTI', total: 3, paymentType: 'debt' });
+    await w.newDebt({ total: 1, invoice: multi.invoice_number });
+    await w.newDebt({ total: 2, invoice: multi.id });
+    truthy('FULL inconsistent linked balances refuse receipt', !!await w.fails(settle(multi.invoice_number, await uuid())));
+    check('FULL mismatch rolls back all drawer entries', await w.txSum(shift, 'debt_payment'), 0.004, 1e-10);
+    await w.q('update public.invoices set debt_remaining=3 where id=$1', [multi.id]);
+    check('FULL multiple debts collected together', (await settle(multi.invoice_number, await uuid())).paid, 3);
+    check('FULL combined invoice paid total', (await w.one('select debt_paid from public.invoices where id=$1', [multi.id])).debt_paid, 3);
+    const closed = await w.newInvoice({ number: 'INV-MARK-CLOSED', total: 4, paymentType: 'debt' });
+    const d = await w.newDebt({ total: 4, invoice: closed.invoice_number });
+    await w.q('update public.cash_shifts set closed_at=now() where id=$1', [shift]);
+    truthy('FULL closed shift refuses payment', !!await w.fails(settle(closed.invoice_number, await uuid())));
+    check('FULL closed shift leaves debt intact', (await w.debt(d)).remaining, 4);
+    check('FULL closed shift leaves invoice pending', (await w.one('select status from public.invoices where id=$1', [closed.id])).status, 'pending');
+  }
 }
 
 

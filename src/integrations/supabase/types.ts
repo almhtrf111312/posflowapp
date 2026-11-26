@@ -4352,6 +4352,10 @@ export type Database = {
         }
         Returns: Json
       }
+      settle_invoice_debts_atomic: {
+        Args: { _invoice_number: string; _shift_id: string; _operation_id: string }
+        Returns: number
+      }
       record_shift_fx_atomic: {
         Args: {
           _from_amount: number

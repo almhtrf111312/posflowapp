@@ -569,19 +569,6 @@ export const resolveDebtFxPolicyCloud = async (
   }
 };
 
-const roundMoney = (n: number) => Math.round(n * 100) / 100;
-
-const fetchOpenDebtsByInvoiceId = async (invoiceId: string): Promise<Array<{ id: string; remaining: number }>> => {
-  const { data, error } = await sb
-    .from('debts')
-    .select('id, remaining_debt')
-    .eq('invoice_id', invoiceId);
-  if (error) throw new Error(error.message || 'فشل تحميل الدين');
-  return ((data || []) as Array<{ id: string; remaining_debt: number | null }>)
-    .map(d => ({ id: d.id, remaining: roundMoney(Number(d.remaining_debt) || 0) }))
-    .filter(d => d.remaining > 0);
-};
-
 export type InvoiceDebtLookup =
   | { status: 'found'; debt: Debt }
   | { status: 'none' }
@@ -611,14 +598,24 @@ export const findInvoiceDebtOnServer = async (invoiceId: string): Promise<Invoic
   }
 };
 
-// Settle every open debt linked to an invoice via the atomic payment RPC; returns the total amount paid
+// The server locks the invoice and posts its exact outstanding cash balance once.
 export const settleDebtsByInvoiceIdCloud = async (invoiceId: string): Promise<number> => {
-  let paid = 0;
-  for (const debt of await fetchOpenDebtsByInvoiceId(invoiceId)) {
-    await recordPaymentCloud(debt.id, debt.remaining);
-    paid = roundMoney(paid + debt.remaining);
-  }
-  return paid;
+  const { getActiveShift } = await import('../cashbox-store');
+  const shiftId = getActiveShift()?.id;
+  if (!shiftId) throw new Error('قبض دفعة نقدية يتطلب وردية أصلية مفتوحة');
+  const { data, error } = await sb.rpc('settle_invoice_debts_atomic', {
+    _invoice_number: invoiceId,
+    _shift_id: shiftId,
+    _operation_id: crypto.randomUUID(),
+  });
+  if (error) throw new Error(error.message || 'فشل تسجيل الدفعة');
+  invalidateDebtsCache();
+  void import('./partners-cloud').then(m => m.invalidatePartnersCache()).catch(() => {});
+  emitEvent(EVENTS.DEBTS_UPDATED, null);
+  emitEvent(EVENTS.INVOICES_UPDATED, null);
+  emitEvent(EVENTS.PARTNERS_UPDATED, null);
+  emitEvent(EVENTS.CUSTOMERS_UPDATED, null);
+  return Number(data);
 };
 
 // Delete / Cancel debt by ID ذرياً — عبر cancel_debt_atomic

@@ -21,7 +21,7 @@ import {
   FileX2,
   MoreVertical
 } from 'lucide-react';
-import { cn, formatNumber, formatCurrency, formatMoney, formatDateTime } from '@/lib/utils';
+import { cn, round8, formatNumber, formatCurrency, formatMoney, formatDateTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -430,31 +430,20 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       let creditUsd: number | undefined;
       if (policy) {
         creditUsd = debtCreditUsd(policy, foreignPaid, amountUSD);
-        if (creditUsd > remainingNow + 0.05) {
-          setDebts(latestList);
-          setSelectedDebt(latest);
-          toast.error(t('debts.amountExceedsRemaining'));
-          return;
-        }
-      } else if (finalPaymentUSD > remainingNow) {
-        // F-26: a difference up to 0.05 USD is absorbed and noted by the SERVER (rounding_adjustment); the client sends the real amount.
-        if (finalPaymentUSD - remainingNow <= 0.05) {
-          // keep finalPaymentUSD as entered
-        } else {
-          setDebts(latestList);
-          setSelectedDebt(latest);
-          toast.error(t('debts.amountExceedsRemaining'));
-          return;
-        }
+      }
+      if (round8((creditUsd ?? finalPaymentUSD) - remainingNow) > 0.05) {
+        setDebts(latestList);
+        setSelectedDebt(latest);
+        toast.error(t('debts.amountExceedsRemaining'));
+        return;
       }
 
-      const paymentRatio = remainingNow > 0 ? Math.min(1, (creditUsd ?? finalPaymentUSD) / remainingNow) : 1;
 
       const { getActiveShift } = await import('@/lib/cashbox-store');
       const activeShift = getActiveShift();
       const currentShiftId = activeShift?.id || undefined;
 
-      await recordPaymentWithInvoiceSyncCloud(
+      const updatedDebt = await recordPaymentWithInvoiceSyncCloud(
         selectedDebt.id,
         finalPaymentUSD,
         paymentOpIdRef.current,
@@ -479,6 +468,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       );
 
       // Confirm pending profits proportionally to payment (ظ…ط­ظ„ظٹط§ظ‹ + ط³ط­ط§ط¨ظٹط§ظ‹)
+      const paymentRatio = updatedDebt?.remainingDebt === 0 || remainingNow <= 0
+        ? 1 : Math.min(1, (creditUsd ?? finalPaymentUSD) / remainingNow);
       confirmPendingProfit(selectedDebt.invoiceId, paymentRatio);
 
       // ✅ إعادة احتساب أرقام العميل من الفواتير النشطة بعد السداد فورياً

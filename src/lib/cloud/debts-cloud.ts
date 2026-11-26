@@ -18,6 +18,7 @@ import { updateInvoiceCloud } from './invoices-cloud';
 import { supabase } from '@/integrations/supabase/client';
 import { addToQueue } from '../sync-queue';
 import { round8 } from '../utils';
+import { applyLocalDebtSettlement } from '../debt-settlement';
 import { toLocalDateString, getLocalDayUtcRange } from '../date-utils';
 
 const sb = supabase;
@@ -442,18 +443,15 @@ export const recordPaymentCloud = async (
   shiftId?: string,
   creditUsd?: number
 ): Promise<Debt | null> => {
+  const amt = round8(amount);
+  if (amt <= 0) throw new Error('أدخل مبلغًا صحيحًا أكبر من الصفر');
   if (isGuestDemoMode()) {
     const debts = debtsCache || loadDebtsLocally() || [];
     const target = debts.find(d => d.id === debtId);
     if (!target) throw new Error('الدين غير موجود');
-    const newPaid = Math.min(target.totalDebt, round8((target.totalPaid || 0) + (creditUsd ?? amount)));
-    const newRemaining = Math.max(0, round8(target.totalDebt - newPaid));
-    const newStatus: DebtStatus = newRemaining === 0 ? 'fully_paid' : 'partially_paid';
     const updatedDebt: Debt = {
       ...target,
-      totalPaid: newPaid,
-      remainingDebt: newRemaining,
-      status: newStatus,
+      ...applyLocalDebtSettlement(target, creditUsd ?? amt),
       updatedAt: new Date().toISOString(),
     };
     const list = debts.map(d => d.id === debtId ? updatedDebt : d);
@@ -464,7 +462,6 @@ export const recordPaymentCloud = async (
     return updatedDebt;
   }
   const opId = operationId || `debtpay_${debtId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const amt = round8(amount);
 
   // حركة الصندوق سحابياً تُسجَّلها الدالة الذرية record_debt_payment_atomic داخل نفس المعاملة
   // (وتحدّث expected_balance وتفصل فرق التقريب). الحالة المحلية للوردية تحدَّثها الواجهة عبر processDebtPayment.
@@ -479,15 +476,13 @@ export const recordPaymentCloud = async (
   if (method === 'cash' && !cashShiftId) throw new Error('قبض دفعة نقدية يتطلب وردية أصلية مفتوحة');
 
   const queuePayment = (): Debt | null => {
-    addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: cashShiftId }, 10);
     // الحالة المحلية فقط؛ الحركة السحابية تُسجَّل عند المزامنة عبر الدالة الذرية
     const list = (debtsCache || loadDebtsLocally() || []).map(d => {
       if (d.id !== debtId) return d;
       // F-27: a foreign-currency payment is credited at the invoice rate (creditUsd), not at the cash value
-      const totalPaid = round8((d.totalPaid || 0) + (creditUsd ?? amt));
-      const remainingDebt = Math.max(0, round8(d.totalDebt - totalPaid));
-      return { ...d, totalPaid, remainingDebt, status: (remainingDebt <= 0 ? 'fully_paid' : 'partially_paid') as DebtStatus };
+      return { ...d, ...applyLocalDebtSettlement(d, creditUsd ?? amt) };
     });
+    addToQueue('debt_payment', { debtId, amount: amt, operationId: opId, currency, currencyAmount, exchangeRate, method, shiftId: cashShiftId }, 10);
     debtsCache = list; cacheTimestamp = Date.now(); saveDebtsLocally(list);
     emitEvent(EVENTS.DEBTS_UPDATED, null);
     return list.find(d => d.id === debtId) || null;

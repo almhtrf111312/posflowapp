@@ -88,7 +88,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { toast } from '@/lib/sonner-bridge';
 import { showSmartToast } from '@/hooks/use-smart-toast';
 import { isNotificationEventAllowed } from '@/lib/notification-events-config';
-import { cn, formatNumber, formatCurrency, formatMoney, formatDateTime, roundCurrency } from '@/lib/utils';
+import { cn, round8, formatNumber, formatCurrency, formatMoney, formatDateTime, roundCurrency } from '@/lib/utils';
 import { useLanguage } from '@/hooks/language-context';
 import { useCurrency, loadDefaultCurrencyCode } from '@/hooks/use-currency';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -1366,28 +1366,18 @@ export default function Invoices() {
       let creditUsd: number | undefined;
       if (policy) {
         creditUsd = debtCreditUsd(policy, parseFloat(paymentAmountInput) || 0, amountUSD);
-        if (creditUsd > remainingNow + 0.05) {
-          setSelectedDebtForPayment(latest);
-          toast.error('المبلغ المدخل يتجاوز إجمالي الدين المتبقي');
-          return;
-        }
-      } else if (finalPaymentUSD > remainingNow) {
-        // F-26: a difference up to 0.05 USD is absorbed and noted by the SERVER (rounding_adjustment); the client sends the real amount.
-        if (finalPaymentUSD - remainingNow <= 0.05) {
-          // keep finalPaymentUSD as entered
-        } else {
-          setSelectedDebtForPayment(latest);
-          toast.error('المبلغ المدخل يتجاوز إجمالي الدين المتبقي');
-          return;
-        }
+      }
+      if (round8((creditUsd ?? finalPaymentUSD) - remainingNow) > 0.05) {
+        setSelectedDebtForPayment(latest);
+        toast.error('المبلغ المدخل يتجاوز إجمالي الدين المتبقي');
+        return;
       }
 
-      const paymentRatio = remainingNow > 0 ? Math.min(1, (creditUsd ?? finalPaymentUSD) / remainingNow) : 1;
 
       // الوردية المفتوحة + العملة الأصلية وسعر الصرف: الدالة الذرية تسجل حركة الصندوق وتفصل فرق التقريب
       const { getActiveShift } = await import('@/lib/cashbox-store');
       const currentShiftId = getActiveShift()?.id || undefined;
-      await recordPaymentWithInvoiceSyncCloud(
+      const updatedDebt = await recordPaymentWithInvoiceSyncCloud(
         selectedDebtForPayment.id,
         finalPaymentUSD,
         paymentOpIdRef.current,
@@ -1412,6 +1402,8 @@ export default function Invoices() {
       );
 
       // تأكيد الأرباح المعلقة (محلياً - السحابي يتم ذرياً داخل record_debt_payment_atomic)
+      const paymentRatio = updatedDebt?.remainingDebt === 0 || remainingNow <= 0
+        ? 1 : Math.min(1, (creditUsd ?? finalPaymentUSD) / remainingNow);
       confirmPendingProfit(selectedDebtForPayment.invoiceId, paymentRatio);
 
       // تحديث بيانات العميل فوراً

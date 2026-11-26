@@ -1,3 +1,4 @@
+import { applyLocalDebtSettlement } from '../debt-settlement';
 import { debtCreditUsd, debtFxDifferenceUsd, maxPayableInCurrency, resolveDebtFxPolicy } from '../debt-fx';
 
 let failed = 0;
@@ -32,6 +33,17 @@ eq('legacy credit = cash', debtCreditUsd(null, 450000, 30), 30);
 eq('legacy max uses today rate', maxPayableInCurrency(100, null, 20000), 2000000);
 eq('legacy fx difference = 0', debtFxDifferenceUsd(null, 30, 30), 0);
 eq('case-insensitive currency', resolveDebtFxPolicy({ currency: 'syp', exchangeRate: 15000 }, ' syp ')?.invoiceCurrency, 'SYP');
+
+const debt = { totalDebt: 10, totalPaid: 0, remainingDebt: 10 };
+for (const credit of [9.95, 9.96, 10, 10.04, 10.05]) {
+  const projected = applyLocalDebtSettlement(debt, credit);
+  eq('snapped credit ' + credit, projected.totalPaid, 10);
+  eq('snapped remaining ' + credit, projected.remainingDebt, 0);
+}
+eq('outside tolerance stays open', applyLocalDebtSettlement(debt, 9.94999999).remainingDebt.toFixed(8), '0.05000001');
+let refused = false;
+try { applyLocalDebtSettlement(debt, 10.05000001); } catch { refused = true; }
+eq('overpayment beyond tolerance refused', refused, true);
 
 console.log(`${failed ? 'FAIL' : 'PASS'} debt-fx: ${passed} passed, ${failed} failed`);
 console.log(`Passed Cases: ${passed}`);

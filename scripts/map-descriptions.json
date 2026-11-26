@@ -397,6 +397,7 @@
   "src/lib/store-credit-op.ts": "Store-credit operations (issue, pay debt from credit, cash payout): stable operation id, offline queue path, RPC mapping",
   "scripts/db-drift-sql.mjs": "Prints one read-only SQL query that lists every live-vs-repo difference (functions, columns, triggers, indexes); npm run db:drift-sql",
   "scripts/finance-sql-check.mjs": "Finance SQL gate (part of G1; npm run finance:sql): builds in-memory Postgres from migrations, runs golden scenarios + reconciliation queries",
+  "src/lib/debt-settlement.ts": "Projects offline debt balances using the server settlement tolerance (F-26).",
   "src/lib/debt-fx.ts": "Debt FX policy (F-27): credit foreign-currency debt payments at the invoice rate, FX difference, max payable",
   "src/lib/__tests__/debt-fx.test.ts": "Production test for debt-fx (finance gate)",
   "src/lib/partner-fx.ts": "Partner currency rules (D-10): capital at the original deposit rate, profit at today rate",

@@ -801,6 +801,23 @@ function ReportsContent() {
     };
   }, [dateRange, cloudExpenses, cloudPartners]);
 
+  // P&L chart rows from the cloud (plan J-04): sales including tax and realized profit per day from the report data, minus the
+  // day's counted expenses. The chart used to read device-local profit records, so a fresh device showed other sales than the cards.
+  const profitTrendRows = useMemo(() => {
+    const expByDay = new Map<string, number>();
+    expenseReportData.expenses.forEach(exp => {
+      const d = toLocalDateString(exp.date);
+      expByDay.set(d, round8((expByDay.get(d) || 0) + Number(exp.amount || 0)));
+    });
+    const days = new Set<string>([...reportData.allDailySales.map(r => r.date), ...expByDay.keys()]);
+    return [...days].sort().map(date => {
+      const row = reportData.allDailySales.find(r => r.date === date);
+      const grossProfit = row?.profit || 0;
+      const expenses = expByDay.get(date) || 0;
+      return { date, sales: row?.sales || 0, grossProfit, expenses, netProfit: round8(grossProfit - expenses) };
+    });
+  }, [reportData.allDailySales, expenseReportData.expenses]);
+
   // Profit Margin & Sales Trend Calculations
   const profitMargin = useMemo(() => {
     if (reportData.summary.totalSales > 0) {
@@ -2768,6 +2785,7 @@ function ReportsContent() {
                   <Suspense fallback={<div className="h-48 flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin" /></div>}>
                     <ProfitTrendChart
                       days={60}
+                      rows={profitTrendRows}
                       startDate={dateRange.from}
                       endDate={dateRange.to}
                       displayMode={reportDisplayMode === 'smart' ? 'chart' : 'table'}
@@ -3157,6 +3175,7 @@ function ReportsContent() {
             <Suspense fallback={<div className="h-48 flex items-center justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin" /></div>}>
               <ProfitTrendChart
                 days={60}
+                rows={profitTrendRows}
                 startDate={dateRange.from}
                 endDate={dateRange.to}
                 displayMode={reportDisplayMode === 'smart' ? 'chart' : 'table'}

@@ -1,4 +1,5 @@
 import { getActiveShift } from '@/lib/cashbox-store';
+import { markExpensePaidFromDrawer, takeExpensePaidFromDrawer } from '@/lib/drawer-expense-marks';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -305,8 +306,11 @@ export default function Expenses() {
       }
 
       // ✅ خصم المبلغ من الصندوق بعملة المصروف الأصلية وسعر صرفها، مع ربط الحركة بمعرّف المصروف نفسه
+      const paidFromLocalDrawer = Boolean(expenseShiftId && getActiveShift()?.id === expenseShiftId);
       processExpense(amountUSD, formData.type, undefined, undefined, created.id, expenseCurrency, formData.amount,
-        selectedCurrencyDef.rate, false, Boolean(expenseShiftId && getActiveShift()?.id === expenseShiftId));
+        selectedCurrencyDef.rate, false, paidFromLocalDrawer);
+      // Remember it so an offline reversal can give the cash back to this drawer once (local = cloud).
+      if (paidFromLocalDrawer && expenseShiftId) markExpensePaidFromDrawer(expenseShiftId, created.id);
 
       const [expensesData, statsData] = await Promise.all([
         loadExpensesCloud(),
@@ -486,7 +490,11 @@ export default function Expenses() {
       const result = await reverseExpenseWithResultCloud(reversedId, 'تراجع بواسطة المستخدم', originalShiftId);
       if (result.cashRefunded && result.shiftId && getActiveShift()?.id === result.shiftId
           && result.cashAmount !== undefined && result.cashCurrency) {
+        takeExpensePaidFromDrawer(result.shiftId, reversedId);
         restoreExpenseCash(result.cashAmount, reversedType, reversedId, result.cashCurrency, result.cashCurrencyAmount);
+      } else if (result.queued && takeExpensePaidFromDrawer(getActiveShift()?.id, reversedId)) {
+        // Offline: the server refunds the drawer when the queued reversal syncs; mirror it locally now, once.
+        restoreExpenseCash(reversedAmount, reversedType, reversedId, expense.originalCurrency || 'USD', expense.originalAmount ?? reversedAmount);
       }
 
       // 3. تحديث البيانات محلياً

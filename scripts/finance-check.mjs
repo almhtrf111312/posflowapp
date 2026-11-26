@@ -30,6 +30,7 @@ const REGISTERED = [
   { file: 'expense-reversal.test.ts', kind: 'production', covers: 'profit-engine: reversed expenses count until the reversal date (audit U6)' },
   { file: 'partner-fx.test.ts', kind: 'production', covers: 'partner-fx: partner withdrawals in any currency (D-10)' },
   { file: 'currency-symbols.test.ts', kind: 'production', covers: 'currency symbol resolution' },
+  { file: 'drawer-expense-marks.test.ts', kind: 'production', covers: 'drawer-expense-marks: an expense reversed offline gives its cash back to the local drawer exactly once (local = cloud)' },
   { file: 'store-credit-op.test.ts', kind: 'production', covers: 'store-credit-op: one operation id per action across retries and the offline queue; refusals are not queued (invariants 3-4)' },
   { file: 'cashbox-shift-adopt.test.ts', kind: 'production', covers: 'shift-adopt: a shift open in the cloud is adopted on another device; expected cash follows the server (F-18)' },
   { file: 'comprehensive-accounting-audit.test.ts', kind: 'model', covers: 'accounting spec model (self-contained; see KD-02)' },

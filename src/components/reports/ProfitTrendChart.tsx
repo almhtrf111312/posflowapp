@@ -10,8 +10,12 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export type ProfitTrendDisplayMode = 'chart' | 'table';
 
+export interface ProfitTrendRow { date: string; sales: number; cogs?: number; grossProfit: number; expenses: number; netProfit: number }
+
 export interface ProfitTrendChartProps {
   days?: number;
+  /** Cloud rows (same numbers as the report cards). When given, the device-local profit records are not used (plan J-04). */
+  rows?: ProfitTrendRow[];
   startDate?: string;
   endDate?: string;
   displayMode?: ProfitTrendDisplayMode;
@@ -19,6 +23,7 @@ export interface ProfitTrendChartProps {
 
 export function ProfitTrendChart({
   days = 30,
+  rows,
   startDate,
   endDate,
   displayMode = 'chart',
@@ -45,7 +50,7 @@ export function ProfitTrendChart({
   } satisfies ChartConfig;
 
   const chartData = useMemo(() => {
-    const stats = getDailyProfitStats(days);
+    const stats = rows ? rows.map(r => ({ cogs: 0, ...r })) : getDailyProfitStats(days);
 
     let filteredStats = stats;
     if (startDate && endDate) {
@@ -61,7 +66,7 @@ export function ProfitTrendChart({
           day: 'numeric'
         }),
       }));
-  }, [days, startDate, endDate, language]);
+  }, [days, rows, startDate, endDate, language]);
 
   const summary = useMemo(() => {
     const totalGrossProfit = chartData.reduce((sum, d) => sum + d.grossProfit, 0);

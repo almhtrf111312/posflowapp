@@ -96,3 +96,24 @@ export function isShiftAlreadyOpenError(error: unknown): boolean {
   if (String(e.code ?? '') === '23505') return true;
   return /uq_cash_shifts_one_open_per_cashier/.test(String(e.message ?? ''));
 }
+
+export type LocalShiftSync = 'close' | 'refresh' | 'keep';
+
+/**
+ * What to do with this device's open shift after reading the cloud (local = cloud, found by plan K-06/L on 2026-11-26).
+ * - 'close'   the cloud has closed it (closed on this or another device): close it locally too, or new operations go to a closed shift.
+ * - 'refresh' still open, the cloud expected cash (from movements, F-18) differs and nothing is waiting in the sync queue:
+ *             reseed the local totals from the cloud (another session sold on the same shift).
+ * - 'keep'    no cloud copy yet, same balance, or local operations still waiting to sync (the cloud is behind this device).
+ */
+export function decideLocalShiftSync(
+  localExpected: number,
+  cloud: { closed_at?: string | null } | null | undefined,
+  cloudExpected: number | null,
+  hasPendingSync: boolean,
+): LocalShiftSync {
+  if (!cloud) return 'keep';
+  if (cloud.closed_at) return 'close';
+  if (hasPendingSync || cloudExpected === null) return 'keep';
+  return Math.abs(cloudExpected - localExpected) > 0.005 ? 'refresh' : 'keep';
+}

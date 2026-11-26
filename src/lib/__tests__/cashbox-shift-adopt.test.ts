@@ -1,5 +1,5 @@
 // Production-code test: rules for adopting a shift open in the cloud but unknown on this device (cross-device sync).
-import { buildAdoptedShift, expectedFromMovements, expectedCashOfShift, isShiftAlreadyOpenError } from '../shift-adopt';
+import { buildAdoptedShift, expectedFromMovements, expectedCashOfShift, isShiftAlreadyOpenError, decideLocalShiftSync } from '../shift-adopt';
 
 let failed = 0;
 let passed = 0;
@@ -54,6 +54,15 @@ eq('QUEUE the index name in the message is a refused shift open', isShiftAlready
 eq('QUEUE a network error is not a refused shift open (it keeps retrying)', isShiftAlreadyOpenError(new Error('Failed to fetch')), false);
 eq('QUEUE another constraint is not a refused shift open', isShiftAlreadyOpenError({ code: '23503' }), false);
 eq('QUEUE null is not a refused shift open', isShiftAlreadyOpenError(null), false);
+
+// K-06 / L (2026-11-26): this device's open shift follows the cloud. Live case: device 511, cloud 526 after a shift closed by sync.
+eq('LOCAL=CLOUD a shift closed in the cloud is closed on the device', decideLocalShiftSync(511, { closed_at: '2026-11-26T00:54:31Z' }, null, false), 'close');
+eq('LOCAL=CLOUD closed in the cloud wins even with pending operations', decideLocalShiftSync(511, { closed_at: '2026-11-26T00:54:31Z' }, null, true), 'close');
+eq('LOCAL=CLOUD another session sold on the same shift: reseed from cloud (511 → 526)', decideLocalShiftSync(511, { closed_at: null }, 526, false), 'refresh');
+eq('LOCAL=CLOUD with local operations still queued the device is kept (cloud is behind)', decideLocalShiftSync(511, { closed_at: null }, 526, true), 'keep');
+eq('LOCAL=CLOUD same balance: nothing to do', decideLocalShiftSync(526, { closed_at: null }, 526, false), 'keep');
+eq('LOCAL=CLOUD no cloud copy yet (opened offline): kept', decideLocalShiftSync(526, null, null, false), 'keep');
+eq('LOCAL=CLOUD cloud balance unknown: kept', decideLocalShiftSync(526, { closed_at: null }, null, false), 'keep');
 
 console.log(`${failed ? 'FAIL' : 'PASS'} cashbox-shift-adopt: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

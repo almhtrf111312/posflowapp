@@ -10,10 +10,13 @@ import {
   closeShift as closeShiftFn,
   calculateShiftStatus,
   adoptCloudOpenShift,
+  closeLocalShiftFromCloud,
+  refreshLocalShiftFromCloud,
   Shift
 } from '@/lib/cashbox-store';
 import { EVENTS } from '@/lib/events';
 import { loadQueue } from '@/lib/sync-queue';
+import { decideLocalShiftSync, expectedCashOfShift } from '@/lib/shift-adopt';
 import { ShiftFxDialog } from '@/components/cashbox/ShiftFxDialog';
 import { loadShiftSupplierMoney, ShiftSupplierMoney } from '@/lib/cloud/suppliers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
@@ -154,6 +157,27 @@ export default function CashShifts() {
     // خلفي: دمج الورديات السحابية
     loadCloudShifts().then(async (cloudShifts) => {
       if (cloudShifts && cloudShifts.length > 0) {
+        // مطابقة وردية هذا الجهاز مع السحابة (المحلي = السحابي): أُغلقت سحابياً ← تُغلق محلياً؛ تغيّر رصيدها
+        // السحابي (بيع من جلسة أخرى) ولا عمليات معلقة ← يُعاد بناء أرقامها من حركات السحابة (F-18).
+        const localOpen = getActiveShift();
+        if (localOpen) {
+          const cloudCopy = cloudShifts.find(cs => cs.id === localOpen.id);
+          const cloudExpected = cloudCopy && !cloudCopy.closed_at
+            ? await loadShiftExpectedFromMovements(cloudCopy.id, cloudCopy.opening_balance) : null;
+          const { getPendingOperations } = await import('@/lib/sync-queue');
+          const decision = decideLocalShiftSync(expectedCashOfShift(localOpen), cloudCopy, cloudExpected, getPendingOperations().length > 0);
+          if (decision === 'close' && cloudCopy) {
+            closeLocalShiftFromCloud(cloudCopy);
+            setOpenShift(null);
+            setShifts(loadShifts());
+          } else if (decision === 'refresh' && cloudCopy && cloudExpected !== null) {
+            const refreshed = refreshLocalShiftFromCloud({ ...cloudCopy, expected_balance: cloudExpected }, user?.id);
+            if (refreshed) {
+              setOpenShift(refreshed);
+              setShiftStatus(calculateShiftStatus(refreshed));
+            }
+          }
+        }
         // وردية مفتوحة في السحابة وغير معروفة على هذا الجهاز: نعتمدها كوردية نشطة (مزامنة بين الأجهزة)
         const cloudOpen = cloudShifts.find(cs => !cs.closed_at);
         if (cloudOpen && !getActiveShift()) {

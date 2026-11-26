@@ -81,11 +81,13 @@ function asOfRangeEnd(inv: ProfitInvoiceInput, range: ProfitRange | undefined, d
  * A reversal after the period end does not remove the expense from that period.
  */
 export function expenseIsCounted(
-  e: { isReversed?: boolean; reversedAt?: string | null },
+  e: { isReversed?: boolean; is_reversed?: boolean; reversedAt?: string | null },
   rangeTo: string | undefined,
   dayOf: (value: string) => string,
 ): boolean {
-  if (!e.isReversed) return true;
+  // Cloud expenses carry the flag as `is_reversed` (expenses-cloud.ts). Reading only `isReversed` counted reversed expenses
+  // in the Reports expense total and net profit (found by plan J-04, 2026-11-26).
+  if (!(e.isReversed ?? e.is_reversed)) return true;
   if (!e.reversedAt || !rangeTo) return false;
   return dayOf(e.reversedAt) > rangeTo;
 }

@@ -299,6 +299,45 @@ export const adoptCloudOpenShift = (
   return adopted;
 };
 
+// The cloud closed this device's open shift (decideLocalShiftSync → 'close'): mark it closed locally with the cloud figures.
+export const closeLocalShiftFromCloud = (cloudShift: CloudShiftLike & { actual_balance?: number | string | null; variance?: number | string | null }): void => {
+  const shifts = loadShifts();
+  const idx = shifts.findIndex(s => s.id === cloudShift.id && s.status === 'open');
+  if (idx === -1) return;
+  const s = shifts[idx];
+  s.status = 'closed';
+  s.closedAt = cloudShift.closed_at || new Date().toISOString();
+  if (cloudShift.actual_balance !== null && cloudShift.actual_balance !== undefined) s.closingCash = roundCurrency(Number(cloudShift.actual_balance));
+  if (cloudShift.expected_balance !== null && cloudShift.expected_balance !== undefined) s.expectedCash = round8(Number(cloudShift.expected_balance));
+  if (cloudShift.variance !== null && cloudShift.variance !== undefined) s.discrepancy = roundCurrency(Number(cloudShift.variance));
+  saveShifts(shifts);
+  const state = loadCashboxState();
+  if (state.activeShiftId === cloudShift.id) {
+    state.activeShiftId = undefined as unknown as typeof state.activeShiftId;
+    state.lastUpdated = new Date().toISOString();
+    saveCashboxState(state);
+  }
+  emitEvent(EVENTS.CASH_SHIFTS_UPDATED, shifts);
+};
+
+// The cloud expected cash of this device's open shift changed (decideLocalShiftSync → 'refresh'): reseed the local totals from it.
+export const refreshLocalShiftFromCloud = (cloudShift: CloudShiftLike, currentUserId?: string | null): Shift | null => {
+  const shifts = loadShifts();
+  const local = shifts.find(s => s.id === cloudShift.id && s.status === 'open');
+  if (!local) return null;
+  const opening = roundCurrency(Number(cloudShift.opening_balance) || 0);
+  const rebuilt = buildAdoptedShift(cloudShift, currentUserId ?? local.userId, false, initShiftCurrencies(opening));
+  if (!rebuilt) return null;
+  const merged: Shift = { ...local, ...rebuilt, userName: local.userName || rebuilt.userName };
+  saveShifts(shifts.map(s => (s.id === merged.id ? merged : s)));
+  const state = loadCashboxState();
+  state.currentBalance = roundCurrency(merged.openingCash + merged.salesTotal - merged.expensesTotal);
+  state.lastUpdated = new Date().toISOString();
+  saveCashboxState(state);
+  emitEvent(EVENTS.CASH_SHIFTS_UPDATED, loadShifts());
+  return merged;
+};
+
 // The server refused a shift this device opened (another one is already open for the cashier): forget the local one
 // so the device adopts the server's open shift on the next load of the shifts page.
 export const dropLocalShift = (shiftId: string): void => {

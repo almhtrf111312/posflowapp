@@ -22,6 +22,9 @@ eq('U6 expense reversed on 5 Nov does not count for 1-5 Nov', expenseTotal(rever
 eq('reversed without a reversal date does not count (legacy rows)', expenseTotal({ amount: 50, date: '2026-11-01', isReversed: true }, '2026-11-01', '2026-11-01'), 0);
 
 eq('expenseIsCounted: active', expenseIsCounted({ isReversed: false }, '2026-11-01', day) ? 1 : 0, 1);
+// J-04: the cloud shape (is_reversed) is honoured — a reversal on the same day removes the expense from that day's report
+eq('expenseIsCounted: cloud expense reversed the same day is not counted', expenseIsCounted({ is_reversed: true, reversedAt: '2026-11-01T18:00:00Z' }, '2026-11-01', day) ? 1 : 0, 0);
+eq('expenseIsCounted: cloud expense reversed after the end still counts', expenseIsCounted({ is_reversed: true, reversedAt: '2026-11-05T00:00:00Z' }, '2026-11-01', day) ? 1 : 0, 1);
 eq('expenseIsCounted: reversed after the end', expenseIsCounted({ isReversed: true, reversedAt: '2026-11-05T00:00:00Z' }, '2026-11-01', day) ? 1 : 0, 1);
 
 // Audit F6: pending profit of a past period must not use a later collection (sale 100, profit 40, paid 100 on 4 Nov).

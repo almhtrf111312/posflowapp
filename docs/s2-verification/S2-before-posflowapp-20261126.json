@@ -1,0 +1,163 @@
+{
+  "project": "posflowapp",
+  "project_ref": "bwlqfxfvchjvehnbvwaz",
+  "source_commit": "784e06e55d3bfd11ecc676d89b6da29269fd78db",
+  "captured_at": "2026-11-26 18:00:20.162275+00",
+  "functions": [
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public._caller_is_store_manager()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public._direct_client_write()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public.guard_cash_shifts_direct()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public.guard_debts_direct()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public.guard_invoice_items_cashier_direct()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public.guard_invoices_cashier_direct()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public.guard_products_cost_cashier_direct()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public.guard_profit_records_direct()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": null,
+      "owner": null,
+      "exists": false,
+      "signature": "public.guard_shift_transactions_direct()",
+      "definition": null,
+      "effective_acl": null
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "owner": "postgres",
+      "exists": true,
+      "signature": "public.post_shift_sale_atomic(uuid,text,numeric,text,numeric,numeric,text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.post_shift_sale_atomic(_shift_id uuid, _operation_id text, _amount_usd numeric, _currency text DEFAULT 'USD'::text, _currency_amount numeric DEFAULT NULL::numeric, _exchange_rate numeric DEFAULT 1, _notes text DEFAULT NULL::text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nDECLARE\n  v_uid uuid := auth.uid();\n  v_owner uuid;\n  v_amount numeric := round(COALESCE(_amount_usd, 0), 8);\n  v_ccy text := upper(COALESCE(NULLIF(trim(_currency), ''), 'USD'));\n  v_rate numeric;\n  v_orig numeric;\n  v_existing public.shift_transactions%ROWTYPE;\nBEGIN\n  IF v_uid IS NULL THEN RAISE EXCEPTION 'المستخدم غير مسجل الدخول'; END IF;\n  v_owner := public.get_owner_id(v_uid);\n  IF v_owner IS NULL THEN RAISE EXCEPTION 'لم يتم العثور على حساب المالك'; END IF;\n  IF _operation_id IS NULL OR length(_operation_id) < 8 THEN RAISE EXCEPTION 'رقم العملية غير صالح'; END IF;\n  IF v_amount <= 0 OR v_amount::text IN ('NaN','Infinity','-Infinity') THEN\n    RAISE EXCEPTION 'مبلغ البيع النقدي يجب أن يكون أكبر من الصفر';\n  END IF;\n  IF v_ccy = 'USD' THEN\n    v_rate := 1; v_orig := round(v_amount, 8);\n  ELSE\n    v_rate := COALESCE(_exchange_rate, 0);\n    IF v_rate <= 0 OR v_rate::text IN ('NaN','Infinity','-Infinity') THEN RAISE EXCEPTION 'سعر الصرف غير صالح'; END IF;\n    v_orig := round(COALESCE(_currency_amount, v_amount * v_rate), 2);\n  END IF;\n\n  -- Same lock order as the other drawer RPCs: shift row first.\n  PERFORM 1 FROM public.cash_shifts WHERE id = _shift_id AND user_id = v_owner FOR UPDATE;\n  IF NOT FOUND THEN RAISE EXCEPTION 'الوردية غير موجودة أو لا تتبع لهذا المتجر'; END IF;\n\n  SELECT * INTO v_existing FROM public.shift_transactions\n   WHERE shift_id = _shift_id AND type = 'sale' AND reference_id = _operation_id;\n  IF FOUND THEN\n    IF abs(v_existing.amount - round(v_amount, 8)) > 0.01 THEN\n      RAISE EXCEPTION 'تعارض في معرّف العملية (%): مبلغ مختلف عن الحركة المسجلة', _operation_id USING ERRCODE = '23505';\n    END IF;\n    RETURN jsonb_build_object('success', true, 'already_processed', true, 'amount', v_existing.amount);\n  END IF;\n\n  -- A sale can only be posted into an OPEN shift (a closed shift is immutable, F-20).\n  PERFORM 1 FROM public.cash_shifts WHERE id = _shift_id AND user_id = v_owner AND closed_at IS NULL;\n  IF NOT FOUND THEN RAISE EXCEPTION 'الوردية مغلقة: لا يمكن ترحيل بيع نقدي إليها'; END IF;\n\n  INSERT INTO public.shift_transactions (shift_id, user_id, type, amount, currency, currency_amount, exchange_rate, notes, reference_id)\n  VALUES (_shift_id, v_owner, 'sale', round(v_amount, 8), v_ccy, v_orig, v_rate, COALESCE(_notes, 'مبيعات نقدية'), _operation_id);\n\n  UPDATE public.cash_shifts\n     SET expected_balance = round(COALESCE(expected_balance, 0) + round(v_amount, 8), 8)\n   WHERE id = _shift_id;\n\n  RETURN jsonb_build_object('success', true, 'already_processed', false, 'amount', round(v_amount, 8));\nEND;\n$function$\n",
+      "effective_acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ]
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "owner": "postgres",
+      "exists": true,
+      "signature": "public.receive_stock_wac(uuid,numeric,numeric,text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.receive_stock_wac(_product_id uuid, _quantity numeric, _unit_cost numeric, _reference text DEFAULT NULL::text)\n RETURNS TABLE(new_quantity numeric, new_cost numeric)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\nDECLARE\r\n  _caller uuid := auth.uid();\r\n  _owner uuid;\r\n  _cur_qty numeric;\r\n  _cur_cost numeric;\r\n  _pos_qty numeric;\r\n  _calc_cost numeric;\r\nBEGIN\r\n  IF _caller IS NULL THEN\r\n    RAISE EXCEPTION 'Authentication required';\r\n  END IF;\r\n\r\n  _owner := public.get_owner_id(_caller);\r\n  IF _owner IS NULL THEN\r\n    RAISE EXCEPTION 'Owner context is required';\r\n  END IF;\r\n\r\n  IF COALESCE(_quantity, 0) <= 0 OR COALESCE(_unit_cost, -1) < 0 THEN\r\n    RAISE EXCEPTION 'Invalid stock quantity or unit cost';\r\n  END IF;\r\n\r\n  SELECT COALESCE(p.quantity, 0), COALESCE(p.cost_price, 0)\r\n    INTO _cur_qty, _cur_cost\r\n    FROM public.products p\r\n   WHERE p.id = _product_id AND p.user_id = _owner\r\n     FOR UPDATE;\r\n\r\n  IF NOT FOUND THEN\r\n    RAISE EXCEPTION 'Product not found';\r\n  END IF;\r\n\r\n  _pos_qty := GREATEST(_cur_qty, 0);\r\n\r\n  -- F-11: free goods (unit cost 0) never lower the weighted-average cost\r\n  IF _unit_cost = 0 THEN\r\n    _calc_cost := _cur_cost;\r\n  ELSIF _pos_qty = 0 THEN\r\n    _calc_cost := _unit_cost;\r\n  ELSE\r\n    _calc_cost := round(((_pos_qty * _cur_cost) + (_quantity * _unit_cost)) / (_pos_qty + _quantity), 8);\r\n  END IF;\r\n\r\n  PERFORM set_config('app.stock_movement_type', 'purchase', true);\r\n  PERFORM set_config('app.stock_source', 'receive_stock_wac', true);\r\n  PERFORM set_config('app.stock_invoice_number', COALESCE(_reference, ''), true);\r\n\r\n  UPDATE public.products\r\n     SET quantity = _cur_qty + _quantity,\r\n         cost_price = _calc_cost,\r\n         updated_at = now()\r\n   WHERE id = _product_id;\r\n\r\n  RETURN QUERY SELECT (_cur_qty + _quantity), _calc_cost;\r\nEND;\r\n$function$\n",
+      "effective_acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "exists": false,
+      "enabled": null,
+      "trigger": "a0_guard_direct",
+      "relation": "public.cash_shifts",
+      "definition": null
+    },
+    {
+      "exists": false,
+      "enabled": null,
+      "trigger": "a0_guard_direct",
+      "relation": "public.debts",
+      "definition": null
+    },
+    {
+      "exists": false,
+      "enabled": null,
+      "trigger": "a0_guard_cashier_direct",
+      "relation": "public.invoice_items",
+      "definition": null
+    },
+    {
+      "exists": false,
+      "enabled": null,
+      "trigger": "a0_guard_cashier_direct",
+      "relation": "public.invoices",
+      "definition": null
+    },
+    {
+      "exists": false,
+      "enabled": null,
+      "trigger": "a0_guard_cashier_direct",
+      "relation": "public.products",
+      "definition": null
+    },
+    {
+      "exists": false,
+      "enabled": null,
+      "trigger": "a0_guard_direct",
+      "relation": "public.profit_records",
+      "definition": null
+    },
+    {
+      "exists": false,
+      "enabled": null,
+      "trigger": "a0_guard_direct",
+      "relation": "public.shift_transactions",
+      "definition": null
+    }
+  ]
+}

@@ -140,29 +140,25 @@ export const closeShiftCloud = async (params: {
 };
 
 /**
- * Idempotent write of one shift transaction.
+ * Idempotent write of one shift transaction through the server (record_shift_movement_atomic, migration 20261126190000).
  * `row.id` is generated once by the caller and reused on every retry, so a lost response never duplicates cash.
- * The table also has a unique index on (shift_id, type, reference_id).
+ * The server keeps the old rules: same id = same movement; a repeated (shift, type, reference) is the same sale, or is kept
+ * under reference#<id> for other types. A closed shift is refused with (F-20): the queue parks it for manual reconciliation.
  */
 export const writeShiftTransactionRow = async (row: Record<string, unknown>): Promise<void> => {
-  const attempt = (payload: Record<string, unknown>) =>
-    sb.from('shift_transactions').upsert(payload as unknown as Database['public']['Tables']['shift_transactions']['Insert'], { onConflict: 'id', ignoreDuplicates: true });
-
-  const { error } = await attempt(row);
-  if (!error) return;
-  if (error.code !== '23505') throw error;
-
-  // Another row already holds this (shift, type, reference).
-  const type = String(row.type || '');
-  // A sale is referenced by its unique operation id and a debt payment by its unique payment id
-  // (the server may already have written it): this is the same movement, nothing to add.
-  if (type === 'sale' || type === 'debt_payment') return;
-
-  // Other types may legitimately repeat a reference in one shift (two withdrawals by one partner,
-  // two partial refunds of one invoice): keep the movement under a distinct reference.
-  const suffix = String(row.id || '').slice(0, 8) || Date.now().toString(36);
-  const { error: retryError } = await attempt({ ...row, reference_id: `${String(row.reference_id ?? '')}#${suffix}` });
-  if (retryError && retryError.code !== '23505') throw retryError;
+  const id = typeof row.id === 'string' && row.id ? row.id : crypto.randomUUID();
+  const { error } = await sb.rpc('record_shift_movement_atomic' as never, {
+    _id: id,
+    _shift_id: row.shift_id,
+    _type: row.type,
+    _amount: row.amount,
+    _reference_id: row.reference_id ?? null,
+    _notes: row.notes ?? null,
+    _currency: row.currency ?? null,
+    _currency_amount: row.currency_amount ?? null,
+    _exchange_rate: row.exchange_rate ?? null,
+  } as never);
+  if (error) throw error;
 };
 
 export const addShiftTransactionCloud = async (params: {

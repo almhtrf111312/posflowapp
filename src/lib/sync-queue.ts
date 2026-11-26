@@ -165,6 +165,7 @@ const isTerminalSyncError = (message: string): boolean => {
     'رصيد الافتتاح والإغلاق يتغيران',
     'الوردية تُفتح فقط',
     'مخصص لمدير المتجر',
+    'نوع حركة الصندوق غير مسموح من التطبيق',
   ].some(fragment => normalized.includes(fragment));
 };
 

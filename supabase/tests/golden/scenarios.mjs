@@ -1283,7 +1283,32 @@ export async function runQaFixes(k, newWorldFn) {
     const msg = await w.fails(w.one(`select public.settle_invoice_debts_atomic('NO-SUCH-INVOICE', $1::uuid, gen_random_uuid()) r`, [sh]));
     truthy('SETTLE a missing invoice gives the Arabic message', msg !== null && msg.includes('الفاتورة غير موجودة'));
   }
+  // Direct-write step 1: drawer movements through record_shift_movement_atomic (same behaviour as the old client insert).
+  {
+    const w = await newWorldFn();
+    const closed = await w.newShift(0);
+    await w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [closed]);
+    const sh = await w.newShift(20);
+    const mv = (id, type, amt, ref, shift = sh) => w.one(`select public.record_shift_movement_atomic($1::uuid,$2::uuid,$3,$4,$5,'t','USD',$4,1) r`, [id, shift, type, amt, ref]);
+    const id1 = '66666666-6666-4666-8666-000000000001';
+    check('MOVE a deposit is recorded', (await mv(id1, 'deposit_revenue', 7.123456789, 'dep-1')).r.status, 'inserted');
+    check('MOVE a replay of the same id adds nothing', (await mv(id1, 'deposit_revenue', 7.123456789, 'dep-1')).r.status, 'replayed');
+    check('MOVE amount keeps 8 decimals', await w.txSum(sh, 'deposit_revenue'), 7.12345679, 1e-12);
+    check('MOVE a sale with the same reference is the same movement', (await mv('66666666-6666-4666-8666-000000000002', 'sale', 5, 'inv-9')).r.status, 'inserted');
+    check('MOVE ...second sale with that reference adds nothing', (await mv('66666666-6666-4666-8666-000000000003', 'sale', 5, 'inv-9')).r.status, 'duplicate_reference');
+    check('MOVE sales total stays 5', await w.txSum(sh, 'sale'), 5);
+    await mv('66666666-6666-4666-8666-000000000004', 'refund', 2, 'inv-7');
+    await mv('66666666-6666-4666-8666-000000000005', 'refund', 1, 'inv-7');
+    check('MOVE two partial refunds of one invoice are both kept (reference#id)', await w.txSum(sh, 'refund'), 3);
+    const closedMsg = await w.fails(mv('66666666-6666-4666-8666-000000000006', 'sale', 3, 'late', closed));
+    truthy('MOVE a closed shift is refused with (F-20)', closedMsg !== null && closedMsg.includes('(F-20)'));
+    truthy('MOVE an expense movement is refused (its RPC writes it)', (await w.fails(mv('66666666-6666-4666-8666-000000000007', 'expense', 3, 'e1'))) !== null);
+    truthy('MOVE a zero amount is refused', (await w.fails(mv('66666666-6666-4666-8666-000000000008', 'sale', 0, 'z'))) !== null);
+    truthy('MOVE an unknown shift is refused', (await w.fails(mv('66666666-6666-4666-8666-000000000009', 'sale', 1, 'u', '66666666-6666-4666-8666-0000000000ff'))) !== null);
+    check('MOVE the shift expected balance is not touched (cache, F-18)', Number((await w.one(`select expected_balance::float8 e from public.cash_shifts where id=$1`, [sh])).e), 20);
+  }
 }
+
 
 
 

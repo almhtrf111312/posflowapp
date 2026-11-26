@@ -311,21 +311,18 @@ where status not in ('refunded', 'cancelled')
 select p.name, p.quantity from public.products p
 join public.stores st on st.user_id = p.user_id
 where p.quantity < 0 and not coalesce(st.allow_negative_stock, false);
--- X-7b per stock location: the latest movement of each (product, warehouse) equals that location's stock — main store
---      (warehouse_id null or the default warehouse) against products.quantity, any other warehouse against warehouse_stock.
---      (The first version mixed locations: a newer movement in another warehouse was compared with the main stock.)
---      Assumption not yet seen on live data (2026-11-26: all 7 movement locations were the main store): the default warehouse's
---      stock lives in products.quantity. Two movements committed in the same instant can still be ordered differently.
+-- X-7b record_main_stock_movement writes NULL for products.quantity. The warehouse trigger
+-- writes its real warehouse_id for warehouse_stock.quantity, including the default warehouse.
+-- Movements sharing a timestamp use the row id as a tie-breaker.
 with last as (
   select distinct on (s.product_id, s.warehouse_id) s.product_id, s.warehouse_id, s.quantity_after, s.created_at
   from public.stock_movements s order by s.product_id, s.warehouse_id, s.created_at desc, s.id desc)
 select p.id, p.name, l.warehouse_id, l.quantity_after,
-       case when l.warehouse_id is null or w.is_default then p.quantity else ws.quantity end as location_stock
+       case when l.warehouse_id is null then p.quantity else ws.quantity end as location_stock
 from last l
 join public.products p on p.id = l.product_id
-left join public.warehouses w on w.id = l.warehouse_id
 left join public.warehouse_stock ws on ws.warehouse_id = l.warehouse_id and ws.product_id = l.product_id
-where (case when l.warehouse_id is null or w.is_default then p.quantity else ws.quantity end) is distinct from l.quantity_after;
+where (case when l.warehouse_id is null then p.quantity else ws.quantity end) is distinct from l.quantity_after;
 
 -- X-8 [D-20, D-23] Store credit: the balance view equals the ledger, at 8 decimals.
 select b.customer_id, b.store_credit,

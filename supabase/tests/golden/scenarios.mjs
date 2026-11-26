@@ -568,6 +568,21 @@ export async function runLawFixes(k, newWorldFn) {
     check('HISTORY debt remains settled', (await w.debt(d)).remaining, 0);
   }
 
+  // Exercise the read-only stock audit against movements written by both actual stock triggers.
+  {
+    const w = await newWorldFn();
+    const plan = fs.readFileSync(new URL('../../../docs/ACCOUNTING_AUDIT_PLAN.md', import.meta.url), 'utf8');
+    const x7b = plan.split('-- X-7b ')[1].split('-- X-8 ')[0].split('\n').slice(1).join('\n');
+    const p = (await w.one("insert into public.products(user_id,name,quantity) values ($1,'X7',9) returning id", [OWNER])).id;
+    for (const [name, isDefault, quantity] of [['Main warehouse', true, 4], ['Van', false, 2]]) {
+      const wh = (await w.one('insert into public.warehouses(user_id,name,is_default) values ($1,$2,$3) returning id', [OWNER,name,isDefault])).id;
+      await w.q('insert into public.warehouse_stock(warehouse_id,product_id,quantity) values ($1,$2,$3)', [wh,p,quantity]);
+    }
+    check('X7b stock 9, default warehouse 4, van 2 all match', (await w.q(x7b)).length, 0);
+    await w.q('update public.stock_movements set quantity_after=3 where product_id=$1 and quantity_after=2', [p]);
+    check('X7b flags only the damaged van movement', (await w.q(x7b)).length, 1);
+  }
+
   // F7 (audit): a credit quick purchase is linked to a supplier and writes one purchase entry (migration 20261124080400).
   {
     const w = await newWorldFn();

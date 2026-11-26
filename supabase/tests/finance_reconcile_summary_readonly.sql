@@ -29,14 +29,20 @@ select 'R-01 debt arithmetic [F-13]' as "check",
 union all
 select 'R-02 debt paid = settled payments [F-13]',
        (select count(*) from (
-          select d.id
+          select d.id, d.user_id, d.total_paid, x.settled_sum, x.refunded_sum,
+                 round(coalesce(d.total_paid,0) - (x.settled_sum - x.refunded_sum), 4) as diff
           from public.debts d
-          left join public.debt_payments p on p.debt_id = d.id
+          cross join lateral (
+            select coalesce((select sum(p.settled_amount) from public.debt_payments p where p.debt_id = d.id), 0) as settled_sum,
+                   coalesce((select sum(greatest(coalesce((l.metadata->>'refund_amount')::numeric, 0) - coalesce((l.metadata->>'debt_reduced')::numeric, 0), 0))
+                              from public.activity_log l
+                              where l.user_id = d.user_id and l.action_type = 'partial_refund' and l.entity_type = 'invoice'
+                                and d.invoice_id is not null and d.invoice_id in (l.entity_name, l.entity_id::text)), 0) as refunded_sum
+          ) x
           where d.status in ('due', 'partially_paid', 'fully_paid')
             and d.created_at >= timestamptz '2026-11-05'
-          group by d.id, d.user_id, d.total_paid
-          having abs(coalesce(d.total_paid,0) - coalesce(sum(p.settled_amount), 0)) > 0.01
-       ) x)
+            and abs(coalesce(d.total_paid,0) - (x.settled_sum - x.refunded_sum)) > 0.01
+       ) violations)
 union all
 select 'R-03 drawer movement orphan / owner / after close [F-19, F-20]',
        (select count(*) from public.shift_transactions t
@@ -68,9 +74,12 @@ select 'R-05b expense movement without real expense [F-17, F-22]',
             and not exists (select 1 from public.expenses e where e.id::text = t.reference_id))
 union all
 select 'R-06 debt FX difference consistency [F-27]',
-       (select count(*) from public.debt_payments
+       (select count(*) from (
+          select id, debt_id, amount, settled_amount, fx_difference_usd, fx_credit_rate
+          from public.debt_payments
           where fx_credit_rate is not null
-            and abs(fx_difference_usd - (amount - settled_amount)) > 0.0001)
+            and abs(fx_difference_usd - (amount - settled_amount + coalesce(rounding_adjustment, 0))) > 0.0001
+       ) violations)
 union all
 select 'R-08 partner allocations within expense [F-21, D-09]',
        (select count(*) from (
@@ -83,11 +92,18 @@ select 'R-08 partner allocations within expense [F-21, D-09]',
        ) x)
 union all
 select 'R-09 credit quick purchase without supplier [F-25, F7]',
-       (select count(*) from public.purchase_invoices pi
+       (select count(*) from (
+          select pi.id, pi.invoice_number, pi.supplier_id, pi.actual_grand_total,
+                 case when pi.supplier_id is null then 'no supplier' else 'no supplier ledger entry' end as problem
+          from public.purchase_invoices pi
           where pi.payment_method = 'credit'
             and pi.status in ('finalized', 'completed')
-            and pi.supplier_id is null
-            and pi.invoice_number like 'QP-%')
+            and pi.invoice_number like 'QP-%'
+            and (pi.supplier_id is null
+                 or not exists (select 1 from public.supplier_ledger_entries l
+                                where l.user_id = pi.user_id and l.reference_type = 'purchase_invoice'
+                                  and l.reference_id = pi.id::text and l.entry_type = 'purchase'))
+       ) violations)
 union all
 select 'R-07 INFO only, open shift cache drift (not a gate, KD-06)',
        (select count(*) from public.cash_shifts s

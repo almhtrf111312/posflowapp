@@ -34,7 +34,7 @@ cross join lateral (
          coalesce((select sum(greatest(coalesce((l.metadata->>'refund_amount')::numeric, 0) - coalesce((l.metadata->>'debt_reduced')::numeric, 0), 0))
                     from public.activity_log l
                     where l.user_id = d.user_id and l.action_type = 'partial_refund' and l.entity_type = 'invoice'
-                      and d.invoice_id is not null and l.entity_name = d.invoice_id), 0) as refunded_sum
+                      and d.invoice_id is not null and d.invoice_id in (l.entity_name, l.entity_id::text)), 0) as refunded_sum
 ) x
 where d.status in ('due', 'partially_paid', 'fully_paid')
   and d.created_at >= timestamptz '2026-11-05'

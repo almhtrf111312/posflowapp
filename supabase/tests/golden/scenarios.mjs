@@ -18,6 +18,11 @@ export function reconQueries() {
   return out;
 }
 
+async function summaryCount(w, id) {
+  const rows = await w.q(fs.readFileSync(path.join(path.dirname(RECON), 'finance_reconcile_summary_readonly.sql'), 'utf8'));
+  return Number(rows.find((r) => r.check.split(' ')[0] === id)?.violations);
+}
+
 export async function runScenarios(w, k) {
   const { q, one, op, newShift, newInvoice, newDebt, debt, expected, txSum, fails } = w;
   const { check, truthy } = k;
@@ -560,6 +565,7 @@ export async function runLawFixes(k, newWorldFn) {
     await w.db.exec('alter table public.supplier_ledger_entries disable trigger user');
     await w.q(`delete from public.supplier_ledger_entries where reference_id=$1 and entry_type='purchase'`, [qpId]);
     check('NEG R-09 catches a credit quick purchase with no supplier ledger entry', (await w.q(r09)).length, 1);
+    check('SUMMARY R-09 detects the missing purchase entry', await summaryCount(w, 'R-09'), 1);
     await w.db.exec('rollback');
     const cashId = '33333333-3333-4333-8333-' + String(Date.now()).slice(-12);
     const shCash = await w.newShift(500);
@@ -1040,6 +1046,14 @@ export async function runQaFixes(k, newWorldFn) {
     const r02 = reconQueries().find((r) => r.id === 'R-02').sql;
     const r02rows = await w.q(r02);
     check('R02 a partial refund on a paid credit sale is not a false difference', r02rows.length, 0);
+    check('SUMMARY R-02 valid partial refund', await summaryCount(w, 'R-02'), 0);
+    // Earlier debts may reference the invoice UUID. The refund RPC accepts either identifier.
+    const invId = (await w.one('select id from public.invoices where invoice_number=$1', [s.invoice_number])).id;
+    await w.q('update public.debts set invoice_id=$1 where id=$2', [invId, d]);
+    check('R02 valid partial refund linked by UUID', (await w.q(r02)).length, 0);
+    await w.q('update public.debts set total_paid=total_paid+1 where id=$1', [d]);
+    check('R02 detects an actual paid-balance mismatch', (await w.q(r02)).length, 1);
+    check('SUMMARY R-02 detects an actual mismatch', await summaryCount(w, 'R-02'), 1);
     const snaps = await w.one(`select count(*) filter (where revenue >= 0)::int o, max(gross_profit) filter (where revenue >= 0)::float8 g from public.profit_records where invoice_id=$1`, [s.invoice_number]);
     check('SNAP2 the original snapshot survives the refund (one row, full profit 8)', `${snaps.o}:${snaps.g}`, '1:8');
     check('SNAP2 a later client call still writes nothing', (await w.one(`select public.record_sale_profit_snapshot($1) r`, [s.invoice_number])).r, false);
@@ -1053,6 +1067,8 @@ export async function runQaFixes(k, newWorldFn) {
     check('FXR the 0.04 is rounding_adjustment (-0.04)', px.r, -0.04, 1e-9);
     check('FXR settled = 10', px.s, 10, 1e-9);
     check('FXR R-06 holds', (await w.q(reconQueries().find((r) => r.id === 'R-06').sql)).length, 0);
+
+    check('SUMMARY R-06 same rate and valid rounding', await summaryCount(w, 'R-06'), 0);
 
     // Manual debt through the RPC, idempotent by id.
     const mid = '55555555-5555-4555-8555-000000000001';

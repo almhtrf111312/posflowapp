@@ -16,7 +16,7 @@ import { formatReportAmount, formatNumber, cn } from '@/lib/utils';
 import { toLocalDateString, isDateInRange, getTodayLocal } from '@/lib/date-utils';
 import { useNavigate } from 'react-router-dom';
 import { invoicesLink } from '@/lib/report-links';
-import { isSalesInvoice, invoiceNetSales, itemNetRevenue, itemProfit, itemUnitCost } from '@/lib/report-metrics';
+import { isSalesInvoice, invoiceNetSales, invoiceGrossSales, itemNetRevenue, itemProfit, itemUnitCost } from '@/lib/report-metrics';
 
 type Range = { from: string; to: string };
 const subtitleOf = (r: Range) => `الفترة من ${r.from} إلى ${r.to}`;
@@ -245,7 +245,7 @@ export function ReturnsDiscountsReport({ invoices, dateRange }: { invoices: Invo
     .map(({ inv, day }) => ({
       id: inv.id, day, saleDay: toLocalDateString(inv.createdAt),
       customer: inv.customerName || 'عميل نقدي', cashier: inv.cashierName || '-',
-      amount: invoiceNetSales(inv),
+      amount: invoiceGrossSales(inv),
     }))
     .sort((a, b) => b.day.localeCompare(a.day)), [invoices, dateRange.from, dateRange.to]);
 
@@ -255,7 +255,7 @@ export function ReturnsDiscountsReport({ invoices, dateRange }: { invoices: Invo
     .map(inv => ({
       id: inv.id, day: toLocalDateString(inv.createdAt),
       customer: inv.customerName || 'عميل نقدي', cashier: inv.cashierName || '-',
-      amount: Number(inv.discount || 0), invoiceTotal: invoiceNetSales(inv),
+      amount: Number(inv.discount || 0), invoiceTotal: invoiceGrossSales(inv),
     }))
     .sort((a, b) => b.day.localeCompare(a.day)), [invoices, dateRange.from, dateRange.to]);
 

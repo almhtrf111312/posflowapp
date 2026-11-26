@@ -47,6 +47,9 @@ test('sales exclude tax', () => {
   const s = computeProfitSummary({ invoices: [inv({ total: 110, taxAmount: 10, profit: 30 })] });
   assertEqual(s.sales, 100, 'sales without tax');
   assertEqual(s.salesWithTax, 110, 'sales with tax');
+  // T-4: the daily row carries the tax-inclusive figure shown in reports
+  assertEqual(s.days[0].salesWithTax, 110, 'daily sales with tax');
+  assertEqual(s.days[0].sales, 100, 'daily sales without tax');
 });
 
 test('owner example: 100 / profit 30, down payment 40, payment 20, write-off 40', () => {

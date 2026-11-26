@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatReportAmount, formatNumber } from '@/lib/utils';
 import { Invoice } from '@/lib/cloud/invoices-cloud';
-import { isSalesInvoice, invoiceNetSales } from '@/lib/report-metrics';
+import { isSalesInvoice, invoiceGrossSales } from '@/lib/report-metrics';
 import { exportToExcel } from '@/lib/excel-export';
 import { exportToPDF } from '@/lib/pdf-export';
 import { toast } from '@/lib/sonner-bridge';
@@ -53,7 +53,7 @@ export function CashierPerformanceReport({
         cashierMap[name] = { name, invoiceCount: 0, totalSales: 0, totalProfit: 0, cashSales: 0, debtSales: 0 };
       }
       cashierMap[name].invoiceCount += 1;
-      const net = invoiceNetSales(inv);
+      const net = invoiceGrossSales(inv); // شاملة الضريبة، مثل الإغلاق اليومي
       cashierMap[name].totalSales += net;
       cashierMap[name].totalProfit += realizedProfitToDate(inv);
       if (inv.paymentType === 'cash') cashierMap[name].cashSales += net;

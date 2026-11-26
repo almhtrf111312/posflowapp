@@ -1,4 +1,4 @@
-import { invoiceNetSales, isSalesInvoice, itemNetRevenue, itemProfit, itemUnitCost } from '../report-metrics';
+import { invoiceGrossSales, invoiceNetSales, isSalesInvoice, itemNetRevenue, itemProfit, itemUnitCost } from '../report-metrics';
 
 function eq(actual: number | boolean, expected: number | boolean, message: string) {
   const ok = typeof expected === 'number' ? Math.abs(Number(actual) - expected) < 1e-6 : actual === expected;
@@ -8,6 +8,9 @@ function eq(actual: number | boolean, expected: number | boolean, message: strin
 
 // المبيعات بدون الضريبة
 eq(invoiceNetSales({ total: 118, taxAmount: 18 }), 100, 'net sales excludes tax');
+// T-4 (owner 2026-11-26): the sales figure in every report includes tax, like the daily closing ($57.00, not $56.62)
+eq(invoiceGrossSales({ total: 118, taxAmount: 18 }), 118, 'displayed sales include tax');
+eq([{ total: 8, taxAmount: 0.38095238 }, { total: 49, taxAmount: 0 }].reduce((s, i) => s + invoiceGrossSales(i), 0), 57, 'live day: sales 57.00 = sum of invoice totals');
 // المعدومة ضمن المبيعات، المستردة والملغاة والمشتريات لا
 eq(isSalesInvoice({ type: 'sale', status: 'written_off' }), true, 'written-off counts as sales');
 eq(isSalesInvoice({ type: 'sale', status: 'refunded' }), false, 'refunded excluded');

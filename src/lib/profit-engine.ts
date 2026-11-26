@@ -115,6 +115,8 @@ export interface ProfitEngineInput {
 export interface ProfitDay {
   date: string;
   sales: number;
+  /** The same day's invoice totals including tax (the sales figure shown in reports, owner decision 2026-11-26). */
+  salesWithTax: number;
   orders: number;
   realizedProfit: number;
   expenses: number;
@@ -350,7 +352,7 @@ export function computeProfitSummary(input: ProfitEngineInput): ProfitSummary {
   const dayRow = (date: string): ProfitDay => {
     let row = days.get(date);
     if (!row) {
-      row = { date, sales: 0, orders: 0, realizedProfit: 0, expenses: 0, badDebtLoss: 0, netProfit: 0 };
+      row = { date, sales: 0, salesWithTax: 0, orders: 0, realizedProfit: 0, expenses: 0, badDebtLoss: 0, netProfit: 0 };
       days.set(date, row);
     }
     return row;
@@ -390,6 +392,7 @@ export function computeProfitSummary(input: ProfitEngineInput): ProfitSummary {
       undatedCollections += timeline.undatedCollections;
       const row = dayRow(timeline.saleDay);
       row.sales += timeline.revenue;
+      row.salesWithTax += timeline.revenueWithTax;
       row.orders += 1;
       row.realizedProfit += timeline.saleDayProfit;
     }
@@ -442,6 +445,7 @@ export function computeProfitSummary(input: ProfitEngineInput): ProfitSummary {
     .map(d => ({
       date: d.date,
       sales: round8(d.sales),
+      salesWithTax: round8(d.salesWithTax),
       orders: d.orders,
       realizedProfit: round8(d.realizedProfit),
       expenses: round8(d.expenses),

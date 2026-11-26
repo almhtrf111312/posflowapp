@@ -171,8 +171,9 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       );
 
       // 🎯 تعريف الربح الموحّد (profit-engine): نفس الأرقام في لوحة التحكم والتقارير وإقفال الفترة
-      // المبيعات بدون الضريبة، والربح المحقق بحسب المبالغ المحصّلة فعلياً في يوم تحصيلها.
-      const netOfTax = (inv: { total: number; taxAmount?: number }) => inv.total - (Number(inv.taxAmount) || 0);
+      // المبيعات شاملة الضريبة، والربح (بدون الضريبة) المحقق بحسب المبالغ المحصّلة فعلياً في يوم تحصيلها.
+      // المبيعات المعروضة شاملة الضريبة (قرار المالك 2026-11-26)، مثل الإغلاق اليومي والتقارير
+      const grossSales = (inv: { total: number }) => Number(inv.total) || 0;
       const profitInputs = {
         invoices,
         payments: profitLedger.payments,
@@ -188,7 +189,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         range: { from: todayLocalYMD, to: todayLocalYMD },
       });
 
-      const todaySales = todaySummary.sales;
+      const todaySales = todaySummary.salesWithTax; // شاملة الضريبة مثل كل التقارير (قرار المالك)
       const todayFullProfit = todayInvoices.reduce((sum, inv) => sum + (inv.profit || 0), 0);
       const todayCOGS = todaySales - todayFullProfit;
       const todayExpenses = todaySummary.expenses;
@@ -214,7 +215,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       });
 
       const uniqueCustomers = new Set(monthInvoices.map(inv => inv.customerName)).size;
-      const monthSales = monthInvoices.reduce((sum, inv) => sum + netOfTax(inv), 0);
+      const monthSales = monthInvoices.reduce((sum, inv) => sum + grossSales(inv), 0);
 
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -223,7 +224,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
       const weekInvoices = invoices.filter(inv =>
         dayOfInvoice(inv.createdAt) >= oneWeekAgoYMD && isActiveInvoice(inv)
       );
-      const weekSales = weekInvoices.reduce((sum, inv) => sum + netOfTax(inv), 0);
+      const weekSales = weekInvoices.reduce((sum, inv) => sum + grossSales(inv), 0);
 
       const inventoryValue = noInventory ? 0 : products.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
 
@@ -246,7 +247,7 @@ export default function Dashboard({ embedded }: { embedded?: boolean }) {
         range: { from: toLocalDateString(weekStart), to: todayLocalYMD },
       });
       const last7ByDay = new Map(last7Summary.days.map(d => [d.date, d]));
-      const dailySales = make7Days(dayYmd => last7ByDay.get(dayYmd)?.sales ?? 0);
+      const dailySales = make7Days(dayYmd => last7ByDay.get(dayYmd)?.salesWithTax ?? 0);
 
       // الربح المحقق لكل يوم (يشمل ما حُصّل من الديون في ذلك اليوم)
       const dailyProfit = make7Days(dayYmd => last7ByDay.get(dayYmd)?.realizedProfit ?? 0);

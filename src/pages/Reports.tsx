@@ -68,7 +68,7 @@ import { loadCategoriesCloud, loadCategoriesLocally, Category } from '@/lib/clou
 import { loadExpensesCloud, loadExpensesForReportsCloud, loadExpensesLocally, Expense } from '@/lib/cloud/expenses-cloud';
 import { loadDebtsCloud, loadDebtsLocally, Debt } from '@/lib/cloud/debts-cloud';
 import { computeProfitSummary, realizedProfitToDate, expenseIsCounted } from '@/lib/profit-engine';
-import { invoiceNetSales, itemNetRevenue, itemProfit, isSalesInvoice } from '@/lib/report-metrics';
+import { invoiceGrossSales, itemNetRevenue, itemProfit, isSalesInvoice } from '@/lib/report-metrics';
 import { invoicesLink } from '@/lib/report-links';
 import { useUserRole } from '@/hooks/user-role-context';
 import { loadProfitLedgerCloud, loadProfitLedgerLocally, withProfitSnapshots, type ProfitLedger } from '@/lib/cloud/profit-ledger-cloud';
@@ -618,15 +618,15 @@ function ReportsContent() {
       invoiceFilter: passingIds ? (inv => passingIds.has(inv.id)) : undefined,
     });
 
-    // المبيعات بدون الضريبة في يوم البيع، والربح المحقق في يوم تحصيله (نقدي، دفعة أولى، أو دفعة دين لاحقة)
-    const totalSales = profitSummary.sales;
+    // المبيعات شاملة الضريبة في يوم البيع (قرار المالك)، والربح المحقق في يوم تحصيله (نقدي، دفعة أولى، أو دفعة دين لاحقة)
+    const totalSales = profitSummary.salesWithTax;
     const totalProfit = profitSummary.realizedProfit;
     let totalDiscount = 0;
 
     const dailySalesMap: Record<string, { sales: number; profit: number; orders: number; discount: number }> = {};
     profitSummary.days.forEach(day => {
       if (day.sales === 0 && day.realizedProfit === 0 && day.orders === 0) return;
-      dailySalesMap[day.date] = { sales: day.sales, profit: day.realizedProfit, orders: day.orders, discount: 0 };
+      dailySalesMap[day.date] = { sales: day.salesWithTax, profit: day.realizedProfit, orders: day.orders, discount: 0 };
     });
     filteredInvoices.forEach(inv => {
       const discount = Number(inv.discount || (inv as typeof inv & { discountAmount?: number }).discountAmount || 0);
@@ -668,7 +668,7 @@ function ReportsContent() {
       const name = inv.customerName || t('reports.cashCustomer');
       if (!customerPurchasesMap[name]) customerPurchasesMap[name] = { name, orders: 0, total: 0 };
       customerPurchasesMap[name].orders += 1;
-      customerPurchasesMap[name].total += invoiceNetSales(inv);
+      customerPurchasesMap[name].total += invoiceGrossSales(inv);
     });
 
     const allCustomers = Object.values(customerPurchasesMap).sort((a, b) => b.total - a.total);
@@ -827,10 +827,10 @@ function ReportsContent() {
       return cloudInvoices
         .filter(inv => {
           const invDate = toLocalDateString(inv.createdAt);
-          // نفس قاعدة الفترة الحالية: بدون ضريبة، والمعدومة ضمن المبيعات
+          // نفس قاعدة الفترة الحالية: شاملة الضريبة، والمعدومة ضمن المبيعات
           return isSalesInvoice(inv) && isDateInRange(invDate, prevFromStr, prevToStr);
         })
-        .reduce((sum, inv) => sum + invoiceNetSales(inv), 0);
+        .reduce((sum, inv) => sum + invoiceGrossSales(inv), 0);
     } catch {
       return 0;
     }
@@ -1438,7 +1438,7 @@ function ReportsContent() {
           const name = inv.cashierName || (isEn ? 'General Cashier' : 'كاشير عام');
           const cur = cMap.get(name) || { count: 0, total: 0, profit: 0 };
           cur.count += 1;
-          cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
+          cur.total += invoiceGrossSales(inv); // شاملة الضريبة كما في الشاشة
           cur.profit += realizedProfitToDate(inv);
           cMap.set(name, cur);
         });
@@ -1749,7 +1749,7 @@ function ReportsContent() {
             const name = inv.cashierName || (isEn ? 'General Cashier' : 'كاشير عام');
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
-            cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
+            cur.total += invoiceGrossSales(inv); // شاملة الضريبة كما في الشاشة
             cur.profit += realizedProfitToDate(inv);
             cashierMap.set(name, cur);
           });
@@ -2064,7 +2064,7 @@ function ReportsContent() {
             const name = inv.cashierName || (isEn ? 'General Cashier' : 'كاشير عام');
             const cur = cashierMap.get(name) || { count: 0, total: 0, profit: 0 };
             cur.count += 1;
-            cur.total += invoiceNetSales(inv); // بدون الضريبة كما في الشاشة
+            cur.total += invoiceGrossSales(inv); // شاملة الضريبة كما في الشاشة
             cur.profit += realizedProfitToDate(inv);
             cashierMap.set(name, cur);
           });

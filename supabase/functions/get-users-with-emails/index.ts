@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     })
 
     // Build cashiers map by owner
-    const cashiersByOwner = new Map<string, any[]>()
+    const cashiersByOwner = new Map<string, Array<Record<string, unknown>>>()
     for (const user of usersWithDetails) {
       if (user.role === 'cashier' && user.owner_id) {
         const list = cashiersByOwner.get(user.owner_id) || []

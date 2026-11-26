@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     let finalDurationDays = duration_days
     let finalMaxCashiers = max_cashiers
     let finalLicenseTier = license_tier
-    let usedCodeId = activation_code_id
+    const usedCodeId = activation_code_id
 
     // If using an existing activation code
     if (activation_code_id) {

@@ -35,10 +35,10 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    let requestBody: any = {};
+    let requestBody: { device_id?: string } = {};
     try {
       requestBody = await req.json();
-    } catch (e) {}
+    } catch (_e) { /* no JSON body: no device id */ }
     const incomingDeviceId = requestBody.device_id;
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);

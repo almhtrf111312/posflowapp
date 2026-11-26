@@ -8,7 +8,7 @@ const b64url = (buf: ArrayBuffer | Uint8Array) => {
 };
 const enc = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
 
-async function accessToken(sa: any): Promise<string> {
+async function accessToken(sa: { client_email: string; private_key: string }): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const head = enc({ alg: "RS256", typ: "JWT" });
   const claim = enc({
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       }
       console.error("fcm_error", r.status, t);
     };
-    const list = tokens.map((t: any) => t.token as string);
+    const list = tokens.map((t: { token: string }) => t.token);
     for (let i = 0; i < list.length; i += 25) {
       await Promise.all(list.slice(i, i + 25).map(sendOne));
     }

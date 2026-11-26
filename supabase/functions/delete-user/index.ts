@@ -10,7 +10,7 @@ type DeleteType = 'user' | 'owner' | 'boss';
 
 // NOTE: Deno edge runtime + esm.sh types can be overly strict here.
 // We intentionally treat the client as `any` to avoid type mismatches.
-type SupabaseAnyClient = any;
+type SupabaseAnyClient = ReturnType<typeof createClient>;
 
 async function safeDeleteByUserId(
   adminClient: SupabaseAnyClient,
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
     }
 
     const targetRole = targetRoleRow?.role as string | undefined;
-    const targetOwnerId = (targetRoleRow as any)?.owner_id as string | null | undefined;
+    const targetOwnerId = (targetRoleRow as { owner_id?: string | null } | null)?.owner_id as string | null | undefined;
 
     // Boss-only deletion of boss accounts
     if (deleteType === 'boss') {
@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const subUserIds = (subRoles || []).map((r: any) => r.user_id).filter(Boolean);
+      const subUserIds = (subRoles || []).map((r: { user_id: string }) => r.user_id).filter(Boolean);
       console.log('Owner sub accounts:', subUserIds.length);
 
       // 2) Delete the owner's business data FIRST (atomic; runs as boss JWT so auth.uid() checks pass).

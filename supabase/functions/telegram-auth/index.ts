@@ -8,6 +8,11 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
+// Minimal shapes of the rows this function reads (types only; no runtime effect).
+type ServiceClient = ReturnType<typeof createClient>;
+type AuthUserLite = { id: string; email?: string | null; user_metadata?: Record<string, unknown> };
+type ProfileRow = { id?: string; user_id: string; phone?: string | null; full_name?: string | null; telegram_chat_id?: string | null };
+
 // Phone normalization helper
 function cleanDigits(phone: string): string {
   return phone.replace(/\D/g, "");
@@ -43,7 +48,7 @@ async function sha256b64url(text: string): Promise<string> {
 }
 
 // Find an auth user by email across every page (a single page of 1000 misses later users)
-async function findAuthUserByEmail(client: any, email: string) {
+async function findAuthUserByEmail(client: ServiceClient, email: string) {
   const wanted = email.toLowerCase();
   const PAGE_SIZE = 1000;
   for (let page = 1; ; page++) {
@@ -53,7 +58,7 @@ async function findAuthUserByEmail(client: any, email: string) {
       return null;
     }
     const users = data?.users || [];
-    const found = users.find((u: any) => u.email?.toLowerCase() === wanted);
+    const found = (users as AuthUserLite[]).find((u) => u.email?.toLowerCase() === wanted);
     if (found) return found;
     if (users.length < PAGE_SIZE) return null;
   }
@@ -61,7 +66,7 @@ async function findAuthUserByEmail(client: any, email: string) {
 
 // Find a profile by phone across every page (PostgREST caps a single select at 1000 rows)
 async function findProfileByPhone(
-  client: any,
+  client: ServiceClient,
   rawPhone: string,
   selectCols: string,
   excludeUserId?: string,
@@ -80,14 +85,14 @@ async function findProfileByPhone(
       return null;
     }
     const rows = data || [];
-    const matched = rows.find((p: any) => isPhoneMatch(p.phone, rawPhone));
+    const matched = (rows as ProfileRow[]).find((p) => isPhoneMatch(p.phone, rawPhone));
     if (matched) return matched;
     if (rows.length < PAGE_SIZE) return null;
   }
 }
 
 // Telegram message sender
-async function sendTelegramMessage(botToken: string, chatId: string | number, text: string, replyMarkup?: any) {
+async function sendTelegramMessage(botToken: string, chatId: string | number, text: string, replyMarkup?: Record<string, unknown>) {
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
   try {
     const res = await fetch(url, {
@@ -111,7 +116,7 @@ async function sendTelegramMessage(botToken: string, chatId: string | number, te
 
 // تهريب محارف Markdown (الإصدار القديم) كي لا تكسر أسماء المستخدمين أو رسائل الأخطاء تنسيق الرسالة
 function escapeMd(value: unknown): string {
-  return String(value ?? "").replace(/([_*`\[])/g, "\\$1");
+  return String(value ?? "").replace(/([_*`[])/g, "\\$1");
 }
 
 // لوحة الأزرار الدائمة للبوت (تبقى ظاهرة بعد الربط)
@@ -295,7 +300,7 @@ serve(async (req) => {
           .from("profiles")
           .select("full_name")
           .eq("telegram_chat_id", chatId.toString());
-        const names = (linkedRows || []).map((r: any) => escapeMd(r.full_name || "المستخدم"));
+        const names = ((linkedRows || []) as ProfileRow[]).map((r) => escapeMd(r.full_name || "المستخدم"));
         await sendTelegramMessage(
           botToken,
           chatId,
@@ -328,14 +333,14 @@ serve(async (req) => {
         const chosenId = (String(message.text).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i) || [])[0];
         if ((profileRows || []).length > 1 && !chosenId) {
           await sendTelegramMessage(botToken, chatId, "🔄 *اختر الحساب المراد نقله لجهاز جديد:*", {
-            inline_keyboard: (profileRows || []).map((r: any) => [
+            inline_keyboard: ((profileRows || []) as ProfileRow[]).map((r) => [
               { text: String(r.full_name || "المستخدم"), callback_data: `/reset_device ${r.user_id}` },
             ]),
           });
           return new Response("OK", { status: 200 });
         }
         const profile = chosenId
-          ? (profileRows || []).find((r: any) => r.user_id === chosenId)
+          ? ((profileRows || []) as ProfileRow[]).find((r) => r.user_id === chosenId)
           : (profileRows || [])[0];
 
         if (!profile) {
@@ -597,7 +602,7 @@ serve(async (req) => {
           if (uData?.user?.email) {
             targetUserEmail = uData.user.email;
           }
-        } catch {}
+        } catch { /* optional lookup: keep going without it */ }
       }
 
       // If still not linked to Telegram: نفس الرد الموحّد
@@ -875,7 +880,7 @@ serve(async (req) => {
         try {
           const { data: uData } = await serviceClient.auth.admin.getUserById(sourceUserId);
           sourceChatId = uData?.user?.user_metadata?.telegram_chat_id || null;
-        } catch {}
+        } catch { /* optional lookup: keep going without it */ }
       }
 
       if (!sourceChatId) {

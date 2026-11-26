@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
 
     if (phone && phone.trim()) {
       // تنظيف الأرقام وتوحيد التنسيق
-      let clean = phone.trim().replace(/[^\+0-9]/g, "");
+      let clean = phone.trim().replace(/[^+0-9]/g, "");
       if (clean.startsWith("00")) clean = "+" + clean.slice(2);
       if (/^09[0-9]{8}$/.test(clean)) clean = "+963" + clean.slice(1);
       if (/^05[0-9]{9}$/.test(clean)) clean = "+90" + clean.slice(1);

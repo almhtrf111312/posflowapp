@@ -79,7 +79,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[reset-own-device] Fatal:', error);
     return new Response(
       JSON.stringify({ success: false, error: 'حدث خطأ داخلي في الخادم' }),

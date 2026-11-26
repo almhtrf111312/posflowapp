@@ -7,6 +7,12 @@ const REPO = `repos/${Deno.env.get('GITHUB_REPO') ?? 'almhtrf111312/posflowapp'}
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+type ChangelogEntry = {
+  versionCode?: number | string; build?: number | string; version?: string; date?: string; changes?: unknown[];
+  public?: { new?: unknown[]; improved?: unknown[]; fixed?: unknown[] };
+};
+type BuildEntry = { versionCode?: number | string; versionName?: string; date?: string; description?: string };
+
 const decode = (b64: string) => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g, '')), (c) => c.charCodeAt(0)));
 
 Deno.serve(async (req) => {
@@ -44,16 +50,16 @@ Deno.serve(async (req) => {
     try {
       const c = log?.content ? JSON.parse(decode(log.content)) : null;
       const list = Array.isArray(c) ? c : c?.entries || c?.versions || [];
-      const entry = list.find((e: any) => Number(e.versionCode ?? e.build) === Number(v.versionCode)) || list[0];
+      const entry = list.find((e: ChangelogEntry) => Number(e.versionCode ?? e.build) === Number(v.versionCode)) || list[0];
       const pub = entry?.public;
       if (pub) notes = [...(pub.new || []), ...(pub.improved || []), ...(pub.fixed || [])].map(String).slice(0, 8);
 
       // استخراج آخر 10 إصدارات من changelog و version.json
       const buildHist = Array.isArray(v.buildHistory) ? v.buildHistory : [];
-      recentReleases = list.slice(0, 10).map((r: any) => {
+      recentReleases = list.slice(0, 10).map((r: ChangelogEntry) => {
         let code = Number(r.versionCode || r.build || 0);
         if (!code) {
-          const match = buildHist.find((b: any) => b.versionName === r.version || b.date === r.date);
+          const match = buildHist.find((b: BuildEntry) => b.versionName === r.version || b.date === r.date);
           if (match) code = Number(match.versionCode || 0);
         }
         return {
@@ -67,7 +73,7 @@ Deno.serve(async (req) => {
 
     // إذا كان changelog فارغاً، استخدم buildHistory من version.json مباشرة
     if (recentReleases.length === 0 && Array.isArray(v.buildHistory)) {
-      recentReleases = v.buildHistory.slice(0, 10).map((b: any) => ({
+      recentReleases = v.buildHistory.slice(0, 10).map((b: BuildEntry) => ({
         version: String(b.versionName || ''),
         versionCode: Number(b.versionCode || 0),
         date: b.date || '',
@@ -85,7 +91,7 @@ Deno.serve(async (req) => {
       recentReleases, // ✅ مصفوفة آخر 10 إصدارات رسمية
       // سجل البناء من version.json: مصدر أسماء الإصدارات الموثوق (changelog قد يتأخر)
       buildHistory: Array.isArray(v.buildHistory)
-        ? v.buildHistory.slice(0, 100).map((b: any) => ({ versionCode: Number(b.versionCode || 0), versionName: String(b.versionName || '') }))
+        ? v.buildHistory.slice(0, 100).map((b: BuildEntry) => ({ versionCode: Number(b.versionCode || 0), versionName: String(b.versionName || '') }))
         : [],
     });
   } catch (e) {

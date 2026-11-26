@@ -153,6 +153,18 @@ const isTerminalSyncError = (message: string): boolean => {
     'عملية شراء قديمة',
     // manual debt refused by create_manual_debt_atomic (closed period, invalid amount...): the same replay gets the same answer
     'دين مرفوض من الخادم',
+    // S-2 guards (migration 20261126170000): direct tampering with financial rows is refused for good
+    'حركات الصندوق سجل ثابت',
+    'مبلغ حركة الصندوق يجب أن يكون أكبر من الصفر',
+    'الوردية غير موجودة لهذا المتجر',
+    'الدين يُنشأ عبر العملية الذرية فقط',
+    'مبالغ الدين وحالته تتغير',
+    'سجل الربح يكتبه الخادم فقط',
+    'لا يمكن تعديل سجل الربح مباشرة',
+    'الوردية مغلقة ولا تُعدَّل',
+    'رصيد الافتتاح والإغلاق يتغيران',
+    'الوردية تُفتح فقط',
+    'مخصص لمدير المتجر',
   ].some(fragment => normalized.includes(fragment));
 };
 

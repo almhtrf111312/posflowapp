@@ -1218,7 +1218,66 @@ export async function runQaFixes(k, newWorldFn) {
     check('FULL closed shift leaves debt intact', (await w.debt(d)).remaining, 4);
     check('FULL closed shift leaves invoice pending', (await w.one('select status from public.invoices where id=$1', [closed.id])).status, 'pending');
   }
+  // S-2: direct REST tampering with financial rows is refused; legit direct inserts and owner management keep working.
+  {
+    const w = await newWorldFn();
+    const CASH = 'cccccccc-0000-4000-8000-0000000000c2';
+    await w.q(`insert into auth.users(id, email) values ($1,'cash-s2@example.test') on conflict do nothing`, [CASH]);
+    await w.q(`delete from public.user_roles where user_id=$1`, [CASH]);
+    await w.q(`insert into public.user_roles(user_id, role, owner_id) values ($1,'cashier',$2)`, [CASH, OWNER]);
+    const closed = await w.newShift(10);
+    await w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [closed]);
+    const sh = await w.newShift(50);
+    const tx = (await w.one(`insert into public.shift_transactions(user_id, shift_id, type, amount, currency, exchange_rate, reference_id) values ($1,$2,'deposit',5,'USD',1,'s2-dep') returning id`, [OWNER, sh])).id;
+    const d = await w.newDebt({ total: 20, isCash: true });
+    const inv = await w.newInvoice({ number: 'INV-S2', total: 30 });
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'S2',10,4,9) returning id`, [OWNER])).id;
+    await w.q(`insert into public.profit_records(user_id, invoice_id, gross_profit, cogs, revenue) values ($1,'INV-S2',5,25,30)`, [OWNER]);
+    const as = async (uid, sql, params = []) => {
+      await w.db.exec('begin');
+      try {
+        await w.q(`select set_config('request.jwt.claim.sub', $1, true)`, [uid]);
+        // Supabase grants table privileges to authenticated by default; the harness does not (rolled back with the test).
+        await w.db.exec('grant usage on schema auth to authenticated'); // Supabase grants this; the harness does not
+        await w.db.exec(`grant select, insert, update, delete on public.shift_transactions, public.debts, public.profit_records,
+          public.cash_shifts, public.invoices, public.invoice_items, public.products, public.user_roles, public.profiles to authenticated`);
+        await w.db.exec('set local role authenticated');
+        return await w.fails(w.q(sql, params));
+      } finally { await w.db.exec('rollback'); }
+    };
+    const refused = async (label, uid, sql, params) => truthy(label, (await as(uid, sql, params)) !== null);
+    const allowed = async (label, uid, sql, params) => check(label, await as(uid, sql, params), null);
+    await refused('S2 cashier cannot edit a drawer movement', CASH, `update public.shift_transactions set amount=1 where id=$1`, [tx]);
+    await refused('S2 owner cannot delete a drawer movement either (append-only)', OWNER, `delete from public.shift_transactions where id=$1`, [tx]);
+    const closedMsg = await as(CASH, `insert into public.shift_transactions(user_id, shift_id, type, amount, currency, exchange_rate, reference_id) values ($1,$2,'sale',3,'USD',1,'s2-late')`, [OWNER, closed]);
+    truthy('S2 a movement for a closed shift is refused with (F-20) so the queue parks it', closedMsg !== null && closedMsg.includes('(F-20)'));
+    await refused('S2 a zero drawer movement is refused', CASH, `insert into public.shift_transactions(user_id, shift_id, type, amount, currency, exchange_rate, reference_id) values ($1,$2,'sale',0,'USD',1,'s2-zero')`, [OWNER, sh]);
+    await allowed('S2 a normal drawer movement into the open shift still works', CASH, `insert into public.shift_transactions(user_id, shift_id, type, amount, currency, exchange_rate, reference_id) values ($1,$2,'sale',3,'USD',1,'s2-ok')`, [OWNER, sh]);
+    await refused('S2 nobody marks a debt paid directly', OWNER, `update public.debts set total_paid=20 where id=$1`, [d]);
+    await allowed('S2 debt notes can still be edited', CASH, `update public.debts set notes='call later' where id=$1`, [d]);
+    await refused('S2 a debt cannot be inserted directly', CASH, `insert into public.debts(user_id, customer_name, total_debt, total_paid, remaining_debt, status) values ($1,'X',5,0,5,'due')`, [OWNER]);
+    await refused('S2 cashier cannot delete profit records', CASH, `delete from public.profit_records where invoice_id='INV-S2'`);
+    await refused('S2 cashier cannot mark profit reversed', CASH, `update public.profit_records set is_reversed=true where invoice_id='INV-S2'`);
+    await allowed('S2 owner can mark profit reversed (invoice cancel)', OWNER, `update public.profit_records set is_reversed=true, reversed_at=now() where invoice_id='INV-S2'`);
+    await refused('S2 owner cannot rewrite a profit amount', OWNER, `update public.profit_records set gross_profit=99 where invoice_id='INV-S2'`);
+    await refused('S2 cashier cannot change an invoice total', CASH, `update public.invoices set total=1 where invoice_number='INV-S2'`);
+    await allowed('S2 owner can cancel an invoice', OWNER, `update public.invoices set status='cancelled' where invoice_number='INV-S2'`);
+    await refused('S2 cashier cannot change a product cost', CASH, `update public.products set cost_price=0 where id=$1`, [prod]);
+    await allowed('S2 cashier can still deduct stock (sale)', CASH, `update public.products set quantity=8 where id=$1`, [prod]);
+    await allowed('S2 owner can change a product cost', OWNER, `update public.products set cost_price=5 where id=$1`, [prod]);
+    await refused('S2 the opening balance cannot be edited', CASH, `update public.cash_shifts set opening_balance=0 where id=$1`, [sh]);
+    await refused('S2 a closed shift is read-only', OWNER, `update public.cash_shifts set notes='x' where id=$1`, [closed]);
+    await w.q(`update public.cash_shifts set closed_at=now() where cashier_id=$1 and closed_at is null`, [CASH]).catch(() => {});
+    await allowed('S2 opening a shift directly still works', CASH, `insert into public.cash_shifts(user_id, cashier_id, opened_at, opening_balance, expected_balance) values ($1,$2,now(),10,10)`, [OWNER, CASH]);
+    const g = await w.one(`select has_function_privilege('authenticated','public.receive_stock_wac(uuid,numeric,numeric,text)','EXECUTE') a,
+      has_function_privilege('authenticated','public.post_shift_sale_atomic(uuid,text,numeric,text,numeric,numeric,text)','EXECUTE') b`);
+    check('S2 internal stock/drawer RPCs not callable by clients', `${g.a}:${g.b}`, 'false:false');
+    // Atomic RPCs are unaffected (they run as their owner): a debt payment still works end to end.
+    await w.one(`select public.record_debt_payment_atomic($1,5,$2,$3,'USD',5,1,'cash')`, [d, w.op('s2pay'), sh]);
+    check('S2 the atomic debt payment still works', (await w.debt(d)).paid, 5);
+  }
 }
+
 
 
 

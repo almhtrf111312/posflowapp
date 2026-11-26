@@ -1474,6 +1474,29 @@ export default function Settings() {
     }
   };
 
+  // P-6: the tax and discount switches (and the tax rate) save on change, so they can never be lost by leaving the page.
+  // Only the changed field is saved (partial update); other unsaved edits in the tab still wait for the Save button.
+  const financeAutoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveFinanceField = (patch: { taxEnabled?: boolean; taxRate?: number; discountPercentEnabled?: boolean; discountFixedEnabled?: boolean }, delayMs = 0) => {
+    const run = async () => {
+      try {
+        await saveUnifiedStoreSettings({ ...patch, updatedAt: Date.now() });
+        if (settingsSnapshotRef.current) Object.assign(settingsSnapshotRef.current, patch);
+        toast({ title: t('common.saved') });
+      } catch (err) {
+        console.error('[Settings] auto-save of tax/discount failed:', err);
+        toast({ title: t('common.error'), description: t('settings.saveFailed' as Parameters<typeof t>[0]), variant: 'destructive' });
+      }
+    };
+    if (financeAutoSaveTimer.current) clearTimeout(financeAutoSaveTimer.current);
+    if (delayMs > 0) financeAutoSaveTimer.current = setTimeout(() => { void run(); }, delayMs);
+    else void run();
+  };
+  const setTaxEnabledAndSave = (v: boolean) => { setTaxEnabled(v); autoSaveFinanceField({ taxEnabled: v }); };
+  const setTaxRateAndSave = (v: number) => { setTaxRate(v); autoSaveFinanceField({ taxRate: v }, 700); };
+  const setDiscountPercentEnabledAndSave = (v: boolean) => { setDiscountPercentEnabled(v); autoSaveFinanceField({ discountPercentEnabled: v }); };
+  const setDiscountFixedEnabledAndSave = (v: boolean) => { setDiscountFixedEnabled(v); autoSaveFinanceField({ discountFixedEnabled: v }); };
+
   const handleSaveSettings = async () => {
     // 1. فحص حالة رقم هاتف المتجر قبل الحفظ
     if (storeSettings.phone && storeSettings.phone.trim()) {
@@ -1818,13 +1841,13 @@ export default function Settings() {
                 currencyDisplayMode={currencyDisplayMode}
                 setCurrencyDisplayMode={setCurrencyDisplayMode}
                 taxEnabled={taxEnabled}
-                setTaxEnabled={setTaxEnabled}
+                setTaxEnabled={setTaxEnabledAndSave}
                 taxRate={taxRate}
-                setTaxRate={setTaxRate}
+                setTaxRate={setTaxRateAndSave}
                 discountPercentEnabled={discountPercentEnabled}
-                setDiscountPercentEnabled={setDiscountPercentEnabled}
+                setDiscountPercentEnabled={setDiscountPercentEnabledAndSave}
                 discountFixedEnabled={discountFixedEnabled}
-                setDiscountFixedEnabled={setDiscountFixedEnabled}
+                setDiscountFixedEnabled={setDiscountFixedEnabledAndSave}
                 trackCapital={trackCapital}
                 setTrackCapital={setTrackCapital}
                 initialCapital={initialCapital}
@@ -1891,13 +1914,13 @@ export default function Settings() {
                     currencyDisplayMode={currencyDisplayMode}
                     setCurrencyDisplayMode={setCurrencyDisplayMode}
                     taxEnabled={taxEnabled}
-                    setTaxEnabled={setTaxEnabled}
+                    setTaxEnabled={setTaxEnabledAndSave}
                     taxRate={taxRate}
-                    setTaxRate={setTaxRate}
+                    setTaxRate={setTaxRateAndSave}
                     discountPercentEnabled={discountPercentEnabled}
-                    setDiscountPercentEnabled={setDiscountPercentEnabled}
+                    setDiscountPercentEnabled={setDiscountPercentEnabledAndSave}
                     discountFixedEnabled={discountFixedEnabled}
-                    setDiscountFixedEnabled={setDiscountFixedEnabled}
+                    setDiscountFixedEnabled={setDiscountFixedEnabledAndSave}
                     trackCapital={trackCapital}
                     setTrackCapital={setTrackCapital}
                     initialCapital={initialCapital}

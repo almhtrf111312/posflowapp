@@ -1276,7 +1276,15 @@ export async function runQaFixes(k, newWorldFn) {
     await w.one(`select public.record_debt_payment_atomic($1,5,$2,$3,'USD',5,1,'cash')`, [d, w.op('s2pay'), sh]);
     check('S2 the atomic debt payment still works', (await w.debt(d)).paid, 5);
   }
+  // Small fixes 2026-11-26: Arabic message for a missing invoice in settle_invoice_debts_atomic.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(0);
+    const msg = await w.fails(w.one(`select public.settle_invoice_debts_atomic('NO-SUCH-INVOICE', $1::uuid, gen_random_uuid()) r`, [sh]));
+    truthy('SETTLE a missing invoice gives the Arabic message', msg !== null && msg.includes('الفاتورة غير موجودة'));
+  }
 }
+
 
 
 

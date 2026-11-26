@@ -681,6 +681,15 @@ export function CartPanel({
       return;
     }
 
+    // 🧾 بيع نقدي بلا وردية محلية بينما قد تكون هناك وردية مفتوحة سحابياً (جهاز جديد): نعتمدها أولاً حتى يدخل المبلغ
+    // الدرج الصحيح (تدقيق 2026-11-26). المهلة قصيرة (2.5 ث) فلا يتعطل البيع عند بطء الشبكة.
+    if (payMethod !== 'digital' && !getActiveShift() && !isAppOffline() && user?.id) {
+      try {
+        const { reconcileDrawerWithCloud } = await import('@/lib/cloud/cashbox-cloud');
+        await Promise.race([reconcileDrawerWithCloud(user.id), new Promise(resolve => setTimeout(resolve, 2500))]);
+      } catch { /* the sale continues without a drawer, as before */ }
+    }
+
     // 🛡️ فحص سلامة أصناف السلة
     const validation = await validateCartProducts(cart);
     if (!validation.isValid) {

@@ -8,7 +8,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | file | role | exports | local deps |
 |---|---|---|---|
 | `BackgroundSyncIndicator.tsx` | Background sync state indicator and hook. | BackgroundSyncIndicator · 1 types | hooks/language-context, hooks/use-network-status, lib/events, lib/notification-events-config, lib/sonner-bridge, lib/subscription-lock, lib/sync-queue, providers/CloudSyncProvider (+1) |
-| `CartPanel.tsx` | POS cart panel: items, discounts, checkout, held carts. | CartPanel · 1 types | BackgroundSyncIndicator, MaintenancePanel, SerialPickerDialog, use-sync-state, components/settings/surplus-profit-sync, hooks/auth-context, hooks/language-context, hooks/use-network-status (+34) |
+| `CartPanel.tsx` | POS cart panel: items, discounts, checkout, held carts. | CartPanel · 1 types | BackgroundSyncIndicator, MaintenancePanel, SerialPickerDialog, use-sync-state, components/settings/surplus-profit-sync, hooks/auth-context, hooks/language-context, hooks/use-network-status (+35) |
 | `KeyboardShortcutsHelp.tsx` | POS keyboard shortcuts help. | KeyboardShortcutsHelp | hooks/language-context, hooks/use-keyboard-shortcuts, ui/* |
 | `LoanQuickDialog.tsx` | Quick library loan dialog. | LoanQuickDialog | hooks/language-context, hooks/use-smart-toast, lib/cloud/library-cloud, lib/sonner-bridge, ui/* |
 | `MaintenancePanel.tsx` | POS maintenance (repair) job panel. | MaintenancePanel | hooks/auth-context, hooks/language-context, lib/activity-log, lib/cloud/customers-cloud, lib/cloud/debts-cloud, lib/cloud/invoices-cloud, lib/cloud/partners-cloud, lib/currencies (+7) |

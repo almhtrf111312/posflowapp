@@ -322,3 +322,30 @@ export async function recordShiftFxCloud(p: {
   });
   if (error) throw error;
 }
+
+
+/**
+ * Startup reconciliation of the drawer (local = cloud), run once per online session for every page, not only the shifts page.
+ * Without it a device that never opened the shifts page sold cash with no local active shift while the cloud had one open, so the
+ * sales never reached the drawer (found by the accounting audit of 2026-11-26: 5 cash invoices, $25, missing from an open shift).
+ * Adopts the cashier's cloud-open shift when the device has none, and closes the local shift when the cloud has closed it.
+ */
+export const reconcileDrawerWithCloud = async (userId: string | null | undefined): Promise<'adopted' | 'closed' | 'none'> => {
+  if (!userId) return 'none';
+  // Local shifts are stored per user; at session start the store may not know the user yet, and a shift saved under the
+  // legacy key is dropped when the user is set. Bind the user first so the adopted shift is kept.
+  if (getCurrentUserId() !== userId) setCurrentUserId(userId);
+  const { getActiveShift, adoptCloudOpenShift, closeLocalShiftFromCloud } = await import('../cashbox-store');
+  const cloudShifts = await loadCloudShifts(20);
+  const local = getActiveShift();
+  if (local) {
+    const copy = cloudShifts.find(cs => cs.id === local.id);
+    if (copy?.closed_at) { closeLocalShiftFromCloud(copy); return 'closed'; }
+    return 'none';
+  }
+  const open = cloudShifts.find(cs => !cs.closed_at && (!cs.cashier_id || cs.cashier_id === userId));
+  if (!open) return 'none';
+  const fromMovements = await loadShiftExpectedFromMovements(open.id, open.opening_balance);
+  const adopted = adoptCloudOpenShift(fromMovements === null ? open : { ...open, expected_balance: fromMovements }, userId);
+  return adopted ? 'adopted' : 'none';
+};

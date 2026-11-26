@@ -170,6 +170,17 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
     return () => configureSyncNetwork(null);
   }, []);
 
+  // مطابقة الدرج مع السحابة عند بدء كل جلسة متصلة: اعتماد الوردية المفتوحة سحابياً، أو إغلاق المحلية المغلقة سحابياً،
+  // حتى لا تُسجَّل مبيعات نقدية خارج الدرج على جهاز لم يفتح صفحة الورديات (تدقيق 2026-11-26).
+  // Runs after the cloud initialization (isReady): a first login on a device clears the previous user's local keys, which
+  // would also drop a shift adopted earlier.
+  useEffect(() => {
+    if (!isReady || !userId || isGuestDemoMode() || isAppOffline()) return;
+    import('@/lib/cloud/cashbox-cloud')
+      .then(({ reconcileDrawerWithCloud }) => reconcileDrawerWithCloud(userId))
+      .catch((e) => console.warn('[CloudSync] Drawer reconciliation skipped:', e));
+  }, [isReady, userId]);
+
   // مفتاح تشفير الحساب: يُضمن عند كل جلسة متصلة (الحساب الجديد يحصل عليه عند التسجيل)
   useEffect(() => {
     if (!userId || isGuestDemoMode() || isAppOffline()) return;

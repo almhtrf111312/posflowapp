@@ -225,6 +225,7 @@
   "src/lib/cloud/customer-stats.ts": "Customer statistics single source of truth (debt, totals).",
   "src/lib/cloud/customers-cloud.ts": "Customers local-first/cloud CRUD and stats.",
   "src/lib/cloud/debt-sale-handler.ts": "Credit (debt) sale processing with offline queue support.",
+  "src/lib/cloud/manual-debt-rpc.ts": "Submits a manual debt via the typed Supabase client and distinguishes server refusals.",
   "src/lib/cloud/debts-cloud.ts": "Debts: load, add, record payment (atomic RPC), settle, delete.",
   "src/lib/cloud/expenses-cloud.ts": "Expenses: add (atomic RPC), reverse/delete (atomic RPC), stats.",
   "src/lib/cloud/index.ts": "Cloud vs local switch: sync-enabled check, cache invalidation, re-exports.",

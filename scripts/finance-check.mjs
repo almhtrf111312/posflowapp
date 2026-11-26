@@ -26,6 +26,7 @@ const REGISTERED = [
   { file: 'invoice-profit.test.ts', kind: 'production', covers: 'invoice-profit: invoice profit metrics' },
   { file: 'report-metrics.test.ts', kind: 'production', covers: 'report-metrics: net sales, revenue, unit cost, profit' },
   { file: 'pos-currency-scope.test.ts', kind: 'production', covers: 'POS currency scope: cart/catalog currency isolation' },
+  { file: 'manual-debt-rpc.test.ts', kind: 'production', covers: 'manual debt RPC through the Supabase SDK and server refusal propagation' },
   { file: 'debt-fx.test.ts', kind: 'production', covers: 'debt-fx: foreign-currency debts credited at the invoice rate (F-27)' },
   { file: 'expense-reversal.test.ts', kind: 'production', covers: 'profit-engine: reversed expenses count until the reversal date (audit U6)' },
   { file: 'partner-fx.test.ts', kind: 'production', covers: 'partner-fx: partner withdrawals in any currency (D-10)' },

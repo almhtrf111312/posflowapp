@@ -35,7 +35,7 @@ Read the MAP.md of the directory you need; do not open source files blindly. 18 
 | `lib/` | 105 | domain logic: *-store.ts (local/offline state), money-engine, sync-queue, utilities | [MAP.md](lib/MAP.md) |
 | `lib/auth/` | 2 | Google sign-in (native/desktop) and phone-claim helpers. | — |
 | `lib/cache/` | 1 | Native stale-while-revalidate (SWR) cache engine. | — |
-| `lib/cloud/` | 28 | Supabase access per domain — every RPC call lives here | [MAP.md](lib/cloud/MAP.md) |
+| `lib/cloud/` | 29 | Supabase access per domain — every RPC call lives here | [MAP.md](lib/cloud/MAP.md) |
 | `lib/db/` | 3 | local database layer | [MAP.md](lib/db/MAP.md) |
 | `lib/fonts/` | 1 | Arabic font loading for PDF export. | — |
 | `lib/locales/` | 5 | translation dictionaries | [MAP.md](lib/locales/MAP.md) |

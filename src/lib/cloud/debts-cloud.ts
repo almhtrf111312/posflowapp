@@ -21,6 +21,9 @@ import { round8 } from '../utils';
 import { applyLocalDebtSettlement } from '../debt-settlement';
 import { toLocalDateString, getLocalDayUtcRange } from '../date-utils';
 
+import { submitManualDebt, ManualDebtRefusedError } from './manual-debt-rpc';
+export { ManualDebtRefusedError };
+
 const sb = supabase;
 export type DebtStatus = 'due' | 'partially_paid' | 'overdue' | 'fully_paid';
 
@@ -384,30 +387,7 @@ export const addDebtCloud = async (
 
 /** Calls create_manual_debt_atomic with the client payload (same id online and on queue replay). Exported for the queue processor. */
 export async function createManualDebtRpc(payload: Record<string, unknown>): Promise<CloudDebt | null> {
-  const rpc = supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>;
-  const { data, error } = await rpc('create_manual_debt_atomic', {
-    _id: payload.id,
-    _invoice_id: payload.invoice_id ?? null,
-    _customer_name: payload.customer_name,
-    _customer_phone: payload.customer_phone ?? null,
-    _total_debt: payload.total_debt,
-    _due_date: payload.due_date || null,
-    _notes: payload.notes ?? null,
-    _is_cash_debt: payload.is_cash_debt ?? false,
-  });
-  if (error) {
-    // A PostgREST/PostgreSQL error with a code is a server decision (closed period, invalid amount, no permission): retrying the
-    // same request returns the same refusal, so it must reach the user instead of waiting in the queue.
-    const code = (error as { code?: string }).code;
-    if (code) throw new ManualDebtRefusedError(`دين مرفوض من الخادم: ${error.message || code}`);
-    throw new Error(error.message || 'فشل إنشاء الدين');
-  }
-  return (data as CloudDebt) ?? null;
-}
-
-/** The server refused the manual debt (permanent: same request, same answer). */
-export class ManualDebtRefusedError extends Error {
-  constructor(message: string) { super(message); this.name = 'ManualDebtRefusedError'; }
+  return submitManualDebt(supabase, payload);
 }
 
 // Add debt from invoice

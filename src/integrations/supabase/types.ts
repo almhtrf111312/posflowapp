@@ -4008,6 +4008,19 @@ export type Database = {
         Args: { p_method_id: string; p_plan_id: string }
         Returns: Json
       }
+      create_manual_debt_atomic: {
+        Args: {
+          _id: string
+          _invoice_id: string | null
+          _customer_name: string
+          _customer_phone: string | null
+          _total_debt: number
+          _due_date?: string | null
+          _notes?: string | null
+          _is_cash_debt?: boolean
+        }
+        Returns: Json
+      }
       create_supplier_atomic: {
         Args: {
           _company?: string

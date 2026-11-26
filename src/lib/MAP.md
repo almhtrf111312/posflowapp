@@ -78,7 +78,7 @@ Subfolders with their own map: cloud/, db/, locales/, printer/
 | `refund-permission.ts` | Cashier refund permission lookup. | getOwnRefundPermission | — | tbl: user_roles |
 | `remote-updates.ts` | Remote release config and broadcasts (forced-update rules). | DEFAULT_RELEASE_CONFIG, BROADCAST_TEMPLATES, CURRENT_VERSION_CODE, CURRENT_VERSION_NAME, computeUpdateStatus, SEEN_KEY, getCachedReleaseConfig, fetchReleaseConfig, saveReleaseConfig, fetchActiveBroadcasts (+6) · 3 types | — | tbl: app_broadcasts, app_settings, broadcast_reads, client_versions |
 | `report-links.ts` | Report to filtered-invoices-page link builders. | invoicesLink, clickableClass · 1 types | — | — |
-| `report-metrics.ts` | Pure report metrics: net sales, revenue, unit cost, profit. | isSalesInvoice, invoiceNetSales, itemNetRevenue, itemUnitCost, itemProfit · 2 types | — | — |
+| `report-metrics.ts` | Pure report metrics: net sales, revenue, unit cost, profit. | isSalesInvoice, invoiceGrossSales, invoiceNetSales, itemNetRevenue, itemUnitCost, itemProfit · 2 types | — | — |
 | `safe-area.ts` | Safe-area inset initialization. | initSafeArea | — | — |
 | `safe-storage.ts` | Validated localStorage writes with quota handling. | safeSave, safeLoad, hasStorageSpace, getStorageUsage · 1 types | — | — |
 | `secure-storage.ts` | Encrypted localStorage (ChaCha20+HMAC) with device key. | getDeviceKey, APP_SECRET_STORAGE, WRAPPED_APP_SECRET_STORAGE, setRuntimeAppSecret, secureSet, secureGet, secureRemove, secureClear, secureHas · 1 types | local-cipher | — |

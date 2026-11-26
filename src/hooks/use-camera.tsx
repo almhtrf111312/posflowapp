@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { App } from '@capacitor/app';
 
 interface UseCameraOptions {
   maxSize?: number;
@@ -157,7 +156,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraResult {
     if (!isNative) return;
     let listener: { remove: () => void } | undefined;
     const setup = async () => {
-      listener = await App.addListener('appRestoredResult', async (result) => {
+      listener = await (await import('@capacitor/app')).App.addListener('appRestoredResult', async (result) => {
         if (result.pluginId === 'Camera' && result.methodName === 'getPhoto' && result.success) {
           const webPath = result.data?.webPath;
           if (webPath && onPhotoRestoredRef.current) {

@@ -153,16 +153,23 @@ where status in ('due', 'partially_paid', 'fully_paid')
        or coalesce(total_paid,0)    < -0.0001);
 
 
--- R-02 [F-13] Debt paid total equals the sum of what its payments settled (settled_amount; `amount` is the cash received).
+-- R-02 [F-13] Debt paid total equals what its payments settled (settled_amount; `amount` is the cash received) minus what partial
+-- refunds of its invoice gave back from the paid part (refund_amount - debt_reduced, written atomically by
+-- refund_invoice_partial_atomic in the same transaction as the debt update). Full refunds cancel the debt (status excluded).
 -- Only debts created after debt_payments went live (2026-11-05): older rows may legitimately predate it.
-select d.id, d.user_id, d.total_paid, coalesce(sum(p.settled_amount), 0) as settled_sum,
-       round(coalesce(d.total_paid,0) - coalesce(sum(p.settled_amount), 0), 4) as diff
+select d.id, d.user_id, d.total_paid, x.settled_sum, x.refunded_sum,
+       round(coalesce(d.total_paid,0) - (x.settled_sum - x.refunded_sum), 4) as diff
 from public.debts d
-left join public.debt_payments p on p.debt_id = d.id
+cross join lateral (
+  select coalesce((select sum(p.settled_amount) from public.debt_payments p where p.debt_id = d.id), 0) as settled_sum,
+         coalesce((select sum(greatest(coalesce((l.metadata->>'refund_amount')::numeric, 0) - coalesce((l.metadata->>'debt_reduced')::numeric, 0), 0))
+                    from public.activity_log l
+                    where l.user_id = d.user_id and l.action_type = 'partial_refund' and l.entity_type = 'invoice'
+                      and d.invoice_id is not null and l.entity_name = d.invoice_id), 0) as refunded_sum
+) x
 where d.status in ('due', 'partially_paid', 'fully_paid')
   and d.created_at >= timestamptz '2026-11-05'
-group by d.id, d.user_id, d.total_paid
-having abs(coalesce(d.total_paid,0) - coalesce(sum(p.settled_amount), 0)) > 0.01;
+  and abs(coalesce(d.total_paid,0) - (x.settled_sum - x.refunded_sum)) > 0.01;
 
 
 -- R-03 [F-19, F-20] Every drawer movement belongs to a shift of the same owner, and none was posted after its shift closed.
@@ -211,7 +218,7 @@ where t.type = 'expense'
 select id, debt_id, amount, settled_amount, fx_difference_usd, fx_credit_rate
 from public.debt_payments
 where fx_credit_rate is not null
-  and abs(fx_difference_usd - (amount - settled_amount)) > 0.0001;
+  and abs(fx_difference_usd - (amount - settled_amount + coalesce(rounding_adjustment, 0))) > 0.0001;
 
 
 -- R-08 [F-21, D-09] An expense never allocates more to partners than the expense itself (reversed expenses excluded).
@@ -304,6 +311,13 @@ where status not in ('refunded', 'cancelled')
 select p.name, p.quantity from public.products p
 join public.stores st on st.user_id = p.user_id
 where p.quantity < 0 and not coalesce(st.allow_negative_stock, false);
+-- X-7b the product quantity equals quantity_after of its latest stock movement (review the rows by hand: two movements
+--      committed in the same instant can be ordered differently; a difference that the next movement explains is not an error).
+select p.id, p.name, p.quantity, m.quantity_after, m.created_at
+from public.products p
+join lateral (select s.quantity_after, s.created_at from public.stock_movements s
+              where s.product_id = p.id order by s.created_at desc, s.id desc limit 1) m on true
+where p.quantity <> m.quantity_after;
 
 -- X-8 [D-20, D-23] Store credit: the balance view equals the ledger, at 8 decimals.
 select b.customer_id, b.store_credit,
@@ -325,10 +339,18 @@ where table_schema = 'public' and data_type = 'numeric' and numeric_scale betwee
   and column_name not like '%quantity%'
   and table_name not in ('store_settings', 'subscription_requests', 'product_serials');
 
--- X-12 [F-16] A refund movement points at a refunded (or partially refunded) invoice.
-select t.id, t.amount, t.reference_id from public.shift_transactions t
-where t.type = 'refund' and t.reference_id like 'receipt-refund:%'
-  and not exists (select 1 from public.invoices i where t.reference_id like '%' || i.invoice_number || '%');
+-- X-12 [F-16] Every refund movement points at an invoice of the same owner (full refunds: reference 'receipt-refund:…';
+--      partial refunds: reference = operation id, invoice number in the notes) and that invoice really had a refund.
+select t.id, t.amount, t.reference_id, t.notes from public.shift_transactions t
+where t.type = 'refund'
+  and not exists (
+    select 1 from public.invoices i
+    where i.user_id = t.user_id
+      and (t.reference_id like '%' || i.invoice_number || '%' or coalesce(t.notes, '') like '%' || i.invoice_number || '%')
+      and (i.status = 'refunded'
+           or exists (select 1 from public.activity_log l where l.user_id = i.user_id and l.action_type = 'partial_refund'
+                        and l.entity_name = i.invoice_number)
+           or exists (select 1 from public.sales_refund_allocations a where a.invoice_id = i.id)));
 
 -- X-13 Reports (one day, gross sales, see 3.3): compare with the screens (summary, cashier, daily closing).
 select (created_at at time zone 'UTC')::date as day, count(*) as invoices, sum(total) as sales_incl_tax,
@@ -337,7 +359,7 @@ from public.invoices where status not in ('refunded', 'cancelled') group by 1 or
 ```
 
 ## 5. ملفات مرتبطة
-- `docs/FINANCE_LAW.md` — القانون والقرارات (D-01 … D-26) وسجل الهجرات.
+- `docs/FINANCE_LAW.md` — القانون والقرارات (D-01 … D-28) وسجل الهجرات.
 - `supabase/tests/finance_reconcile_readonly.sql` — أصل R-01 … R-09 (يشغّلها `finance:sql` أيضاً).
 - `docs/audit/SCHEMA_LOGIC_REFERENCE.sql` — نص SQL الكامل للمنطق مع بصمات المقارنة.
 - `scripts/db-drift-sql.mjs` — فحص تطابق الحي مع المستودع.

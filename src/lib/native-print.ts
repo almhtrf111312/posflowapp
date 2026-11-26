@@ -7,8 +7,6 @@ import { sanitizePrintHtml, escapeHtml, safeImageSrc } from './print-sanitize';
  */
 
 import { Capacitor } from '@capacitor/core';
-import { Share } from '@capacitor/share';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { formatNumber, formatCurrency } from './utils';
 import { resolveInvoiceCurrencySymbol, getActiveCurrencyCode } from './currencies';
 import { getEnabledCurrencies, formatAmount, fromUsd, toUsd } from './money-engine';

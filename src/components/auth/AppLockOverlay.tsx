@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppLock } from '@/hooks/app-lock-context';
 import { useAuth } from '@/hooks/auth-context';
 import { useLanguage } from '@/hooks/language-context';
-import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import {
   Lock,
@@ -59,9 +58,9 @@ export function AppLockOverlay() {
     let cleanup: (() => void) | null = null;
 
     if (Capacitor.isNativePlatform()) {
-      CapApp.addListener('backButton', () => {
+      import('@capacitor/app').then(({ App: CapApp }) => CapApp.addListener('backButton', () => {
         CapApp.exitApp();
-      })
+      }))
         .then((handle) => {
           cleanup = () => handle.remove();
         })

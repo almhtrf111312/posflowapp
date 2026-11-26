@@ -92,7 +92,7 @@ async function fetchAllRows(table: string, columns: string): Promise<Record<stri
 
 async function fetchLedger(userId: string): Promise<ProfitLedger> {
   // Original profit records: read separately so a failure never blocks the payments and write-offs.
-  const snapshotRows = await fetchAllRows('profit_records', 'invoice_id, gross_profit, recorded_at, is_reversed, reversed_at').catch(() => []);
+  const snapshotRows = await fetchAllRows('profit_records', 'invoice_id, gross_profit, revenue, recorded_at, is_reversed, reversed_at').catch(() => []);
   const [debts, payments, writeoffs] = await Promise.all([
     fetchAllRows('debts', 'id, invoice_id, is_cash_debt'),
     // '*' on purpose: settled_amount / fx_difference_usd exist only after the FX migration is applied.
@@ -140,8 +140,11 @@ async function fetchLedger(userId: string): Promise<ProfitLedger> {
         grossProfit: Number(r.gross_profit) || 0,
         recordedAt: String(r.recorded_at ?? ''),
         reversedAt: r.reversed_at ? String(r.reversed_at) : null,
+        revenue: r.revenue == null ? undefined : Number(r.revenue),
       }))
-      .filter(r => r.invoiceId),
+      // D-12: only the original sale row is a snapshot; partial-refund rows have negative revenue.
+      .filter(r => r.invoiceId && !(typeof r.revenue === 'number' && r.revenue < 0))
+      .map(({ revenue: _rev, ...r }) => r),
     fetchedAt: Date.now(),
   };
 
@@ -183,7 +186,8 @@ export function withProfitSnapshots<T extends { id: string; invoiceNumber?: stri
   const latest = new Map<string, { grossProfit: number; recordedAt: string; reversedAt: string | null }>();
   for (const snap of ledger?.profitSnapshots ?? []) {
     const current = latest.get(snap.invoiceId);
-    if (!current || snap.recordedAt > current.recordedAt) latest.set(snap.invoiceId, snap);
+    // Earliest row = the original sale snapshot (older caches may still hold refund rows, which came later).
+    if (!current || snap.recordedAt < current.recordedAt) latest.set(snap.invoiceId, snap);
   }
   return invoices.map(inv => {
     const snap = latest.get(inv.id) ?? (inv.invoiceNumber ? latest.get(inv.invoiceNumber) : undefined);

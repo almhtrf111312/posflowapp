@@ -339,14 +339,16 @@ export const reconcileDrawerWithCloud = async (userId: string | null | undefined
   // legacy key is dropped when the user is set. Bind the user first so the adopted shift is kept.
   if (getCurrentUserId() !== userId) setCurrentUserId(userId);
   const { getActiveShift, adoptCloudOpenShift, closeLocalShiftFromCloud } = await import('../cashbox-store');
-  const cloudShifts = await loadCloudShifts(20);
   const local = getActiveShift();
   if (local) {
-    const copy = cloudShifts.find(cs => cs.id === local.id);
-    if (copy?.closed_at) { closeLocalShiftFromCloud(copy); return 'closed'; }
+    // Look the local shift up by id: a recent-shifts list can miss it when more than N shifts were opened since.
+    const { data: copy } = await sb.from('cash_shifts').select('*').eq('id', local.id).maybeSingle();
+    if ((copy as CloudShift | null)?.closed_at) { closeLocalShiftFromCloud(copy as CloudShift); return 'closed'; }
     return 'none';
   }
-  const open = cloudShifts.find(cs => !cs.closed_at && (!cs.cashier_id || cs.cashier_id === userId));
+  // Query open shifts directly instead of filtering the last 20 shifts.
+  const { data: openRows } = await sb.from('cash_shifts').select('*').is('closed_at', null).order('opened_at', { ascending: false }).limit(50);
+  const open = ((openRows || []) as CloudShift[]).find(cs => !cs.cashier_id || cs.cashier_id === userId);
   if (!open) return 'none';
   const fromMovements = await loadShiftExpectedFromMovements(open.id, open.opening_balance);
   const adopted = adoptCloudOpenShift(fromMovements === null ? open : { ...open, expected_balance: fromMovements }, userId);

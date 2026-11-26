@@ -3,7 +3,6 @@
 // uplink is dead. That state is treated as OFFLINE here: the interface flag alone is never trusted.
 import { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Network } from '@capacitor/network';
 import { isLocalOnlyMode } from '@/lib/subscription-lock';
 
 const PROBE_CACHE_TTL = 4000; // positive cache (ms)
@@ -71,6 +70,7 @@ export async function getNetworkStatus(): Promise<boolean> {
   }
   if (Capacitor.isNativePlatform()) {
     try {
+      const { Network } = await import('@capacitor/network');
       const status = await Network.getStatus();
       return status.connected;
     } catch (error) {
@@ -213,14 +213,14 @@ function startMonitor() {
   let nativeHandle: { remove: () => Promise<void> | void } | null = null;
   let nativeRemoved = false;
   if (Capacitor.isNativePlatform()) {
-    Network.addListener('networkStatusChange', (status) => {
+    import('@capacitor/network').then(({ Network }) => Network.addListener('networkStatusChange', (status) => {
       if (status.connected) {
         void checkNowAndReschedule();
       } else {
         publishVerifiedState(true);
         scheduleNextCheck();
       }
-    }).then((handle) => {
+    })).then((handle) => {
       if (nativeRemoved) void handle.remove();
       else nativeHandle = handle;
     }).catch(() => {});

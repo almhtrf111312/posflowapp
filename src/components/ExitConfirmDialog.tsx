@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useLocation } from 'react-router-dom';
 import { showToast } from '@/lib/toast-config';
-import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 
 export function ExitConfirmDialog() {
@@ -50,7 +49,7 @@ export function ExitConfirmDialog() {
     const setupCapacitorBackButton = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
-          listenerHandle = await App.addListener('backButton', ({ canGoBack }) => {
+          listenerHandle = await (await import('@capacitor/app')).App.addListener('backButton', ({ canGoBack }) => {
             // 🛡️ إذا كان هناك كبت نشط (مثل إغلاق سلة أو إتمام عملية بيع)، لا نظهر إشعار الخروج
             if ((window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil && Date.now() < (window as unknown as { __posSuppressExitUntil?: number }).__posSuppressExitUntil) {
               return;
@@ -129,7 +128,7 @@ export function ExitConfirmDialog() {
     // Use Capacitor App.exitApp() for native platforms
     if (Capacitor.isNativePlatform()) {
       try {
-        await App.exitApp();
+        await (await import('@capacitor/app')).App.exitApp();
       } catch (error) {
         console.error('Failed to exit app:', error);
       }

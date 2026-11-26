@@ -7,8 +7,6 @@ import { getCurrentLanguage } from '@/lib/i18n';
  */
 
 import { Capacitor } from '@capacitor/core';
-import { Share as CapacitorShare } from '@capacitor/share';
-import { Filesystem, Directory } from '@capacitor/filesystem';
 import { formatNumber, formatCurrency, formatMoney } from './utils';
 import { resolveInvoiceCurrencySymbol } from './currencies';
 import { isGuestDemoMode } from './demo-data';
@@ -61,18 +59,18 @@ export async function shareInvoiceImage(
   if (Capacitor.isNativePlatform()) {
     try {
       const base64Data = await blobToBase64(blob);
-      const writeResult = await Filesystem.writeFile({
+      const writeResult = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
         path: safeName,
         data: base64Data,
-        directory: Directory.Cache,
+        directory: (await import('@capacitor/filesystem')).Directory.Cache,
       });
 
-      const fileUri = writeResult.uri || (await Filesystem.getUri({
+      const fileUri = writeResult.uri || (await (await import('@capacitor/filesystem')).Filesystem.getUri({
         path: safeName,
-        directory: Directory.Cache,
+        directory: (await import('@capacitor/filesystem')).Directory.Cache,
       })).uri;
 
-      await CapacitorShare.share({
+      await (await import('@capacitor/share')).Share.share({
         title: title,
         files: [fileUri],
         dialogTitle: 'مشاركة الفاتورة كصورة',
@@ -139,13 +137,13 @@ export async function shareCanvasImage(
   if (Capacitor.isNativePlatform()) {
     const safeName = `${fileName.replace(/[^a-zA-Z0-9_\u0600-\u06FF-]/g, '_')}.jpg`;
     try {
-      const writeResult = await Filesystem.writeFile({
+      const writeResult = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
         path: safeName,
         data: canvasToJpegBase64(canvas),
-        directory: Directory.Cache,
+        directory: (await import('@capacitor/filesystem')).Directory.Cache,
       });
-      const fileUri = writeResult.uri || (await Filesystem.getUri({ path: safeName, directory: Directory.Cache })).uri;
-      await CapacitorShare.share({ title, files: [fileUri], dialogTitle: 'مشاركة الفاتورة كصورة' });
+      const fileUri = writeResult.uri || (await (await import('@capacitor/filesystem')).Filesystem.getUri({ path: safeName, directory: (await import('@capacitor/filesystem')).Directory.Cache })).uri;
+      await (await import('@capacitor/share')).Share.share({ title, files: [fileUri], dialogTitle: 'مشاركة الفاتورة كصورة' });
       return true;
     } catch (error: unknown) {
       const errObj = typeof error === 'object' && error !== null ? (error as { message?: unknown; name?: unknown }) : null;
@@ -165,7 +163,7 @@ export async function nativeShare(options: ShareOptions): Promise<boolean> {
   // على الأندرويد/iOS استخدم Capacitor Share
   if (Capacitor.isNativePlatform()) {
     try {
-      await CapacitorShare.share({
+      await (await import('@capacitor/share')).Share.share({
         title: title || 'مشاركة',
         text: text,
         url: url,

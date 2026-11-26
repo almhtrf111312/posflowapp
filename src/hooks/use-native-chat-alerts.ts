@@ -1,8 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
-import { App as CapApp } from '@capacitor/app';
-import { LocalNotifications } from '@capacitor/local-notifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/auth-context';
 import {
@@ -69,11 +67,11 @@ export function useNativeChatAlerts() {
 
     let appListenerHandle: { remove: () => Promise<void> } | null = null;
     if (Capacitor.isNativePlatform()) {
-      CapApp.addListener('appStateChange', ({ isActive }) => {
+      import('@capacitor/app').then(({ App: CapApp }) => CapApp.addListener('appStateChange', ({ isActive }) => {
         if (isActive) {
           checkUnreadMessagesAndAlert();
         }
-      }).then((h) => {
+      })).then((h) => {
         appListenerHandle = h;
       }).catch(() => {});
     }
@@ -96,13 +94,13 @@ export function useNativeChatAlerts() {
     if (!Capacitor.isNativePlatform()) return;
 
     let notifListenerHandle: { remove: () => Promise<void> } | null = null;
-    LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+    import('@capacitor/local-notifications').then(({ LocalNotifications }) => LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
       const extra = notification.notification.extra;
       if (extra?.action === 'open_support_chat') {
         window.dispatchEvent(new CustomEvent('posflow:open-support-chat', { detail: extra }));
         navigate('/contact', { state: { openChat: true, conversationId: extra.conversationId } });
       }
-    }).then((h) => {
+    })).then((h) => {
       notifListenerHandle = h;
     }).catch(() => {});
 

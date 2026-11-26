@@ -46,11 +46,11 @@ export function isClosedShiftRefusal(message: string | undefined | null): boolea
   return /الوردية[^\n]*مغلقة/.test(String(message || ''));
 }
 
-function notifyClosedShiftRetarget(what: string): void {
+function notifyClosedShiftPending(what: string): void {
   import('@/hooks/use-smart-toast').then(({ showSmartToast }) => showSmartToast({
     type: 'warning',
-    title: `${what} سُجّل بدون حركة صندوق`,
-    description: 'أُغلقت ورديته قبل المزامنة، والمبلغ احتُسب عند عدّ الإغلاق. لم يُخصم من الوردية الحالية حتى لا يُحسب مرتين.',
+    title: `${what} معلّق: ورديته أُغلقت قبل المزامنة`,
+    description: 'لم يُرحَّل إلى وردية أخرى ولم يُسجَّل تلقائيًا. راجعه في العمليات المعلقة وطابقه يدويًا.',
   } as never)).catch(() => {});
 }
 
@@ -149,26 +149,20 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       return true;
     }
     case 'debt': {
-      const cleanData = filterTablePayload('debts', data);
-      const ownerId = await getOwnerIdForInsert();
-      if (!ownerId) throw new Error('No owner id');
-      if (cleanData.id) {
-        return assertSuccess(sb.from('debts').upsert(asInsert<'debts'>({ ...cleanData, user_id: ownerId }), { onConflict: 'id', ignoreDuplicates: true }));
-      }
-      return assertSuccess(sb.from('debts').insert(asInsert<'debts'>({ ...cleanData, user_id: ownerId })));
+      // F-25: replay through the atomic RPC with the same client id (idempotent), never a direct insert into debts.
+      if (!data.id) throw new Error('دين مؤجل بلا معرّف. يلزم مطابقته يدويًا.');
+      const { createManualDebtRpc } = await import('./debts-cloud');
+      await createManualDebtRpc(data as Record<string, unknown>);
+      return true;
     }
     case 'expense_atomic': {
       const { uniqueKey: _u, ...args } = data;
       const { error } = await sb.rpc('add_expense_atomic', args as unknown as RpcArgs<'add_expense_atomic'>);
       if (error && args._shift_id && isClosedShiftRefusal(error.message)) {
-        // The drawer shift was closed (on this or another device) before this offline expense synced. Its cash was already
-        // counted at that close, so posting it to another drawer would count it twice: the expense is recorded without a
-        // drawer movement, with the same operation id (idempotent), and the device is told.
-        const { error: retryError } = await sb.rpc('add_expense_atomic',
-          { ...args, _shift_id: null, _paid_from: 'external' } as unknown as RpcArgs<'add_expense_atomic'>);
-        if (retryError) throw new Error(retryError.message);
-        notifyClosedShiftRetarget('مصروف');
-        return true;
+        // F-20: the drawer shift was closed before this offline expense synced. It is NOT moved to another drawer and NOT
+        // recorded without a drawer on its own: it stays pending (same operation id) for the owner's manual reconciliation.
+        notifyClosedShiftPending('مصروف');
+        throw new Error('مصروف مؤجل وورديته أُغلقت قبل المزامنة. يبقى معلقًا للمطابقة اليدوية من المالك (F-20).');
       }
       if (error) throw new Error(error.message);
       return true;

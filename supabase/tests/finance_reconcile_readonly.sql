@@ -22,16 +22,23 @@ where status in ('due', 'partially_paid', 'fully_paid')
        or coalesce(total_paid,0)    < -0.0001);
 
 
--- R-02 [F-13] Debt paid total equals the sum of what its payments settled (settled_amount; `amount` is the cash received).
+-- R-02 [F-13] Debt paid total equals what its payments settled (settled_amount; `amount` is the cash received) minus what partial
+-- refunds of its invoice gave back from the paid part (refund_amount - debt_reduced, written atomically by
+-- refund_invoice_partial_atomic in the same transaction as the debt update). Full refunds cancel the debt (status excluded).
 -- Only debts created after debt_payments went live (2026-11-05): older rows may legitimately predate it.
-select d.id, d.user_id, d.total_paid, coalesce(sum(p.settled_amount), 0) as settled_sum,
-       round(coalesce(d.total_paid,0) - coalesce(sum(p.settled_amount), 0), 4) as diff
+select d.id, d.user_id, d.total_paid, x.settled_sum, x.refunded_sum,
+       round(coalesce(d.total_paid,0) - (x.settled_sum - x.refunded_sum), 4) as diff
 from public.debts d
-left join public.debt_payments p on p.debt_id = d.id
+cross join lateral (
+  select coalesce((select sum(p.settled_amount) from public.debt_payments p where p.debt_id = d.id), 0) as settled_sum,
+         coalesce((select sum(greatest(coalesce((l.metadata->>'refund_amount')::numeric, 0) - coalesce((l.metadata->>'debt_reduced')::numeric, 0), 0))
+                    from public.activity_log l
+                    where l.user_id = d.user_id and l.action_type = 'partial_refund' and l.entity_type = 'invoice'
+                      and d.invoice_id is not null and l.entity_name = d.invoice_id), 0) as refunded_sum
+) x
 where d.status in ('due', 'partially_paid', 'fully_paid')
   and d.created_at >= timestamptz '2026-11-05'
-group by d.id, d.user_id, d.total_paid
-having abs(coalesce(d.total_paid,0) - coalesce(sum(p.settled_amount), 0)) > 0.01;
+  and abs(coalesce(d.total_paid,0) - (x.settled_sum - x.refunded_sum)) > 0.01;
 
 
 -- R-03 [F-19, F-20] Every drawer movement belongs to a shift of the same owner, and none was posted after its shift closed.
@@ -80,7 +87,7 @@ where t.type = 'expense'
 select id, debt_id, amount, settled_amount, fx_difference_usd, fx_credit_rate
 from public.debt_payments
 where fx_credit_rate is not null
-  and abs(fx_difference_usd - (amount - settled_amount)) > 0.0001;
+  and abs(fx_difference_usd - (amount - settled_amount + coalesce(rounding_adjustment, 0))) > 0.0001;
 
 
 -- R-08 [F-21, D-09] An expense never allocates more to partners than the expense itself (reversed expenses excluded).

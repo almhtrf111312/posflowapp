@@ -1,5 +1,6 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
 import { capitalOriginalRate, capitalUsdFromForeign, type CapitalHistoryLike } from '../partner-fx';
+import { round8 } from '../utils';
 // Cloud Partners Store - Supabase-backed partners management
 import { 
   fetchFromSupabase, 
@@ -378,7 +379,7 @@ export const addCapitalCloud = async (
   const partner = await getPartnerByIdCloud(partnerId);
   if (!partner || amount <= 0) return false;
   
-  const roundedAmount = Math.round(amount * 100) / 100;
+  const roundedAmount = round8(amount);
   
   const transaction: CapitalTransaction = {
     id: Date.now().toString(),
@@ -389,8 +390,8 @@ export const addCapitalCloud = async (
   };
   
   return updatePartnerCloud(partnerId, {
-    initialCapital: partner.initialCapital + roundedAmount,
-    currentCapital: partner.currentCapital + roundedAmount,
+    initialCapital: round8(partner.initialCapital + roundedAmount),
+    currentCapital: round8(partner.currentCapital + roundedAmount),
     capitalHistory: [...partner.capitalHistory, transaction],
   });
 };
@@ -432,9 +433,9 @@ export const addCapitalWithCashboxCloud = async (
   originalAmount?: number,
   exchangeRate?: number
 ): Promise<boolean> => {
-  const roundedUsd = Math.round(amountUsd * 100) / 100;
+  const roundedUsd = round8(amountUsd);
   const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedUsd;
-  const rate = exchangeRate || (currency !== 'USD' && roundedUsd > 0 ? Math.round((origAmt / roundedUsd) * 10000) / 10000 : 1.0);
+  const rate = exchangeRate || (currency !== 'USD' && roundedUsd > 0 ? round8(origAmt / roundedUsd) : 1.0);
   assertFxConsistent(roundedUsd, origAmt, rate, 'الإيداع');
 
   if (isLocalDataMode()) throw new Error(PARTNER_OFFLINE_MSG);
@@ -487,10 +488,10 @@ export const addCapitalWithCashboxCloud = async (
       notes: notes || (depositTarget === 'balance' ? 'إيداع رصيد للشريك' : 'إيداع رأس مال'),
     };
     if (depositTarget === 'balance') {
-      partner.currentBalance = Math.round((partner.currentBalance + roundedUsd) * 100) / 100;
+      partner.currentBalance = round8(partner.currentBalance + roundedUsd);
     } else {
-      partner.initialCapital = Math.round((partner.initialCapital + roundedUsd) * 100) / 100;
-      partner.currentCapital = Math.round((partner.currentCapital + roundedUsd) * 100) / 100;
+      partner.initialCapital = round8(partner.initialCapital + roundedUsd);
+      partner.currentCapital = round8(partner.currentCapital + roundedUsd);
     }
     partner.capitalHistory = [...(partner.capitalHistory || []), capRecord];
     if (partnersCache) {
@@ -574,7 +575,7 @@ const applyWithdrawalLocally = async (a: {
     } as CapitalTransaction];
   }
 
-  partner.totalWithdrawn = Math.round((partner.totalWithdrawn + roundedAmount) * 100) / 100;
+  partner.totalWithdrawn = round8(partner.totalWithdrawn + roundedAmount);
   partner.currentBalance = newBalance;
   partner.currentCapital = newCapital;
   partner.withdrawalHistory = [...(partner.withdrawalHistory || []), ...newWithdrawals];
@@ -627,7 +628,7 @@ const queueOfflinePartnerWithdrawal = async (a: {
   const { partner, partnerId, withdrawalType, roundedAmount, origAmt, rate, currency, notes, operationId, originalShift } = a;
   const balance = Math.max(0, partner.currentBalance || 0);
   const capital = Math.max(0, partner.currentCapital || 0);
-  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const r2 = round8; // F-02: USD keeps 8 decimals
 
   const profitDeducted = withdrawalType === 'profit' ? roundedAmount
     : withdrawalType === 'capital' ? 0
@@ -704,9 +705,9 @@ const executePartnerWithdrawal = async (
     effectiveRate = capitalRate;
     effectiveAmount = capitalUsdFromForeign(originalAmount, capitalRate);
   }
-  const roundedAmount = Math.round(effectiveAmount * 100) / 100;
+  const roundedAmount = round8(effectiveAmount);
   const origAmt = originalAmount !== undefined ? Math.round(originalAmount * 100) / 100 : roundedAmount;
-  const rate = effectiveRate || (currency !== 'USD' && roundedAmount > 0 ? Math.round((origAmt / roundedAmount) * 10000) / 10000 : 1.0);
+  const rate = effectiveRate || (currency !== 'USD' && roundedAmount > 0 ? round8(origAmt / roundedAmount) : 1.0);
   const label =
     withdrawalType === 'profit'
       ? 'سحب الأرباح'
@@ -780,10 +781,10 @@ const executePartnerWithdrawal = async (
     result.capital_deducted ?? (withdrawalType === 'capital' ? roundedAmount : 0)
   );
   const newBalance = Number(
-    result.new_balance ?? Math.round((liveBalance - profitDeducted) * 100) / 100
+    result.new_balance ?? round8(liveBalance - profitDeducted)
   );
   const newCapital = Number(
-    result.new_capital ?? Math.round((liveCapital - capitalDeducted) * 100) / 100
+    result.new_capital ?? round8(liveCapital - capitalDeducted)
   );
 
   // تحديث الحالة المحلية بعد تأكيد الخادم فقط (تجنب التكرار إذا كانت العملية منفذة مسبقاً)

@@ -1,5 +1,4 @@
-import { Device } from '@capacitor/device';
-import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 /**
  * Get the current system language code
@@ -7,6 +6,8 @@ import { App } from '@capacitor/app';
  */
 export async function getSystemLanguage(): Promise<string> {
   try {
+    if (!Capacitor.isNativePlatform()) return (typeof navigator !== 'undefined' && navigator.language) || 'ar';
+    const { Device } = await import('@capacitor/device');
     const info = await Device.getLanguageCode();
     return info.value; // Returns language code like 'ar', 'en', etc.
   } catch (error) {
@@ -39,14 +40,15 @@ export function mapSystemLanguage(systemLang: string): 'ar' | 'en' | 'tr' | 'fa'
  */
 export function setupSystemLanguageListener(callback: (lang: string) => void) {
   let lastMapped: string | null = null;
-  App.addListener('appStateChange', async ({ isActive }) => {
+  if (!Capacitor.isNativePlatform()) return;
+  void import('@capacitor/app').then(({ App }) => App.addListener('appStateChange', async ({ isActive }) => {
     if (!isActive) return;
     const systemLang = await getSystemLanguage();
     const mappedLang = mapSystemLanguage(systemLang);
     if (mappedLang === lastMapped) return;
     lastMapped = mappedLang;
     callback(mappedLang);
-  });
+  })).catch(() => {});
 }
 
 /**

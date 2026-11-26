@@ -12,7 +12,8 @@ export interface CloudShiftLike {
   cashier_name?: string | null;
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
+import { round8 } from './utils';
+const round2 = round8; // F-02: USD keeps 8 decimals (name kept for the call sites)
 
 /** Returns the Shift to store locally, or null when the cloud shift must not be adopted. */
 export function buildAdoptedShift(

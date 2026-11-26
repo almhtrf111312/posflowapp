@@ -1,5 +1,4 @@
 import { Capacitor } from '@capacitor/core';
-import { LocalNotifications } from '@capacitor/local-notifications';
 
 export type NotificationChannelType = 'critical' | 'transactions' | 'system';
 
@@ -61,7 +60,7 @@ export async function initNotificationChannels(): Promise<void> {
   if (!Capacitor.isNativePlatform() || channelsCreated) return;
   try {
     for (const ch of Object.values(NOTIFICATION_CHANNELS)) {
-      await LocalNotifications.createChannel({
+      await (await import('@capacitor/local-notifications')).LocalNotifications.createChannel({
         id: ch.id,
         name: ch.name,
         description: ch.description,
@@ -87,7 +86,7 @@ export const initNotificationChannel = initNotificationChannels;
 export async function checkNotificationPermissionNative(): Promise<'granted' | 'denied' | 'prompt'> {
   if (Capacitor.isNativePlatform()) {
     try {
-      const status = await LocalNotifications.checkPermissions();
+      const status = await (await import('@capacitor/local-notifications')).LocalNotifications.checkPermissions();
       return status.display === 'granted' || status.display === 'denied' ? status.display : 'prompt';
     } catch (e) {
       console.warn('[Notifications] Check permission failed:', e);
@@ -109,7 +108,7 @@ export async function requestNotificationPermissionNative(): Promise<'granted' |
   if (Capacitor.isNativePlatform()) {
     try {
       await initNotificationChannels();
-      const status = await LocalNotifications.requestPermissions();
+      const status = await (await import('@capacitor/local-notifications')).LocalNotifications.requestPermissions();
       return status.display === 'granted' ? 'granted' : 'denied';
     } catch (e) {
       console.warn('[Notifications] Native request failed:', e);
@@ -153,7 +152,7 @@ export async function sendLocalNotification(
       const notifId = Math.floor(Math.random() * 1000000) + 1;
       const targetChannel = NOTIFICATION_CHANNELS[channel] || NOTIFICATION_CHANNELS.critical;
 
-      await LocalNotifications.schedule({
+      await (await import('@capacitor/local-notifications')).LocalNotifications.schedule({
         notifications: [
           {
             id: notifId,
@@ -196,11 +195,11 @@ export async function initAndroidNotificationChannel() {
   if (!Capacitor.isNativePlatform() || channelInitialized) return;
   try {
     // لا نطلب الإذن هنا: الطلب يتم فقط عندما يضغط المستخدم «تفعيل» في قسم الإشعارات
-    const perm = await LocalNotifications.checkPermissions();
+    const perm = await (await import('@capacitor/local-notifications')).LocalNotifications.checkPermissions();
     if (perm.display !== 'granted') {
       return;
     }
-    await LocalNotifications.createChannel({
+    await (await import('@capacitor/local-notifications')).LocalNotifications.createChannel({
       id: ANDROID_CHANNEL_ID,
       name: 'PosFlow Notifications',
       description: 'إشعارات المبيعات والعمليات الفورية',
@@ -224,7 +223,7 @@ export async function triggerAndroidSystemNotification(payload: {
     if (Capacitor.isNativePlatform()) {
       await initAndroidNotificationChannel();
       const notificationId = Math.floor((Date.now() % 2147483000) + Math.random() * 1000);
-      await LocalNotifications.schedule({
+      await (await import('@capacitor/local-notifications')).LocalNotifications.schedule({
         notifications: [
           {
             id: notificationId,

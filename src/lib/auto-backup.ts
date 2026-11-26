@@ -1,6 +1,5 @@
 // Smart Auto-Backup System
 // Activity-based backup with local and cloud storage support
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { uploadCloudBackup } from './cloud-backup';
 import { formatDateTime } from './utils';
 
@@ -122,11 +121,11 @@ export const saveBackupLocally = async (): Promise<boolean> => {
       !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
 
     if (isNative) {
-      await Filesystem.writeFile({
+      await (await import('@capacitor/filesystem')).Filesystem.writeFile({
         path: `PosFlow/backups/${fileName}`,
         data: JSON.stringify(backupData, null, 2),
-        directory: Directory.Documents,
-        encoding: Encoding.UTF8,
+        directory: (await import('@capacitor/filesystem')).Directory.Documents,
+        encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,
         recursive: true,
       });
     } else {

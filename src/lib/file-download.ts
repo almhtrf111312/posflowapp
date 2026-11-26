@@ -5,8 +5,6 @@
  */
 
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 
 interface DownloadOptions {
   filename: string;
@@ -33,14 +31,14 @@ export const isNativePlatform = (): boolean => {
 const requestStoragePermissions = async (): Promise<boolean> => {
   try {
     // Check current permission status
-    const { publicStorage } = await Filesystem.checkPermissions();
+    const { publicStorage } = await (await import('@capacitor/filesystem')).Filesystem.checkPermissions();
 
     if (publicStorage === 'granted') {
       return true;
     }
 
     // Request permissions
-    const result = await Filesystem.requestPermissions();
+    const result = await (await import('@capacitor/filesystem')).Filesystem.requestPermissions();
     return result.publicStorage === 'granted';
   } catch (error) {
     console.log('[FileDownload] Permission check error:', error);
@@ -81,11 +79,11 @@ const saveFileNative = async (
 
     // 1. Try Documents directory first
     try {
-      const result = await Filesystem.writeFile({
+      const result = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
         path: `PosFlow/${filename}`,
         data: content,
-        directory: Directory.Documents,
-        encoding: Encoding.UTF8,
+        directory: (await import('@capacitor/filesystem')).Directory.Documents,
+        encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,
         recursive: true,
       });
 
@@ -97,11 +95,11 @@ const saveFileNative = async (
 
     // 2. Try Downloads directory
     try {
-      const result = await Filesystem.writeFile({
+      const result = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
         path: `Download/${filename}`,
         data: content,
-        directory: Directory.ExternalStorage,
-        encoding: Encoding.UTF8,
+        directory: (await import('@capacitor/filesystem')).Directory.ExternalStorage,
+        encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,
         recursive: true,
       });
 
@@ -112,16 +110,16 @@ const saveFileNative = async (
     }
 
     // 3. Fallback: Save to Cache and Open Share Dialog
-    const cacheResult = await Filesystem.writeFile({
+    const cacheResult = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
       path: filename,
       data: content,
-      directory: Directory.Cache,
-      encoding: Encoding.UTF8,
+      directory: (await import('@capacitor/filesystem')).Directory.Cache,
+      encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,
     });
 
     console.log('[FileDownload] Saved to Cache for sharing:', cacheResult.uri);
 
-    await Share.share({
+    await (await import('@capacitor/share')).Share.share({
       title: filename,
       text: 'نسخة احتياطية من PosFlow',
       url: cacheResult.uri,
@@ -228,9 +226,9 @@ export const listNativeBackups = async (): Promise<NativeBackupFile[]> => {
   if (!isNativePlatform()) return [];
 
   try {
-    const result = await Filesystem.readdir({
+    const result = await (await import('@capacitor/filesystem')).Filesystem.readdir({
       path: 'PosFlow',
-      directory: Directory.Documents,
+      directory: (await import('@capacitor/filesystem')).Directory.Documents,
     });
 
     const backups: NativeBackupFile[] = result.files

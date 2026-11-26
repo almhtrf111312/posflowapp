@@ -1,8 +1,6 @@
 // Professional Excel Export using ExcelJS library (secure, no SheetJS vulnerabilities)
 import ExcelJS from 'exceljs';
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { formatDate, formatDateTime } from './utils';
 import { getCurrencyDisplayLabel, getReportCurrency } from './currencies';
 import { roundForCurrency } from './money-engine';
@@ -98,13 +96,13 @@ const saveExcelNative = async (wb: ExcelJS.Workbook, fileName: string): Promise<
   try {
     const base64 = await workbookToBase64(wb);
 
-    const result = await Filesystem.writeFile({
+    const result = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
       path: fileName,
       data: base64,
-      directory: Directory.Cache,
+      directory: (await import('@capacitor/filesystem')).Directory.Cache,
     });
 
-    await Share.share({
+    await (await import('@capacitor/share')).Share.share({
       title: fileName,
       url: result.uri,
       dialogTitle: 'حفظ ملف Excel',

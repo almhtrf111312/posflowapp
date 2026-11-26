@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PluginListenerHandle } from '@capacitor/core';
-import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { AlertTriangle, Bluetooth, CheckCircle2, Loader2, Printer, RefreshCw } from 'lucide-react';
 import {
   Dialog,
@@ -163,14 +163,14 @@ export function BluetoothPrinterDialog({ open, onOpenChange, isRTL, paperWidth, 
 
   // ---------- لما يرجع التطبيق من شاشة النظام (مثلاً بعد تشغيل البلوتوث) ----------
   useEffect(() => {
-    if (!open) return;
-    const sub = App.addListener('appStateChange', ({ isActive }) => {
+    if (!open || !Capacitor.isNativePlatform()) return;
+    const sub = import('@capacitor/app').then(({ App }) => App.addListener('appStateChange', ({ isActive }) => {
       if (isActive && stepRef.current === 'blocked') {
         void refreshReadiness();
       }
-    });
+    }));
     return () => {
-      void sub.then((h) => h.remove());
+      void sub.then((h) => h.remove()).catch(() => {});
     };
   }, [open, refreshReadiness]);
 

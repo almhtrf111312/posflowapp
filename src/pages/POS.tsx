@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { findSerialLocal, getSelectedSerials, setSelectedSerials, clearSelectedSerials } from '@/lib/serials-store';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
@@ -55,7 +56,6 @@ import { useWarehouse } from '@/hooks/warehouse-context';
 
 import { useAuth } from '@/hooks/auth-context';
 
-import { App } from '@capacitor/app';
 
 
 
@@ -663,7 +663,8 @@ export default function POS() {
 
 
 
-    App.addListener('appStateChange', ({ isActive }) => {
+    (Capacitor.isNativePlatform()
+      ? import('@capacitor/app').then(({ App }) => App.addListener('appStateChange', ({ isActive }) => {
 
       if (!isActive) {
 
@@ -725,7 +726,8 @@ export default function POS() {
 
       }
 
-    }).then(listener => {
+    }))
+      : Promise.reject(new Error('web'))).then(listener => {
 
       appListener = listener;
 

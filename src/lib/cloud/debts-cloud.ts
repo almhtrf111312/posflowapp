@@ -4,7 +4,6 @@ import { isOperationCancelled } from '../cancellation-registry';
 // Cloud Debts Store - Supabase-backed debts management
 import {
   fetchFromSupabase,
-  insertToSupabase,
   updateInSupabase,
   deleteFromSupabase,
   getCurrentUserId,
@@ -362,7 +361,8 @@ export const addDebtCloud = async (
   }
 
   try {
-    const inserted = await insertToSupabase<CloudDebt>('debts', payload);
+    // F-25: the debt row is written by the atomic RPC (idempotent by the client id), never by a direct table insert.
+    const inserted = await createManualDebtRpc(payload);
 
     if (inserted) {
       invalidateDebtsCache();
@@ -378,6 +378,23 @@ export const addDebtCloud = async (
     return saveToLocalAndQueue();
   }
 };
+
+/** Calls create_manual_debt_atomic with the client payload (same id online and on queue replay). Exported for the queue processor. */
+export async function createManualDebtRpc(payload: Record<string, unknown>): Promise<CloudDebt | null> {
+  const rpc = supabase.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  const { data, error } = await rpc('create_manual_debt_atomic', {
+    _id: payload.id,
+    _invoice_id: payload.invoice_id ?? null,
+    _customer_name: payload.customer_name,
+    _customer_phone: payload.customer_phone ?? null,
+    _total_debt: payload.total_debt,
+    _due_date: payload.due_date || null,
+    _notes: payload.notes ?? null,
+    _is_cash_debt: payload.is_cash_debt ?? false,
+  });
+  if (error) throw new Error(error.message || 'فشل إنشاء الدين');
+  return (data as CloudDebt) ?? null;
+}
 
 // Add debt from invoice
 export const addDebtFromInvoiceCloud = async (

@@ -999,7 +999,7 @@ export async function runQaFixes(k, newWorldFn) {
     const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Snap',8,3.33333333,50) returning id`, [OWNER])).id;
     const items = JSON.stringify([{ product_id: prod, product_name: 'Snap', quantity: 1, unit_price: 8, amount_usd: 8, amount_original: 8, cost_price: 3.33333333 }]);
     const s = await w.one(`select * from public.process_pos_sale_atomic($1,'debt','Cust','',8,0,0,0,0,8,0,'USD',null::uuid,$2::jsonb,2,1,null)`, [w.op('snap'), items]);
-    check('SNAP first call writes the snapshot', (await w.one(`select public.record_sale_profit_snapshot($1) r`, [s.invoice_number])).r, true);
+    check('SNAP the sale itself wrote the snapshot on commit (client call is a no-op)', (await w.one(`select public.record_sale_profit_snapshot($1) r`, [s.invoice_number])).r, false);
     check('SNAP a replay writes nothing', (await w.one(`select public.record_sale_profit_snapshot($1) r`, [s.invoice_number])).r, false);
     const snap = await w.one(`select gross_profit::float8 g, revenue::float8 r, count(*) over () n from public.profit_records where invoice_id=$1`, [s.invoice_number]);
     check('SNAP the credit sale keeps its FULL original profit (8 - 3.33333333 = 4.66666667), not the down-payment share', snap.g, 4.66666667, 1e-9);
@@ -1016,4 +1016,44 @@ export async function runQaFixes(k, newWorldFn) {
     const d2 = await w.newDebt({ total: 10, isCash: true });
     truthy('F26 more than 0.05 over the remaining is refused', (await w.fails(w.one(`select public.record_debt_payment_atomic($1,10.06,$2,$3,'USD',10.06,1,'cash')`, [d2, w.op('f26b'), sh]))) !== null);
   }
+  // Audit round 2: R-02 after a partial refund, FX vs rounding split (F-26/F-27), snapshot survives an early refund, manual debt RPC.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    const pA = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'RA',5,2,50) returning id`, [OWNER])).id;
+    const pB = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'RB',8,3,50) returning id`, [OWNER])).id;
+    const both = JSON.stringify([{ product_id: pA, product_name: 'RA', quantity: 1, unit_price: 5, amount_usd: 5, amount_original: 5, cost_price: 2 },
+      { product_id: pB, product_name: 'RB', quantity: 1, unit_price: 8, amount_usd: 8, amount_original: 8, cost_price: 3 }]);
+    const s = await w.one(`select * from public.process_pos_sale_atomic($1,'debt','Cust','',13,0,0,0,0,13,0,'USD',null::uuid,$2::jsonb,0,1,null)`, [w.op('r2'), both]);
+    const d = (await w.one(`select id from public.debts where invoice_id=$1`, [s.invoice_number])).id;
+    await w.one(`select public.record_debt_payment_atomic($1,10,$2,$3,'USD',10,1,'cash')`, [d, w.op('r2p'), sh]);
+    await w.one(`select public.refund_invoice_partial_atomic($1,$2::jsonb,$3,$4::uuid,null,null,null,'drawer') r`,
+      [s.invoice_number, JSON.stringify([{ product_id: pA, quantity: 1 }]), w.op('r2r'), sh]);
+    const r02 = reconQueries().find((r) => r.id === 'R-02').sql;
+    const r02rows = await w.q(r02);
+    check('R02 a partial refund on a paid credit sale is not a false difference', r02rows.length, 0);
+    const snaps = await w.one(`select count(*) filter (where revenue >= 0)::int o, max(gross_profit) filter (where revenue >= 0)::float8 g from public.profit_records where invoice_id=$1`, [s.invoice_number]);
+    check('SNAP2 the original snapshot survives the refund (one row, full profit 8)', `${snaps.o}:${snaps.g}`, '1:8');
+    check('SNAP2 a later client call still writes nothing', (await w.one(`select public.record_sale_profit_snapshot($1) r`, [s.invoice_number])).r, false);
+
+    // FX at the same rate (1000): 10,040 SYP on a 10 USD debt. fx difference 0, the 0.04 snapping is rounding, not FX.
+    const inv = await w.newInvoice({ number: 'INV-FXR', total: 10000, currency: 'SYP', rate: 1000 });
+    const dx = await w.newDebt({ total: 10, invoice: inv.invoice_number });
+    await w.one(`select public.record_debt_payment_atomic($1,10.04,$2,$3,'SYP',10040,1000,'cash')`, [dx, w.op('fxr'), sh]);
+    const px = await w.one(`select amount::float8 a, settled_amount::float8 s, fx_difference_usd::float8 f, rounding_adjustment::float8 r from public.debt_payments where debt_id=$1`, [dx]);
+    check('FXR same rate: fx difference is 0', px.f, 0, 1e-9);
+    check('FXR the 0.04 is rounding_adjustment (-0.04)', px.r, -0.04, 1e-9);
+    check('FXR settled = 10', px.s, 10, 1e-9);
+    check('FXR R-06 holds', (await w.q(reconQueries().find((r) => r.id === 'R-06').sql)).length, 0);
+
+    // Manual debt through the RPC, idempotent by id.
+    const mid = '55555555-5555-4555-8555-000000000001';
+    const m1 = (await w.one(`select public.create_manual_debt_atomic($1::uuid,'MD-1','Ali','0999',12.123456789,null,null,true) r`, [mid])).r;
+    const m2 = (await w.one(`select public.create_manual_debt_atomic($1::uuid,'MD-1','Ali','0999',12.123456789,null,null,true) r`, [mid])).r;
+    check('MDEBT replay returns the same row', `${m1.replayed}:${m2.replayed}`, 'false:true');
+    check('MDEBT one row, 8 decimals', (await w.one(`select count(*)::int n, max(total_debt)::float8 t from public.debts where id=$1`, [mid])).t, 12.12345679, 1e-9);
+    truthy('MDEBT zero amount refused', (await w.fails(w.one(`select public.create_manual_debt_atomic(gen_random_uuid(),null,'X',null,0) r`))) !== null);
+    check('MDEBT no drawer movement', Number((await w.one(`select count(*)::int n from public.shift_transactions where reference_id=$1`, [mid])).n), 0);
+  }
 }
+

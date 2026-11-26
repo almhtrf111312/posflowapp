@@ -2,8 +2,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import { loadArabicFont, ARABIC_FONT_NAME } from './fonts/cairo-font';
 import { getCurrentLanguage } from './i18n';
 import ArabicReshaper from 'arabic-reshaper';
@@ -118,13 +116,13 @@ const formatInvoiceDate = (dateStr: string): string => {
 const savePDFNative = async (doc: jsPDF, fileName: string): Promise<void> => {
   try {
     const pdfBase64 = doc.output('datauristring').split(',')[1];
-    const result = await Filesystem.writeFile({
+    const result = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
       path: fileName,
       data: pdfBase64,
-      directory: Directory.Cache,
+      directory: (await import('@capacitor/filesystem')).Directory.Cache,
     });
 
-    await Share.share({
+    await (await import('@capacitor/share')).Share.share({
       title: fileName,
       url: result.uri,
       dialogTitle: 'حفظ ملف PDF',

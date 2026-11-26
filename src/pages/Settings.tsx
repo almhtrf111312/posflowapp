@@ -789,7 +789,12 @@ export default function Settings() {
         });
         return;
       }
-    } catch { /* if the queue cannot be read, continue as before */ }
+    } catch (e) {
+      // If the queue cannot be read we cannot prove nothing is pending: stop, never risk wiping unsynced operations.
+      console.error('[Settings] transfer guard: sync queue unreadable', e);
+      toast({ title: t('common.error'), description: 'تعذّر التحقق من العمليات غير المرفوعة. لم يتم النقل حفاظًا على بياناتك.', variant: 'destructive' });
+      return;
+    }
     if (!transferPassword || !currentUser?.email) return;
     setIsTransferring(true);
     try {

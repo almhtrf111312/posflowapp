@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, useSearchParams, useNavigate, useLocation, Outlet, Navigate } from "react-router-dom";
 import { Capacitor } from '@capacitor/core';
 import { isSetupCompleteFor, markSetupComplete, setupFlagKey } from '@/lib/setup-flag';
-import { App as CapApp } from '@capacitor/app';
 import { MainLayout } from "./components/layout/MainLayout";
 import { NativeTabHost } from "./components/layout/NativeTabKeepAlive";
 import { NotificationsProvider } from "./hooks/use-notifications";
@@ -278,7 +277,7 @@ const AppContent = () => {
     let listenerHandle: { remove: () => Promise<void> } | null = null;
 
     const setupListener = async () => {
-      listenerHandle = await CapApp.addListener('appRestoredResult', (data) => {
+      listenerHandle = await (await import('@capacitor/app')).App.addListener('appRestoredResult', (data) => {
         console.log('[App Restored] Plugin data received:', data);
 
         // Handle Camera plugin data

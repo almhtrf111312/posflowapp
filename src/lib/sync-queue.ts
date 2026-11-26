@@ -83,7 +83,9 @@ export interface QueuedOperation {
   maxRetries: number;
   status: 'pending' | 'processing' | 'failed' | 'completed';
   error?: string;
-  errorClass?: 'retryable' | 'terminal';
+  // 'reconciliation': the server refused because the operation's shift closed before it synced (F-20). Not retried;
+  // it waits for the owner's manual reconciliation.
+  errorClass?: 'retryable' | 'terminal' | 'reconciliation';
   createdAt: string;
   lastAttempt?: string;
   dependsOn?: string;
@@ -149,6 +151,8 @@ const isTerminalSyncError = (message: string): boolean => {
     'an open cash shift for this purchase is required',
     'الوردية غير موجودة',
     'عملية شراء قديمة',
+    // manual debt refused by create_manual_debt_atomic (closed period, invalid amount...): the same replay gets the same answer
+    'دين مرفوض من الخادم',
   ].some(fragment => normalized.includes(fragment));
 };
 
@@ -499,6 +503,30 @@ export const getPendingOperations = (): QueuedOperation[] => {
 };
 
 /**
+ * For actions that wipe local data (device transfer): counts EVERY operation the server has not confirmed — pending, processing
+ * and failed at any retry count, for any tenant on this device. Throws when a stored queue exists but cannot be read, so the
+ * caller stops instead of treating an unreadable queue as empty (invariant 5).
+ */
+export const countUnsyncedOperationsStrict = (): number => {
+  const raw = localStorage.getItem(`${SYNC_QUEUE_NAMESPACE}_${SYNC_QUEUE_KEY}`);
+  const stored = secureGet<QueuedOperation[]>(SYNC_QUEUE_KEY, { namespace: SYNC_QUEUE_NAMESPACE });
+  if (raw && !Array.isArray(stored)) throw new Error('sync queue unreadable');
+  const ids = new Set<string>();
+  let count = 0;
+  for (const op of stored || []) {
+    ids.add(op.id);
+    if (op.status !== 'completed') count++;
+  }
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !key.startsWith('posflow_sync_pending_')) continue;
+    const op = JSON.parse(localStorage.getItem(key) || 'null') as QueuedOperation | null; // a corrupt entry throws: stop
+    if (op && !ids.has(op.id) && op.status !== 'completed') count++;
+  }
+  return count;
+};
+
+/**
  * الحصول على العمليات الفاشلة
  */
 export const getFailedOperations = (): QueuedOperation[] => {
@@ -700,6 +728,23 @@ export const processQueue = async (
           updateOperationStatus(operation.id, 'pending');
           updateHistoryStatus(operation.id, 'pending', 'بانتظار تفعيل الاشتراك');
           break;
+        }
+        if (errorMessage.includes('(F-20)')) {
+          const queue = loadQueue();
+          const index = queue.findIndex(item => item.id === operation.id);
+          if (index !== -1) {
+            queue[index].status = 'failed';
+            queue[index].retryCount = queue[index].maxRetries;
+            queue[index].error = errorMessage;
+            queue[index].errorClass = 'reconciliation';
+            queue[index].lastAttempt = new Date().toISOString();
+            saveQueue(queue);
+          }
+          updateHistoryStatus(operation.id, 'failed', errorMessage);
+          failed++;
+          if (operation.id === targetOperationId) targetSuccess = false;
+          console.warn(`[SyncQueue] Operation ${operation.id} awaits manual reconciliation (closed shift, F-20)`);
+          continue;
         }
         const terminal = isTerminalSyncError(errorMessage);
         if (terminal) {

@@ -48,7 +48,7 @@ export interface StuckOperation {
   maxRetries: number;
   status: QueuedOperation['status'];
   error?: string;
-  errorClass?: 'retryable' | 'terminal';
+  errorClass?: 'retryable' | 'terminal' | 'reconciliation';
   cancellationStatus?: CancelledOpStatus;
 }
 

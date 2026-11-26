@@ -40,7 +40,20 @@ export function mapSystemLanguage(systemLang: string): 'ar' | 'en' | 'tr' | 'fa'
  */
 export function setupSystemLanguageListener(callback: (lang: string) => void) {
   let lastMapped: string | null = null;
-  if (!Capacitor.isNativePlatform()) return;
+  if (!Capacitor.isNativePlatform()) {
+    // Web: the browser reports a language change directly; also re-check when the tab comes back.
+    const onChange = async () => {
+      const mappedLang = mapSystemLanguage(await getSystemLanguage());
+      if (mappedLang === lastMapped) return;
+      lastMapped = mappedLang;
+      callback(mappedLang);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('languagechange', () => { void onChange(); });
+      window.addEventListener('focus', () => { void onChange(); });
+    }
+    return;
+  }
   void import('@capacitor/app').then(({ App }) => App.addListener('appStateChange', async ({ isActive }) => {
     if (!isActive) return;
     const systemLang = await getSystemLanguage();

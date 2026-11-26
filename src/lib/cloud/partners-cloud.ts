@@ -1088,21 +1088,4 @@ export const confirmPendingProfitCloud = async (invoiceId: string, ratio: number
   }
 };
 
-// ✅ عكس أرباح الشركاء سحابياً عند المرتجع — يستدعي الدالة الذرية على السيرفر
-export const revertProfitDistributionCloud = async (invoiceId: string, ratio: number = 1.0): Promise<void> => {
-  if (!invoiceId) return;
-
-  try {
-    // استدعاء دالة العكس الذرية بالسيرفر لضمان الأمان المحاسبي وقفل FOR UPDATE
-    const { error } = await sb.rpc('revert_invoice_partner_profits_atomic', {
-      _invoice_id: invoiceId,
-      _revert_ratio: ratio,
-    });
-    if (error) {
-      console.warn('[revertProfitDistributionCloud] Server RPC notice:', error.message);
-    }
-    invalidatePartnersCache();
-  } catch (err) {
-    console.error('[revertProfitDistributionCloud] Failed:', err);
-  }
-};
+// Partner profit reversal on refund runs inside the refund RPCs on the server (revert_invoice_partner_profits_atomic is not callable by clients).

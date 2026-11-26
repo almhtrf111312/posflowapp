@@ -25,6 +25,7 @@ const statusLabel = (op: StuckOperation) => {
   if (op.cancellationStatus === 'needs_attention') return 'فشل التعويض ويحتاج معالجة';
   if (op.cancellationStatus === 'cancelled') return 'ملغاة';
   if (op.cancellationStatus === 'refunded') return 'استرداد مكتمل';
+  if (op.errorClass === 'reconciliation') return 'بانتظار المطابقة اليدوية (الوردية أُغلقت)';
   if (op.errorClass === 'terminal' || op.retryCount >= op.maxRetries) return 'فشل نهائي';
   if (op.status === 'processing') return 'جاري الرفع';
   if (op.status === 'failed') return `إعادة محاولة ${op.retryCount}/${op.maxRetries}`;
@@ -43,6 +44,9 @@ const statusBadgeClass = (op: StuckOperation) => {
   }
   if (op.cancellationStatus === 'refunded') {
     return 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30';
+  }
+  if (op.errorClass === 'reconciliation') {
+    return 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30';
   }
   if (op.errorClass === 'terminal' || op.retryCount >= op.maxRetries) {
     return 'bg-destructive/15 text-destructive border-destructive/30';

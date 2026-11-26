@@ -374,6 +374,7 @@ export const addDebtCloud = async (
     // If inserted is null (e.g. server error), queue it locally
     return saveToLocalAndQueue();
   } catch (error) {
+    if (error instanceof ManualDebtRefusedError) throw error; // shown to the user, never queued
     console.warn('[addDebtCloud] Exception, queueing locally:', error);
     return saveToLocalAndQueue();
   }
@@ -392,8 +393,19 @@ export async function createManualDebtRpc(payload: Record<string, unknown>): Pro
     _notes: payload.notes ?? null,
     _is_cash_debt: payload.is_cash_debt ?? false,
   });
-  if (error) throw new Error(error.message || 'فشل إنشاء الدين');
+  if (error) {
+    // A PostgREST/PostgreSQL error with a code is a server decision (closed period, invalid amount, no permission): retrying the
+    // same request returns the same refusal, so it must reach the user instead of waiting in the queue.
+    const code = (error as { code?: string }).code;
+    if (code) throw new ManualDebtRefusedError(`دين مرفوض من الخادم: ${error.message || code}`);
+    throw new Error(error.message || 'فشل إنشاء الدين');
+  }
   return (data as CloudDebt) ?? null;
+}
+
+/** The server refused the manual debt (permanent: same request, same answer). */
+export class ManualDebtRefusedError extends Error {
+  constructor(message: string) { super(message); this.name = 'ManualDebtRefusedError'; }
 }
 
 // Add debt from invoice

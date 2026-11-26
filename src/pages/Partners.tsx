@@ -1,3 +1,4 @@
+import { round8 } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
 import { capitalMaxInForeign, capitalOriginalRate, capitalUsdFromForeign, type CapitalHistoryLike } from '@/lib/partner-fx';
 import { getActiveShift } from '@/lib/cashbox-store';
@@ -414,9 +415,10 @@ export default function Partners() {
         ? capitalOriginalRate(selectedPartner.capitalHistory as unknown as CapitalHistoryLike[])
         : 0;
       const rate = withdrawCurrency === 'USD' ? 1 : isForeignCapital ? capitalRate : getCurrencyDef(withdrawCurrency).rate;
-      const amount = Math.round((isForeignCapital
+      // F-02: USD keeps 8 decimals (the foreign amount below stays at its own 2 decimals)
+      const amount = round8(isForeignCapital
         ? capitalUsdFromForeign(withdrawAmount, capitalRate)
-        : toUsd(withdrawAmount, withdrawCurrency, rate)) * 100) / 100;
+        : toUsd(withdrawAmount, withdrawCurrency, rate));
       if (!Number.isFinite(rate) || rate <= 0 || !Number.isFinite(amount) || amount <= 0) {
         toast.error(t('partners.enterValidAmount'));
         return;
@@ -487,7 +489,7 @@ export default function Partners() {
     }
 
     // حساب المعادل الفوري بالدولار بدقة
-    const depositUsdAmount = Math.round(toUsd(capitalAmount, depositCurrency) * 100) / 100;
+    const depositUsdAmount = round8(toUsd(capitalAmount, depositCurrency)); // F-02: 8 decimals
 
     let success = false;
     try {

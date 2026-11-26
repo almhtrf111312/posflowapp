@@ -614,6 +614,9 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
         operation: isEn ? 'New Debt' : 'دين جديد',
         duration: 4000,
       });
+    } catch (err) {
+      console.error('[Debts] add cash debt failed:', err);
+      toast.error(err instanceof Error ? err.message : (isEn ? 'Failed to add debt' : 'فشل إضافة الدين'));
     } finally {
       isSavingRef.current = false;
     }

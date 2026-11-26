@@ -347,8 +347,10 @@ export const reconcileDrawerWithCloud = async (userId: string | null | undefined
     return 'none';
   }
   // Query open shifts directly instead of filtering the last 20 shifts.
-  const { data: openRows } = await sb.from('cash_shifts').select('*').is('closed_at', null).order('opened_at', { ascending: false }).limit(50);
-  const open = ((openRows || []) as CloudShift[]).find(cs => !cs.cashier_id || cs.cashier_id === userId);
+  // The cashier filter runs in the query, so other cashiers' open shifts can never push this one out of the result.
+  const { data: openRows } = await sb.from('cash_shifts').select('*').is('closed_at', null)
+    .or(`cashier_id.is.null,cashier_id.eq.${userId}`).order('opened_at', { ascending: false }).limit(1);
+  const open = ((openRows || []) as CloudShift[])[0];
   if (!open) return 'none';
   const fromMovements = await loadShiftExpectedFromMovements(open.id, open.opening_balance);
   const adopted = adoptCloudOpenShift(fromMovements === null ? open : { ...open, expected_balance: fromMovements }, userId);

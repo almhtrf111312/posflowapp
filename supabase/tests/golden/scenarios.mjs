@@ -553,6 +553,14 @@ export async function runLawFixes(k, newWorldFn) {
     const inv = await w.one(`select supplier_id::text sid, supplier_name from public.purchase_invoices where id=$1::uuid`, [qpId]);
     check('F7 invoice is linked to the supplier', inv.sid, sup);
     check('F7 supplier name is the supplier (not the product)', inv.supplier_name, 'Supplier F7');
+    const r09 = reconQueries().find((r) => r.id === 'R-09').sql;
+    check('R09 a correct credit quick purchase passes', (await w.q(r09)).length, 0);
+    // Negative: remove the purchase entry on purpose (triggers off, rolled back) — R-09 must catch it.
+    await w.db.exec('begin');
+    await w.db.exec('alter table public.supplier_ledger_entries disable trigger user');
+    await w.q(`delete from public.supplier_ledger_entries where reference_id=$1 and entry_type='purchase'`, [qpId]);
+    check('NEG R-09 catches a credit quick purchase with no supplier ledger entry', (await w.q(r09)).length, 1);
+    await w.db.exec('rollback');
     const cashId = '33333333-3333-4333-8333-' + String(Date.now()).slice(-12);
     const shCash = await w.newShift(500);
     await w.one(`select public.process_quick_purchase_atomic($1::uuid, $2::jsonb) r`, [cashId, JSON.stringify({ productName: 'F7 cash', quantity: 1, costPrice: 5, salePrice: 9, paymentMethod: 'cash', shiftId: shCash })]);
@@ -1055,5 +1063,18 @@ export async function runQaFixes(k, newWorldFn) {
     truthy('MDEBT zero amount refused', (await w.fails(w.one(`select public.create_manual_debt_atomic(gen_random_uuid(),null,'X',null,0) r`))) !== null);
     check('MDEBT no drawer movement', Number((await w.one(`select count(*)::int n from public.shift_transactions where reference_id=$1`, [mid])).n), 0);
   }
+  // Security phase 1 (2026-11-26): internal partner-revert helper not callable by clients; PIN checks only the caller's own PIN.
+  {
+    const w = await newWorldFn();
+    const g = await w.one(`select has_function_privilege('authenticated','public.revert_invoice_partner_profits_atomic(uuid,numeric,jsonb)','EXECUTE') a,
+      has_function_privilege('anon','public.create_manual_debt_atomic(uuid,text,text,text,numeric,date,text,boolean)','EXECUTE') b,
+      has_function_privilege('anon','public.record_sale_profit_snapshot(text)','EXECUTE') c,
+      has_function_privilege('authenticated','public.create_manual_debt_atomic(uuid,text,text,text,numeric,date,text,boolean)','EXECUTE') d`);
+    check('SEC revert helper: no client EXECUTE', g.a, false);
+    check('SEC anon cannot run manual debt / snapshot RPCs', `${g.b}:${g.c}`, 'false:false');
+    check('SEC authenticated keeps manual debt RPC', g.d, true);
+    check('SEC another user PIN is never checked', (await w.one(`select public.verify_user_pin(gen_random_uuid(), '1234') r`)).r, false);
+  }
 }
+
 

@@ -101,12 +101,17 @@ having sum((d->>'amount')::numeric) > e.amount + 0.01;
 
 
 -- R-09 [F-25, audit F7] A credit quick purchase is linked to a supplier and has its purchase entry.
-select pi.id, pi.invoice_number, pi.supplier_id, pi.actual_grand_total
+-- Two failures are caught: no supplier at all, or a supplier but no 'purchase' entry in the supplier ledger.
+select pi.id, pi.invoice_number, pi.supplier_id, pi.actual_grand_total,
+       case when pi.supplier_id is null then 'no supplier' else 'no supplier ledger entry' end as problem
 from public.purchase_invoices pi
 where pi.payment_method = 'credit'
   and pi.status in ('finalized', 'completed')
-  and pi.supplier_id is null
-  and pi.invoice_number like 'QP-%';
+  and pi.invoice_number like 'QP-%'
+  and (pi.supplier_id is null
+       or not exists (select 1 from public.supplier_ledger_entries l
+                      where l.user_id = pi.user_id and l.reference_type = 'purchase_invoice'
+                        and l.reference_id = pi.id::text and l.entry_type = 'purchase'));
 
 
 -- R-07 [F-18] INFORMATION ONLY — NOT a gate (KD-06). cash_shifts.expected_balance is a best-effort cache during an open shift:

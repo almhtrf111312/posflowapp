@@ -779,8 +779,9 @@ export default function Settings() {
   const handleTransferLicense = async () => {
     // The device's local data is wiped after a transfer; operations not yet sent to the cloud would be lost (invariant 5).
     try {
-      const { getPendingOperations } = await import('@/lib/sync-queue');
-      const pending = getPendingOperations().length;
+      // Strict count: includes operations being sent and failed ones that ran out of retries; throws if the queue is unreadable.
+      const { countUnsyncedOperationsStrict } = await import('@/lib/sync-queue');
+      const pending = countUnsyncedOperationsStrict();
       if (pending > 0) {
         toast({
           title: t('common.error'),

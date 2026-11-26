@@ -551,6 +551,23 @@ export async function runLawFixes(k, newWorldFn) {
     check('F4 closure row net_profit is unchanged by FX', row.p, res.net_profit);
   }
 
+  // Historical receipts may predate the settlement request cache.
+  {
+    const w = await newWorldFn();
+    const d = await w.newDebt({ total: 2, isCash: true });
+    const pay = (amount, operation, original = amount) => w.one(
+      "select public.record_debt_payment_atomic($1,$2,$3,null,'USD',$4,1,'transfer') r", [d, amount, operation, original]);
+    for (const amount of [0.12345678, 1.88]) {
+      const operation = w.op('history');
+      await pay(amount, operation);
+      await w.q('delete from public.sales_settlement_replays where operation_id=$1', [operation]);
+      check('HISTORY exact receipt accepted: ' + amount, (await pay(amount, operation)).r.already_processed, true);
+      truthy('HISTORY changed original amount refused: ' + amount, !!await w.fails(pay(amount, operation, amount + 0.00000001)));
+    }
+    check('HISTORY no duplicate payment rows', (await w.one('select count(*)::int n from public.debt_payments where debt_id=$1', [d])).n, 2);
+    check('HISTORY debt remains settled', (await w.debt(d)).remaining, 0);
+  }
+
   // F7 (audit): a credit quick purchase is linked to a supplier and writes one purchase entry (migration 20261124080400).
   {
     const w = await newWorldFn();

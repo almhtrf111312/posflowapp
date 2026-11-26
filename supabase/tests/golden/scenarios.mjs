@@ -1083,6 +1083,16 @@ export async function runQaFixes(k, newWorldFn) {
     await w.one(`select public.record_debt_payment_atomic($1,10,$2,$3,'USD',10,1,'cash')`, [d, w.op('r2p'), sh]);
     await w.one(`select public.refund_invoice_partial_atomic($1,$2::jsonb,$3,$4::uuid,null,null,null,'drawer') r`,
       [s.invoice_number, JSON.stringify([{ product_id: pA, quantity: 1 }]), w.op('r2r'), sh]);
+    const plan = fs.readFileSync(new URL('../../../docs/ACCOUNTING_AUDIT_PLAN.md', import.meta.url), 'utf8');
+    const x12 = plan.split('-- X-12 [')[1].split('-- X-13')[0].split('\n').slice(1).join('\n');
+    check('X12 real partial refund has its receipt allocation', (await w.q(x12)).length, 0);
+    await w.newInvoice({ number: 'SALE-10', total: 10, status: 'refunded' });
+    await w.q(`insert into public.shift_transactions(shift_id,user_id,type,amount,reference_id,notes) values
+      ($1,$2,'refund',1,'SALE-10','استرداد فاتورة SALE-10'),
+      ($1,$2,'refund',1,'receipt-refund:full_refund:SALE-101:missing','رد إيصال قبض للفاتورة SALE-101')`, [sh, OWNER]);
+    const orphans = await w.q(x12);
+    check('X12 accepts historical refund and flags only the orphan', orphans.length, 1);
+    check('X12 similar invoice numbers cannot validate the orphan', orphans[0]?.reference_id, 'receipt-refund:full_refund:SALE-101:missing');
     const r02 = reconQueries().find((r) => r.id === 'R-02').sql;
     const r02rows = await w.q(r02);
     check('R02 a partial refund on a paid credit sale is not a false difference', r02rows.length, 0);

@@ -344,18 +344,26 @@ where table_schema = 'public' and data_type = 'numeric' and numeric_scale betwee
   and column_name not like '%quantity%'
   and table_name not in ('store_settings', 'subscription_requests', 'product_serials');
 
--- X-12 [F-16] Every refund movement points at an invoice of the same owner (full refunds: reference 'receipt-refund:…';
---      partial refunds: reference = operation id, invoice number in the notes) and that invoice really had a refund.
+-- X-12 [F-16] Match a receipt refund to its exact allocation, or a historical
+-- refund to the original invoice number / partial-refund activity.
 select t.id, t.amount, t.reference_id, t.notes from public.shift_transactions t
 where t.type = 'refund'
   and not exists (
+    select 1 from public.sales_refund_allocations a
+    join public.invoices i on i.id = a.invoice_id and i.user_id = a.user_id
+    where a.user_id = t.user_id and a.shift_id = t.shift_id
+      and a.method = 'cash' and a.settlement_mode = 'drawer'
+      and t.reference_id = 'receipt-refund:' || a.kind || ':' || a.operation_id || ':' || a.receipt_key)
+  and not exists (
     select 1 from public.invoices i
-    where i.user_id = t.user_id
-      and (t.reference_id like '%' || i.invoice_number || '%' or coalesce(t.notes, '') like '%' || i.invoice_number || '%')
-      and (i.status = 'refunded'
-           or exists (select 1 from public.activity_log l where l.user_id = i.user_id and l.action_type = 'partial_refund'
-                        and l.entity_name = i.invoice_number)
-           or exists (select 1 from public.sales_refund_allocations a where a.invoice_id = i.id)));
+    where i.user_id = t.user_id and coalesce(t.reference_id, '') not like 'receipt-refund:%'
+      and ((i.status = 'refunded' and t.reference_id = i.invoice_number)
+           or (t.notes = 'استرداد جزئي للفاتورة ' || i.invoice_number and exists (
+                select 1 from public.activity_log l where l.user_id = i.user_id
+                  and l.action_type = 'partial_refund' and l.entity_type = 'invoice'
+                  and (l.entity_id = i.id::text or l.entity_name = i.invoice_number)
+                  and (nullif(l.metadata->>'operation_id','') is null
+                       or l.metadata->>'operation_id' = t.reference_id)))));
 
 -- X-13 Reports (one day, gross sales, see 3.3): compare with the screens (summary, cashier, daily closing).
 select (created_at at time zone 'UTC')::date as day, count(*) as invoices, sum(total) as sales_incl_tax,

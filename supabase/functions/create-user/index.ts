@@ -5,92 +5,44 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const J = { ...corsHeaders, "Content-Type": "application/json" };
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    // Get the authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      console.log("No authorization header found");
-      return new Response(JSON.stringify({ error: "Missing authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Missing authorization header" }), { status: 401, headers: J });
     }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
-    // Create admin client with service role
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-
-    // Verify the user token
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await adminClient.auth.getUser(token);
-
     if (userError || !userData?.user) {
-      console.log("JWT verification failed:", userError);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: J });
     }
-
     const currentUser = userData.user;
-    console.log("Authenticated user:", currentUser.id);
 
-    // Check if current user is admin or boss
-    const { data: currentUserRole, error: roleError } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", currentUser.id)
-      .single();
-
-    console.log("Role check result:", currentUserRole, roleError);
-
+    const { data: currentUserRole, error: roleError } = await adminClient.from("user_roles").select("role").eq("user_id", currentUser.id).single();
     const isBoss = currentUserRole?.role === "boss";
     const isAdmin = currentUserRole?.role === "admin";
-
     if (roleError || (!isAdmin && !isBoss)) {
-      return new Response(JSON.stringify({ error: "Only admins or boss can create users" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Only admins or boss can create users" }), { status: 403, headers: J });
     }
 
-    // Get user data from request body
     const { email, password, fullName, role, userType, phone, allowedPages } = await req.json();
-
     if (!email || !password) {
-      return new Response(JSON.stringify({ error: "Email and password are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Email and password are required" }), { status: 400, headers: J });
     }
-
     if (password.length < 6) {
-      return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Password must be at least 6 characters" }), { status: 400, headers: J });
     }
 
-    // 1. استخراج وتجهيز الهاتف والبريد
     const normalizedEmail = (email || "").trim().toLowerCase();
     let normalizedPhone: string | null = null;
-
     if (phone && phone.trim()) {
-      // تنظيف الأرقام وتوحيد التنسيق
       let clean = phone.trim().replace(/[^+0-9]/g, "");
       if (clean.startsWith("00")) clean = "+" + clean.slice(2);
       if (/^09[0-9]{8}$/.test(clean)) clean = "+963" + clean.slice(1);
@@ -98,159 +50,58 @@ Deno.serve(async (req) => {
       normalizedPhone = clean || null;
     }
 
-    // 2. الفحص الاستباقي (Pre-Check Query) لمنع التكرار قبل أي عملية
     if (normalizedPhone) {
-      const { data: existingProfile } = await adminClient
-        .from("profiles")
-        .select("user_id, full_name, phone")
-        .eq("phone", normalizedPhone)
-        .maybeSingle();
-
+      const { data: existingProfile } = await adminClient.from("profiles").select("user_id, full_name, phone").eq("phone", normalizedPhone).maybeSingle();
       if (existingProfile) {
-        return new Response(
-          JSON.stringify({
-            // لا نكشف اسم صاحب الرقم لمن ينشئ الحساب
-            error: `رقم الهاتف (${normalizedPhone}) مسجل بالفعل لحساب آخر ولا يمكن تكراره.`,
-          }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify({ error: `رقم الهاتف (${normalizedPhone}) مسجل بالفعل لحساب آخر ولا يمكن تكراره.` }), { status: 400, headers: J });
       }
     }
 
-    // 3. فحص البريد الإلكتروني في جدول auth.users
     const { data: existingUsers } = await adminClient.auth.admin.listUsers();
     const emailTaken = existingUsers?.users?.some((u) => u.email?.toLowerCase() === normalizedEmail);
-
     if (emailTaken) {
-      return new Response(JSON.stringify({ error: "البريد الإلكتروني مسجل بالفعل لحساب آخر ولا يمكن استخدامه" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "البريد الإلكتروني مسجل بالفعل لحساب آخر ولا يمكن استخدامه" }), { status: 400, headers: J });
     }
 
-    console.log("Creating user");
-
-    // Create user using admin API - this won't affect the current session
     const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
       email: normalizedEmail,
       password,
-      email_confirm: true, // Auto-confirm the email
-      user_metadata: {
-        full_name: fullName,
-      },
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
     });
+    if (createError) return new Response(JSON.stringify({ error: createError.message }), { status: 400, headers: J });
+    if (!newUser?.user) return new Response(JSON.stringify({ error: "Failed to create user" }), { status: 500, headers: J });
 
-    if (createError) {
-      console.error("Error creating user:", createError);
-      return new Response(JSON.stringify({ error: createError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // حذف الدور الذي أنشأه الـ trigger تلقائياً قبل إدراج الدور الصحيح
+    await adminClient.from("user_roles").delete().eq("user_id", newUser.user.id);
 
-    if (!newUser?.user) {
-      return new Response(JSON.stringify({ error: "Failed to create user" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log("User created:", newUser.user.id);
-
-    // ✅ CRITICAL FIX: Delete any auto-created role from the trigger FIRST
-    // The handle_new_user_role trigger auto-creates an 'admin' role for ALL new users
-    // We need to delete it before inserting the correct role
-    const { error: deleteRoleError } = await adminClient.from("user_roles").delete().eq("user_id", newUser.user.id);
-
-    if (deleteRoleError) {
-      console.log("No existing role to delete or delete failed:", deleteRoleError);
-    } else {
-      console.log("Deleted auto-created role for user:", newUser.user.id);
-    }
-
-    // Create role for the new user
-    // IMPORTANT: Only Boss can create admin accounts
-    // Regular admins can only create cashier accounts linked to themselves
-    // This prevents privilege escalation
     let finalRole = role || "cashier";
     let ownerId: string | null = null;
-
     if (isBoss) {
-      // Boss can create any role
-      // If creating admin, no owner_id (they're independent)
-      // If creating cashier, link to boss (or could be null for boss-created cashiers)
-      if (finalRole === "cashier") {
-        ownerId = currentUser.id;
-      }
-      // Boss can also create admin accounts without owner_id
+      if (finalRole === "cashier") ownerId = currentUser.id;
     } else {
-      // Regular admin can ONLY create cashiers, ALWAYS linked to themselves
-      finalRole = "cashier"; // Force to cashier regardless of what was passed
+      finalRole = "cashier";
       ownerId = currentUser.id;
     }
 
-    console.log("Creating role with:", { finalRole, ownerId, isBoss });
-
-    // ✅ Now insert the correct role
-    const { error: roleInsertError } = await adminClient.from("user_roles").insert({
-      user_id: newUser.user.id,
-      role: finalRole,
-      owner_id: ownerId,
-    });
-
+    const { error: roleInsertError } = await adminClient.from("user_roles").insert({ user_id: newUser.user.id, role: finalRole, owner_id: ownerId });
     if (roleInsertError) {
-      console.error("Error creating user role:", roleInsertError);
-      // This is critical - if role creation fails, delete the user
       await adminClient.auth.admin.deleteUser(newUser.user.id);
-      return new Response(JSON.stringify({ error: "Failed to assign role to user" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(JSON.stringify({ error: "Failed to assign role to user" }), { status: 500, headers: J });
     }
 
-    console.log("Role created successfully:", finalRole, "with owner_id:", ownerId);
-
-    // Update profile with user_type, phone, and allowed_pages if provided
     const profileUpdate: { user_type?: string; phone?: string; allowed_pages?: unknown } = {};
-    if (userType) {
-      profileUpdate.user_type = userType;
-    }
-    if (normalizedPhone) {
-      profileUpdate.phone = normalizedPhone;
-    }
-    if (allowedPages && Array.isArray(allowedPages)) {
-      profileUpdate.allowed_pages = allowedPages;
-    }
-
+    if (userType) profileUpdate.user_type = userType;
+    if (normalizedPhone) profileUpdate.phone = normalizedPhone;
+    if (allowedPages && Array.isArray(allowedPages)) profileUpdate.allowed_pages = allowedPages;
     if (Object.keys(profileUpdate).length > 0) {
-      const { error: profileError } = await adminClient
-        .from("profiles")
-        .update(profileUpdate)
-        .eq("user_id", newUser.user.id);
-
-      if (profileError) {
-        console.error("Error updating profile:", profileError);
-      }
+      const { error: profileError } = await adminClient.from("profiles").update(profileUpdate).eq("user_id", newUser.user.id);
+      if (profileError) console.error("Error updating profile:", profileError);
     }
 
-    console.log("User created successfully:", newUser.user.id);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: "User created successfully",
-        user: {
-          id: newUser.user.id,
-          email: newUser.user.email,
-        },
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ success: true, message: "User created successfully", user: { id: newUser.user.id, email: newUser.user.email } }), { status: 200, headers: J });
   } catch (error: unknown) {
     console.error("Error in create-user function:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500, headers: J });
   }
 });

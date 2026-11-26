@@ -103,7 +103,7 @@ Any task that touches money, profit, tax, debts, drawer/shifts, refunds, partner
   (build/typecheck/maps) · branch+commit · notes.
 
 ## Read on demand only (never by default)
-`docs/ui-standards.md` · `docs/design.md` · `docs/speed-rules.md` · `FINANCIAL_FORMULAS_AR.md` (examples only; the law is mandatory, see above)
+`docs/ISSUES_TRACKER.md` = the single current list of open/closed issues (update it when an issue opens or closes) · `docs/ui-standards.md` · `docs/design.md` · `docs/speed-rules.md` · `FINANCIAL_FORMULAS_AR.md` (examples only; the law is mandatory, see above)
 · `docs/lessons-learned.md` (before touching a previously broken area) · `docs/PROJECT_NOTES.md` (offline queue, release
 control, Telegram, DB snapshot) · `SYSTEM_ARCHITECTURE.md` (roles and financial-operations map) · `docs/adr/` ·
 `ELECTRON_BUILD.md` · `GRADLE_TROUBLESHOOTING.md`.

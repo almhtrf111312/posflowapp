@@ -1075,6 +1075,38 @@ export async function runQaFixes(k, newWorldFn) {
     check('SEC authenticated keeps manual debt RPC', g.d, true);
     check('SEC another user PIN is never checked', (await w.one(`select public.verify_user_pin(gen_random_uuid(), '1234') r`)).r, false);
   }
+  // Security phase 2: profile privilege columns, product-images limits, e-mail lookup scope.
+  {
+    const w = await newWorldFn();
+    const CASH = 'cccccccc-0000-4000-8000-0000000000c1';
+    await w.q(`insert into auth.users(id, email) values ($1,'cash-sec2@example.test') on conflict do nothing`, [CASH]);
+    // Signing up creates an admin role by trigger; make it a real cashier of OWNER (as create-user does).
+    await w.q(`delete from public.user_roles where user_id=$1`, [CASH]);
+    await w.q(`insert into public.user_roles(user_id, role, owner_id) values ($1,'cashier',$2)`, [CASH, OWNER]);
+    await w.q(`insert into public.profiles(user_id, full_name) values ($1,'Cash') on conflict (user_id) do nothing`, [CASH]);
+    const asUser = async (uid, sql, params = []) => {
+      await w.db.exec('begin');
+      try {
+        await w.q(`select set_config('request.jwt.claim.sub', $1, true)`, [uid]);
+        // Supabase grants table privileges to authenticated by default; the harness does not (rolled back with the test).
+        await w.db.exec('grant select, insert, update on public.profiles to authenticated; grant select on public.user_roles to authenticated');
+        await w.db.exec('set local role authenticated');
+        return await w.fails(w.q(sql, params));
+      } finally { await w.db.exec('rollback'); }
+    };
+    const selfPages = await asUser(CASH, `update public.profiles set allowed_pages='["reports","partners"]'::jsonb where user_id=$1`, [CASH]);
+    truthy('SEC2 a cashier cannot grant itself pages', selfPages !== null && /مخصص لمدير المتجر|42501|permission/i.test(selfPages));
+    const selfType = await asUser(CASH, `update public.profiles set user_type='distributor' where user_id=$1`, [CASH]);
+    truthy('SEC2 a cashier cannot change its user type', selfType !== null);
+    const selfPin = await asUser(CASH, `update public.profiles set pin_hash='x' where user_id=$1`, [CASH]);
+    truthy('SEC2 pin_hash cannot be written directly', selfPin !== null);
+    check('SEC2 a cashier can still change its own name', await asUser(CASH, `update public.profiles set full_name='Cash 2' where user_id=$1`, [CASH]), null);
+    check('SEC2 the store admin can set the cashier pages', await asUser(OWNER, `update public.profiles set allowed_pages='["reports"]'::jsonb where user_id=$1`, [CASH]), null);
+    const b = await w.one(`select file_size_limit::int l, allowed_mime_types m from storage.buckets where id='product-images'`).catch(() => null);
+    if (b) check('SEC2 product-images limited to 2 MB images', `${b.l}:${b.m.includes('image/webp')}:${b.m.includes('text/html')}`, '2097152:true:false');
+    check('SEC2 internal lookup is not callable by clients', (await w.one(`select has_function_privilege('authenticated','public.check_phone_email_availability__impl(text,text,uuid)','EXECUTE') a`)).a, false);
+  }
 }
+
 
 

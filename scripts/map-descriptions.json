@@ -391,6 +391,7 @@
   "supabase/functions/sync-release-metadata/": "Syncs release metadata to the cloud (called by CI).",
   "supabase/functions/telegram-auth/": "Telegram-based authentication and recovery.",
   "supabase/functions/transfer-license/": "Transfers a license.",
+  "supabase/functions/trigger-build-release/": "Boss 'build and publish': dispatches build-apk.yml on main with Telegram publish.",
   "supabase/functions/trigger-public-release/": "Triggers the public release workflow.",
   "supabase/functions/update-boss-email/": "Updates the Boss email.",
   "supabase/functions/validate-activation-code/": "Validates an activation code.",

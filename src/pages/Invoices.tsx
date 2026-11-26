@@ -1365,7 +1365,7 @@ export default function Invoices() {
 
       // F-27: same foreign currency as the invoice -> credit at the invoice rate; cash stays valued at today's rate
       const policy = await resolveDebtFxPolicyCloud(latest, paymentCurrency);
-      let finalPaymentUSD = amountUSD;
+      const finalPaymentUSD = amountUSD;
       let creditUsd: number | undefined;
       if (policy) {
         creditUsd = debtCreditUsd(policy, parseFloat(paymentAmountInput) || 0, amountUSD);

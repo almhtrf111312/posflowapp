@@ -12,7 +12,7 @@
 | حالة الحية | كل هجرات `main` مطبّقة على الحية **ما عدا** `20261126170000` (S-2). لذلك أداة المطابقة ستُظهر فرقاً حتى تطبّقها؛ هذا متوقع |
 | الهجرة المطلوب تطبيقها | `supabase/migrations/20261126170000_s2_block_direct_financial_tampering.sql` (167 سطراً) |
 | سكربت التراجع | `supabase/live-snapshots/2026-11-26/ROLLBACK_s2_guards.sql` |
-| الاختبارات | `supabase/tests/golden/scenarios.mjs` كتلة `S2` (26 حالة) |
+| الاختبارات | `supabase/tests/golden/scenarios.mjs` كتلة `S2` (22 حالة) |
 | مشروع Supabase | `bwlqfxfvchjvehnbvwaz` |
 | الإصدار | v1.5.283 (versionCode 671) — لا تعدّل `version.json` يدوياً |
 

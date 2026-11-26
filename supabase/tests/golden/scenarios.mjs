@@ -27,6 +27,14 @@ export async function runScenarios(w, k) {
   const { q, one, op, newShift, newInvoice, newDebt, debt, expected, txSum, fails } = w;
   const { check, truthy } = k;
 
+  // Mirror the production client debt-fx precision cases against the deployed RPC signature.
+  {
+    const inv = await newInvoice({ number: 'INV-TINY-FX', total: 1, currency: 'SYP', rate: 15000 });
+    const id = await newDebt({ total: 1, invoice: inv.invoice_number });
+    const payment = await one(`select public.record_debt_payment_atomic($1,0.00005,$2,null,'SYP',1,20000,'transfer') r`, [id, op('tinyfx')]);
+    check('small FX credit at invoice rate', Number(payment.r.settled_amount), 0.00006667, 1e-10);
+    check('small FX difference at cash rate', Number(payment.r.fx_difference_usd), -0.00001667, 1e-10);
+  }
   // ---------- Debts in USD ----------
   {
     const sh = await newShift(100);

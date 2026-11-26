@@ -7,6 +7,8 @@
  * Every other combination (USD payment, cash debt, a different currency) keeps the legacy behaviour: credit = cash.
  * Mirrors the server (`record_debt_payment_atomic`, migration 20261123071000); the server is the authority.
  */
+import { round8 } from './money-engine';
+
 export interface DebtFxPolicy {
   invoiceCurrency: string;
   /** foreign units per 1 USD, from the invoice snapshot */
@@ -17,9 +19,6 @@ export interface InvoiceRateSnapshot {
   currency?: string | null;
   exchangeRate?: number | null;
 }
-
-const r4 = (n: number) => Math.round((Number(n) || 0) * 1e4) / 1e4;
-const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
 
 export function resolveDebtFxPolicy(
   invoice: InvoiceRateSnapshot | null | undefined,
@@ -37,7 +36,7 @@ export function resolveDebtFxPolicy(
 /** USD that the payment removes from the debt. */
 export function debtCreditUsd(policy: DebtFxPolicy | null, foreignAmount: number, cashUsd: number): number {
   if (!policy) return cashUsd;
-  return r4((Number(foreignAmount) || 0) / policy.invoiceRate);
+  return round8((Number(foreignAmount) || 0) / policy.invoiceRate);
 }
 
 /** Largest payment, in the payment currency, that does not exceed the remaining debt. */
@@ -48,5 +47,5 @@ export function maxPayableInCurrency(remainingUsd: number, policy: DebtFxPolicy 
 
 /** FX difference in USD: cash value at the payment-day rate minus the credit given (> 0 gain, < 0 loss). */
 export function debtFxDifferenceUsd(policy: DebtFxPolicy | null, cashUsd: number, creditUsd: number): number {
-  return policy ? r2(cashUsd - creditUsd) : 0;
+  return policy ? round8(cashUsd - creditUsd) : 0;
 }

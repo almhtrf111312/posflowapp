@@ -17,6 +17,10 @@ eq('fx difference loss = 37.5 - 50', debtFxDifferenceUsd(p, 37.5, 50), -12.5);
 eq('fx difference gain', debtFxDifferenceUsd(p, 62.5, debtCreditUsd(p, 750000, 62.5)), 12.5);
 eq('max payable uses invoice rate', maxPayableInCurrency(100, p, 20000), 1500000);
 
+// Compare at the eight decimal places used by record_debt_payment_atomic.
+eq('tiny foreign credit matches SQL', debtCreditUsd(p, 1, 0.00005).toFixed(8), '0.00006667');
+eq('tiny FX loss matches SQL', debtFxDifferenceUsd(p, 0.00005, 0.00006667).toFixed(8), '-0.00001667');
+
 // Legacy behaviour everywhere else
 eq('USD payment: no policy', resolveDebtFxPolicy(syp, 'USD'), null);
 eq('other currency: no policy', resolveDebtFxPolicy(syp, 'TRY'), null);

@@ -1106,7 +1106,19 @@ export async function runQaFixes(k, newWorldFn) {
     if (b) check('SEC2 product-images limited to 2 MB images', `${b.l}:${b.m.includes('image/webp')}:${b.m.includes('text/html')}`, '2097152:true:false');
     check('SEC2 internal lookup is not callable by clients', (await w.one(`select has_function_privilege('authenticated','public.check_phone_email_availability__impl(text,text,uuid)','EXECUTE') a`)).a, false);
   }
+  // F-02 leftovers found in the function review: partner deposit and drawer sale posting keep 8 decimals.
+  {
+    const w = await newWorldFn();
+    const pid = (await w.one(`insert into public.partners(user_id,name,share_percentage) values ($1,'P8',10) returning id`, [OWNER])).id;
+    await w.one(`select public.partner_deposit_atomic($1,0.123456789,'capital',null,null,'USD',0.123456789,1)`, [pid]);
+    const pr = await w.one(`select current_capital::float8 c, current_balance::float8 b from public.partners where id=$1`, [pid]);
+    check('F02 partner deposit keeps 8 decimals (0.12345679, not 0.1235)', pr.c, 0.12345679, 1e-12);
+    const sh = await w.newShift(0);
+    await w.one(`select public.post_shift_sale_atomic($1,$2,0.123456789,'USD',0.123456789,1)`, [sh, w.op('p8')]);
+    check('F02 drawer sale posting keeps 8 decimals', await w.txSum(sh, 'sale'), 0.12345679, 1e-12);
+  }
 }
+
 
 
 

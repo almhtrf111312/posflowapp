@@ -6,6 +6,10 @@
 -- S-6) check_phone_email_availability let any signed-in user probe which e-mails exist. E-mail lookup is now for store owners
 --      and boss only (they create users); every caller is limited to 30 lookups per 10 minutes. Phone lookup stays for everyone
 --      (the unique phone index reveals it on save anyway).
+-- F-02) Found in the function-by-function review: USD amounts still rounded to 4 decimals in supplier payments/refunds and their
+--      drawer movements, partner deposits and released profits, cash-sale drawer posting, purchase link/return/cancel values and
+--      the USD side of an in-shift currency exchange. Now 8. Kept on purpose: counted cash at shift close, partner share
+--      percentages, and foreign-currency amounts.
 
 -- SECURITY INVOKER on purpose: current_user is then the caller (authenticated for a REST write, the definer's owner inside a
 -- SECURITY DEFINER function such as set_user_pin, service_role in Edge Functions).
@@ -104,3 +108,24 @@ BEGIN
 END $function$;
 REVOKE EXECUTE ON FUNCTION public.check_phone_email_availability(text, text, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.check_phone_email_availability(text, text, uuid) TO authenticated, service_role;
+
+DO $do$
+DECLARE
+  r record;
+  v_def text;
+  v_new text;
+BEGIN
+  FOR r IN SELECT p.oid, p.proname FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN (
+      '_supplier_drawer_tx', 'cancel_purchase_invoice_atomic', 'link_purchase_to_supplier_atomic', 'partner_deposit_atomic',
+      'pay_supplier_atomic', 'post_shift_sale_atomic', 'purchase_return_atomic', 'release_pending_partner_profits_for_invoice',
+      'supplier_refund_atomic', 'record_shift_fx_atomic')
+  LOOP
+    v_def := replace(pg_get_functiondef(r.oid), chr(13) || chr(10), chr(10));
+    IF r.proname = 'record_shift_fx_atomic' THEN
+      v_new := regexp_replace(v_def, 'round\((_from_usd|_to_usd)\s*,\s*4\)', 'round(\1, 8)', 'g');
+    ELSE
+      v_new := regexp_replace(v_def, '(round\([^;]*?),\s*4\)', '\1, 8)', 'g');
+    END IF;
+    IF v_new <> v_def THEN EXECUTE v_new; END IF;
+  END LOOP;
+END $do$;

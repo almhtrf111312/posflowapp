@@ -965,4 +965,16 @@ export async function runQaFixes(k, newWorldFn) {
     check('T2 replaying the same credit-to-debt operation pays the debt once (remaining 7.5)', (await w.debt(debtId)).remaining, 7.5);
     check('T2 the credit is spent once (balance 0)', await view(), 0, 1e-10);
   }
+
+  // F-02 storage: a debt payment of 5,000 LBP (0.05586592 USD) is settled with 8 decimals, so payments = total_paid exactly.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    const d = await w.newDebt({ total: 1, isCash: true });
+    await w.one(`select public.record_debt_payment_atomic($1,0.05586592,$2,$3,'LBP',5000,89500,'cash')`, [d, w.op('p8'), sh]);
+    const r = await w.one(`select settled_amount::text s from public.debt_payments where debt_id=$1`, [d]);
+    check('P8DP settled amount keeps 8 decimals (0.05586592, not 0.0559)', Number(r.s), 0.05586592, 1e-10);
+    const scale = await w.one(`select numeric_scale s from information_schema.columns where table_name='supplier_ledger_entries' and column_name='amount'`);
+    check('P8DP supplier ledger amount has 8 decimals', scale.s, 8);
+  }
 }

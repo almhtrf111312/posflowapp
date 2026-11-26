@@ -50,6 +50,23 @@ export interface CloudShift {
   notes: string | null;
 }
 
+/**
+ * Opens a shift through the server (open_cash_shift_atomic, migration 20261126200000), online and from the offline queue.
+ * The shift id is the client id: a replay returns the stored shift and changes nothing. A second open shift for the same
+ * cashier is refused by the unique index with code 23505 (isShiftAlreadyOpenError), exactly as before.
+ */
+export const openShiftFromPayload = async (payload: Record<string, unknown>): Promise<void> => {
+  const { error } = await sb.rpc('open_cash_shift_atomic' as never, {
+    _id: payload.id,
+    _cashier_id: payload.cashier_id ?? null,
+    _cashier_name: payload.cashier_name ?? null,
+    _opening_balance: payload.opening_balance ?? 0,
+    _opening_by_currency: payload.opening_by_currency ?? null,
+    _opened_at: payload.opened_at ?? null,
+  } as never);
+  if (error) throw error;
+};
+
 export const openShiftCloud = async (params: {
   shiftId?: string;
   cashierId?: string | null;
@@ -82,13 +99,8 @@ export const openShiftCloud = async (params: {
   }
 
   try {
-    const { data, error } = await sb
-      .from('cash_shifts')
-      .upsert(payload as unknown as Database['public']['Tables']['cash_shifts']['Insert'], { onConflict: 'id' })
-      .select('id')
-      .single();
-    if (error) throw error;
-    return data?.id || (payload.id as string);
+    await openShiftFromPayload(payload);
+    return payload.id as string;
   } catch (e) {
     // الخادم يسمح بوردية مفتوحة واحدة لكل كاشير: وردية أخرى مفتوحة مسبقاً (من جهاز آخر) ← لا نُدرجها في الطابور
     if ((e as { code?: string } | null)?.code === '23505') {

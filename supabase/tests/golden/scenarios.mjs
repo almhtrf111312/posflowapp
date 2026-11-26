@@ -1307,7 +1307,31 @@ export async function runQaFixes(k, newWorldFn) {
     truthy('MOVE an unknown shift is refused', (await w.fails(mv('66666666-6666-4666-8666-000000000009', 'sale', 1, 'u', '66666666-6666-4666-8666-0000000000ff'))) !== null);
     check('MOVE the shift expected balance is not touched (cache, F-18)', Number((await w.one(`select expected_balance::float8 e from public.cash_shifts where id=$1`, [sh])).e), 20);
   }
+  // Direct-write step 2 (W-2): opening a shift through open_cash_shift_atomic.
+  {
+    const w = await newWorldFn();
+    await w.q(`update public.cash_shifts set closed_at=now() where closed_at is null`);
+    const id1 = '77777777-7777-4777-8777-000000000001';
+    const open = (id, bal = 25, at = null, cashier = null) => w.one(`select public.open_cash_shift_atomic($1::uuid,$2::uuid,'C',$3,null,$4::timestamptz) r`, [id, cashier, bal, at]);
+    check('OPEN a shift is opened', (await open(id1, 25.123456789)).r.status, 'opened');
+    const row = await w.one(`select opening_balance::float8 o, expected_balance::float8 e, closed_at from public.cash_shifts where id=$1`, [id1]);
+    check('OPEN opening = expected, 8 decimals', `${row.o}:${row.e}`, '25.12345679:25.12345679');
+    await w.q(`update public.cash_shifts set expected_balance=99 where id=$1`, [id1]);
+    check('OPEN a replay of the same id returns the stored shift', (await open(id1, 25)).r.status, 'replayed');
+    check('OPEN ...and does not reset the expected balance', Number((await w.one(`select expected_balance::float8 e from public.cash_shifts where id=$1`, [id1])).e), 99);
+    const second = await w.fails(open('77777777-7777-4777-8777-000000000002', 10));
+    truthy('OPEN a second open shift for the same cashier is refused (unique index, 23505)', second !== null);
+    truthy('OPEN a cashier of another store is refused', (await w.fails(open('77777777-7777-4777-8777-000000000003', 1, null, '77777777-7777-4777-8777-0000000000ff'))) !== null);
+    await w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [id1]);
+    truthy('OPEN a negative opening balance is refused', (await w.fails(open('77777777-7777-4777-8777-000000000004', -1))) !== null);
+    await open('77777777-7777-4777-8777-000000000005', 5, '2026-11-01T10:00:00Z');
+    check('OPEN an offline open keeps its original time', String((await w.one(`select to_char(opened_at at time zone 'UTC','YYYY-MM-DD HH24:MI') t from public.cash_shifts where id='77777777-7777-4777-8777-000000000005'`)).t), '2026-11-01 10:00');
+    await w.q(`update public.cash_shifts set closed_at=now() where closed_at is null`);
+    await open('77777777-7777-4777-8777-000000000006', 5, '2999-01-01T00:00:00Z');
+    truthy('OPEN a future open time is clamped to now', (await w.one(`select opened_at <= now() ok from public.cash_shifts where id='77777777-7777-4777-8777-000000000006'`)).ok === true);
+  }
 }
+
 
 
 

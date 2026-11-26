@@ -74,29 +74,15 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
         is_reversed: true,
         reversed_at: new Date().toISOString(),
       }).eq('invoice_id', String(data.invoiceId || '')).eq('is_reversed', false));
-    case 'shift_open': {
-      const cleanData = filterTablePayload('cash_shifts', data);
-      const ownerId = await getOwnerIdForInsert();
-      if (!ownerId) throw new Error('No owner id');
-      try {
-        return await assertSuccess(sb.from('cash_shifts').insert(asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId })));
-      } catch (e) {
-        return dropRejectedShiftOpen(String(cleanData.id ?? ''), e);
-      }
-    }
+    case 'shift_open':
     case 'cash_shift_upsert': {
-      const cleanData = filterTablePayload('cash_shifts', data);
-      const ownerId = await getOwnerIdForInsert();
-      if (!ownerId) throw new Error('No owner id');
+      // W-2: opened through open_cash_shift_atomic (same id, idempotent); "already open" is dropped as before.
+      const { openShiftFromPayload } = await import('./cashbox-cloud');
       try {
-        return await assertSuccess(
-          sb.from('cash_shifts').upsert(
-            asInsert<'cash_shifts'>({ ...cleanData, user_id: ownerId }),
-            { onConflict: 'id' }
-          )
-        );
+        await openShiftFromPayload(data as Record<string, unknown>);
+        return true;
       } catch (e) {
-        return dropRejectedShiftOpen(String(cleanData.id ?? ''), e);
+        return dropRejectedShiftOpen(String(data.id ?? ''), e);
       }
     }
     case 'shift_close': {

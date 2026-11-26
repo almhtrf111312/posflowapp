@@ -379,8 +379,10 @@ export default function Expenses() {
         });
         if (!createdRecurringPayment) throw new Error('فشل إنشاء دفعة المصروف الثابت');
 
+        const recurringPaidFromDrawer = Boolean(expenseShiftId && getActiveShift()?.id === expenseShiftId);
         processExpense(amountUSD, recurringForm.type, undefined, undefined, createdRecurringPayment.id, curr,
-          recurringForm.amount, currDef.rate, false, Boolean(expenseShiftId && getActiveShift()?.id === expenseShiftId));
+          recurringForm.amount, currDef.rate, false, recurringPaidFromDrawer);
+        if (recurringPaidFromDrawer && expenseShiftId) markExpensePaidFromDrawer(expenseShiftId, createdRecurringPayment.id);
 
         const nextDate = new Date(recurringForm.startDate || todayStr);
         nextDate.setDate(nextDate.getDate() + (recurringForm.intervalDays || 30));

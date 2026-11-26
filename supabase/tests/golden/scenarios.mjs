@@ -977,4 +977,19 @@ export async function runQaFixes(k, newWorldFn) {
     const scale = await w.one(`select numeric_scale s from information_schema.columns where table_name='supplier_ledger_entries' and column_name='amount'`);
     check('P8DP supplier ledger amount has 8 decimals', scale.s, 8);
   }
+
+  // Offline expense whose shift was closed before sync: the closed shift refuses it; the replay without a drawer
+  // (same operation id, paid_from external) records the expense once and moves no drawer.
+  {
+    const w = await newWorldFn();
+    const sh = await w.newShift(100);
+    await w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [sh]);
+    const op = '44444444-4444-4444-8444-000000000001';
+    const refused = await w.fails(w.one(`select public.add_expense_atomic($1,'rent',3,'rent',current_date,null,$2,'drawer','USD',3,1) r`, [op, sh]));
+    truthy('CLOSEDQ the closed shift refuses the queued drawer expense', refused !== null && /مغلقة/.test(refused));
+    check('CLOSEDQ replay without a drawer succeeds', await w.fails(w.one(`select public.add_expense_atomic($1,'rent',3,'rent',current_date,null,null,'external','USD',3,1) r`, [op])), null);
+    await w.one(`select public.add_expense_atomic($1,'rent',3,'rent',current_date,null,null,'external','USD',3,1) r`, [op]);
+    check('CLOSEDQ the expense exists once', Number((await w.one(`select count(*)::int n from public.expenses where amount=3`)).n), 1);
+    check('CLOSEDQ no drawer movement anywhere', Number((await w.one(`select count(*)::int n from public.shift_transactions where type='expense'`)).n), 0);
+  }
 }

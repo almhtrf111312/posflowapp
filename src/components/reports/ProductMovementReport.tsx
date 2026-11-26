@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Activity, Package, ArrowDown, ArrowUp, RotateCcw, Trash2 } from 'lucide-react';
 import { ReportShell } from './ReportShell';
 import { EntityPicker } from './EntityPicker';
@@ -14,7 +15,7 @@ import { useLanguage } from '@/hooks/language-context';
 
 interface MovementRow {
   date: string;
-  type: 'purchase' | 'sale' | 'refund' | 'damage';
+  type: 'purchase' | 'sale' | 'refund' | 'damage' | 'adjustment';
   qty: number;
   unitPrice: number;
   total: number;
@@ -33,6 +34,7 @@ const TYPE_META: Record<MovementRow['type'], { label: string; icon: typeof Arrow
   sale:     { label: 'بيع', icon: ArrowUp, color: 'text-info', bg: 'bg-info/10' },
   refund:   { label: 'مرتجع', icon: RotateCcw, color: 'text-warning', bg: 'bg-warning/10' },
   damage:   { label: 'إتلاف', icon: Trash2, color: 'text-destructive', bg: 'bg-destructive/10' },
+  adjustment: { label: 'تعديل يدوي', icon: Package, color: 'text-muted-foreground', bg: 'bg-muted' },
 };
 
 /** A purchase entry as it may appear on a product (the field names differ between local and cloud data). */
@@ -52,6 +54,8 @@ export function ProductMovementReport({ dateRange }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [damages, setDamages] = useState<StockDamage[]>([]);
+  // Manual stock changes (restock, reset, opening balance) from stock_movements, so the net movement explains the stock.
+  const [adjustments, setAdjustments] = useState<{ product_id: string; created_at: string; quantity_delta: number; movement_type: string }[]>([]);
   const [productId, setProductId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +73,11 @@ export function ProductMovementReport({ dateRange }: Props) {
         setProducts(p);
         setInvoices(inv);
         setDamages(dmg);
+        const { data: adj } = await supabase.from('stock_movements')
+          .select('product_id, created_at, quantity_delta, movement_type')
+          .in('movement_type', ['adjustment_in', 'adjustment_out', 'opening_balance'])
+          .gte('created_at', dateRange.from + 'T00:00:00').lte('created_at', dateRange.to + 'T23:59:59');
+        if (!cancelled) setAdjustments((adj || []).map(a => ({ ...a, quantity_delta: Number(a.quantity_delta) || 0 })));
         refreshProductsFromCloud().then(fresh => { if (!cancelled) setProducts(fresh); }).catch(() => {});
       } catch (e) {
         console.error(e);
@@ -144,18 +153,32 @@ export function ProductMovementReport({ dateRange }: Props) {
       });
     });
 
+    // 4) Manual adjustments (signed quantity: + in, − out)
+    adjustments.forEach(a => {
+      if (a.product_id !== product.id || !a.quantity_delta) return;
+      rows.push({
+        date: a.created_at,
+        type: 'adjustment',
+        qty: a.quantity_delta,
+        unitPrice: 0,
+        total: 0,
+        reference: a.movement_type === 'opening_balance' ? 'رصيد افتتاحي' : a.quantity_delta > 0 ? 'إضافة يدوية للمخزون' : 'خصم يدوي من المخزون',
+      });
+    });
+
     return rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [product, invoices, damages, dateRange.from, dateRange.to]);
+  }, [product, invoices, damages, adjustments, dateRange.from, dateRange.to]);
 
   const summary = useMemo(() => {
     const incoming = movements.filter(m => m.type === 'purchase').reduce((s, m) => s + m.qty, 0);
     const outgoing = movements.filter(m => m.type === 'sale').reduce((s, m) => s + m.qty, 0);
     const refunded = movements.filter(m => m.type === 'refund').reduce((s, m) => s + m.qty, 0);
     const damaged = movements.filter(m => m.type === 'damage').reduce((s, m) => s + m.qty, 0);
+    const adjusted = movements.filter(m => m.type === 'adjustment').reduce((s, m) => s + m.qty, 0);
     const unitCostOf = (m: MovementRow) => m.unitCost ?? Number(product?.costPrice || 0);
     const profit = movements.filter(m => m.type === 'sale').reduce((s, m) => s + (m.unitPrice - unitCostOf(m)) * m.qty, 0)
       - movements.filter(m => m.type === 'refund').reduce((s, m) => s + (m.unitPrice - unitCostOf(m)) * m.qty, 0);
-    return { incoming, outgoing, refunded, damaged, net: incoming - outgoing + refunded - damaged, profit };
+    return { incoming, outgoing, refunded, damaged, adjusted, net: incoming - outgoing + refunded - damaged + adjusted, profit };
   }, [movements, product]);
 
   const handleExportPDF = () => {
@@ -237,6 +260,7 @@ export function ProductMovementReport({ dateRange }: Props) {
               { label: 'صادر', value: summary.outgoing, color: 'text-info', bg: 'bg-info/10' },
               { label: 'مرتجع', value: summary.refunded, color: 'text-warning', bg: 'bg-warning/10' },
               { label: 'إتلاف', value: summary.damaged, color: 'text-destructive', bg: 'bg-destructive/10' },
+              { label: 'تعديل يدوي', value: summary.adjusted, color: 'text-muted-foreground', bg: 'bg-muted' },
             ].map(k => (
               <Card key={k.label}><CardContent className="p-3">
                 <p className="text-xs text-muted-foreground">{k.label}</p>

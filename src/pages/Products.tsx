@@ -224,7 +224,7 @@ export default function Products() {
   // Quick Restock state (for restocking out-of-stock items in the archive)
   const [restockProduct, setRestockProduct] = useState<Product | null>(null);
   const [showRestockDialog, setShowRestockDialog] = useState(false);
-  const [restockQuantity, setRestockQuantity] = useState<string>('10');
+  const [restockQuantity, setRestockQuantity] = useState<string>('');
   const [isRestocking, setIsRestocking] = useState(false);
 
   // Unified View & Form state (Full-Screen View)
@@ -893,8 +893,7 @@ export default function Products() {
     return products.filter(product => {
       if (product.archived) return false;
 
-      // استبعاد المنتجات المنتهية تماماً من قسم النشطة (تذهب حصراً للأرشيف)
-      if (!noInventory && product.quantity <= 0) return false;
+      // المنتجات المنتهية تبقى ظاهرة في قسم النشطة (بكمية حمراء) حتى لا تبدو محذوفة؛ وتظهر أيضاً في الأرشيف لإعادة التزويد.
 
       // تصفية حسب حالة التوفر المتبقية (متوفر / منخفض)
       if (!noInventory) {
@@ -959,7 +958,7 @@ export default function Products() {
 
   const openQuickRestock = (product: Product) => {
     setRestockProduct(product);
-    setRestockQuantity('10');
+    setRestockQuantity(''); // لا كمية افتراضية: يجب أن يُدخل المستخدم الكمية الفعلية
     setShowRestockDialog(true);
   };
 

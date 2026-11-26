@@ -41,6 +41,19 @@ async function dropRejectedShiftOpen(shiftId: string, error: unknown): Promise<b
   return true;
 }
 
+// A refusal because the operation's shift is closed (text of the server messages in add_expense_atomic and friends).
+export function isClosedShiftRefusal(message: string | undefined | null): boolean {
+  return /الوردية[^\n]*مغلقة/.test(String(message || ''));
+}
+
+function notifyClosedShiftRetarget(what: string): void {
+  import('@/hooks/use-smart-toast').then(({ showSmartToast }) => showSmartToast({
+    type: 'warning',
+    title: `${what} سُجّل بدون حركة صندوق`,
+    description: 'أُغلقت ورديته قبل المزامنة، والمبلغ احتُسب عند عدّ الإغلاق. لم يُخصم من الوردية الحالية حتى لا يُحسب مرتين.',
+  } as never)).catch(() => {});
+}
+
 export async function processGenericQueuedOperation(operation: QueuedOperation): Promise<boolean> {
   const data = operation.data;
 
@@ -140,6 +153,16 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
     case 'expense_atomic': {
       const { uniqueKey: _u, ...args } = data;
       const { error } = await sb.rpc('add_expense_atomic', args as unknown as RpcArgs<'add_expense_atomic'>);
+      if (error && args._shift_id && isClosedShiftRefusal(error.message)) {
+        // The drawer shift was closed (on this or another device) before this offline expense synced. Its cash was already
+        // counted at that close, so posting it to another drawer would count it twice: the expense is recorded without a
+        // drawer movement, with the same operation id (idempotent), and the device is told.
+        const { error: retryError } = await sb.rpc('add_expense_atomic',
+          { ...args, _shift_id: null, _paid_from: 'external' } as unknown as RpcArgs<'add_expense_atomic'>);
+        if (retryError) throw new Error(retryError.message);
+        notifyClosedShiftRetarget('مصروف');
+        return true;
+      }
       if (error) throw new Error(error.message);
       return true;
     }

@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { assertCurrencyUsable } from '../money-engine';
 import { getPendingOperations } from '../sync-queue';
 import { isOperationCancelled } from '../cancellation-registry';
 // Cloud Debts Store - Supabase-backed debts management
@@ -491,6 +492,7 @@ export const recordPaymentCloud = async (
     emitEvent(EVENTS.DEBTS_UPDATED, null);
     return list.find(d => d.id === debtId) || null;
   };
+  assertCurrencyUsable(currency); // F-05: refuse a currency that is not set up instead of converting at rate 1
   if (isLocalDataMode()) return queuePayment();
   const { data, error } = await sb.rpc('record_debt_payment_atomic', {
     _debt_id: debtId,

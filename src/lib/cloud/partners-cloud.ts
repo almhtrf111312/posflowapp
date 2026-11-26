@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { assertCurrencyUsable } from '../money-engine';
 import { capitalOriginalRate, capitalUsdFromForeign, type CapitalHistoryLike } from '../partner-fx';
 import { round8 } from '../utils';
 // Cloud Partners Store - Supabase-backed partners management
@@ -438,6 +439,7 @@ export const addCapitalWithCashboxCloud = async (
   const rate = exchangeRate || (currency !== 'USD' && roundedUsd > 0 ? round8(origAmt / roundedUsd) : 1.0);
   assertFxConsistent(roundedUsd, origAmt, rate, 'الإيداع');
 
+  assertCurrencyUsable(currency); // F-05: refuse a currency that is not set up instead of converting at rate 1
   if (isLocalDataMode()) throw new Error(PARTNER_OFFLINE_MSG);
 
   const shiftId = await resolveActiveShiftIdForPartner();
@@ -644,6 +646,7 @@ const queueOfflinePartnerWithdrawal = async (a: {
   }
 
   const opId = operationId?.trim() || generateWithdrawalOperationId(partnerId);
+  assertCurrencyUsable(currency); // F-05: refuse a currency that is not set up instead of converting at rate 1
   const shiftId = originalShift ? originalShift.id : await resolveActiveShiftIdForPartner();
   const withdrawalNote = withdrawalNoteFor(partner, withdrawalType, notes, Boolean(originalShift));
   const newBalance = r2(partner.currentBalance - profitDeducted);
@@ -745,6 +748,7 @@ const executePartnerWithdrawal = async (
   }
 
   const withdrawalNote = withdrawalNoteFor(partner, withdrawalType, notes, Boolean(originalShift));
+  assertCurrencyUsable(currency); // F-05: refuse a currency that is not set up instead of converting at rate 1
   const shiftId = originalShift ? originalShift.id : await resolveActiveShiftIdForPartner();
   const resolvedOpId = operationId?.trim() || null;
 

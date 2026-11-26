@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { assertCurrencyUsable } from '../money-engine';
 import { emitEvent, EVENTS } from '@/lib/events';
 import { addUniqueOperation } from '@/lib/sync-queue';
 import { isAppOffline } from '@/hooks/use-network-status';
@@ -54,6 +55,7 @@ export async function applyCreditToDebt(debtId: string, amount: number, operatio
   return r;
 }
 export async function payoutStoreCredit(customerId: string, amount: number, shiftId: string, operationId: string, currency = 'USD', currencyAmount?: number, onLocalPayout?: (d: CreditOpData) => void): Promise<CreditOpResult> {
+  assertCurrencyUsable(currency); // F-05
   const r = await submitCreditOperation({ kind: 'payout', operationId, customerId, amount, shiftId, currency, currencyAmount: currencyAmount ?? amount }, creditDeps(onLocalPayout));
   done();
   return r;

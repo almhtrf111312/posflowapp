@@ -10,6 +10,8 @@ export interface CurrencyDefinition {
   symbolPosition: 'before' | 'after';
   enabled: boolean;
   isCustom?: boolean;
+  /** true when the store entered a rate (USD always); false when the rate is only the fallback of 1 or a built-in default. */
+  rateSet?: boolean;
 }
 
 export interface CurrencySnapshot {
@@ -213,6 +215,7 @@ function buildStateFromStorage(): MoneyEngineState {
             symbolPosition: item.symbolPosition || getDefaultSymbolPosition(code, symbol),
             enabled: item.enabled === true,
             isCustom: true,
+            rateSet: code === 'USD' || Number(item.rate || item.exchangeRate) > 0,
           };
         }
 
@@ -260,6 +263,7 @@ function buildStateFromStorage(): MoneyEngineState {
               (code === activeCode ||
                 (code === 'USD' ? rawEnabled !== false : rawEnabled === true)),
             isCustom: existing?.isCustom ?? !DEFAULT_DEFINITIONS[code],
+            rateSet: code === 'USD' || (Number.isFinite(parsedRate) && parsedRate > 0) || existing?.rateSet === true,
           };
         }
       }
@@ -445,6 +449,25 @@ export function roundForCurrency(amount: number, code?: string | null, decimalsO
     return Math.round(num);
   }
   return roundDecimal(num, decimals);
+}
+
+/** A non-USD currency that is not set up (unknown, disabled or without a rate) — the operation is refused (F-05). */
+export class CurrencyNotEnabledError extends Error {
+  constructor(code: string) {
+    super(`العملة ${code} غير مفعّلة أو بلا سعر صرف في الإعدادات. فعّلها من الإعدادات أو اختر عملة مفعّلة ثم أعد المحاولة.`);
+    this.name = 'CurrencyNotEnabledError';
+  }
+}
+
+/**
+ * Guard for NEW money operations (F-05): USD always passes; any other currency must be known, enabled and have a rate > 0.
+ * Never silently converts at rate 1. Not used for display or for replays of operations already accepted.
+ */
+export function assertCurrencyUsable(code?: string | null): void {
+  const normalized = normalizeCurrencyCode(code || 'USD');
+  if (normalized === 'USD') return;
+  const def = getMoneyState().currencies[normalized];
+  if (!def || def.enabled !== true || def.rateSet !== true || !(Number(def.rate) > 0)) throw new CurrencyNotEnabledError(normalized);
 }
 
 export function toUsd(amount: number, code?: string | null, rateOverride?: number): number {

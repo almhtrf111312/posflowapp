@@ -1,4 +1,5 @@
 import { isLocalDataMode } from '@/hooks/use-network-status';
+import { assertCurrencyUsable } from '../money-engine';
 // Cloud Expenses Store - Supabase-backed expenses management
 import { 
   fetchFromSupabase, 
@@ -304,6 +305,7 @@ export const addExpenseCloud = async (expenseData: {
   const nowIso = new Date().toISOString();
   const roundedAmount = round8(expenseData.amount);
   const originalCurrency = expenseData.originalCurrency || 'USD';
+  assertCurrencyUsable(originalCurrency); // F-05: never record a foreign expense at a silent rate of 1
   const exchangeRate = expenseData.exchangeRate || 1;
   const originalAmount = expenseData.originalAmount ?? roundedAmount;
 

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { assertCurrencyUsable } from '../money-engine';
 import { emitEvent, EVENTS } from '@/lib/events';
 
 export interface SupplierBalance {
@@ -75,7 +76,7 @@ interface MoneyArgs {
   operationId?: string;
 }
 
-const moneyParams = (a: MoneyArgs) => ({
+const moneyParams = (a: MoneyArgs) => (assertCurrencyUsable(a.currency), { // F-05
   _supplier_id: a.supplierId,
   _amount: a.amount,
   _method: a.method || 'cash',

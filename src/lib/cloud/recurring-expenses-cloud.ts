@@ -97,6 +97,7 @@ const CACHE_TTL = 30000;
 export const invalidateRecurringExpensesCache = () => {
   recurringCache = null;
   cacheTimestamp = 0;
+  recurringDirty = true;
 };
 
 // Fresh fetch from Supabase
@@ -203,27 +204,31 @@ const fetchFresh_loadRecurringExpensesCloud = async (): Promise<RecurringExpense
   return [];
 };
 
-// Local-first boot: returns saved copy instantly on first load, then refreshes in background
-let bootServed_loadRecurringExpensesCloud = false;
+// Stale-while-revalidate: the saved copy is shown at once and refreshed in the background (at most every CACHE_TTL);
+// right after an action on this device (invalidateRecurringExpensesCache) the fresh copy is awaited.
+let recurringDirty = false;
+let recurringBgInflight = false;
+let lastRecurringBgAt = 0;
 export const loadRecurringExpensesCloud = async (): Promise<RecurringExpense[]> => {
-  if (!bootServed_loadRecurringExpensesCloud) {
-    bootServed_loadRecurringExpensesCloud = true;
-    const local = loadRecurringExpensesLocally();
+  if (!recurringDirty) {
+    const local = recurringCache ?? loadRecurringExpensesLocally();
     if (local && local.length > 0 && getCurrentUserId()) {
       recurringCache = local;
-      cacheTimestamp = Date.now();
-      if (typeof navigator !== 'undefined' && !isLocalDataMode()) {
+      if (typeof navigator !== 'undefined' && !isLocalDataMode() && !recurringBgInflight && Date.now() - lastRecurringBgAt >= CACHE_TTL) {
+        recurringBgInflight = true;
+        lastRecurringBgAt = Date.now();
         setTimeout(() => {
-          recurringCache = null;
           cacheTimestamp = 0;
           fetchFresh_loadRecurringExpensesCloud()
             .then(data => emitEvent(EVENTS.RECURRING_EXPENSES_UPDATED, data))
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => { recurringBgInflight = false; });
         }, 0);
       }
       return local;
     }
   }
+  recurringDirty = false;
   return fetchFresh_loadRecurringExpensesCloud();
 };
 

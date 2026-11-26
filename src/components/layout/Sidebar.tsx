@@ -257,7 +257,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
           aria-label="إغلاق القائمة"
           onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
           className={cn(
-            "fixed inset-0 bg-black/70 z-[70] transition-opacity duration-300 select-none outline-none focus:outline-none [touch-action:manipulation]",
+            "fixed inset-0 bg-black/70 z-[70] transition-opacity duration-300 will-change-[opacity] select-none outline-none focus:outline-none [touch-action:manipulation]",
             "[-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]",
             isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           )}
@@ -270,14 +270,17 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
         aria-hidden={isMobile && !isOpen}
         {...(isMobile && !isOpen ? { inert: '' } : {})}
         className={cn(
-          "fixed z-[80] transition-all duration-300 ease-in-out flex flex-col",
+          "fixed z-[80] flex flex-col",
           "bg-sidebar pt-[var(--app-safe-top,0px)]",
           isMobile 
             ? cn(
+                // Smooth drawer: only the transform animates (GPU layer prepared ahead), no per-frame layout or blur work.
+                "sidebar-mobile-drawer transition-transform duration-300 ease-out will-change-transform [backface-visibility:hidden]",
                 "top-0 start-0 h-[100dvh] w-72 max-w-[85vw] border-e border-sidebar-border",
                 isOpen ? "translate-x-0 pointer-events-auto visible" : isRTL ? "translate-x-full pointer-events-none" : "-translate-x-full pointer-events-none"
               )
             : cn(
+                "transition-[width] duration-300 ease-in-out",
                 "top-2 start-2 rounded-2xl shadow-xl border border-sidebar-border/50 h-[calc(100dvh-16px)]",
                 effectiveCollapsed ? "w-[5.14rem]" : "w-56"
               )
@@ -386,7 +389,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                   key={item.path}
                   draggable={false}
                   onDragStart={(e) => e.preventDefault()}
-                  className={cn("select-none pointer-events-auto", isMobile && isOpen && "animate-fade-in-up")}
+                  className="select-none pointer-events-auto"
                   style={{
                     WebkitUserSelect: 'none',
                     userSelect: 'none',
@@ -406,7 +409,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
                       WebkitTouchCallout: 'none',
                     }}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl transition-all duration-200 group relative select-none pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "flex items-center gap-3 rounded-xl transition-[background-color,color,box-shadow,transform] duration-200 group relative select-none pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       effectiveCollapsed && !isMobile ? "justify-center p-2.5 mx-auto" : "px-3 py-2.5",
                       isActive 
                         ? "bg-gradient-primary text-primary-foreground font-semibold shadow-md shadow-primary/25" 

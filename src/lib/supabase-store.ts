@@ -1,3 +1,4 @@
+import { getCachedRole } from '@/hooks/user-role-context';
 import { isLocalDataMode } from '@/hooks/use-network-status';
 // Supabase Store - Cloud sync utilities for all data stores
 import { supabase } from '@/integrations/supabase/client';
@@ -143,12 +144,19 @@ export const getCurrentUserRole = async (): Promise<UserRole | null> => {
   }
   if (!userId) return null;
 
+  // The role saved at the last sign-in answers at once (a weak network must not hold every loader back).
+  const savedRole = getCachedRole(userId);
+  if (savedRole?.role) {
+    currentUserRole = savedRole.role as UserRole;
+    return currentUserRole;
+  }
+
   try {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data, error } = await withTimeout(
+      Promise.resolve(supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle()),
+      3000,
+      { data: null, error: new Error('role lookup timeout') } as never,
+    );
 
     if (error || !data) return null;
 
@@ -184,13 +192,23 @@ export const getOwnerIdForInsert = async (): Promise<string | null> => {
   }
   if (!userId) return null;
 
+  // The role/owner saved at the last sign-in answers at once: every write (offline sales included) waits on this.
+  const saved = getCachedRole(userId);
+  if (saved?.role) {
+    currentUserRole = saved.role as UserRole;
+    const owner = saved.role === 'admin' || saved.role === 'boss' || !saved.ownerId ? userId : saved.ownerId;
+    currentOwnerId = owner;
+    rememberTenant(userId, owner);
+    return owner;
+  }
+
   try {
-    // Query user_roles to get owner_id
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role, owner_id')
-      .eq('user_id', userId)
-      .maybeSingle<UserRoleRow>();
+    // Query user_roles to get owner_id (bounded: a weak network falls back as before)
+    const { data, error } = await withTimeout(
+      Promise.resolve(supabase.from('user_roles').select('role, owner_id').eq('user_id', userId).maybeSingle<UserRoleRow>()),
+      3000,
+      { data: null, error: new Error('owner lookup timeout') } as never,
+    );
 
     if (error || !data) {
       console.warn('[getOwnerIdForInsert] Could not fetch role, using self as owner');

@@ -251,7 +251,9 @@ const fetchFresh_loadDebtsCloud = async (): Promise<Debt[]> => {
 };
 
 // Local-first boot: first load after app start shows the saved copy instantly, refreshes silently
-let bootServed_loadDebtsCloud = false;
+let debtsDirty = false;
+let debtsBgInflight = false;
+let lastDebtsBgAt = 0;
 export const loadDebtsCloud = async (): Promise<Debt[]> => {
   // If offline, return immediately from local cache
   if (typeof navigator !== 'undefined' && isLocalDataMode()) {
@@ -264,28 +266,35 @@ export const loadDebtsCloud = async (): Promise<Debt[]> => {
     return mergeSyncQueueDebts(debtsCache || []);
   }
 
-  if (!bootServed_loadDebtsCloud) {
-    bootServed_loadDebtsCloud = true;
-    const local = loadDebtsLocally();
+  // Stale-while-revalidate (instant open on a weak network): the saved copy is shown at once and a fresh copy is fetched
+  // in the background at most every CACHE_TTL. Right after an action on this device (invalidateDebtsCache) the fresh copy
+  // is awaited instead, so a debt just paid never shows as still open.
+  if (!debtsDirty) {
+    const local = debtsCache ?? loadDebtsLocally();
     if (local && local.length > 0) {
       debtsCache = local;
-      cacheTimestamp = Date.now();
-      if (!isLocalDataMode()) {
+      if (!isLocalDataMode() && !debtsBgInflight && Date.now() - lastDebtsBgAt >= CACHE_TTL) {
+        debtsBgInflight = true;
+        lastDebtsBgAt = Date.now();
         setTimeout(() => {
-          debtsCache = null;
           cacheTimestamp = 0;
-          fetchFresh_loadDebtsCloud().then(() => emitEvent(EVENTS.DEBTS_UPDATED, null)).catch(() => {});
+          fetchFresh_loadDebtsCloud()
+            .then(() => emitEvent(EVENTS.DEBTS_UPDATED, null))
+            .catch(() => {})
+            .finally(() => { debtsBgInflight = false; });
         }, 0);
       }
       return mergeSyncQueueDebts(local);
     }
   }
+  debtsDirty = false;
   return fetchFresh_loadDebtsCloud().then(mergeSyncQueueDebts);
 };
 
 export const invalidateDebtsCache = () => {
   debtsCache = null;
   cacheTimestamp = 0;
+  debtsDirty = true; // the next load awaits the server (an action of this device just changed debts)
 };
 
 // Add debt

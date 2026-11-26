@@ -172,6 +172,9 @@ export async function loadProfitLedgerCloud(): Promise<ProfitLedger> {
       })
       .finally(() => { inflight = null; });
   }
+  // Instant open on a weak network: a saved ledger is shown at once and the fresh one is saved in the background
+  // for the next view. Only a device with no saved ledger waits for the server.
+  if (local.fetchedAt > 0) return local;
   return inflight;
 }
 

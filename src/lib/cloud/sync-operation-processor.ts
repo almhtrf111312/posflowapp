@@ -62,6 +62,13 @@ export async function processGenericQueuedOperation(operation: QueuedOperation):
       const cleanData = filterTablePayload('profit_records', data);
       return assertSuccess(sb.from('profit_records').insert(asInsert<'profit_records'>(cleanData)));
     }
+    case 'profit_snapshot': {
+      if (!data.invoiceId) throw new Error('Missing invoice for profit snapshot');
+      const { error } = await (sb.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: { message?: string } | null }>)(
+        'record_sale_profit_snapshot', { _invoice_number: String(data.invoiceId) });
+      if (error) throw new Error(error.message || 'فشل تسجيل ربح الفاتورة');
+      return true;
+    }
     case 'profit_reverse':
       return assertSuccess(sb.from('profit_records').update({
         is_reversed: true,

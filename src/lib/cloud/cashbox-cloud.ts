@@ -10,6 +10,7 @@ const sb = supabase;
 import { getCurrentUserId, setCurrentUserId, getOwnerIdForInsert } from '../supabase-store';
 import { addToQueue } from '../sync-queue';
 import { roundCurrency } from '../utils';
+import { round8 } from '../money-engine';
 
 export type ShiftTxType =
   | 'sale'
@@ -184,7 +185,7 @@ export const addShiftTransactionCloud = async (params: {
     shift_id: params.shiftId,
     user_id: ownerId,
     type: params.type,
-    amount: roundCurrency(params.amount),
+    amount: round8(params.amount), // F-02: drawer movements keep 8 decimals
     reference_id: params.referenceId || null,
     notes: params.notes || null,
   };
@@ -315,10 +316,12 @@ export const resolveShiftVarianceCloud = async (shiftId: string, decision: 'acce
 /** تحويل عملة داخل الوردية المفتوحة: خارج بعملة وداخل بأخرى (يحسبه الإغلاق لكل عملة) */
 export async function recordShiftFxCloud(p: {
   shiftId: string; fromCode: string; fromAmount: number; fromUsd: number; toCode: string; toAmount: number; toUsd: number;
+  /** One id per user action, reused on retry (F-20). */
+  operationId?: string;
 }): Promise<void> {
   const { error } = await sb.rpc('record_shift_fx_atomic', {
     _shift_id: p.shiftId, _from_ccy: p.fromCode, _from_amount: p.fromAmount, _from_usd: p.fromUsd,
-    _to_ccy: p.toCode, _to_amount: p.toAmount, _to_usd: p.toUsd, _operation_id: crypto.randomUUID(),
+    _to_ccy: p.toCode, _to_amount: p.toAmount, _to_usd: p.toUsd, _operation_id: p.operationId || crypto.randomUUID(),
   });
   if (error) throw error;
 }

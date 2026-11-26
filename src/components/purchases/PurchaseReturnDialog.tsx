@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,9 @@ export function PurchaseReturnDialog({ open, onOpenChange, invoiceId, items, onD
     });
   }, [open, items]);
 
+  // One operation id per return, reused if the user retries after an error (F-20).
+  const opIdRef = useRef<string>((typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`));
+
   const submit = async () => {
     const lines = items
       .map(i => ({ item: i, q: Number(qty[i.id] || 0) }))
@@ -45,7 +48,8 @@ export function PurchaseReturnDialog({ open, onOpenChange, invoiceId, items, onD
     if (lines.length === 0) { toast.error('حدد كمية مرتجعة لبند واحد على الأقل'); return; }
     setBusy(true);
     try {
-      await purchaseReturnCloud(invoiceId, lines, reason || 'مرتجع مشتريات');
+      await purchaseReturnCloud(invoiceId, lines, reason || 'مرتجع مشتريات', opIdRef.current);
+      opIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
       toast.success('تم تسجيل مرتجع المشتريات');
       onDone?.();
       onOpenChange(false);

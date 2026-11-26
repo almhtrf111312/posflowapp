@@ -53,7 +53,11 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
     setLedger(await loadSupplierLedgerCloud(s.id));
   };
 
+  // One operation id per payment/refund, reused if the user retries after an error (F-20); renewed per new action.
+  const opIdRef = useRef<string>((typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`));
+
   const startMode = (m: 'pay' | 'refund') => {
+    opIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     setMode(m); setAmount(''); setNote('');
     setSource(getActiveShift() ? 'drawer' : 'external');
   };
@@ -67,9 +71,10 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
     setBusy(true);
     try {
       const usd = ccy === 'USD' ? val : round8(toUsd(val, ccy));
-      const args = { supplierId: selected.id, amount: usd, note, source, shiftId: shift?.id, currency: ccy, currencyAmount: val, rate: usd > 0 ? round8(val / usd) : undefined };
+      const args = { supplierId: selected.id, amount: usd, note, source, shiftId: shift?.id, currency: ccy, currencyAmount: val, rate: usd > 0 ? round8(val / usd) : undefined, operationId: opIdRef.current };
       if (mode === 'pay') await paySupplierCloud(args); else await refundFromSupplierCloud(args);
       if (source === 'drawer') { if (mode === 'pay') addWithdrawalFromShift(usd, ccy, val); else addDepositToShift(usd, ccy, val); }
+      opIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
       toast.success(mode === 'pay' ? 'تم تسجيل الدفعة' : 'تم تسجيل الاسترداد');
       setMode(null);
       await refresh(selected.id);

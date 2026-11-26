@@ -992,4 +992,28 @@ export async function runQaFixes(k, newWorldFn) {
     check('CLOSEDQ the expense exists once', Number((await w.one(`select count(*)::int n from public.expenses where amount=3`)).n), 1);
     check('CLOSEDQ no drawer movement anywhere', Number((await w.one(`select count(*)::int n from public.shift_transactions where type='expense'`)).n), 0);
   }
+
+  // Audit follow-up: profit snapshot on the server (F-25/D-12) and the 0.05 settlement rule (F-26).
+  {
+    const w = await newWorldFn();
+    const prod = (await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'Snap',8,3.33333333,50) returning id`, [OWNER])).id;
+    const items = JSON.stringify([{ product_id: prod, product_name: 'Snap', quantity: 1, unit_price: 8, amount_usd: 8, amount_original: 8, cost_price: 3.33333333 }]);
+    const s = await w.one(`select * from public.process_pos_sale_atomic($1,'debt','Cust','',8,0,0,0,0,8,0,'USD',null::uuid,$2::jsonb,2,1,null)`, [w.op('snap'), items]);
+    check('SNAP first call writes the snapshot', (await w.one(`select public.record_sale_profit_snapshot($1) r`, [s.invoice_number])).r, true);
+    check('SNAP a replay writes nothing', (await w.one(`select public.record_sale_profit_snapshot($1) r`, [s.invoice_number])).r, false);
+    const snap = await w.one(`select gross_profit::float8 g, revenue::float8 r, count(*) over () n from public.profit_records where invoice_id=$1`, [s.invoice_number]);
+    check('SNAP the credit sale keeps its FULL original profit (8 - 3.33333333 = 4.66666667), not the down-payment share', snap.g, 4.66666667, 1e-9);
+    check('SNAP exactly one row', Number(snap.n), 1);
+    // F-26: 10.04 paid on a 10 debt closes it; the 0.04 is kept as rounding_adjustment, not dropped.
+    const sh = await w.newShift(100);
+    const d = await w.newDebt({ total: 10, isCash: true });
+    await w.one(`select public.record_debt_payment_atomic($1,10.04,$2,$3,'USD',10.04,1,'cash')`, [d, w.op('f26'), sh]);
+    const dd = await w.debt(d);
+    check('F26 a 0.04 difference closes the debt', dd.status, 'fully_paid');
+    const pay = await w.one(`select amount::float8 a, settled_amount::float8 s, rounding_adjustment::float8 r from public.debt_payments where debt_id=$1`, [d]);
+    check('F26 settlement is the debt (10)', pay.s, 10);
+    check('F26 the difference is noted (-0.04)', pay.r, -0.04, 1e-9);
+    const d2 = await w.newDebt({ total: 10, isCash: true });
+    truthy('F26 more than 0.05 over the remaining is refused', (await w.fails(w.one(`select public.record_debt_payment_atomic($1,10.06,$2,$3,'USD',10.06,1,'cash')`, [d2, w.op('f26b'), sh]))) !== null);
+  }
 }

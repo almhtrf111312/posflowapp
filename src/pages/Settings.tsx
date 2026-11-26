@@ -777,6 +777,19 @@ export default function Settings() {
   const [showTransferPassword, setShowTransferPassword] = useState(false);
 
   const handleTransferLicense = async () => {
+    // The device's local data is wiped after a transfer; operations not yet sent to the cloud would be lost (invariant 5).
+    try {
+      const { getPendingOperations } = await import('@/lib/sync-queue');
+      const pending = getPendingOperations().length;
+      if (pending > 0) {
+        toast({
+          title: t('common.error'),
+          description: `يوجد ${pending} عملية لم تُرفع للسحابة بعد. اتصل بالإنترنت وانتظر اكتمال المزامنة ثم أعد المحاولة، حتى لا تضيع.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    } catch { /* if the queue cannot be read, continue as before */ }
     if (!transferPassword || !currentUser?.email) return;
     setIsTransferring(true);
     try {

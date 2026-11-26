@@ -590,33 +590,6 @@ export const settleDebtsByInvoiceIdCloud = async (invoiceId: string): Promise<nu
   return paid;
 };
 
-// Delete debt by invoice ID - يدعم البحث بـ invoice_number أو UUID
-// ⚠️ ملاحظة: لا نستخدم user_id فلتر هنا لأن getCurrentUserId() قد يُرجع cashier_id
-// لكن الديون محفوظة بـ owner_id - RLS يتولى التصفية تلقائياً
-export const deleteDebtByInvoiceIdCloud = async (invoiceId: string): Promise<boolean> => {
-  try {
-    // البحث أولاً بـ invoice_id ثم الحذف بـ UUID لضمان الدقة
-    const { data: foundDebts } = await sb
-      .from('debts')
-      .select('id')
-      .eq('invoice_id', invoiceId);
-
-    if (foundDebts && foundDebts.length > 0) {
-      for (const debt of foundDebts) {
-        await sb.from('debts').delete().eq('id', debt.id);
-      }
-      invalidateDebtsCache();
-      emitEvent(EVENTS.DEBTS_UPDATED, null);
-      return true;
-    }
-
-    return false;
-  } catch (e) {
-    console.error('[deleteDebtByInvoiceIdCloud] Error:', e);
-    return false;
-  }
-};
-
 // Delete / Cancel debt by ID ذرياً — عبر cancel_debt_atomic
 export const deleteDebtCloud = async (debtId: string, reason = 'إلغاء الدين'): Promise<boolean> => {
   if (isGuestDemoMode()) {

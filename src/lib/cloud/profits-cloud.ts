@@ -18,27 +18,21 @@ export interface CloudProfitInput {
   currency?: string;
 }
 
-/** تسجيل ربح إجمالي في السحابة. يفشل بصمت ويُضاف إلى الطابور إذا offline. */
+/**
+ * Sale-time profit snapshot (D-12) written ON THE SERVER from the invoice itself (F-25): full profit, 8 decimals, once per invoice.
+ * The client values in `input` are no longer sent (they were rounded to 2 decimals and, for a credit sale, only the down-payment share).
+ * Offline or on a transport failure the call is queued ('profit_snapshot') and replayed; a replay writes nothing twice.
+ */
 export const addGrossProfitCloud = async (input: CloudProfitInput): Promise<boolean> => {
-  const ownerId = await getOwnerIdForInsert();
-  if (!ownerId) return false;
-
-  const payload = {
-    user_id: ownerId, // ✅ ضمان ارتباط السجل بمتجر المالك الرئيسي
-    invoice_id: input.invoiceId,
-    gross_profit: roundCurrency(input.grossProfit),
-    cogs: roundCurrency(input.cogs),
-    revenue: roundCurrency(input.revenue),
-    currency: input.currency || 'USD',
-  };
-
+  if (!input.invoiceId) return false;
   try {
-    const { error } = await sb.from('profit_records').insert(payload);
+    const { error } = await (sb.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ error: { message?: string; code?: string } | null }>)(
+      'record_sale_profit_snapshot', { _invoice_number: input.invoiceId });
     if (error) throw error;
     return true;
   } catch (e) {
-    console.warn('[profits-cloud] insert failed, queued:', e);
-    try { addToQueue('profit_record', payload); } catch { /* noop */ }
+    console.warn('[profits-cloud] snapshot failed, queued:', e);
+    try { addToQueue('profit_snapshot', { invoiceId: input.invoiceId }); } catch { /* noop */ }
     return false;
   }
 };

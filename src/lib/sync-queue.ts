@@ -49,7 +49,8 @@ export type OperationType =
   | 'expense_atomic'
   | 'customer_delete'
   | 'invoice_create'
-  | 'profit_record'
+  | 'profit_record' // legacy direct insert, kept only to drain old queued items
+  | 'profit_snapshot' // server-side profit snapshot (record_sale_profit_snapshot)
   | 'profit_reverse'
   | 'shift_open'
   | 'shift_close'

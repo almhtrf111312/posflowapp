@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ export function ShiftFxDialog({ open, onOpenChange, shiftId, onDone }: { open: b
   const [fromAmt, setFromAmt] = useState('');
   const [toAmt, setToAmt] = useState('');
   const [busy, setBusy] = useState(false);
+  // One operation id per exchange, reused if the user retries after an error (F-20); renewed after a success.
+  const opIdRef = useRef<string>((typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`));
 
   const suggest = (amt: string, f: string, t: string) => {
     const n = Number(amt);
@@ -30,7 +32,8 @@ export function ShiftFxDialog({ open, onOpenChange, shiftId, onDone }: { open: b
     const toUsdVal = round8(toUsd(b, to));
     setBusy(true);
     try {
-      await recordShiftFxCloud({ shiftId, fromCode: from, fromAmount: a, fromUsd: fromUsdVal, toCode: to, toAmount: b, toUsd: toUsdVal });
+      await recordShiftFxCloud({ shiftId, fromCode: from, fromAmount: a, fromUsd: fromUsdVal, toCode: to, toAmount: b, toUsd: toUsdVal, operationId: opIdRef.current });
+      opIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
       addWithdrawalFromShift(fromUsdVal, from, a);
       addDepositToShift(toUsdVal, to, b);
       toast.success('تم تسجيل التحويل');

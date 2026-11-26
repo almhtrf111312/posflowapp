@@ -421,7 +421,7 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       invalidateDebtsCache();
       const latestList = await loadDebtsCloud();
       const latest = latestList.find(d => d.id === selectedDebt.id) || selectedDebt;
-      const remainingNow = Math.round(latest.remainingDebt * 100) / 100;
+      const remainingNow = Number(latest.remainingDebt) || 0; // 8 decimals as stored (F-02)
 
       // F-27: same foreign currency as the invoice -> credit at the invoice rate; cash stays valued at today's rate
       const policy = await resolveDebtFxPolicyCloud(latest, paymentCurrency);
@@ -437,8 +437,9 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
           return;
         }
       } else if (finalPaymentUSD > remainingNow) {
+        // F-26: a difference up to 0.05 USD is absorbed and noted by the SERVER (rounding_adjustment); the client sends the real amount.
         if (finalPaymentUSD - remainingNow <= 0.05) {
-          finalPaymentUSD = remainingNow;
+          // keep finalPaymentUSD as entered
         } else {
           setDebts(latestList);
           setSelectedDebt(latest);

@@ -2470,7 +2470,8 @@ export function CartPanel({
               onClick={handleCashSale}
             >
               <Banknote className="w-4 h-4" />
-              {t('pos.cash')}
+              {/* P-9: the button names the chosen payment method (the sale is recorded with it) */}
+              {payMethod === 'digital' ? t('pos.payDigital' as never) : t('pos.cash')}
             </Button>
 
             <Button
@@ -2505,7 +2506,7 @@ export function CartPanel({
           <DialogHeader className="shrink-0 px-4 pt-4 pb-3 sm:px-6 sm:pt-5 border-b border-border/60 text-start pe-12">
             <DialogTitle className="flex items-center gap-2">
               <Banknote className="w-5 h-5 text-success shrink-0" />
-              {t('pos.confirmCashSale')}
+              {payMethod === 'digital' ? t('pos.confirmDigitalSale' as never) : t('pos.confirmCashSale')}
             </DialogTitle>
             <DialogDescription>
               {t('pos.confirmCashSaleDesc')}

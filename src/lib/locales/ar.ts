@@ -1331,6 +1331,8 @@ const ar = {
   'pos.selectCustomer': 'اختر عميل',
   'pos.cashCustomer': 'عميل نقدي',
   'pos.confirmCashSale': 'تأكيد البيع النقدي',
+  'pos.payDigital': 'دفع رقمي',
+  'pos.confirmDigitalSale': 'تأكيد البيع بالدفع الرقمي',
   'pos.confirmDebtSale': 'تأكيد البيع المؤجل',
   'pos.cashSaleDesc': 'سيتم إنشاء فاتورة بيع نقدي وخصم الكميات من المخزون',
   'pos.debtSaleDesc': 'سيتم إنشاء فاتورة بيع مؤجل وتسجيل المبلغ المستحق على العميل',
@@ -1449,6 +1451,10 @@ const ar = {
   'reports.backupError': 'فشل في إنشاء النسخة الاحتياطية',
 
   // Settings
+  'settings.unsavedTitle': 'تغييرات غير محفوظة',
+  'settings.unsavedDesc': 'عدّلت إعدادات في هذا القسم ولم تحفظها بعد. إن خرجت الآن دون حفظ ستُلغى.',
+  'settings.saveAndLeave': 'حفظ والخروج',
+  'settings.discardChanges': 'تجاهل التغييرات',
   'settings.title': 'الإعدادات',
   'settings.profile': 'إعدادات الملف الشخصي',
   'settings.general': 'عام',

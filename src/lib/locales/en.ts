@@ -1215,6 +1215,8 @@ const en: TranslationDict = {
   'pos.selectCustomer': 'Select Customer',
   'pos.cashCustomer': 'Cash Customer',
   'pos.confirmCashSale': 'Confirm Cash Sale',
+  'pos.payDigital': 'Digital',
+  'pos.confirmDigitalSale': 'Confirm Digital Sale',
   'pos.confirmDebtSale': 'Confirm Debt Sale',
   'pos.cashSaleDesc': 'A cash invoice will be created and quantities deducted from inventory',
   'pos.debtSaleDesc': 'An invoice will be created and the amount recorded as debt',
@@ -1331,6 +1333,10 @@ const en: TranslationDict = {
   'reports.shareViaWhatsApp': 'Share via WhatsApp',
 
   // Settings
+  'settings.unsavedTitle': 'Unsaved changes',
+  'settings.unsavedDesc': 'You changed settings in this section and have not saved them. Leaving now without saving discards them.',
+  'settings.saveAndLeave': 'Save and leave',
+  'settings.discardChanges': 'Discard changes',
   'settings.title': 'Settings',
   'settings.general': 'General',
   'settings.backup': 'Backup',

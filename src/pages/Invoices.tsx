@@ -1059,10 +1059,14 @@ export default function Invoices() {
           return;
         }
 
+        // P-10: the server refuses because the original receipt of the down payment is not in any drawer; say why and what to do.
+        const explained = reason && reason.includes('تعذّر تحديد حركة الدفعة الأولى الأصلية')
+          ? 'لم يُعثر على حركة قبض الدفعة الأولى لهذه الفاتورة في أي وردية (ربما حُذفت الوردية أو صُفّرت)، لذلك لا يمكن رد المبلغ نقداً تلقائياً. لم يتغير شيء. راجع مالك المتجر لتسوية الفاتورة يدوياً.'
+          : reason;
         toast.error(`فشل في استرداد ${invoiceLabel}`, {
           id: toastId,
-          description: reason || 'لم يطرأ أي تغيير على الفاتورة أو المخزون',
-          duration: 5000,
+          description: explained || 'لم يطرأ أي تغيير على الفاتورة أو المخزون',
+          duration: 8000,
         });
         return;
       }

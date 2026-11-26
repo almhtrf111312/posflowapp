@@ -1145,6 +1145,8 @@ export default function Settings() {
   const INDEPENDENT_TABS = ['activity', 'archive', 'license', 'contact', 'reset', 'about', 'users', 'partners', 'profile'];
 
   // Check if there are unsaved changes
+  // P-6: leaving a tab with unsaved changes (e.g. the tax or discount switch) asks to save or discard instead of losing them silently.
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const hasUnsavedChanges = (() => {
     // Hide save bar on main screen (activeTab === null) or independent tabs
     if (!activeTab || INDEPENDENT_TABS.includes(activeTab)) return false;
@@ -2612,7 +2614,7 @@ export default function Settings() {
               type="button"
               variant="outline"
               size="icon"
-              onClick={() => setActiveTab(null)}
+              onClick={() => { if (hasUnsavedChanges) setLeaveConfirmOpen(true); else setActiveTab(null); }}
               aria-label={t('common.back')}
               className="shrink-0"
             >
@@ -2695,6 +2697,24 @@ export default function Settings() {
               {isTransferring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
               {t('settings.confirmUnbind')}
             </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={leaveConfirmOpen} onOpenChange={setLeaveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('settings.unsavedTitle' as never)}</AlertDialogTitle>
+            <AlertDialogDescription>{t('settings.unsavedDesc' as never)}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <Button variant="outline" onClick={() => { handleRevert(); setLeaveConfirmOpen(false); setActiveTab(null); }}>
+              {t('settings.discardChanges' as never)}
+            </Button>
+            <AlertDialogAction onClick={async () => { await handleSaveSettings(); setActiveTab(null); }}>
+              {t('settings.saveAndLeave' as never)}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

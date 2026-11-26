@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
 
     const run = await gh('POST', 'actions/workflows/build-apk.yml/dispatches', {
       ref: 'main',
-      inputs: { publish_telegram: true, custom_notes: notes },
+      inputs: { publish_telegram: 'true', custom_notes: notes },
     });
     if (!run.ok) return json({ error: 'تعذر تشغيل البناء', status: run.status, details: run.text }, 502);
     return json({ success: true });

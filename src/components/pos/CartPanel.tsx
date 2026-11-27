@@ -624,6 +624,11 @@ export function CartPanel({
 
   const handleDebtSale = async () => {
     if (cart.length === 0) return;
+    // D-35: a user required to open a shift cannot make a credit sale without one either (agent test R3, 2026-11-27).
+    if (!getActiveShift() && isShiftRequiredForCurrentUser()) {
+      showToast.error(isEn ? 'Open a shift before selling' : 'يجب فتح وردية قبل البيع', { persistent: false });
+      return;
+    }
     if (!(await ensureSerials('debt'))) return;
 
     // 🛡️ فحص استباقي: التحقق من أن كل صنف في السلة معتمد وموجود في الكتالوج السحابي
@@ -1126,6 +1131,15 @@ export function CartPanel({
       savingRef.current = false;
       setIsSaving(false);
       showToast.error(leaseGate.message, { persistent: false });
+      return;
+    }
+
+    // D-35: same rule at confirmation (the dialog may have been opened before the requirement changed).
+    if (!getActiveShift() && isShiftRequiredForCurrentUser()) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
+      savingRef.current = false;
+      setIsSaving(false);
+      showToast.error(isEn ? 'Open a shift before selling' : 'يجب فتح وردية قبل البيع', { persistent: false });
       return;
     }
 

@@ -308,10 +308,25 @@ export const loadShiftMovements = async (shiftId: string): Promise<ShiftMovement
         });
       } catch { /* the movement list still shows without the invoice number */ }
     }
+    // Sales and refunds: the movement reference is the sale operation id (or the invoice id) → invoice number.
+    const saleRefs = ((data || []) as Array<Record<string, unknown>>)
+      .filter(r => (r.type === 'sale' || r.type === 'refund') && r.reference_id && !/\d{8}-\d{3,}/.test(String(r.reference_id)))
+      .map(r => String(r.reference_id).split('#')[0]);
+    if (saleRefs.length > 0) {
+      try {
+        const [{ data: byOp }, { data: byId }] = await Promise.all([
+          sb.from('invoices').select('operation_id, invoice_number').in('operation_id', saleRefs),
+          sb.from('invoices').select('id, invoice_number').in('id', saleRefs.filter(x => /^[0-9a-f-]{36}$/i.test(x))),
+        ]);
+        ((byOp || []) as Array<{ operation_id: string; invoice_number: string }>).forEach(i => invoiceByRef.set(i.operation_id, i.invoice_number));
+        ((byId || []) as Array<{ id: string; invoice_number: string }>).forEach(i => invoiceByRef.set(i.id, i.invoice_number));
+      } catch { /* still shown without the invoice number */ }
+    }
     const displayRef = (type: string, ref: unknown): string | null => {
       if (!ref) return null;
       const r = String(ref);
       if (invoiceByRef.has(r)) return invoiceByRef.get(r) || null;
+      if (invoiceByRef.has(r.split('#')[0])) return invoiceByRef.get(r.split('#')[0]) || null;
       const m = r.match(/\d{8}-\d{3,}/); // invoice numbers look like 20261127-00032
       return m ? m[0] : null;
     };

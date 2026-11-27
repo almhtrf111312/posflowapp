@@ -8,6 +8,14 @@
 
 ---
 
+## Corrections after the first run (2026-11-27) — read before testing
+1. **Test the code from `main`, never the hosted website** (it is an older version). In the report write `git log -1 --oneline`
+   and `versionName` from `version.json` (must be **1.5.288 or newer**). Browser fallback = `npm run dev` on the local URL only.
+2. Use an **activated** owner account. If you see «هذا القسم يحتاج تفعيل اشتراك», stop and tell the owner.
+3. Earlier test data exists (invoices 20261127-00037…00040 and a 20 USD expense recorded by an old version, outside any drawer).
+   Do not try to fix it. Start S5 (count the general drawer) so the general drawer is matched before the tests.
+4. A cash operation made **without a shift** must appear in «الصندوق العام» → «التفاصيل». If it does not, mark ❌ and note the invoice number.
+
 ## 0. FIRST: report your capabilities (before testing anything)
 
 Before step 1, send the owner a short message (Arabic) answering each line with ✅ / ❌ and one sentence:
@@ -87,8 +95,8 @@ file backup, status bar) cannot be tested this way: mark them **«لم يُخت�
 | ID | Step | Expected |
 |---|---|---|
 | R1 | Log in as **cashier A** (shift required), no shift: try a CASH sale | Refused: «يجب فتح وردية قبل البيع» |
-| R2 | Cashier A, no shift: try a DIGITAL sale | Refused with the same message |
-| R3 | Cashier A, no shift: try a CREDIT (آجل) sale | Refused with the same message |
+| R2 | Cashier A, no shift: select the payment method «رقمي» explicitly, then confirm | Refused with the same message |
+| R3 | Cashier A, no shift: select a registered customer FIRST, then a CREDIT (آجل) sale | Refused with the same message («يجب فتح وردية قبل البيع»), not «يرجى تحديد عميل» |
 | R4 | Log in as **cashier B** (not required), no shift: cash sale 3 USD | Accepted; owner sees general drawer +3 |
 | R5 | Cashier A: try to open «الدعم الفني» / contact | Not visible anywhere |
 

@@ -31,7 +31,7 @@ export function POSHeader({
   const { t, tDynamic, language } = useLanguage();
   const isEn = language === 'en';
   const navigate = useNavigate();
-  const { isBoss, isAdmin, canAccessSettings } = useUserRole();
+  const { isBoss, isAdmin, canAccessSettings, isCashier } = useUserRole();
   const supportUnread = useSupportUnread();
 
   return (
@@ -65,7 +65,8 @@ export function POSHeader({
 
       {/* جهة اليسار (RTL): التحكم المدمج للموبايل + اختصارات الديسكتوب والوصول السريع */}
       <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
-        {/* زر الدعم الفني والتواصل المباشر مع المطور */}
+        {/* زر الدعم الفني والتواصل المباشر مع المطور (مخفي عن الكاشير) */}
+        {!isCashier && (
         <Button
           variant="ghost"
           size="icon"
@@ -80,7 +81,7 @@ export function POSHeader({
               {supportUnread > 9 ? '9+' : supportUnread}
             </span>
           )}
-        </Button>
+        </Button>)}
 
         {/* زر الإعدادات السريعة للمدير */}
         {(isBoss || isAdmin || canAccessSettings) && (

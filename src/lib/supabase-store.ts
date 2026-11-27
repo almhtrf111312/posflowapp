@@ -778,6 +778,9 @@ export async function fetchStoreSettings(timeoutMs: number = 1500): Promise<Stor
 
 // Save store settings directly to Supabase
 // ✅ Uses getOwnerIdForInsert - cashiers should NOT save store settings
+/** A server rule refused the settings change; retrying cannot succeed until the cause (e.g. an open shift) is gone. */
+export class StoreSettingsRejectedError extends Error {}
+
 export async function saveStoreSettingsDirect(settings: Record<string, unknown>): Promise<boolean> {
   const ownerId = await getOwnerIdForInsert();
   if (!ownerId) return false;
@@ -835,6 +838,8 @@ export async function saveStoreSettingsDirect(settings: Record<string, unknown>)
 
       if (error) {
         console.error('Error updating store settings:', error);
+        // P0001 = a server rule refused the change (e.g. currencies/rates while a shift is open): show its message, never retry blindly.
+        if (error.code === 'P0001') throw new StoreSettingsRejectedError(String(error.message || ''));
         return false;
       }
     } else {
@@ -851,6 +856,7 @@ export async function saveStoreSettingsDirect(settings: Record<string, unknown>)
 
     return true;
   } catch (error) {
+    if (error instanceof StoreSettingsRejectedError) throw error;
     console.error('Error saving store settings:', error);
     return false;
   }
@@ -871,7 +877,17 @@ export async function saveStoreSettings(settings: Record<string, unknown>): Prom
   }
 
   // If online, attempt direct save; on failure, enqueue to sync queue
-  const success = await saveStoreSettingsDirect(settings);
+  let success = false;
+  try {
+    success = await saveStoreSettingsDirect(settings);
+  } catch (e) {
+    if (e instanceof StoreSettingsRejectedError) {
+      const { toast } = await import('@/lib/sonner-bridge');
+      toast.error(e.message || 'رفض الخادم حفظ الإعدادات');
+      return false;
+    }
+    throw e;
+  }
   if (!success) {
     try {
       const { enqueueStoreSettingsUpdate } = await import('./sync-queue');

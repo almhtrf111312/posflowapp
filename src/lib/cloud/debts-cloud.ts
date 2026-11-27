@@ -821,3 +821,17 @@ export const loadDebtPaymentsForDate = async (dateStr: string): Promise<number> 
   return round8(total);
 };
 
+
+/** Non-USD currencies the payments of an invoice's debt were collected in (for the share note, no rates). Empty on error/offline. */
+export const loadInvoicePaymentCurrencies = async (invoiceId: string): Promise<string[]> => {
+  if (!invoiceId || isLocalDataMode()) return [];
+  try {
+    const { data: debts } = await supabase.from('debts').select('id').eq('invoice_id', invoiceId).limit(5);
+    const ids = (debts || []).map(d => d.id);
+    if (ids.length === 0) return [];
+    const { data: pays } = await supabase.from('debt_payments').select('currency').in('debt_id', ids);
+    return Array.from(new Set((pays || []).map(p => String(p.currency || 'USD')).filter(c => c && c !== 'USD')));
+  } catch {
+    return [];
+  }
+};

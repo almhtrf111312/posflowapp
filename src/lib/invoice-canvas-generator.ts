@@ -47,6 +47,8 @@ export interface InvoiceCanvasData {
   totalUSD?: number;
   paymentType: 'cash' | 'debt' | 'split' | string;
   downPayment?: number;
+  /** Non-USD currencies the paid part was collected in (note only, no rate). */
+  paidInCurrencies?: string[];
   debtRemaining?: number;
   notes?: string;
   serviceDescription?: string;
@@ -642,7 +644,9 @@ export async function generateInvoiceCanvas(data: InvoiceCanvasData): Promise<HT
       detailsY += 24;
       ctx.fillStyle = '#16a34a';
       ctx.font = `12px ${FONT_FAMILY}`;
-      ctx.fillText(`المدفوع نقداً: ${formatCanvasPrice(data.downPayment, effectiveSymbol, undefined, rawCurrency, data.currencyName)}`, detailsRightX, detailsY);
+      // A payment on a credit invoice is a debt payment, not a cash sale: label it "paid", note the collection currency.
+      const paidNote = data.paidInCurrencies && data.paidInCurrencies.length > 0 ? ` (دُفع بـ ${data.paidInCurrencies.join('، ')})` : '';
+      ctx.fillText(`${data.paymentType === 'debt' ? 'المدفوع' : 'المدفوع نقداً'}: ${formatCanvasPrice(data.downPayment, effectiveSymbol, undefined, rawCurrency, data.currencyName)}${paidNote}`, detailsRightX, detailsY);
 
       detailsY += 20;
       ctx.fillStyle = '#dc2626';

@@ -36,6 +36,7 @@ import type { CustomField } from '@/lib/custom-fields-config';
 import {
   StoreSettingsRow,
   saveStoreSettingsDirect,
+  StoreSettingsRejectedError,
   fetchStoreSettings,
 } from '@/lib/supabase-store';
 import { enqueueStoreSettingsUpdate } from '@/lib/sync-queue';
@@ -985,6 +986,12 @@ export async function saveUnifiedStoreSettings(
           console.log('[StoreSettingsSync] Background cloud sync succeeded');
         }
       } catch (err) {
+        if (err instanceof StoreSettingsRejectedError) {
+          // Refused by a server rule (e.g. currencies/rates while a shift is open): tell the user, never queue a change that cannot pass.
+          console.warn('[StoreSettingsSync] Server refused the settings change:', err.message);
+          void import('@/lib/sonner-bridge').then(({ toast }) => toast.error(err.message || 'رفض الخادم حفظ الإعدادات'));
+          return;
+        }
         console.warn('[StoreSettingsSync] Background sync network error, enqueued in sync queue:', err);
         enqueueStoreSettingsUpdate(cloudPayload);
       }
@@ -1015,6 +1022,9 @@ export async function saveUnifiedStoreSettings(
       };
     }
   } catch (err) {
+    if (err instanceof StoreSettingsRejectedError) {
+      return { success: false, status: 'saved_locally', message: err.message || 'رفض الخادم حفظ الإعدادات' };
+    }
     console.warn('[StoreSettingsSync] Network error while syncing settings, enqueuing:', err);
     enqueueStoreSettingsUpdate(cloudPayload);
     return {

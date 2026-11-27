@@ -1544,13 +1544,20 @@ export default function Products() {
     clearPersistedState();
   }, [clearPersistedState]);
 
+  // Snapshot of the form when it opens: the exit confirmation appears only if something was actually changed.
+  const formSnapshotRef = useRef<string>('');
+  useEffect(() => {
+    if (activeView === 'add' || activeView === 'edit') formSnapshotRef.current = JSON.stringify(formData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView]);
+
   const handleCloseForm = useCallback(() => {
-    if (formData.name?.trim()) {
+    if (formData.name?.trim() && JSON.stringify(formData) !== formSnapshotRef.current) {
       setShowCancelConfirmDialog(true);
       return;
     }
     closeFormDirectly();
-  }, [formData.name, closeFormDirectly]);
+  }, [formData, closeFormDirectly]);
 
   // Plain function: it depends on handleAddProduct/handleEditProduct, which are re-created every render, so memoizing it never helped.
   const handleSaveProductSubmit = () => {

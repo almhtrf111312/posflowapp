@@ -260,6 +260,7 @@ export interface InvoiceShareData {
   totalUSD?: number;
   paymentType: 'cash' | 'debt' | 'split' | string;
   downPayment?: number;
+  paidInCurrencies?: string[];
   debtRemaining?: number;
   serviceDescription?: string;
   type?: 'sale' | 'purchase' | 'maintenance' | 'return';
@@ -284,6 +285,7 @@ export function generateInvoiceShareText(data: InvoiceShareData): string {
     currencySymbol: rawCurrencySymbol,
     paymentType,
     downPayment,
+    paidInCurrencies,
     debtRemaining,
     serviceDescription,
     type,
@@ -327,7 +329,7 @@ ${itemsList}
 ────────────────
 ${items.length > 1 ? `📊 المجموع الفرعي: ${formatInvoiceAmount(subtotal)}\n` : ''}${discount && discount > 0 ? `✂️ الخصم: -${formatInvoiceAmount(discount)}\n` : ''}${data.taxAmount && data.taxAmount > 0 ? `🧾 الضريبة${data.taxRate ? ` (${data.taxRate}%)` : ''}: ${formatInvoiceAmount(data.taxAmount)}\n` : ''}💰 الإجمالي: ${formatInvoiceAmount(total)}${data.currency && data.currency !== 'USD' && data.totalUSD ? ` (المعادل: ${formatMoney(data.totalUSD, 'USD', 2)})` : ''}
 💳 طريقة الدفع: ${paymentLabel}
-${(paymentType === 'split' || paymentType === 'debt' || (downPayment && downPayment > 0)) ? (downPayment && downPayment > 0 ? `💵 المدفوع نقداً: ${formatInvoiceAmount(downPayment)}\n📋 المتبقي كدين: ${formatInvoiceAmount(debtRemaining !== undefined && debtRemaining !== null ? debtRemaining : (total - downPayment))}\n` : `📋 مستحق كدين: ${formatInvoiceAmount(debtRemaining !== undefined && debtRemaining !== null ? debtRemaining : total)}\n`) : ''}
+${(paymentType === 'split' || paymentType === 'debt' || (downPayment && downPayment > 0)) ? (downPayment && downPayment > 0 ? `💵 ${paymentType === 'debt' ? 'المدفوع' : 'المدفوع نقداً'}: ${formatInvoiceAmount(downPayment)}${paidInCurrencies && paidInCurrencies.length > 0 ? ` (دُفع بـ ${paidInCurrencies.join('، ')})` : ''}\n📋 المتبقي كدين: ${formatInvoiceAmount(debtRemaining !== undefined && debtRemaining !== null ? debtRemaining : (total - downPayment))}\n` : `📋 مستحق كدين: ${formatInvoiceAmount(debtRemaining !== undefined && debtRemaining !== null ? debtRemaining : total)}\n`) : ''}
 
 ────────────────
 ${storePhone ? `📞 للتواصل: ${storePhone}` : ''}
@@ -370,6 +372,7 @@ export async function shareInvoice(data: InvoiceShareData): Promise<boolean> {
       totalUSD: data.totalUSD,
       paymentType: data.paymentType,
       downPayment: data.downPayment,
+      paidInCurrencies: data.paidInCurrencies,
       debtRemaining: data.debtRemaining,
       notes: data.notes,
       serviceDescription: data.serviceDescription,

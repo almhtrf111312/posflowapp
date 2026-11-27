@@ -125,7 +125,7 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
   const isTablet = useIsTablet();
   const { user, profile, signOut } = useAuth();
   const { t, tDynamic, storeType, isRTL } = useLanguage();
-  const { isBoss, isAdmin, canAccessSettings } = useUserRole();
+  const { isBoss, isAdmin, canAccessSettings, isCashier } = useUserRole();
   const { unreadCount: notificationsUnreadCount } = useNotifications();
   const supportUnreadCount = useSupportUnread();
 
@@ -232,7 +232,8 @@ export function Sidebar({ isOpen, onToggle, defaultCollapsed = false }: SidebarP
     if (item.requiresBakeryMode && !noInventory) return false;
     if (item.requiresBookstore && storeType !== 'bookstore') return false;
     // التواصل مع المطور متاح دائماً بدون حجب
-    if (item.path === '/contact') return true;
+    // Cashiers never see developer support (owner decision 2026-11-27).
+    if (item.path === '/contact') return !isCashier;
     if (item.requiresContactSidebar && !showContactInSidebar && !shouldShowContactDueToLicense) return false;
     return true;
   });

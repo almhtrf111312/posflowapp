@@ -571,7 +571,10 @@ export function useUsersManagement() {
       if (!data || data.length === 0) throw new Error('لم يتم العثور على حساب الكاشير');
       setUsers(prev => prev.map(u => (u.user_id === userId ? { ...u, canRefund: allowed } : u)));
       // Shown through the app's visible toast (agent test P4: the legacy toast was not rendered).
-      void import('@/lib/sonner-bridge').then(({ toast: t }) => t.success(allowed ? 'تم منح صلاحية الاسترداد' : 'تم حجب صلاحية الاسترداد'));
+      // A single string becomes the hidden description with a generic «تم» title (agent diagnosis P4): put the message in the
+      // title and the cashier's name in the description so both are visible.
+      const who = users.find(u => u.user_id === userId)?.name || '';
+      void import('@/lib/sonner-bridge').then(({ toast: t }) => t.success(allowed ? 'تم منح صلاحية الاسترداد' : 'تم حجب صلاحية الاسترداد', { description: who || ' ' }));
       return true;
     } catch (err) {
       console.error('Error updating refund permission:', err);

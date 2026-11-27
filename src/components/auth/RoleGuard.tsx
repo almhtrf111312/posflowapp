@@ -10,6 +10,9 @@ interface RoleGuardProps {
   allowedRoles: AppRole[];
   redirectTo?: string;
   fallback?: ReactNode;
+  /** The page this guard protects (allowed_pages key). Needed for keep-alive tabs, which stay mounted while the user is on
+   *  another route: without it the guard read the CURRENT route and could redirect the user away from an allowed page. */
+  pageKey?: string;
 }
 
 // Map routes to page keys for allowed_pages check
@@ -44,7 +47,8 @@ function RoleGuardInner({
   children,
   allowedRoles,
   redirectTo = '/',
-  fallback
+  fallback,
+  pageKey: explicitPageKey,
 }: RoleGuardProps) {
 
   const { role, isLoading } = useUserRole();
@@ -66,7 +70,7 @@ function RoleGuardInner({
       if (allowedPages && allowedPages.length > 0) {
         const currentPath = location.pathname;
         // Check exact match or prefix match for nested routes
-        const pageKey = routeToPageKey[currentPath] || 
+        const pageKey = explicitPageKey || routeToPageKey[currentPath] ||
           Object.entries(routeToPageKey).find(([route]) => currentPath.startsWith(route))?.[1];
         if (pageKey && allowedPages.includes(pageKey)) {
           return <>{children}</>;
@@ -74,7 +78,7 @@ function RoleGuardInner({
       }
     }
     
-    if (fallback) {
+    if (fallback !== undefined) {
       return <>{fallback}</>;
     }
     return <Navigate to={redirectTo} replace />;

@@ -92,6 +92,9 @@ export function UsersTab() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSavingUser, setIsSavingUser] = useState(false);
 
+  // Edit dialog: refund + must-open-shift are saved together with «حفظ» (null = unchanged / not applicable).
+  const [editRefund, setEditRefund] = useState<boolean | null>(null);
+  const [editRequireShift, setEditRequireShift] = useState<boolean | null>(null);
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
@@ -160,6 +163,8 @@ export function UsersTab() {
       userType: user.userType || 'cashier',
       allowedPages: user.allowedPages || [],
     });
+    setEditRefund(user.role === 'cashier' && !user.isOwner && user.canRefund !== undefined ? user.canRefund === true : null);
+    setEditRequireShift(!user.isOwner ? requireShiftFor(user.user_id, user.role === 'cashier') : null);
     setEmailError('');
     setPasswordError('');
     setUserDialogOpen(true);
@@ -228,6 +233,15 @@ export function UsersTab() {
           userForm.phone,
           userForm.allowedPages.length > 0 ? userForm.allowedPages : null
         );
+      }
+
+      // Permissions shown as switches in this dialog are applied on «حفظ» too.
+      if (success && editRefund !== null && editRefund !== (selectedUser.canRefund === true)) {
+        const ok = await setUserRefundPermission(selectedUser.user_id, editRefund);
+        if (ok === false) success = false;
+      }
+      if (success && editRequireShift !== null && editRequireShift !== requireShiftFor(selectedUser.user_id, selectedUser.role === 'cashier')) {
+        await saveRequireShift(selectedUser.user_id, editRequireShift);
       }
 
       if (success) {
@@ -463,12 +477,12 @@ export function UsersTab() {
           </DialogHeader>
           <DialogBody className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">{t('settings.username' as Parameters<typeof t>[0])}</label>
+              <label className="text-sm font-medium">{isRTL ? 'اسم المستخدم' : 'User name'}</label>
               <Input
                 ref={userNameInputRef}
                 value={userForm.name}
                 onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                placeholder={t('settings.username' as Parameters<typeof t>[0])}
+                placeholder={isRTL ? 'اسم المستخدم' : 'User name'}
               />
             </div>
             {!selectedUser && (
@@ -559,60 +573,59 @@ export function UsersTab() {
               <p className="text-xs text-muted-foreground">
                 {isRTL ? 'حدد القوائم الإضافية التي يستطيع هذا المستخدم الوصول إليها' : 'Select additional pages this user can access'}
               </p>
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="space-y-1.5 pt-1">
                 {[
-                  { key: 'dashboard', label: t('nav.dashboard') },
                   { key: 'products', label: isRTL ? 'المنتجات (عرض فقط)' : 'Products (view only)' },
-                  { key: 'partners', label: t('nav.partners') },
                   { key: 'reports', label: t('nav.reports') },
                   { key: 'settings', label: t('nav.settings') },
                 ].map(page => (
-                  <label key={page.key} className="flex items-center gap-2 text-sm cursor-pointer p-1.5 rounded-lg hover:bg-muted">
-                    <input
-                      type="checkbox"
+                  <div key={page.key} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2">
+                    <span className="text-sm">{page.label}</span>
+                    <Switch
                       checked={userForm.allowedPages.includes(page.key)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setUserForm(prev => ({ ...prev, allowedPages: [...prev.allowedPages, page.key] }));
-                        } else {
-                          setUserForm(prev => ({ ...prev, allowedPages: prev.allowedPages.filter(p => p !== page.key) }));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-primary text-primary accent-primary"
+                      onCheckedChange={(on) => setUserForm(prev => ({
+                        ...prev,
+                        allowedPages: on
+                          ? [...prev.allowedPages.filter(p => p !== page.key), page.key]
+                          : prev.allowedPages.filter(p => p !== page.key && !(page.key === 'products' && p === 'products:add')),
+                      }))}
                     />
-                    {page.label}
-                  </label>
+                  </div>
                 ))}
-              </div>
-              {(userForm.allowedPages.includes('products') || userForm.role === 'cashier') && (
-                <div className="mt-2 p-2.5 bg-muted/60 rounded-lg border border-border/50">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={userForm.allowedPages.includes('products:add')}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setUserForm(prev => ({
-                            ...prev,
-                            allowedPages: [...prev.allowedPages.filter(p => p !== 'products:add'), 'products:add',
-                              ...(!prev.allowedPages.includes('products') ? ['products'] : [])
-                            ]
-                          }));
-                        } else {
-                          setUserForm(prev => ({ ...prev, allowedPages: prev.allowedPages.filter(p => p !== 'products:add') }));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-primary text-primary accent-primary"
-                    />
-                    <div>
-                      <span className="font-medium">{isRTL ? 'إمكانية إضافة المنتجات' : 'Can Add Products'}</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {isRTL ? 'يسمح للكاشير بإضافة منتجات جديدة وتعديلها' : 'Allows cashier to add and edit products'}
-                      </p>
-                    </div>
-                  </label>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-sm">{isRTL ? 'إمكانية إضافة المنتجات' : 'Can Add Products'}</p>
+                    <p className="text-xs text-muted-foreground">{isRTL ? 'يسمح للكاشير بإضافة منتجات جديدة وتعديلها' : 'Allows cashier to add and edit products'}</p>
+                  </div>
+                  <Switch
+                    checked={userForm.allowedPages.includes('products:add')}
+                    onCheckedChange={(on) => setUserForm(prev => ({
+                      ...prev,
+                      allowedPages: on
+                        ? [...prev.allowedPages.filter(p => p !== 'products:add' && p !== 'products'), 'products', 'products:add']
+                        : prev.allowedPages.filter(p => p !== 'products:add'),
+                    }))}
+                  />
                 </div>
-              )}
+                {selectedUser && editRefund !== null && (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm">{isRTL ? 'السماح بالاسترداد' : 'Allow refunds'}</p>
+                      <p className="text-xs text-muted-foreground">{isRTL ? 'يستطيع هذا الكاشير استرداد الفواتير' : 'This cashier can refund invoices'}</p>
+                    </div>
+                    <Switch checked={editRefund} onCheckedChange={setEditRefund} />
+                  </div>
+                )}
+                {selectedUser && editRequireShift !== null && (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-sm">{isRTL ? 'إلزام فتح وردية' : 'Must open a shift'}</p>
+                      <p className="text-xs text-muted-foreground">{isRTL ? 'عند الإيقاف تذهب عملياته النقدية بلا وردية إلى الصندوق العام' : 'When off, cash without a shift goes to the general drawer'}</p>
+                    </div>
+                    <Switch checked={editRequireShift} onCheckedChange={setEditRequireShift} />
+                  </div>
+                )}
+              </div>
             </div>
           </DialogBody>
           <DialogFooter className="shrink-0 px-4 py-3 sm:px-6 border-t border-border/60">

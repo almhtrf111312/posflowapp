@@ -1378,6 +1378,11 @@ export default function Products() {
   });
 
   const openEditDialog = (product: Product) => {
+    // View-only users (cashier without «إمكانية إضافة المنتجات») cannot open the edit form from any entry point.
+    if (!canAddProducts) {
+      toast.error(isRTL ? 'لا تملك صلاحية تعديل المنتجات' : 'You are not allowed to edit products');
+      return;
+    }
     setSelectedProduct(product);
 
     // الكمية في قاعدة البيانات دائماً بالقطع

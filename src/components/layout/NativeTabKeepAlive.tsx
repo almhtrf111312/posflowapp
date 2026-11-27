@@ -134,7 +134,7 @@ export const NativeTabHost = memo(() => {
     <div className="w-full flex-1 flex flex-col relative min-h-[calc(100vh-4rem)]">
       {mountedTabs.has('/products') && (
         <KeepAliveTab activePath={activeTab ?? ''} tabPath="/products">
-          <RoleGuard allowedRoles={['boss', 'admin']}>
+          <RoleGuard allowedRoles={['boss', 'admin']} pageKey="products" fallback={activeTab === '/products' ? undefined : null}>
             <FeatureErrorBoundary featureName="إدارة المنتجات">
               <Suspense fallback={<TabFallback />}>
                 <Products />
@@ -186,7 +186,7 @@ export const NativeTabHost = memo(() => {
 
       {mountedTabs.has('/purchases') && (
         <KeepAliveTab activePath={activeTab ?? ''} tabPath="/purchases">
-          <RoleGuard allowedRoles={['boss', 'admin']}>
+          <RoleGuard allowedRoles={['boss', 'admin']} pageKey="purchases" fallback={activeTab === '/purchases' ? undefined : null}>
             <FeatureErrorBoundary featureName="المشتريات">
               <Suspense fallback={<TabFallback />}>
                 <Purchases />
@@ -198,7 +198,7 @@ export const NativeTabHost = memo(() => {
 
       {mountedTabs.has('/reports') && (
         <KeepAliveTab activePath={activeTab ?? ''} tabPath="/reports">
-          <RoleGuard allowedRoles={['boss', 'admin']}>
+          <RoleGuard allowedRoles={['boss', 'admin']} pageKey="reports" fallback={activeTab === '/reports' ? undefined : null}>
             <FeatureErrorBoundary featureName="التقارير">
               <Suspense fallback={<TabFallback />}>
                 <Reports />

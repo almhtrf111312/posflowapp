@@ -723,11 +723,8 @@ export default function Settings() {
   // Users are now managed by useUsersManagement hook
 
   // Backups
-  const [backups, setBackups] = useState<BackupData[]>([
-    { id: '1', date: '2024-01-15 10:00', size: '2.5 MB', type: 'auto' },
-    { id: '2', date: '2024-01-14 10:00', size: '2.4 MB', type: 'auto' },
-    { id: '3', date: '2024-01-13 15:30', size: '2.3 MB', type: 'manual' },
-  ]);
+  // No sample entries: the real backups are the files listed under «النسخ المحفوظة على الجهاز».
+  const [backups, setBackups] = useState<BackupData[]>([]);
 
   const [backupSettings, setBackupSettings] = useState({
     autoBackup: persisted?.backupSettings?.autoBackup ?? initialUnified?.backupSettings?.autoBackup ?? true,

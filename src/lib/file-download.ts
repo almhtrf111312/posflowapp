@@ -255,3 +255,18 @@ export const readNativeBackupFile = async (backup: NativeBackupFile): Promise<Fi
   const text = typeof res.data === 'string' ? res.data : await (res.data as Blob).text();
   return new File([text], backup.name, { type: 'application/json' });
 };
+
+/** Opens the system share sheet for a backup listed by listNativeBackups (save to Drive, WhatsApp, Downloads, another phone…). */
+export const shareNativeBackup = async (backup: NativeBackupFile): Promise<boolean> => {
+  if (!isNativePlatform()) return false;
+  try {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { uri } = await Filesystem.getUri({ path: backup.uri, directory: Directory.Documents });
+    const { Share } = await import('@capacitor/share');
+    await Share.share({ title: backup.name, text: 'نسخة احتياطية من PosFlow', url: uri, dialogTitle: 'مشاركة النسخة الاحتياطية' });
+    return true;
+  } catch (error) {
+    console.error('[FileDownload] share backup failed:', error);
+    return false;
+  }
+};

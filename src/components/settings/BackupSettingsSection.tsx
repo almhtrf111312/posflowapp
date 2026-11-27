@@ -13,7 +13,6 @@ import {
   Trash2
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/language-context';
-import { LocalBackupSection } from '@/components/settings/LocalBackupSection';
 
 /** Backup-related settings as the parent screen keeps them. */
 export interface BackupSettingsValue {
@@ -104,7 +103,10 @@ export function BackupSettingsSection({
                       <div className="text-xs truncate" dir="ltr">{b.name}</div>
                       <div className="text-[10px] text-muted-foreground" dir="ltr">{(b.size / 1024 / 1024).toFixed(2)} MB{b.ctime ? ` · ${new Date(b.ctime).toLocaleString()}` : ''}</div>
                     </div>
-                    <Button variant="outline" size="sm" disabled={isImporting} onClick={() => onRestoreDeviceBackup(b)}>استعادة</Button>
+                    <div className="flex shrink-0 gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => { void import('@/lib/file-download').then(m => m.shareNativeBackup(b)); }}>مشاركة</Button>
+                      <Button variant="outline" size="sm" disabled={isImporting} onClick={() => onRestoreDeviceBackup(b)}>استعادة</Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -168,34 +170,6 @@ export function BackupSettingsSection({
               </div>
             </div>
 
-            {/* Local Auto-Backup */}
-            <LocalBackupSection />
-
-            {/* Recent Backups - compact */}
-            <div className="space-y-1.5">
-              <h3 className="text-xs font-semibold text-foreground">{t('settings.recentBackups')}</h3>
-              {backups.map((backup) => (
-                <div key={backup.id} className="flex flex-col gap-1.5 p-2 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Database className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-foreground truncate">{backup.date}</p>
-                      <p className="text-[10px] text-muted-foreground">{backup.size} • {backup.type === 'auto' ? t('settings.auto') : t('settings.manual')}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 border-t border-border/50 pt-1.5">
-                    <Button variant="ghost" size="sm" className="flex-1 gap-1.5" onClick={() => handleRestoreBackup(backup)}>
-                      <RefreshCw className="w-4 h-4" />
-                      {t('settings.restoreBtn')}
-                    </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteBackup(backup)}>
-                      <Trash2 className="w-4 h-4" />
-                      {t('common.delete')}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
   );

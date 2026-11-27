@@ -11,7 +11,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `ActivityArchiveSection.tsx` | Archived activity log section. | ActivityArchiveSection | hooks/language-context, hooks/user-role-context, lib/demo-data, ActivityLogSection*, ArchiveSection*, IntegrityCheckSection* | — |
 | `ActivityLogSection.tsx` | Activity log viewer. | ActivityLogSection, default | hooks/language-context, lib/activity-log, lib/supabase-store*, ui/* | tbl: activity_log |
 | `ArchiveSection.tsx` | Archived data management section. | ArchiveSection | hooks/language-context, lib/activity-log, lib/cloud/debts-cloud, lib/cloud/expenses-cloud, lib/cloud/invoices-cloud, lib/cloud/products-cloud, lib/cloud/purchase-invoices-cloud, ui/* | tbl: activity_log |
-| `BackupSettingsSection.tsx` | Backup settings: auto, cloud and export. | BackupSettingsSection, default · 3 types | LocalBackupSection, hooks/language-context, ui/* | — |
+| `BackupSettingsSection.tsx` | Backup settings: auto, cloud and export. | BackupSettingsSection, default · 3 types | hooks/language-context, lib/file-download*, ui/* | — |
 | `ContactLinksSection.tsx` | Contact links settings. | ContactLinksSection, CHANNELS · 1 types | hooks/language-context | tbl: app_settings |
 | `CustomFieldsManager.tsx` | Custom product fields manager. | CustomFieldsManager | hooks/language-context, hooks/use-network-status, lib/custom-fields-config, lib/sonner-bridge, ui/* | — |
 | `DataResetSection.tsx` | Guarded manual data reset section. | default(DataResetSection) | hooks/auth-context, hooks/language-context, hooks/use-network-status, lib/clear-demo-data, lib/i18n, lib/sonner-bridge, lib/file-download*, lib/full-backup* (+1) | — |

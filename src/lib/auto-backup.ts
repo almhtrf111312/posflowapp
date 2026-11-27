@@ -122,7 +122,7 @@ export const saveBackupLocally = async (): Promise<boolean> => {
 
     if (isNative) {
       await (await import('@capacitor/filesystem')).Filesystem.writeFile({
-        path: `PosFlow/backups/${fileName}`,
+        path: `PosFlow App/${fileName}`, // same folder as manual backups (listed in Settings → backups)
         data: JSON.stringify(backupData, null, 2),
         directory: (await import('@capacitor/filesystem')).Directory.Documents,
         encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,

@@ -79,6 +79,10 @@ async function saveToNativeFS(backup: LocalBackup): Promise<void> {
  * Trigger an automatic backup with a reason
  */
 export function triggerAutoBackup(reason: string): void {
+  // Owner decision (2026-11-27): no backup after every invoice/expense/product (it wrote to Documents/FlowBOS Pro).
+  // Backups are daily (first app open of the day, auto-backup.ts) or manual, all in Documents/PosFlow App.
+  void reason;
+  return;
   if (debounceTimer) clearTimeout(debounceTimer);
 
   debounceTimer = setTimeout(() => {

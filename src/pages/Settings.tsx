@@ -1162,6 +1162,19 @@ export default function Settings() {
 
   // Check if there are unsaved changes
   // P-6: leaving a tab with unsaved changes (e.g. the tax or discount switch) asks to save or discard instead of losing them silently.
+  const folderConsent = useRef<((allowed: boolean) => void) | null>(null);
+  const [folderPromptOpen, setFolderPromptOpen] = useState(false);
+  const askFolderAccess = () => new Promise<boolean>(resolve => {
+    folderConsent.current?.(false);
+    folderConsent.current = resolve;
+    setFolderPromptOpen(true);
+  });
+  const finishFolderPrompt = (allowed: boolean) => {
+    folderConsent.current?.(allowed);
+    folderConsent.current = null;
+    setFolderPromptOpen(false);
+  };
+  useEffect(() => () => folderConsent.current?.(false), []);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const hasUnsavedChanges = (() => {
     // Hide save bar on main screen (activeTab === null) or independent tabs
@@ -1545,7 +1558,7 @@ export default function Settings() {
       const { buildFullBackup, backupFileName } = await import('@/lib/full-backup');
       const { downloadFile, prepareBackupFolder, usesAndroidBackupFolder, saveAndroidBackup } = await import('@/lib/file-download');
       setLastBackupResult(null);
-      if (!(await prepareBackupFolder(t('settings.backupFolderAccess')))) return;
+      if (!(await prepareBackupFolder(askFolderAccess))) return;
       const backup = await buildFullBackup();
       const content = JSON.stringify(backup);
       const filename = backupFileName();
@@ -2293,7 +2306,7 @@ export default function Settings() {
         return <Partners />;
 
       case 'reset':
-        return <DataResetSection />;
+        return <DataResetSection askFolderAccess={askFolderAccess} />;
 
       case 'about': {
         // Read version injected at build time by vite.config.ts from version.json
@@ -2764,6 +2777,18 @@ export default function Settings() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={folderPromptOpen} onOpenChange={open => { if (!open) finishFolderPrompt(false); }}>
+        <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('settings.backupFolderTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('settings.backupFolderAccess')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => finishFolderPrompt(true)}>{t('settings.chooseBackupFolder')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={leaveConfirmOpen} onOpenChange={setLeaveConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

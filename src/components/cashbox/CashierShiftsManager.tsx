@@ -60,7 +60,7 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
       toast.error(isEn ? 'Enter the counted amount' : 'أدخل المبلغ المعدود');
       return;
     }
-    const expected = closing.expected ?? Number(closing.expected_balance) ?? 0;
+    const expected = closing.expected ?? (Number(closing.expected_balance) || 0);
     setBusy(true);
     try {
       const ok = await closeShiftCloud({
@@ -119,7 +119,7 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
     }
   };
 
-  const closingExpected = closing ? (closing.expected ?? Number(closing.expected_balance) ?? 0) : 0;
+  const closingExpected = closing ? (closing.expected ?? (Number(closing.expected_balance) || 0)) : 0;
   const closingDiff = closing && counted !== '' ? round8((parseFloat(counted) || 0) - closingExpected) : null;
 
   return (
@@ -150,7 +150,7 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
               <div className="text-xs text-muted-foreground">{formatDateTime(r.opened_at)}</div>
               <div className="text-xs">
                 {isEn ? 'Opening' : 'الافتتاح'}: {formatMoney(Number(r.opening_balance) || 0, 'USD')} ·{' '}
-                {isEn ? 'Expected' : 'المتوقع'}: <span className="font-bold">{formatMoney(r.expected ?? Number(r.expected_balance) ?? 0, 'USD')}</span>
+                {isEn ? 'Expected' : 'المتوقع'}: <span className="font-bold">{formatMoney(r.expected ?? (Number(r.expected_balance) || 0), 'USD')}</span>
               </div>
             </div>
             <Button size="sm" variant="destructive" onClick={() => { setClosing(r); setCounted(''); setDecision('accept'); }}>

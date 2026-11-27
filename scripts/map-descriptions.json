@@ -417,5 +417,6 @@
   "src/components/cashbox/ShiftDetailsDialog.tsx": "Shift details: totals per movement kind and the full drawer movement list of one shift (read-only, from cloud movements)",
   "src/components/cashbox/ShiftFxDialog.tsx": "In-shift currency exchange dialog (cash out in one currency, in another)",
   "src/components/cashbox/GeneralDrawerCard.tsx": "General store drawer card (D-35): balance, details, owner deposit and optional count, and the require-shift settings",
+  "android/app/src/main/java/com/posflow/app/files/BackupFolderPlugin.java": "Persists Android Documents folder access and writes and lists verified backups.",
   "android/app/src/main/java/com/posflow/app/files/PosFlowMediaScanPlugin.java": "Media scan plugin: indexes saved backups in Documents/PosFlow App so file managers show them."
 }

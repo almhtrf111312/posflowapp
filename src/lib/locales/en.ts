@@ -1463,6 +1463,7 @@ const en: TranslationDict = {
   'settings.backupComplete': 'Backup complete',
   'settings.backupSavedDevice': 'Backup saved to device',
   'settings.backupDownloaded': 'Backup downloaded',
+  'settings.backupFolderAccess': 'To save and restore your backups, allow access to a folder. Choose Documents in internal storage or its PosFlow App folder, then tap Use this folder.',
   'settings.backupFailed': 'Backup failed',
   'settings.invalidBackupFile': 'Invalid backup file',
   'settings.invalidBackupFormat': 'Invalid backup file format',

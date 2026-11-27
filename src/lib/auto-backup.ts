@@ -121,6 +121,10 @@ export const saveBackupLocally = async (): Promise<boolean> => {
       !!(window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
 
     if (isNative) {
+      const { usesAndroidBackupFolder, saveAndroidBackup, hasBackupFolderAccess } = await import('./file-download');
+      if (usesAndroidBackupFolder() && await hasBackupFolderAccess()) {
+        return (await saveAndroidBackup(fileName, JSON.stringify(backupData))).success;
+      }
       await (await import('@capacitor/filesystem')).Filesystem.writeFile({
         path: `PosFlow App/${fileName}`, // same folder as manual backups (listed in Settings → backups)
         data: JSON.stringify(backupData, null, 2),

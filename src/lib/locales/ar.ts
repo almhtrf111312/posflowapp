@@ -1590,6 +1590,7 @@ const ar = {
   'settings.backupComplete': 'اكتمل النسخ الاحتياطي',
   'settings.backupSavedDevice': 'تم حفظ النسخة الاحتياطية على الجهاز',
   'settings.backupDownloaded': 'تم تحميل النسخة الاحتياطية',
+  'settings.backupFolderAccess': 'لحفظ نسخك الاحتياطية واستعادتها، يحتاج التطبيق إلى إذن للمجلد. اختر «المستندات» (Documents) في التخزين الداخلي أو مجلد PosFlow App داخله، ثم اضغط «استخدام هذا المجلد».',
   'settings.backupFailed': 'فشل النسخ الاحتياطي',
   'settings.invalidBackupFile': 'ملف نسخة احتياطية غير صالح',
   'settings.invalidBackupFormat': 'تنسيق ملف النسخة الاحتياطية غير صالح',

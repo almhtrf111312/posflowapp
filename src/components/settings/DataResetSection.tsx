@@ -103,13 +103,17 @@ export default function DataResetSection() {
     try {
       // 1. Save a backup on this device right before the wipe. If it cannot be saved, nothing is deleted.
       const { buildFullBackup, backupFileName } = await import('@/lib/full-backup');
-      const { downloadFile } = await import('@/lib/file-download');
+      const { downloadFile, prepareBackupFolder, usesAndroidBackupFolder, saveAndroidBackup } = await import('@/lib/file-download');
+      if (!(await prepareBackupFolder(t('settings.backupFolderAccess', language)))) {
+        setError(t('settings.resetBackupFailed', language));
+        return;
+      }
       const backup = await buildFullBackup();
-      const saved = await downloadFile({
-        filename: backupFileName(),
-        content: JSON.stringify(backup),
-        mimeType: 'application/json',
-      });
+      const filename = backupFileName();
+      const content = JSON.stringify(backup);
+      const saved = usesAndroidBackupFolder()
+        ? await saveAndroidBackup(filename, content)
+        : await downloadFile({ filename, content, mimeType: 'application/json' });
       if (!saved.success) {
         setError(t('settings.resetBackupFailed', language));
         return;

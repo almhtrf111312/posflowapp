@@ -4,7 +4,29 @@
  * Supports direct download to Downloads folder on Android
  */
 
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+const backupFolder = registerPlugin<{
+  status(): Promise<{ granted: boolean }>;
+  choose(): Promise<{ granted: boolean }>;
+  save(o: { filename: string; content: string }): Promise<{ filename: string }>;
+  list(): Promise<{ files: NativeBackupFile[] }>;
+}>('BackupFolder');
+
+export const usesAndroidBackupFolder = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+
+export const hasBackupFolderAccess = async () => (await backupFolder.status()).granted;
+
+export async function prepareBackupFolder(explanation: string): Promise<boolean> {
+  if (!usesAndroidBackupFolder() || (await backupFolder.status()).granted) return true;
+  if (!window.confirm(explanation)) return false;
+  return (await backupFolder.choose()).granted;
+}
+
+export async function saveAndroidBackup(filename: string, content: string): Promise<DownloadResult> {
+  const saved = await backupFolder.save({ filename, content });
+  return { success: true, path: 'Documents/PosFlow App', filename: saved.filename };
+}
 
 interface DownloadOptions {
   filename: string;
@@ -235,25 +257,30 @@ export const listNativeBackups = async (): Promise<NativeBackupFile[]> => {
   if (!isNativePlatform()) return [];
   const { Filesystem, Directory } = await import('@capacitor/filesystem');
   const all: NativeBackupFile[] = [];
+  if (usesAndroidBackupFolder() && (await backupFolder.status()).granted) {
+    const { files } = await backupFolder.list();
+    all.push(...files.filter(f => /backup/i.test(f.name) && /\.(posflowbak|json)$/i.test(f.name)));
+  }
   // Current folder first, then the old "PosFlow" folder so earlier backups stay restorable.
   for (const dir of [NATIVE_BACKUP_DIR, 'PosFlow']) {
     try {
       const result = await Filesystem.readdir({ path: dir, directory: Directory.Documents });
       result.files
         .filter(f => f.type === 'file' && /\.(posflowbak|json)$/i.test(f.name) && /backup/i.test(f.name))
+        .filter(f => dir !== NATIVE_BACKUP_DIR || !all.some(b => b.name === f.name))
         .forEach(f => all.push({ name: f.name, uri: `${dir}/${f.name}`, size: f.size || 0, ctime: f.ctime || f.mtime || 0 }));
     } catch (error) {
       console.log('[FileDownload] Cannot read Documents/' + dir + ':', error);
     }
   }
-  void indexDocumentsFiles(all.map(b => b.uri));
+  void indexDocumentsFiles(all.filter(b => !b.uri.startsWith('content://')).map(b => b.uri));
   return all.sort((a, b) => b.ctime - a.ctime);
 };
 
 /** Reads a backup listed by listNativeBackups (its `uri` is the path under Documents) as a File for the normal import. */
 export const readNativeBackupFile = async (backup: NativeBackupFile): Promise<File> => {
   const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
-  const res = await Filesystem.readFile({ path: backup.uri, directory: Directory.Documents, encoding: Encoding.UTF8 });
+  const res = await Filesystem.readFile({ path: backup.uri, directory: backup.uri.startsWith('content://') ? undefined : Directory.Documents, encoding: Encoding.UTF8 });
   const text = typeof res.data === 'string' ? res.data : await (res.data as Blob).text();
   return new File([text], backup.name, { type: 'application/json' });
 };
@@ -263,7 +290,13 @@ export const shareNativeBackup = async (backup: NativeBackupFile): Promise<boole
   if (!isNativePlatform()) return false;
   try {
     const { Filesystem, Directory } = await import('@capacitor/filesystem');
-    const { uri } = await Filesystem.getUri({ path: backup.uri, directory: Directory.Documents });
+    const { uri } = backup.uri.startsWith('content://')
+      ? await Filesystem.writeFile({
+          path: `backup-share/${backup.name}`, directory: Directory.Cache, recursive: true,
+          data: await (await readNativeBackupFile(backup)).text(),
+          encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,
+        })
+      : await Filesystem.getUri({ path: backup.uri, directory: Directory.Documents });
     const { Share } = await import('@capacitor/share');
     await Share.share({ title: backup.name, text: 'نسخة احتياطية من PosFlow', url: uri, dialogTitle: 'مشاركة النسخة الاحتياطية' });
     return true;

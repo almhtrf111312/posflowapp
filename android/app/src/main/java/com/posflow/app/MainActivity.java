@@ -18,6 +18,7 @@ import com.posflow.app.auth.PosFlowGoogleAuthPlugin;
 import com.posflow.app.security.PosFlowKeystorePlugin;
 import com.posflow.app.push.PosFlowPushPlugin;
 import com.posflow.app.files.PosFlowMediaScanPlugin;
+import com.posflow.app.files.BackupFolderPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -37,6 +38,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PosFlowPrinterPlugin.class);
         registerPlugin(PosFlowGoogleAuthPlugin.class); // Google sign-in (removable)
         registerPlugin(PosFlowPushPlugin.class); // FCM push token + tap routing
+        registerPlugin(BackupFolderPlugin.class);
         registerPlugin(PosFlowMediaScanPlugin.class); // index saved backups so file managers show them
         super.onCreate(savedInstanceState);
 

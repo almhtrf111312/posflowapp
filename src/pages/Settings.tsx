@@ -1543,11 +1543,16 @@ export default function Settings() {
     setIsBackingUp(true);
     try {
       const { buildFullBackup, backupFileName } = await import('@/lib/full-backup');
-      const { downloadFile } = await import('@/lib/file-download');
+      const { downloadFile, prepareBackupFolder, usesAndroidBackupFolder, saveAndroidBackup } = await import('@/lib/file-download');
+      setLastBackupResult(null);
+      if (!(await prepareBackupFolder(t('settings.backupFolderAccess')))) return;
       const backup = await buildFullBackup();
       const content = JSON.stringify(backup);
       const filename = backupFileName();
-      const result = await downloadFile({ filename, content, mimeType: 'application/json' });
+      const result = usesAndroidBackupFolder()
+        ? await saveAndroidBackup(filename, content)
+        : await downloadFile({ filename, content, mimeType: 'application/json' });
+      if (!result.success) throw new Error(t('settings.backupFailed'));
 
       const newBackup: BackupData = {
         id: Date.now().toString(),
@@ -1555,23 +1560,19 @@ export default function Settings() {
         size: (content.length / 1024 / 1024).toFixed(2) + ' MB',
         type: 'manual',
       };
-      setBackups([newBackup, ...backups]);
+      setBackups(current => [newBackup, ...current]);
       void refreshDeviceBackups();
 
-      if (result.success) {
-        setLastBackupResult({ ...result, filename });
-        toast({
-          title: t('settings.backupComplete'),
-          description: isNativePlatform()
-            ? `${t('settings.backupSavedDevice')} - ${result.path}/${filename}`
-            : t('settings.backupDownloaded'),
-        });
-      } else {
-        toast({ title: t('common.error'), description: t('settings.backupFailed'), variant: 'destructive' });
-      }
+      setLastBackupResult(result);
+      toast({
+        title: t('settings.backupComplete'),
+        description: isNativePlatform()
+          ? `${t('settings.backupSavedDevice')} - ${result.path}/${result.filename}`
+          : t('settings.backupDownloaded'),
+      });
     } catch (error) {
       console.error('Backup error:', error);
-      toast({ title: t('common.error'), description: t('settings.backupFailed'), variant: 'destructive' });
+      toast({ title: t('common.error'), description: error instanceof Error ? error.message : t('settings.backupFailed'), variant: 'destructive' });
     } finally {
       setIsBackingUp(false);
     }

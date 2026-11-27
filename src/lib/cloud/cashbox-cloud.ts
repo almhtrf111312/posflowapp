@@ -301,6 +301,28 @@ export const loadShiftMovements = async (shiftId: string): Promise<ShiftMovement
   }
 };
 
+/** Invoices a cashier issued during a shift window, grouped by payment type (cash / credit / digital…), for the shift details. */
+export const loadShiftInvoiceSummary = async (cashierId: string, fromIso: string, toIso: string | null): Promise<Array<{ paymentType: string; count: number; total: number }>> => {
+  try {
+    let q = sb.from('invoices').select('payment_type, total, status').eq('cashier_id', cashierId).gte('created_at', fromIso);
+    if (toIso) q = q.lte('created_at', toIso);
+    const { data, error } = await q.limit(2000);
+    if (error) throw error;
+    const map = new Map<string, { count: number; total: number }>();
+    ((data || []) as Array<{ payment_type: string | null; total: number | string | null; status: string | null }>)
+      .filter(r => r.status !== 'cancelled')
+      .forEach(r => {
+        const k = r.payment_type || 'cash';
+        const g = map.get(k) || { count: 0, total: 0 };
+        g.count += 1; g.total = round8(g.total + (Number(r.total) || 0));
+        map.set(k, g);
+      });
+    return Array.from(map.entries()).map(([paymentType, g]) => ({ paymentType, ...g }));
+  } catch {
+    return [];
+  }
+};
+
 /** حد سماح فروقات الصندوق بالدولار (من إعدادات المتجر) */
 export const loadShiftVarianceTolerance = async (): Promise<number> => {
   try {
@@ -346,14 +368,20 @@ export const ensureGeneralDrawerCloud = async (openingBalance = 0): Promise<stri
   }
 };
 
-/** Owner-only count of the general drawer; the difference is posted as surplus/shortage and the drawer stays open. */
-export const countGeneralDrawerCloud = async (countedUsd: number, note: string | null, operationId: string): Promise<{ difference: number; expected: number }> => {
+/** Owner-only count of the general drawer per currency (units of that currency, rate = units per 1 USD); differences are posted
+ * as surplus/shortage in that currency and the drawer stays open. */
+export const countGeneralDrawerCloud = async (
+  counts: Array<{ code: string; counted: number; rate: number }>, note: string | null, operationId: string,
+): Promise<Array<{ code: string; expected: number; counted: number; difference: number; difference_usd: number }>> => {
   const { data, error } = await sb.rpc('count_general_drawer_atomic' as never, {
-    _counted_usd: round8(countedUsd), _note: note, _operation_id: operationId,
+    _counts: counts.map(c => ({ code: c.code, counted: c.counted, rate: c.rate })), _note: note, _operation_id: operationId,
   } as never);
   if (error) throw error;
-  const r = (data || {}) as { difference?: number | string; expected?: number | string };
-  return { difference: Number(r.difference) || 0, expected: Number(r.expected) || 0 };
+  const rows = ((data || {}) as { currencies?: Array<Record<string, unknown>> }).currencies || [];
+  return rows.map(r => ({
+    code: String(r.code), expected: Number(r.expected) || 0, counted: Number(r.counted) || 0,
+    difference: Number(r.difference) || 0, difference_usd: Number(r.difference_usd) || 0,
+  }));
 };
 
 /** Every open shift of the store (owner view: manage cashiers' drawers remotely). */

@@ -132,41 +132,65 @@ DROP TRIGGER IF EXISTS z_general_drawer_transfer ON public.cash_shifts;
 CREATE TRIGGER z_general_drawer_transfer AFTER INSERT OR UPDATE OF closed_at ON public.cash_shifts
   FOR EACH ROW EXECUTE FUNCTION public.general_drawer_shift_transfer();
 
--- Optional count of the general drawer (owner only): posts the difference as surplus/shortage; the drawer stays open.
--- Idempotent by operation id (reference 'count:<op>').
-CREATE OR REPLACE FUNCTION public.count_general_drawer_atomic(_counted_usd numeric, _note text DEFAULT NULL, _operation_id text DEFAULT NULL)
+-- Optional count of the general drawer (owner only), per currency like a shift close: _counts = [{code, counted, rate}]
+-- (counted in that currency's units; rate = units per 1 USD). For every counted currency the difference from the expected
+-- amount (opening in USD + movements in that currency) is posted as surplus/shortage in that currency; the drawer stays open.
+-- Currencies not in _counts are not touched. Idempotent by operation id (reference 'count:<op>:<code>').
+CREATE OR REPLACE FUNCTION public.count_general_drawer_atomic(_counts jsonb, _note text DEFAULT NULL, _operation_id text DEFAULT NULL)
  RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $function$
 DECLARE
   _uid uuid := auth.uid();
   _owner uuid := public.get_owner_id(auth.uid());
   _gen record;
-  _ref text;
-  _expected numeric; _diff numeric;
+  _op text := COALESCE(NULLIF(_operation_id, ''), gen_random_uuid()::text);
+  _e jsonb; _c text; _cnt numeric; _rate numeric; _exp numeric; _diff numeric;
+  _details jsonb := '[]'::jsonb;
+  _posted boolean := false;
 BEGIN
   IF _uid IS NULL OR _owner IS NULL OR _uid <> _owner THEN RAISE EXCEPTION 'عدّ الصندوق العام للمالك فقط'; END IF;
-  IF _counted_usd IS NULL OR _counted_usd < 0 THEN RAISE EXCEPTION 'المبلغ المعدود غير صالح'; END IF;
+  IF _counts IS NULL OR jsonb_typeof(_counts) <> 'array' OR jsonb_array_length(_counts) = 0 THEN
+    RAISE EXCEPTION 'أدخل المبلغ المعدود لعملة واحدة على الأقل';
+  END IF;
   SELECT * INTO _gen FROM public.cash_shifts WHERE user_id = _owner AND is_general FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'لا يوجد صندوق عام لهذا المتجر'; END IF;
-  _ref := 'count:' || COALESCE(NULLIF(_operation_id, ''), gen_random_uuid()::text);
-  IF EXISTS (SELECT 1 FROM public.shift_transactions WHERE shift_id = _gen.id AND reference_id = _ref) THEN
+  IF EXISTS (SELECT 1 FROM public.shift_transactions WHERE shift_id = _gen.id AND reference_id LIKE 'count:' || _op || ':%') THEN
     RETURN jsonb_build_object('success', true, 'replayed', true);
   END IF;
-  _expected := round(COALESCE(_gen.opening_balance, 0)
-    + COALESCE((SELECT SUM(amount) FROM public.shift_transactions WHERE shift_id = _gen.id AND type IN ('sale','deposit','deposit_capital','deposit_revenue','deposit_purchase_cover','debt_payment','surplus','expense_refund','supplier_refund','fx_in','transfer_in')), 0)
-    - COALESCE((SELECT SUM(amount) FROM public.shift_transactions WHERE shift_id = _gen.id AND type IN ('expense','refund','withdrawal','supplier_payment','store_credit_refund','shortage','fx_out','transfer_out')), 0), 8);
-  _diff := round(round(_counted_usd, 8) - _expected, 8);
-  IF _diff <> 0 THEN
-    PERFORM public.assert_period_open(_owner, CURRENT_DATE, 'عدّ الصندوق العام');
-    INSERT INTO public.shift_transactions(shift_id, user_id, type, amount, currency, currency_amount, exchange_rate, reference_id, notes, created_at)
-    VALUES (_gen.id, _owner, CASE WHEN _diff > 0 THEN 'surplus' ELSE 'shortage' END, abs(_diff), 'USD', abs(_diff), 1, _ref,
-            CASE WHEN _diff > 0 THEN 'فائض عند عدّ الصندوق العام: ' ELSE 'عجز عند عدّ الصندوق العام: ' END || COALESCE(_note, ''), now());
-  END IF;
-  UPDATE public.cash_shifts SET expected_balance = round(_counted_usd, 8), updated_at = now() WHERE id = _gen.id;
-  RETURN jsonb_build_object('success', true, 'expected', _expected, 'counted', round(_counted_usd, 8), 'difference', _diff);
+  FOR _e IN SELECT * FROM jsonb_array_elements(_counts) LOOP
+    _c := upper(NULLIF(trim(_e->>'code'), ''));
+    _cnt := (_e->>'counted')::numeric;
+    IF _c IS NULL OR _cnt IS NULL OR _cnt < 0 THEN RAISE EXCEPTION 'مبلغ معدود غير صالح'; END IF;
+    _rate := CASE WHEN _c = 'USD' THEN 1 ELSE NULLIF((_e->>'rate')::numeric, 0) END;
+    IF _rate IS NULL OR _rate <= 0 THEN RAISE EXCEPTION 'سعر صرف العملة % غير متوفر', _c; END IF;
+    _exp := CASE WHEN _c = 'USD' THEN COALESCE(_gen.opening_balance, 0) ELSE 0 END + COALESCE((
+      SELECT SUM(CASE
+          WHEN type IN ('sale','deposit','deposit_capital','deposit_revenue','deposit_purchase_cover','debt_payment','surplus','expense_refund','supplier_refund','fx_in','transfer_in') THEN COALESCE(currency_amount, amount)
+          WHEN type IN ('expense','refund','withdrawal','supplier_payment','store_credit_refund','shortage','fx_out','transfer_out') THEN -COALESCE(currency_amount, amount)
+          ELSE 0 END)
+      FROM public.shift_transactions WHERE shift_id = _gen.id AND upper(COALESCE(currency, 'USD')) = _c), 0);
+    _diff := round(_cnt - _exp, 8);
+    IF _diff <> 0 THEN
+      IF NOT _posted THEN PERFORM public.assert_period_open(_owner, CURRENT_DATE, 'عدّ الصندوق العام'); END IF;
+      _posted := true;
+      INSERT INTO public.shift_transactions(shift_id, user_id, type, amount, currency, currency_amount, exchange_rate, reference_id, notes, created_at)
+      VALUES (_gen.id, _owner, CASE WHEN _diff > 0 THEN 'surplus' ELSE 'shortage' END, round(abs(_diff) / _rate, 8), _c, abs(_diff), _rate,
+              'count:' || _op || ':' || _c,
+              CASE WHEN _diff > 0 THEN 'فائض عند عدّ الصندوق العام: ' ELSE 'عجز عند عدّ الصندوق العام: ' END || COALESCE(_note, ''), now());
+    END IF;
+    _details := _details || jsonb_build_object('code', _c, 'rate', _rate, 'expected', round(_exp, 8), 'counted', round(_cnt, 8),
+                                               'difference', _diff, 'difference_usd', round(_diff / _rate, 8));
+  END LOOP;
+  -- Cache (F-18): USD value of all movements.
+  UPDATE public.cash_shifts SET expected_balance = round(COALESCE(opening_balance, 0)
+      + COALESCE((SELECT SUM(amount) FROM public.shift_transactions WHERE shift_id = _gen.id AND type IN ('sale','deposit','deposit_capital','deposit_revenue','deposit_purchase_cover','debt_payment','surplus','expense_refund','supplier_refund','fx_in','transfer_in')), 0)
+      - COALESCE((SELECT SUM(amount) FROM public.shift_transactions WHERE shift_id = _gen.id AND type IN ('expense','refund','withdrawal','supplier_payment','store_credit_refund','shortage','fx_out','transfer_out')), 0), 8),
+      updated_at = now()
+   WHERE id = _gen.id;
+  RETURN jsonb_build_object('success', true, 'currencies', _details);
 END $function$;
-REVOKE EXECUTE ON FUNCTION public.count_general_drawer_atomic(numeric, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.count_general_drawer_atomic(numeric, text, text) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.count_general_drawer_atomic(jsonb, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.count_general_drawer_atomic(jsonb, text, text) TO authenticated, service_role;
 
 -- Patches of existing functions (exact occurrence counts are asserted; any mismatch aborts the whole migration):
 --   * guard_fx_change_during_open_shift: the general drawer is always open, so it must not block currency changes.

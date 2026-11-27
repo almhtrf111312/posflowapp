@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { formatMoney, formatDateTime } from '@/lib/utils';
-import { loadShiftMovements, ShiftMovementRow } from '@/lib/cloud/cashbox-cloud';
+import { loadShiftMovements, loadShiftInvoiceSummary, ShiftMovementRow } from '@/lib/cloud/cashbox-cloud';
 import { INFLOW_TYPES } from '@/lib/shift-adopt';
 import { round8 } from '@/lib/money-engine';
 
@@ -18,6 +18,8 @@ export interface ShiftSummaryInput {
   closingCash?: number;
   discrepancy?: number;
   status: 'open' | 'closed';
+  /** When set, the invoices this cashier issued during the shift are summarised (cash / credit / digital). */
+  cashierId?: string;
 }
 
 const LABELS: Record<string, [string, string]> = {
@@ -42,14 +44,25 @@ const LABELS: Record<string, [string, string]> = {
   transfer_out: ['تحويل خارج', 'Transfer out'],
 };
 
+const PAY_LABELS: Record<string, [string, string]> = {
+  cash: ['مبيعات نقدية', 'Cash sales'],
+  debt: ['مبيعات آجلة (ديون)', 'Credit sales (debts)'],
+  credit: ['مبيعات آجلة (ديون)', 'Credit sales (debts)'],
+  split: ['مبيعات مقسّمة (جزء نقدي وجزء دين)', 'Split sales'],
+  digital: ['مبيعات رقمية', 'Digital sales'],
+};
+
 export function ShiftDetailsDialog({ shift, isEn, onClose }: { shift: ShiftSummaryInput | null; isEn: boolean; onClose: () => void }) {
   const [rows, setRows] = useState<ShiftMovementRow[] | null>(null);
+  const [sales, setSales] = useState<Array<{ paymentType: string; count: number; total: number }>>([]);
 
   useEffect(() => {
     if (!shift) return;
     let alive = true;
     setRows(null);
     void loadShiftMovements(shift.id).then(r => { if (alive) setRows(r); });
+    setSales([]);
+    if (shift.cashierId) void loadShiftInvoiceSummary(shift.cashierId, shift.openedAt, shift.closedAt ?? null).then(r => { if (alive) setSales(r); });
     return () => { alive = false; };
   }, [shift]);
 
@@ -77,6 +90,17 @@ export function ShiftDetailsDialog({ shift, isEn, onClose }: { shift: ShiftSumma
               <div className="text-muted-foreground">{isEn ? 'Opened' : 'الفتح'}</div><div dir="ltr" className="text-end tabular-nums">{formatDateTime(shift.openedAt)}</div>
               <div className="text-muted-foreground">{isEn ? 'Closed' : 'الإغلاق'}</div><div dir="ltr" className="text-end tabular-nums">{shift.closedAt ? formatDateTime(shift.closedAt) : '-'}</div>
               <div className="text-muted-foreground">{isEn ? 'Opening' : 'الافتتاح'}</div><div dir="ltr" className="text-end tabular-nums">{formatMoney(shift.openingCash, 'USD')}</div>
+            </div>
+          )}
+          {sales.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-muted-foreground">{isEn ? 'Invoices in this shift' : 'فواتير هذه الوردية'}</p>
+              {sales.map(g => (
+                <div key={g.paymentType} className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm">
+                  <span>{PAY_LABELS[g.paymentType] ? PAY_LABELS[g.paymentType][isEn ? 1 : 0] : g.paymentType} <span className="text-xs text-muted-foreground">({g.count})</span></span>
+                  <span dir="ltr" className="tabular-nums font-bold">{formatMoney(g.total, 'USD')}</span>
+                </div>
+              ))}
             </div>
           )}
           {rows === null ? (

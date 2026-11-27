@@ -1375,12 +1375,22 @@ export async function runQaFixes(k, newWorldFn) {
     truthy('GENERAL a direct close is refused', (await w.fails(w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [gen]))) !== null);
     truthy('GENERAL the flag cannot be removed', (await w.fails(w.q(`update public.cash_shifts set is_general=false where id=$1`, [gen]))) !== null);
     // Optional count: 120 counted vs 125 expected → shortage 5, drawer stays open; replay adds nothing.
-    const c1 = (await w.one(`select public.count_general_drawer_atomic(120,'count','op-count-1') r`)).r;
-    check('GENERAL count posts the difference', Number(c1.difference), -5);
+    const c1 = (await w.one(`select public.count_general_drawer_atomic('[{"code":"USD","counted":120,"rate":1}]'::jsonb,'count','op-count-1') r`)).r;
+    check('GENERAL count posts the difference', Number(c1.currencies[0].difference), -5);
     check('GENERAL after the count the balance equals the counted cash', await bal(gen), 120);
-    check('GENERAL count replay adds nothing', (await w.one(`select public.count_general_drawer_atomic(120,'count','op-count-1') r`)).r.replayed, true);
+    check('GENERAL count replay adds nothing', (await w.one(`select public.count_general_drawer_atomic('[{"code":"USD","counted":120,"rate":1}]'::jsonb,'count','op-count-1') r`)).r.replayed, true);
     check('GENERAL balance unchanged after replay', await bal(gen), 120);
     check('GENERAL drawer still open after a count', (await w.one(`select closed_at is null o from public.cash_shifts where id=$1`, [gen])).o, true);
+    // Currencies: a TRY sale of 1000 at 10 (= 100 USD) in the general drawer, counted per currency.
+    await w.one(`select public.record_shift_movement_atomic($1::uuid,$2::uuid,'sale',100,'inv-g3','t','TRY',1000,10) r`, ['88888888-8888-4888-8888-0000000000a3', gen]);
+    const c2 = (await w.one(`select public.count_general_drawer_atomic('[{"code":"USD","counted":120,"rate":1},{"code":"TRY","counted":950,"rate":10}]'::jsonb,'c2','op-count-2') r`)).r;
+    const tr = c2.currencies.find((x) => x.code === 'TRY');
+    check('GENERAL TRY expected 1000 lira', Number(tr.expected), 1000);
+    check('GENERAL TRY shortage of 50 lira', Number(tr.difference), -50);
+    check('GENERAL TRY shortage is 5 USD in the drawer value', await bal(gen), 215);
+    check('GENERAL TRY shortage row keeps the lira amount', Number((await w.one(`select currency_amount::float8 a from public.shift_transactions where shift_id=$1 and reference_id='count:op-count-2:TRY'`, [gen])).a), 50);
+    check('GENERAL USD matched: no row posted for USD', Number((await w.one(`select count(*)::int c from public.shift_transactions where reference_id='count:op-count-2:USD'`)).c), 0);
+    truthy('GENERAL a count without a rate for a foreign currency is refused', (await w.fails(w.one(`select public.count_general_drawer_atomic('[{"code":"TRY","counted":1}]'::jsonb,'x','op-count-3') r`))) !== null);
     // Currency settings are not blocked by the always-open general drawer.
     await w.q(`insert into public.stores(user_id, name) values ($1,'S') on conflict do nothing`, [OWNER]);
     truthy('GENERAL currency change allowed while only the general drawer is open',
@@ -1388,7 +1398,7 @@ export async function runQaFixes(k, newWorldFn) {
     // An expense paid from the general drawer.
     const ex = await w.one(`select public.add_expense_atomic('op-gen-exp','other',4,'d',current_date,null,$1::uuid,'drawer') r`, [gen]);
     truthy('GENERAL an expense can be paid from the general drawer', ex.r && (ex.r.success === true || ex.r.id));
-    check('GENERAL ...and leaves it (120 - 4)', await bal(gen), 116);
+    check('GENERAL ...and leaves it (215 - 4)', await bal(gen), 211);
   }
 }
 

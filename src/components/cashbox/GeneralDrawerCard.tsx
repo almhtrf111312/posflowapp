@@ -12,10 +12,11 @@ import { Switch } from '@/components/ui/switch';
 import { Loader2, Landmark } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
 import { formatMoney } from '@/lib/utils';
-import { round8 } from '@/lib/money-engine';
+import { round8, getEnabledCurrencies } from '@/lib/money-engine';
+import { INFLOW_TYPES, OUTFLOW_TYPES } from '@/lib/shift-adopt';
 import { addActivityLog } from '@/lib/activity-log';
 import {
-  ensureGeneralDrawerCloud, countGeneralDrawerCloud, loadShiftExpectedFromMovements, addShiftTransactionCloud,
+  ensureGeneralDrawerCloud, countGeneralDrawerCloud, loadShiftExpectedFromMovements, addShiftTransactionCloud, loadShiftMovements,
 } from '@/lib/cloud/cashbox-cloud';
 import { ShiftDetailsDialog } from './ShiftDetailsDialog';
 
@@ -24,6 +25,9 @@ const newOpId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ?
 export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner: boolean; userId: string; userName: string; isEn: boolean }) {
   const [id, setId] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  // Balance per currency (units of each currency), from the drawer's movements; USD includes the starting balance.
+  const [byCurrency, setByCurrency] = useState<Record<string, number>>({});
+  const [counts, setCounts] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<'count' | 'deposit' | null>(null);
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
@@ -55,10 +59,48 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
     const gid = await ensureGeneralDrawerCloud();
     setId(gid);
     setBalance(gid ? await loadShiftExpectedFromMovements(gid, 0) : null);
+    if (gid) {
+      const rows = await loadShiftMovements(gid);
+      const map: Record<string, number> = {};
+      rows.forEach(r => {
+        const code = (r.currency || 'USD').toUpperCase();
+        const units = r.currency_amount ?? r.amount;
+        const sign = INFLOW_TYPES.includes(r.type) ? 1 : OUTFLOW_TYPES.includes(r.type) ? -1 : 0;
+        map[code] = round8((map[code] || 0) + sign * units);
+      });
+      setByCurrency(map);
+    }
   }, []);
   useEffect(() => { void reload(); }, [reload]);
 
   const submit = async () => {
+    if (mode === 'count') {
+      const list = countCurrencies
+        .filter(c => (counts[c.code] ?? '').trim() !== '')
+        .map(c => ({ code: c.code, counted: parseFloat(counts[c.code]), rate: c.code === 'USD' ? 1 : c.rate }));
+      if (!id || list.length === 0 || list.some(c => !Number.isFinite(c.counted) || c.counted < 0)) {
+        toast.error(isEn ? 'Enter the counted amount' : 'أدخل المبلغ المعدود');
+        return;
+      }
+      setBusy(true);
+      try {
+        const res = await countGeneralDrawerCloud(list, isEn ? `Counted by ${userName}` : `عدّه ${userName}`, opRef.current);
+        const diffs = res.filter(r => r.difference !== 0);
+        addActivityLog('shift_closed', userId, userName, `${isEn ? 'General drawer count' : 'عدّ الصندوق العام'}: ${res.map(r => `${r.counted} ${r.code} (${r.difference >= 0 ? '+' : ''}${r.difference})`).join('، ')}`);
+        toast.success(diffs.length === 0 ? (isEn ? 'Matched' : 'الصندوق مطابق')
+          : diffs.map(r => `${r.difference > 0 ? (isEn ? 'Surplus' : 'فائض') : (isEn ? 'Shortage' : 'عجز')} ${Math.abs(r.difference)} ${r.code}`).join('، '));
+        opRef.current = newOpId();
+        setMode(null);
+        setCounts({});
+        await reload();
+      } catch (err) {
+        console.error('[GeneralDrawerCard] count failed:', err);
+        toast.error(err instanceof Error ? err.message : (isEn ? 'Failed' : 'تعذّرت العملية'));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     const v = parseFloat(amount);
     if (!id || !Number.isFinite(v) || v < 0 || (mode === 'deposit' && v <= 0)) {
       toast.error(isEn ? 'Enter a valid amount' : 'أدخل مبلغاً صحيحاً');
@@ -66,13 +108,7 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
     }
     setBusy(true);
     try {
-      if (mode === 'count') {
-        const r = await countGeneralDrawerCloud(round8(v), isEn ? `Counted by ${userName}` : `عدّه ${userName}`, opRef.current);
-        addActivityLog('shift_closed', userId, userName, `${isEn ? 'General drawer count' : 'عدّ الصندوق العام'}: ${formatMoney(v, 'USD')} (${r.difference >= 0 ? '+' : ''}${formatMoney(r.difference, 'USD')})`);
-        toast.success(r.difference === 0
-          ? (isEn ? 'Matched' : 'الصندوق مطابق')
-          : `${r.difference > 0 ? (isEn ? 'Surplus' : 'فائض') : (isEn ? 'Shortage' : 'عجز')} ${formatMoney(Math.abs(r.difference), 'USD')}`);
-      } else {
+      {
         const ok = await addShiftTransactionCloud({ shiftId: id, type: 'deposit_capital', amount: round8(v), notes: isEn ? 'Cash added to the general drawer' : 'إيداع في الصندوق العام' });
         if (!ok) throw new Error(isEn ? 'Could not record the deposit' : 'تعذّر تسجيل الإيداع');
         addActivityLog('shift_opened', userId, userName, `${isEn ? 'General drawer deposit' : 'إيداع في الصندوق العام'}: ${formatMoney(v, 'USD')}`);
@@ -89,6 +125,11 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
       setBusy(false);
     }
   };
+
+  // Currencies to count: USD, the enabled ones, and any currency already in the drawer.
+  const enabled = getEnabledCurrencies();
+  const countCurrencies = Array.from(new Set(['USD', ...enabled.map(c => c.code.toUpperCase()), ...Object.keys(byCurrency)]))
+    .map(code => ({ code, rate: code === 'USD' ? 1 : (enabled.find(c => c.code.toUpperCase() === code)?.rate || 0) }));
 
   if (!id) return null;
 
@@ -109,6 +150,9 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
           <div dir="ltr" className={balance !== null && balance < 0 ? 'text-lg font-black tabular-nums text-destructive' : 'text-lg font-black tabular-nums'}>
             {balance === null ? '—' : formatMoney(balance, 'USD')}
           </div>
+          {Object.entries(byCurrency).filter(([code, v]) => code !== 'USD' && v !== 0).map(([code, v]) => (
+            <div key={code} dir="ltr" className="text-xs tabular-nums text-muted-foreground">{v} {code}</div>
+          ))}
         </div>
       </CardHeader>
       {isOwner && (
@@ -127,7 +171,7 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
       <CardContent className="flex flex-wrap gap-2 pt-4">
         <Button size="sm" variant="outline" onClick={() => setShowDetails(true)}>{isEn ? 'Details' : 'التفاصيل'}</Button>
         {isOwner && <Button size="sm" variant="outline" onClick={() => { setMode('deposit'); setAmount(''); }}>{isEn ? 'Add cash' : 'إيداع'}</Button>}
-        {isOwner && <Button size="sm" onClick={() => { setMode('count'); setAmount(''); opRef.current = newOpId(); }}>{isEn ? 'Count the drawer' : 'عدّ الصندوق'}</Button>}
+        {isOwner && <Button size="sm" onClick={() => { setMode('count'); setCounts({}); opRef.current = newOpId(); }}>{isEn ? 'Count the drawer' : 'عدّ الصندوق'}</Button>}
       </CardContent>
 
       <Dialog open={mode !== null} onOpenChange={(o) => { if (!o) setMode(null); }}>
@@ -136,15 +180,23 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
             <DialogTitle>{mode === 'count' ? (isEn ? 'Count the general drawer' : 'عدّ الصندوق العام') : (isEn ? 'Add cash to the general drawer' : 'إيداع في الصندوق العام')}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-3">
-            {mode === 'count' && balance !== null && (
-              <div className="text-sm">{isEn ? 'Expected' : 'المتوقع'}: <b dir="ltr">{formatMoney(balance, 'USD')}</b></div>
+            {mode === 'count' ? countCurrencies.map(c => (
+              <div key={c.code} className="space-y-1">
+                <Label className="flex justify-between gap-2">
+                  <span>{isEn ? 'Counted' : 'المعدود'} {c.code}</span>
+                  <span dir="ltr" className="text-xs text-muted-foreground tabular-nums">{isEn ? 'expected' : 'المتوقع'} {c.code === 'USD' ? (byCurrency.USD ?? 0) : (byCurrency[c.code] ?? 0)}</span>
+                </Label>
+                <Input type="number" inputMode="decimal" min="0" value={counts[c.code] ?? ''} disabled={c.code !== 'USD' && !c.rate}
+                  onChange={e => setCounts(prev => ({ ...prev, [c.code]: e.target.value }))} />
+              </div>
+            )) : (
+              <div className="space-y-1">
+                <Label>{isEn ? 'Amount (USD)' : 'المبلغ (دولار)'}</Label>
+                <Input type="number" inputMode="decimal" min="0" value={amount} onChange={e => setAmount(e.target.value)} />
+              </div>
             )}
-            <div className="space-y-1">
-              <Label>{mode === 'count' ? (isEn ? 'Counted cash (USD value)' : 'النقد المعدود (بقيمة الدولار)') : (isEn ? 'Amount (USD)' : 'المبلغ (دولار)')}</Label>
-              <Input type="number" inputMode="decimal" min="0" value={amount} onChange={e => setAmount(e.target.value)} />
-            </div>
             {mode === 'count' && (
-              <p className="text-xs text-muted-foreground">{isEn ? 'Optional. The difference is recorded as surplus or shortage; the drawer stays open.' : 'اختياري. الفرق يُسجَّل فائضاً أو عجزاً، والصندوق يبقى مفتوحاً.'}</p>
+              <p className="text-xs text-muted-foreground">{isEn ? 'Optional. Leave a currency empty to skip it. Each difference is recorded as surplus or shortage in its currency; the drawer stays open.' : 'اختياري. اترك العملة فارغة لتخطّيها. كل فرق يُسجَّل فائضاً أو عجزاً بعملته، والصندوق يبقى مفتوحاً.'}</p>
             )}
           </DialogBody>
           <DialogFooter>

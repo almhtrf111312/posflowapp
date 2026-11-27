@@ -75,6 +75,7 @@ export default function CashShifts() {
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [detailsShift, setDetailsShift] = useState<Shift | null>(null);
+  const detailsShiftInput = useMemo(() => (detailsShift ? { ...detailsShift, cashierId: detailsShift.userId || undefined } : null), [detailsShift]);
   const [openShift, setOpenShift] = useState<Shift | null>(null);
   const [showFx, setShowFx] = useState(false);
   const [supplierMoney, setSupplierMoney] = useState<ShiftSupplierMoney | null>(null);
@@ -681,7 +682,7 @@ export default function CashShifts() {
         </CardContent>
       </Card>
 
-      <ShiftDetailsDialog shift={detailsShift} isEn={isEn} onClose={() => setDetailsShift(null)} />
+      <ShiftDetailsDialog shift={detailsShiftInput} isEn={isEn} onClose={() => setDetailsShift(null)} />
 
       {/* Start Shift Dialog */}
       <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
@@ -793,6 +794,11 @@ export default function CashShifts() {
           </DialogHeader>
 
           <DialogBody className="space-y-4">
+            {openShift && (
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setDetailsShift(openShift)}>
+                {isEn ? 'Shift details (sales, debts, expenses…)' : 'تفاصيل الوردية (المبيعات، الديون، المصاريف…)'}
+              </Button>
+            )}
             {/* Quick Fill Button */}
             <div className="flex items-center justify-between gap-2 bg-muted/40 p-2.5 rounded-lg border">
               <span className="text-xs text-muted-foreground">{isEn ? "Quickly fill actual amounts matching expected totals:" : "لإدخال المبالغ الفعلية المطابقة للحساب فوراً:"}</span>

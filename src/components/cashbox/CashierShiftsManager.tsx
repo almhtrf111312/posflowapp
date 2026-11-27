@@ -1,7 +1,8 @@
 // Owner view: every cashier's open shift, with remote close (counted cash + decision) and "open a shift for a cashier".
 // Closing and opening go through the same server RPCs as the cashier's own device (close_cash_shift_atomic /
 // open_cash_shift_atomic); the cashier's device then adopts or closes its local copy on its next sync.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ShiftDetailsDialog } from './ShiftDetailsDialog';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,11 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
   const [openFor, setOpenFor] = useState('');
   const [openAmount, setOpenAmount] = useState('');
   const [busy, setBusy] = useState(false);
+  const [detailsRow, setDetailsRow] = useState<OpenRow | null>(null);
+  const detailsInput = useMemo(() => (detailsRow ? {
+    id: detailsRow.id, userName: detailsRow.cashier_name || (isEn ? 'Cashier' : 'كاشير'), openedAt: detailsRow.opened_at,
+    openingCash: Number(detailsRow.opening_balance) || 0, status: 'open' as const, cashierId: detailsRow.cashier_id || undefined,
+  } : null), [detailsRow, isEn]);
 
   const reload = useCallback(async () => {
     const [shifts, list] = await Promise.all([loadStoreOpenShifts(), loadStoreCashiers(ownerId)]);
@@ -153,10 +159,13 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
                 {isEn ? 'Expected' : 'المتوقع'}: <span className="font-bold">{formatMoney(r.expected ?? (Number(r.expected_balance) || 0), 'USD')}</span>
               </div>
             </div>
+            <div className="flex shrink-0 gap-1.5">
+            <Button size="sm" variant="outline" onClick={() => setDetailsRow(r)}>{isEn ? 'Details' : 'التفاصيل'}</Button>
             <Button size="sm" variant="destructive" onClick={() => { setClosing(r); setCounted(''); setDecision('accept'); }}>
               <StopCircle className="h-4 w-4 shrink-0" />
               {isEn ? 'Close' : 'إغلاق'}
             </Button>
+            </div>
           </div>
         ))}
       </CardContent>
@@ -167,7 +176,10 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
             <DialogTitle>{isEn ? 'Close cashier shift' : 'إغلاق وردية الكاشير'} — {closing?.cashier_name}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-3">
-            <div className="text-sm">{isEn ? 'Expected in the drawer' : 'المتوقع في الدرج'}: <b>{formatMoney(closingExpected, 'USD')}</b></div>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span>{isEn ? 'Expected in the drawer' : 'المتوقع في الدرج'}: <b>{formatMoney(closingExpected, 'USD')}</b></span>
+              <Button size="sm" variant="ghost" onClick={() => closing && setDetailsRow(closing)}>{isEn ? 'Details' : 'التفاصيل'}</Button>
+            </div>
             <div className="space-y-1">
               <Label>{isEn ? 'Counted cash (USD)' : 'النقد المعدود (دولار)'}</Label>
               <Input type="number" inputMode="decimal" min="0" value={counted} onChange={e => setCounted(e.target.value)} />
@@ -229,6 +241,7 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ShiftDetailsDialog shift={detailsInput} isEn={isEn} onClose={() => setDetailsRow(null)} />
     </Card>
   );
 }

@@ -45,6 +45,9 @@ export interface BackupSettingsSectionProps {
   handleRestoreBackup: (backup: BackupItem) => void;
   handleDeleteBackup: (backup: BackupItem) => void;
   importInputRef: React.RefObject<HTMLInputElement | null>;
+  /** Backup files found on the device (native only). */
+  deviceBackups?: Array<{ name: string; uri: string; size: number; ctime: number }>;
+  onRestoreDeviceBackup?: (b: { name: string; uri: string; size: number; ctime: number }) => void;
 }
 
 export function BackupSettingsSection({
@@ -62,6 +65,8 @@ export function BackupSettingsSection({
   handleRestoreBackup,
   handleDeleteBackup,
   importInputRef,
+  deviceBackups = [],
+  onRestoreDeviceBackup,
 }: BackupSettingsSectionProps) {
   const { t } = useLanguage();
 
@@ -78,7 +83,7 @@ export function BackupSettingsSection({
                 <span>{t('settings.downloadBackup')}</span>
               </Button>
               <div className="w-full">
-                <input type="file" accept=".posflowbak,.json,application/json,text/plain" onChange={handleImportBackup} className="hidden" id="import-backup" ref={importInputRef} />
+                <input type="file" accept=".posflowbak,.json,application/json,text/plain,application/octet-stream,*/*" onChange={handleImportBackup} className="hidden" id="import-backup" ref={importInputRef} />
                 <label htmlFor="import-backup" className="w-full block">
                   <Button variant="outline" size="sm" className="w-full" asChild disabled={isImporting}>
                     <span className="cursor-pointer">
@@ -89,6 +94,21 @@ export function BackupSettingsSection({
                 </label>
               </div>
             </div>
+            {/* Backups saved on this device: restore directly, no file picker */}
+            {onRestoreDeviceBackup && deviceBackups.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-muted-foreground">النسخ المحفوظة على الجهاز (Documents/PosFlow App)</p>
+                {deviceBackups.slice(0, 10).map(b => (
+                  <div key={b.uri} className="flex items-center justify-between gap-2 rounded-lg border border-border p-2">
+                    <div className="min-w-0">
+                      <div className="text-xs truncate" dir="ltr">{b.name}</div>
+                      <div className="text-[10px] text-muted-foreground" dir="ltr">{(b.size / 1024 / 1024).toFixed(2)} MB{b.ctime ? ` · ${new Date(b.ctime).toLocaleString()}` : ''}</div>
+                    </div>
+                    <Button variant="outline" size="sm" disabled={isImporting} onClick={() => onRestoreDeviceBackup(b)}>استعادة</Button>
+                  </div>
+                ))}
+              </div>
+            )}
             {/* Last backup result */}
             {lastBackupResult?.success && (
               <div className="p-2 bg-muted/50 rounded-lg border border-border text-xs flex items-center gap-2">

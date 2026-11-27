@@ -69,6 +69,9 @@ export const downloadFile = async (options: DownloadOptions): Promise<DownloadRe
 /**
  * Save file on native platform - tries Downloads first, then fallbacks
  */
+/** Folder under Documents that holds manual backups and exports (owner's name: "PosFlow App"). */
+export const NATIVE_BACKUP_DIR = 'PosFlow App';
+
 const saveFileNative = async (
   filename: string,
   content: string,
@@ -79,16 +82,21 @@ const saveFileNative = async (
 
     // 1. Try Documents directory first
     try {
-      const result = await (await import('@capacitor/filesystem')).Filesystem.writeFile({
-        path: `PosFlow/${filename}`,
+      const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+      // recursive: the folder is created again if the user deleted it.
+      const result = await Filesystem.writeFile({
+        path: `${NATIVE_BACKUP_DIR}/${filename}`,
         data: content,
-        directory: (await import('@capacitor/filesystem')).Directory.Documents,
-        encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8,
         recursive: true,
       });
+      // Do not report success unless the file is really there with content.
+      const st = await Filesystem.stat({ path: `${NATIVE_BACKUP_DIR}/${filename}`, directory: Directory.Documents });
+      if (!st || !(Number(st.size) > 0)) throw new Error('Backup file missing after write');
 
-      console.log('[FileDownload] Saved to Documents/PosFlow:', result.uri);
-      return { success: true, path: 'Documents/PosFlow', filename };
+      console.log('[FileDownload] Saved to Documents/' + NATIVE_BACKUP_DIR + ':', result.uri);
+      return { success: true, path: `Documents/${NATIVE_BACKUP_DIR}`, filename };
     } catch (documentsError) {
       console.warn('[FileDownload] Documents save failed, trying Downloads:', documentsError);
     }
@@ -224,26 +232,26 @@ export interface NativeBackupFile {
 
 export const listNativeBackups = async (): Promise<NativeBackupFile[]> => {
   if (!isNativePlatform()) return [];
-
-  try {
-    const result = await (await import('@capacitor/filesystem')).Filesystem.readdir({
-      path: 'PosFlow',
-      directory: (await import('@capacitor/filesystem')).Directory.Documents,
-    });
-
-    const backups: NativeBackupFile[] = result.files
-      .filter(f => f.name.endsWith('.json') && f.type === 'file')
-      .map(f => ({
-        name: f.name,
-        uri: f.uri || '',
-        size: f.size || 0,
-        ctime: f.ctime || 0,
-      }))
-      .sort((a, b) => b.ctime - a.ctime);
-
-    return backups;
-  } catch (error) {
-    console.log('[FileDownload] Cannot read PosFlow directory:', error);
-    return [];
+  const { Filesystem, Directory } = await import('@capacitor/filesystem');
+  const all: NativeBackupFile[] = [];
+  // Current folder first, then the old "PosFlow" folder so earlier backups stay restorable.
+  for (const dir of [NATIVE_BACKUP_DIR, 'PosFlow']) {
+    try {
+      const result = await Filesystem.readdir({ path: dir, directory: Directory.Documents });
+      result.files
+        .filter(f => f.type === 'file' && /\.(posflowbak|json)$/i.test(f.name) && /backup/i.test(f.name))
+        .forEach(f => all.push({ name: f.name, uri: `${dir}/${f.name}`, size: f.size || 0, ctime: f.ctime || f.mtime || 0 }));
+    } catch (error) {
+      console.log('[FileDownload] Cannot read Documents/' + dir + ':', error);
+    }
   }
+  return all.sort((a, b) => b.ctime - a.ctime);
+};
+
+/** Reads a backup listed by listNativeBackups (its `uri` is the path under Documents) as a File for the normal import. */
+export const readNativeBackupFile = async (backup: NativeBackupFile): Promise<File> => {
+  const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+  const res = await Filesystem.readFile({ path: backup.uri, directory: Directory.Documents, encoding: Encoding.UTF8 });
+  const text = typeof res.data === 'string' ? res.data : await (res.data as Blob).text();
+  return new File([text], backup.name, { type: 'application/json' });
 };

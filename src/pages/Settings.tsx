@@ -1559,6 +1559,7 @@ export default function Settings() {
         type: 'manual',
       };
       setBackups([newBackup, ...backups]);
+      void refreshDeviceBackups();
 
       if (result.success) {
         setLastBackupResult({ ...result, filename });
@@ -1583,6 +1584,26 @@ export default function Settings() {
   const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    await importBackupFile(file);
+  };
+
+  // Backups found in Documents/PosFlow App (and the old PosFlow folder): restore without the system file picker.
+  const [deviceBackups, setDeviceBackups] = useState<NativeBackupFile[]>([]);
+  const refreshDeviceBackups = useCallback(async () => {
+    setDeviceBackups(await listNativeBackups().catch(() => []));
+  }, []);
+  useEffect(() => { void refreshDeviceBackups(); }, [refreshDeviceBackups]);
+  const handleRestoreDeviceBackup = async (b: NativeBackupFile) => {
+    try {
+      const { readNativeBackupFile } = await import('@/lib/file-download');
+      await importBackupFile(await readNativeBackupFile(b));
+    } catch (error) {
+      console.error('Device backup read error:', error);
+      toast({ title: t('common.error'), description: t('settings.invalidBackupFile'), variant: 'destructive' });
+    }
+  };
+
+  const importBackupFile = async (file: File) => {
     setIsImporting(true);
     try {
       const { decodeBackupFile, parseBackup } = await import('@/lib/full-backup');
@@ -2171,6 +2192,8 @@ export default function Settings() {
               handleBackupNow={handleBackupNow}
               isBackingUp={isBackingUp}
               handleImportBackup={handleImportBackup}
+              deviceBackups={deviceBackups}
+              onRestoreDeviceBackup={handleRestoreDeviceBackup}
               isImporting={isImporting}
               lastBackupResult={lastBackupResult}
               backupSettings={backupSettings}

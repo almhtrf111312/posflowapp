@@ -5,14 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Truck } from 'lucide-react';
+import { Loader2, ArrowLeft, Truck, Plus } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
 import { getActiveShift, addWithdrawalFromShift, addDepositToShift } from '@/lib/cashbox-store';
 import { extractErrorMessage } from '@/lib/sync-queue';
 import { formatMoney } from '@/lib/utils';
 import { getEnabledCurrencies, toUsd, round8 } from '@/lib/money-engine';
 import {
-  loadSuppliersCloud, loadSupplierLedgerCloud, paySupplierCloud, refundFromSupplierCloud,
+  loadSuppliersCloud, createSupplierCloud, loadSupplierLedgerCloud, paySupplierCloud, refundFromSupplierCloud,
   SupplierBalance, SupplierLedgerRow, SupplierMoneySource,
 } from '@/lib/cloud/suppliers-cloud';
 
@@ -31,6 +31,10 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const [source, setSource] = useState<SupplierMoneySource>('external');
   const [busy, setBusy] = useState(false);
   const [ccy, setCcy] = useState('USD');
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newCompany, setNewCompany] = useState('');
+  const [newPhone, setNewPhone] = useState('');
   const currencies = getEnabledCurrencies();
 
   const refresh = useCallback(async (keepId?: string) => {
@@ -47,6 +51,27 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
   useEffect(() => { if (open) { setMode(null); void refreshRef.current(); } }, [open]);
+
+  const addSupplier = async () => {
+    const name = newName.trim();
+    if (!name) { toast.error('أدخل اسم المورد'); return; }
+    if (suppliers.some(x => x.name.trim().toLowerCase() === name.toLowerCase())) {
+      toast.error('يوجد مورد بهذا الاسم بالفعل');
+      return;
+    }
+    setBusy(true);
+    try {
+      await createSupplierCloud({ name, company: newCompany, phone: newPhone });
+      toast.success('تمت إضافة المورد');
+      setAdding(false); setNewName(''); setNewCompany(''); setNewPhone('');
+      await refresh();
+    } catch (err) {
+      console.error('[SuppliersDialog] create supplier failed:', err);
+      toast.error(extractErrorMessage(err) || 'تعذّرت إضافة المورد (يتطلب اتصالاً بالإنترنت)');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const pick = async (s: SupplierBalance) => {
     setSelected(s); setMode(null);
@@ -103,10 +128,27 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
           {!selected && !loading && (
             <div className="space-y-2">
+              {adding ? (
+                <div className="space-y-2 rounded-xl border border-border p-3">
+                  <div className="space-y-1"><Label>اسم المورد *</Label><Input value={newName} onChange={e => setNewName(e.target.value)} /></div>
+                  <div className="space-y-1"><Label>الشركة</Label><Input value={newCompany} onChange={e => setNewCompany(e.target.value)} /></div>
+                  <div className="space-y-1"><Label>الهاتف</Label><Input dir="ltr" inputMode="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} /></div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" disabled={busy} onClick={() => setAdding(false)}>إلغاء</Button>
+                    <Button className="flex-1" disabled={busy} onClick={addSupplier}>
+                      {busy && <Loader2 className="w-4 h-4 animate-spin" />}حفظ المورد
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
+                  <Plus className="w-4 h-4 shrink-0" />إضافة مورد
+                </Button>
+              )}
               {suppliers.length === 0 && (
                 <div className="flex flex-col items-center justify-center text-center py-10 px-4 rounded-2xl border border-dashed border-border/70 bg-muted/20">
                   <Truck className="w-12 h-12 text-muted-foreground/50 mb-3" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">لا يوجد موردون بعد — يُنشأ المورد من نافذة فاتورة الشراء.</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">لا يوجد موردون بعد — أضف مورداً بالزر أعلاه أو من نافذة فاتورة الشراء.</p>
                 </div>
               )}
               {suppliers.map(s => (

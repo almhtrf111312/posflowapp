@@ -118,6 +118,20 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showAddDebtDialog, setShowAddDebtDialog] = useState(false);
+  // Existing customers for the manual-debt form: suggest from the first letter so the same customer is not added twice.
+  const [debtCustomers, setDebtCustomers] = useState<Array<{ name: string; phone: string }>>([]);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  useEffect(() => {
+    if (!showAddDebtDialog) return;
+    let alive = true;
+    void import('@/lib/cloud/customers-cloud').then(async ({ loadCustomersLocally, loadCustomersCloud }) => {
+      const local = loadCustomersLocally();
+      if (alive && local) setDebtCustomers(local.map(c => ({ name: c.name, phone: c.phone || '' })));
+      const cloud = await loadCustomersCloud().catch(() => null);
+      if (alive && cloud) setDebtCustomers(cloud.map(c => ({ name: c.name, phone: c.phone || '' })));
+    });
+    return () => { alive = false; };
+  }, [showAddDebtDialog]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   // شطب الدين كدين معدوم: لمالك المتجر فقط (والخادم يتحقق أيضاً)
   const [showWriteoffDialog, setShowWriteoffDialog] = useState(false);
@@ -558,6 +572,16 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       return;
     }
 
+    // Same name, different phone: probably the same customer typed again. Ask before creating a second one.
+    const typedName = newDebtForm.customerName.trim().toLowerCase();
+    const sameName = debtCustomers.find(c => c.name.trim().toLowerCase() === typedName);
+    if (sameName && sameName.phone && sameName.phone !== newDebtForm.customerPhone.trim()) {
+      const ok = window.confirm(isEn
+        ? `A customer named "${sameName.name}" already exists with phone ${sameName.phone}. Create a new customer anyway?`
+        : `يوجد عميل باسم «${sameName.name}» برقم ${sameName.phone}. هل تريد إنشاء عميل جديد بنفس الاسم؟ (اضغط إلغاء ثم اختره من الاقتراحات)`);
+      if (!ok) return;
+    }
+
     isSavingRef.current = true;
 
     try {
@@ -884,9 +908,32 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
                 <Input
                   placeholder={t('debts.customerName')}
                   value={newDebtForm.customerName}
-                  onChange={(e) => setNewDebtForm({ ...newDebtForm, customerName: e.target.value })}
+                  onChange={(e) => { setNewDebtForm({ ...newDebtForm, customerName: e.target.value }); setShowCustomerSuggestions(true); }}
+                  onFocus={() => setShowCustomerSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 150)}
                   className="ps-9"
+                  autoComplete="off"
                 />
+                {showCustomerSuggestions && newDebtForm.customerName.trim() !== '' && (() => {
+                  const q = newDebtForm.customerName.trim().toLowerCase();
+                  const matches = debtCustomers.filter(c => c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))).slice(0, 6);
+                  if (matches.length === 0) return null;
+                  return (
+                    <div className="absolute z-50 mt-1 w-full rounded-xl border bg-popover shadow-md max-h-56 overflow-y-auto">
+                      {matches.map((c, i) => (
+                        <button
+                          key={`${c.name}-${c.phone}-${i}`}
+                          type="button"
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted text-start"
+                          onMouseDown={(e) => { e.preventDefault(); setNewDebtForm({ ...newDebtForm, customerName: c.name, customerPhone: c.phone }); setShowCustomerSuggestions(false); }}
+                        >
+                          <span className="truncate font-medium">{c.name}</span>
+                          <span className="font-mono text-xs text-muted-foreground" dir="ltr">{c.phone}</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             <div className="space-y-1.5">

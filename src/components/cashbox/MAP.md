@@ -9,4 +9,4 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 |---|---|---|---|
 | `CashierShiftsManager.tsx` | Owner card: cashiers' open shifts, close one remotely (count + accept/defer) or open one for a cashier | CashierShiftsManager | lib/activity-log, lib/cloud/cashbox-cloud, lib/money-engine, lib/sonner-bridge, ui/* |
 | `ShiftDetailsDialog.tsx` | Shift details: totals per movement kind and the full drawer movement list of one shift (read-only, from cloud movements) | ShiftDetailsDialog · 1 types | lib/cloud/cashbox-cloud, lib/money-engine, lib/shift-adopt, ui/* |
-| `ShiftFxDialog.tsx` | ⚠ NO DESCRIPTION | ShiftFxDialog | lib/cashbox-store, lib/cloud/cashbox-cloud, lib/money-engine, lib/sonner-bridge, lib/sync-queue, ui/* |
+| `ShiftFxDialog.tsx` | In-shift currency exchange dialog (cash out in one currency, in another) | ShiftFxDialog | lib/cashbox-store, lib/cloud/cashbox-cloud, lib/money-engine, lib/sonner-bridge, lib/sync-queue, ui/* |

@@ -3051,3 +3051,18 @@ html.dark.theme-soft {
 /* Horizontal chip rows that scroll without a visible scrollbar */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ───── قناع شريط الحالة: المحتوى لا يمرّ تحت الساعة والبطارية عند التمرير ─────
+   شريط حالة أندرويد شفاف (edge-to-edge)، فكان المحتوى المُمرَّر يظهر فوق أيقوناته (فيديو المالك 2026-11-27).
+   طبقة ثابتة بلون الخلفية بارتفاع الشريط تغطيه دائماً؛ على الويب ارتفاعها صفر فلا تأثير. */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--app-safe-top, 0px);
+  background: hsl(var(--background));
+  z-index: 2147483000;
+  pointer-events: none;
+}

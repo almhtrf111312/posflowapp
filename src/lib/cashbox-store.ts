@@ -2,8 +2,9 @@
 // عند تبديل الكاشير على نفس الجهاز — كل مستخدم لديه قسم عزل خاص به.
 // SECURITY FIX: الثابتة القديمة كانت posflow_cashbox_v1 / posflow_shifts_v1
 // ولم تتضمن userId مما يتسبب في مسح ورديات الكاشير الأول عند تسجيل دخول آخر.
-import { getCurrentUserId } from './supabase-store';
-import { buildAdoptedShift, expectedCashOfShift, type CloudShiftLike } from './shift-adopt';
+import { getCurrentUserId, getKnownTenantId } from './supabase-store';
+import { getCachedRole } from '@/hooks/user-role-context';
+import { buildAdoptedShift, expectedCashOfShift, decideCashDrawer, type CloudShiftLike } from './shift-adopt';
 import { emitEvent, EVENTS } from './events';
 import { addCurrency, subtractCurrency, round8, round8 as roundCurrency } from './utils';
 import { getEnabledCurrencies, roundForCurrency, fromUsd } from './money-engine';
@@ -176,6 +177,43 @@ export const getActiveShift = (): Shift | null => {
   const shifts = loadShifts();
   return shifts.find(s => s.status === 'open') || null;
 };
+
+// ── General store drawer (D-35) ──────────────────────────────────────────────────────────────────────────────
+// The store's permanent drawer on the server (cash_shifts.is_general). Cash operations made without an open shift
+// are posted to it, unless the owner requires a shift for this user (Settings → cashbox: cashiers by default, owner off).
+const GENERAL_DRAWER_KEY = 'posflow_general_drawer';
+
+export const getCachedGeneralDrawerId = (): string | null => {
+  try {
+    const v = JSON.parse(localStorage.getItem(GENERAL_DRAWER_KEY) || 'null') as { owner?: string; id?: string } | null;
+    const tenant = getKnownTenantId();
+    return v?.id && (!tenant || !v.owner || v.owner === tenant) ? v.id : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setCachedGeneralDrawerId = (owner: string | null, id: string): void => {
+  try { localStorage.setItem(GENERAL_DRAWER_KEY, JSON.stringify({ owner, id })); } catch { /* ignore */ }
+};
+
+const decideForCurrentUser = () => {
+  let sync: Record<string, unknown> = {};
+  try { sync = (JSON.parse(localStorage.getItem('posflow_settings_v1') || '{}')?.syncSettings || {}) as Record<string, unknown>; } catch { /* defaults */ }
+  const uid = getCurrentUserId();
+  return decideCashDrawer({
+    activeShiftId: getActiveShift()?.id,
+    generalDrawerId: getCachedGeneralDrawerId(),
+    role: uid ? getCachedRole(uid)?.role : undefined,
+    sync,
+  });
+};
+
+/** Owner setting (store sync settings): cashiers must open a shift (default yes); the owner must (default no). */
+export const isShiftRequiredForCurrentUser = (): boolean => decideForCurrentUser().shiftRequired;
+
+/** The drawer a cash operation goes to: the open shift, else the general drawer when a shift is not required (D-35). */
+export const getCashDrawerId = (): string | null => decideForCurrentUser().drawerId;
 
 // Helper to initialize multi-currency shift totals dynamically
 export const initShiftCurrencies = (

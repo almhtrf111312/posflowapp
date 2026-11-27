@@ -411,9 +411,9 @@ const assertFxConsistent = (amountUsd: number, originalAmount: number, rate: num
 
 const resolveActiveShiftIdForPartner = async (): Promise<string | null> => {
   try {
-    const { getActiveShift } = await import('../cashbox-store');
-    const activeShift = getActiveShift();
-    return activeShift?.id && activeShift.id.length >= 32 ? activeShift.id : null;
+    const { getCashDrawerId } = await import('../cashbox-store');
+    const drawerId = getCashDrawerId();
+    return drawerId && drawerId.length >= 32 ? drawerId : null;
   } catch {
     return null;
   }

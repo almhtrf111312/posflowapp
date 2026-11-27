@@ -312,8 +312,8 @@ export const addExpenseCloud = async (expenseData: {
   let resolvedShiftId: string | null = expenseData.shiftId ?? null;
   if (!resolvedShiftId && expenseData.paidFrom === 'drawer') {
     try {
-      const { getActiveShift } = await import('../cashbox-store');
-      resolvedShiftId = getActiveShift()?.id || null;
+      const { getCashDrawerId } = await import('../cashbox-store');
+      resolvedShiftId = getCashDrawerId();
     } catch { /* ignore */ }
   }
 

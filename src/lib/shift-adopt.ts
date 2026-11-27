@@ -118,3 +118,21 @@ export function decideLocalShiftSync(
   if (hasPendingSync || cloudExpected === null) return 'keep';
   return Math.abs(cloudExpected - localExpected) > 0.005 ? 'refresh' : 'keep';
 }
+
+/**
+ * D-35: which drawer a cash operation goes to. The open shift always wins; without one, the general store drawer is used
+ * unless the owner requires a shift for this user (cashiers: required unless turned off; owner: free unless turned on).
+ * An unknown role is treated as a cashier (the conservative choice). Null = no drawer (the caller refuses or warns).
+ */
+export function decideCashDrawer(input: {
+  activeShiftId: string | null | undefined;
+  generalDrawerId: string | null | undefined;
+  role: 'boss' | 'admin' | 'cashier' | null | undefined;
+  sync: { requireShiftCashier?: unknown; requireShiftOwner?: unknown } | null | undefined;
+}): { drawerId: string | null; shiftRequired: boolean } {
+  const sync = input.sync || {};
+  const isCashier = input.role === 'cashier' || !input.role;
+  const shiftRequired = isCashier ? sync.requireShiftCashier !== false : sync.requireShiftOwner === true;
+  if (input.activeShiftId) return { drawerId: input.activeShiftId, shiftRequired };
+  return { drawerId: shiftRequired ? null : (input.generalDrawerId || null), shiftRequired };
+}

@@ -457,8 +457,8 @@ export const recordPaymentCloud = async (
   const resolveCashShiftId = async (): Promise<string | null> => {
     if (method !== 'cash') return null; // التحويل البنكي لا يدخل الصندوق النقدي
     if (shiftId) return shiftId;
-    const { getActiveShift } = await import('../cashbox-store');
-    return getActiveShift()?.id || null;
+    const { getCashDrawerId } = await import('../cashbox-store');
+    return getCashDrawerId();
   };
 
   const cashShiftId = await resolveCashShiftId();
@@ -584,8 +584,8 @@ export const findInvoiceDebtOnServer = async (invoiceId: string): Promise<Invoic
 
 // The server locks the invoice and posts its exact outstanding cash balance once.
 export const settleDebtsByInvoiceIdCloud = async (invoiceId: string): Promise<number> => {
-  const { getActiveShift } = await import('../cashbox-store');
-  const shiftId = getActiveShift()?.id;
+  const { getCashDrawerId } = await import('../cashbox-store');
+  const shiftId = (getCashDrawerId() ?? undefined);
   if (!shiftId) throw new Error('قبض دفعة نقدية يتطلب وردية أصلية مفتوحة');
   const { data, error } = await sb.rpc('settle_invoice_debts_atomic', {
     _invoice_number: invoiceId,

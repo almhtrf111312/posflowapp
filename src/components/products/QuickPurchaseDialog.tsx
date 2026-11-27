@@ -36,7 +36,7 @@ import { useImageUpload } from '@/hooks/use-image-upload';
 import { BarcodeScanner } from '@/components/BarcodeScanner';
 import { NativeCameraPreview } from '@/components/camera/NativeCameraPreview';
 import { cn, formatNumber } from '@/lib/utils';
-import { getActiveShift } from '@/lib/cashbox-store';
+import { getActiveShift, getCashDrawerId } from '@/lib/cashbox-store';
 import { getCategoryNamesCloud, getCategoryNamesLocalFirst } from '@/lib/cloud/categories-cloud';
 import { loadSuppliersCloud } from '@/lib/cloud/suppliers-cloud';
 
@@ -289,7 +289,7 @@ export function QuickPurchaseDialog({ open, onOpenChange, onSuccess }: QuickPurc
       return;
     }
 
-    const shiftId = paymentMethod === 'cash' && totalCost > 0 ? getActiveShift()?.id : undefined;
+    const shiftId = paymentMethod === 'cash' && totalCost > 0 ? (getCashDrawerId() ?? undefined) : undefined;
     if (paymentMethod === 'cash' && totalCost > 0 && !shiftId) {
       toast.error(language === 'en' ? 'Open a cash shift before recording a cash purchase' : 'افتح وردية قبل تسجيل شراء نقدي');
       return;

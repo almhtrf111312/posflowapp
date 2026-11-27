@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/lib/sonner-bridge';
-import { getActiveShift, addWithdrawalFromShift } from '@/lib/cashbox-store';
+import { getActiveShift, addWithdrawalFromShift, getCashDrawerId } from '@/lib/cashbox-store';
 import { extractErrorMessage } from '@/lib/sync-queue';
 import { formatMoney } from '@/lib/utils';
 import { getEnabledCurrencies, toUsd, round8 } from '@/lib/money-engine';
@@ -131,8 +131,8 @@ export function CustomerCreditDialog({ customer, isOwner, onOpenChange }: {
                     {busy && <Loader2 className="w-4 h-4 animate-spin" />}
                     إصدار رصيد
                   </Button>
-                  <Button variant="outline" disabled={busy || !valid || sum.storeCredit <= 0 || !getActiveShift()}
-                    onClick={() => run(() => payoutStoreCredit(customer.id, usdVal, getActiveShift()!.id, opIdRef.current, payCcy, val,
+                  <Button variant="outline" disabled={busy || !valid || sum.storeCredit <= 0 || !getCashDrawerId()}
+                    onClick={() => run(() => payoutStoreCredit(customer.id, usdVal, getCashDrawerId()!, opIdRef.current, payCcy, val,
                       () => addWithdrawalFromShift(usdVal, payCcy, val)), 'تم صرف الرصيد نقداً')}>
                     {busy && <Loader2 className="w-4 h-4 animate-spin" />}
                     صرف نقدي من الصندوق

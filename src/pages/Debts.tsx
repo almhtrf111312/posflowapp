@@ -453,9 +453,8 @@ export default function Debts({ embedded, onAddDebt, onAddDebtChange }: DebtsPro
       }
 
 
-      const { getActiveShift } = await import('@/lib/cashbox-store');
-      const activeShift = getActiveShift();
-      const currentShiftId = activeShift?.id || undefined;
+      const { getCashDrawerId } = await import('@/lib/cashbox-store');
+      const currentShiftId = getCashDrawerId() || undefined;
 
       const updatedDebt = await recordPaymentWithInvoiceSyncCloud(
         selectedDebt.id,

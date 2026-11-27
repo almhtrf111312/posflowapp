@@ -29,7 +29,7 @@ import {
   Wallet,
   Trash2
 } from 'lucide-react';
-import { addWithdrawalFromShift, getActiveShift } from '@/lib/cashbox-store';
+import { addWithdrawalFromShift, getActiveShift, getCashDrawerId } from '@/lib/cashbox-store';
 import { loadSuppliersCloud, createSupplierCloud, SupplierBalance } from '@/lib/cloud/suppliers-cloud';
 import { addActivityLog } from '@/lib/activity-log';
 import { formatMoney } from '@/lib/utils';
@@ -79,7 +79,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
   const [supplierId, setSupplierId] = useState('');
   const [newSupplier, setNewSupplier] = useState(false);
   const [paidFrom, setPaidFrom] = useState<'drawer' | 'external'>('drawer');
-  const activeShift = getActiveShift();
+  const activeShift = getCashDrawerId();
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
@@ -96,7 +96,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
   useEffect(() => {
     if (open) {
       loadSuppliersCloud().then(setSuppliers).catch(() => {});
-      setPaidFrom(getActiveShift() ? 'drawer' : 'external');
+      setPaidFrom(getCashDrawerId() ? 'drawer' : 'external');
     }
   }, [open]);
 
@@ -449,7 +449,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         supplierId: currentInvoice.supplier_id || undefined,
         amountPaid: paymentMethod === 'cash' ? totalCost : 0,
         paidFrom: paymentMethod === 'cash' ? paidFrom : undefined,
-        paidShiftId: paymentMethod === 'cash' && paidFrom === 'drawer' ? getActiveShift()?.id : undefined,
+        paidShiftId: paymentMethod === 'cash' && paidFrom === 'drawer' ? (getCashDrawerId() ?? undefined) : undefined,
         invoiceDate: currentInvoice.invoice_date,
         notes: currentInvoice.notes || undefined,
         imageUrl: invoiceImageUrl || undefined,
@@ -479,7 +479,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
     try {
       // سجّل بيانات السداد على الفاتورة قبل الاعتماد (يُنشئ الخادم قيد المورد وحركة الصندوق ذرّياً)
       const payingCash = paymentMethod === 'cash' && totalCost > 0;
-      if (payingCash && paidFrom === 'drawer' && !getActiveShift()) {
+      if (payingCash && paidFrom === 'drawer' && !getCashDrawerId()) {
         setLoading(false);
         toast.error('لا توجد وردية مفتوحة للدفع من الصندوق، اختر «مصدر خارجي» أو افتح وردية');
         return;
@@ -489,7 +489,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         .update({
           amount_paid: payingCash ? totalCost : 0,
           paid_from: payingCash ? paidFrom : null,
-          paid_shift_id: payingCash && paidFrom === 'drawer' ? getActiveShift()?.id : null,
+          paid_shift_id: payingCash && paidFrom === 'drawer' ? (getCashDrawerId() ?? undefined) : null,
           payment_method: paymentMethod,
         } as never)
         .eq('id', currentInvoice.id);
@@ -533,7 +533,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
         supplierId: currentInvoice.supplier_id || undefined,
         amountPaid: paymentMethod === 'cash' ? totalCost : 0,
         paidFrom: paymentMethod === 'cash' ? paidFrom : undefined,
-        paidShiftId: paymentMethod === 'cash' && paidFrom === 'drawer' ? getActiveShift()?.id : undefined,
+        paidShiftId: paymentMethod === 'cash' && paidFrom === 'drawer' ? (getCashDrawerId() ?? undefined) : undefined,
         invoiceDate: currentInvoice.invoice_date,
         notes: currentInvoice.notes || undefined,
         imageUrl: invoiceImageUrl || undefined,

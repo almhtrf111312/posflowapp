@@ -18,6 +18,7 @@ import { EVENTS } from '@/lib/events';
 import { loadQueue } from '@/lib/sync-queue';
 import { decideLocalShiftSync, expectedCashOfShift } from '@/lib/shift-adopt';
 import { ShiftFxDialog } from '@/components/cashbox/ShiftFxDialog';
+import { GeneralDrawerCard } from '@/components/cashbox/GeneralDrawerCard';
 import { ShiftDetailsDialog } from '@/components/cashbox/ShiftDetailsDialog';
 import { CashierShiftsManager } from '@/components/cashbox/CashierShiftsManager';
 import { loadShiftSupplierMoney, ShiftSupplierMoney } from '@/lib/cloud/suppliers-cloud';
@@ -25,7 +26,7 @@ import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
 import { getCurrencyDisplayLabel } from '@/lib/currencies';
 import { getEnabledCurrencies, toUsd, fromUsd, round8, roundForCurrency } from '@/lib/money-engine';
-import { openShiftCloud, closeShiftCloud, loadCloudShifts, loadShiftExpectedFromMovements, loadShiftVarianceTolerance, loadDeferredShiftVariances, resolveShiftVarianceCloud, DeferredShiftVariance } from '@/lib/cloud/cashbox-cloud';
+import { openShiftCloud, closeShiftCloud, loadCloudShifts, loadShiftExpectedFromMovements, loadShiftVarianceTolerance, loadDeferredShiftVariances, resolveShiftVarianceCloud, DeferredShiftVariance, isGeneralDrawerRow } from '@/lib/cloud/cashbox-cloud';
 import { useUserRole } from '@/hooks/user-role-context';
 import { addActivityLog } from '@/lib/activity-log';
 import { Button } from '@/components/ui/button';
@@ -182,7 +183,7 @@ export default function CashShifts() {
           }
         }
         // وردية مفتوحة في السحابة وغير معروفة على هذا الجهاز: نعتمدها كوردية نشطة (مزامنة بين الأجهزة)
-        const cloudOpen = cloudShifts.find(cs => !cs.closed_at);
+        const cloudOpen = cloudShifts.find(cs => !cs.closed_at && !isGeneralDrawerRow(cs));
         if (cloudOpen && !getActiveShift()) {
           // الرصيد من حركات الوردية (F-18) وليس من الرصيد المخزّن الذي لا يشمل مبيعات الصندوق (KD-06)
           const fromMovements = await loadShiftExpectedFromMovements(cloudOpen.id, cloudOpen.opening_balance);
@@ -198,7 +199,7 @@ export default function CashShifts() {
         setShifts(prev => {
           const localIds = new Set(prev.map(s => s.id));
           const newFromCloud = cloudShifts
-            .filter(cs => !localIds.has(cs.id))
+            .filter(cs => !localIds.has(cs.id) && !isGeneralDrawerRow(cs))
             .map(cs => ({
               id: cs.id,
               openedAt: cs.opened_at,
@@ -313,7 +314,7 @@ export default function CashShifts() {
         // الخادم رفض: توجد وردية مفتوحة لهذا الكاشير. نلغي الوردية المحلية ونعتمد الوردية المفتوحة في السحابة
         saveShifts(loadShifts().filter(s => s.id !== newShift.id));
         const cloud = await loadCloudShifts();
-        const cloudOpen = cloud.find(cs => !cs.closed_at);
+        const cloudOpen = cloud.find(cs => !cs.closed_at && !isGeneralDrawerRow(cs));
         if (cloudOpen) adoptCloudOpenShift(cloudOpen, user?.id);
         toast.warning(isEn ? 'A shift is already open on the server; it was loaded on this device.' : 'توجد وردية مفتوحة مسبقاً على الخادم، تم تحميلها على هذا الجهاز.');
         loadData();
@@ -589,6 +590,8 @@ export default function CashShifts() {
           </CardContent>
         </Card>
       )}
+
+      {user?.id && <GeneralDrawerCard isOwner={isOwner} userId={user.id} userName={userName} isEn={isEn} />}
 
       {isOwner && user?.id && (
         <CashierShiftsManager ownerId={user.id} ownerName={userName} isEn={isEn} onChanged={() => { loadData(); loadDeferred(); }} />

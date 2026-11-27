@@ -61,7 +61,7 @@ import { isNativeAndroid } from '@/lib/printer/posflow-printer';
 import { getStoredPrinterConfig } from '@/lib/printer/printer-config';
 import { shareInvoice, InvoiceShareData } from '@/lib/native-share';
 import { playSaleComplete, playDebtRecorded } from '@/lib/sound-utils';
-import { addSalesToShift, addDigitalSaleToShift, getActiveShift } from '@/lib/cashbox-store';
+import { addSalesToShift, addDigitalSaleToShift, getActiveShift, getCashDrawerId, isShiftRequiredForCurrentUser } from '@/lib/cashbox-store';
 import { recordActivity } from '@/lib/auto-backup';
 import { useLanguage } from '@/hooks/language-context';
 import { getLocalizedUnit } from '@/lib/product-units';
@@ -690,6 +690,15 @@ export function CartPanel({
       } catch { /* the sale continues without a drawer, as before */ }
     }
 
+    // D-35: when the owner requires a shift for this user, a cash sale needs an open shift (otherwise it goes to the general drawer).
+    if (payMethod !== 'digital' && !getCashDrawerId() && isShiftRequiredForCurrentUser()) {
+      if (globalLock.lockId) releaseLock(globalLock.lockId);
+      savingRef.current = false;
+      setIsSaving(false);
+      showToast.error(isEn ? 'Open a shift before a cash sale' : 'يجب فتح وردية قبل البيع النقدي', { persistent: false });
+      return;
+    }
+
     // 🛡️ فحص سلامة أصناف السلة
     const validation = await validateCartProducts(cart);
     if (!validation.isValid) {
@@ -937,7 +946,7 @@ export function CartPanel({
 
       // 2. ✅ إضافة الفاتورة لطابور المزامنة sync-queue
       // audit F1 (2026-11-24): a cash sale carries its open shift; the server posts the invoice and the drawer movement together
-      const drawerShiftId = payMethod !== 'digital' ? (getActiveShift()?.id ?? null) : null;
+      const drawerShiftId = payMethod !== 'digital' ? getCashDrawerId() : null;
       addUniqueOperation('invoice_create', {
         operationId,
         bundle: {

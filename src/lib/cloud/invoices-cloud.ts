@@ -1098,8 +1098,8 @@ const refundInvoiceCloudImpl = async (
   if (!userId) return failedRefund('تعذّر تحديد المستخدم الحالي');
 
   const targetInvoice = (invoicesCache || loadInvoicesFromLocalCache() || []).find(inv => inv.id === id);
-  const { getActiveShift } = await import('../cashbox-store');
-  const activeShiftId = shiftId === undefined && source === 'online' ? getActiveShift()?.id ?? null : shiftId ?? null;
+  const { getCashDrawerId } = await import('../cashbox-store');
+  const activeShiftId = shiftId === undefined && source === 'online' ? getCashDrawerId() : shiftId ?? null;
   const { data, error } = await sb.rpc('refund_invoice_atomic', {
     _invoice_number: id,
     _source: source,
@@ -1231,8 +1231,8 @@ export const refundInvoicePartialCloud = async (
 
   const opId = operationId || (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `pr-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
 
-  const { getActiveShift } = await import('../cashbox-store');
-  const activeShiftId = shiftId === undefined ? getActiveShift()?.id ?? null : shiftId;
+  const { getCashDrawerId } = await import('../cashbox-store');
+  const activeShiftId = shiftId === undefined ? getCashDrawerId() : shiftId;
   const { data, error } = await sb.rpc('refund_invoice_partial_atomic', {
     _invoice_number: invoiceNumber,
     _items: items,

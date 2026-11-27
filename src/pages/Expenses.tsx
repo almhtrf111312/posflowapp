@@ -1,4 +1,4 @@
-import { getActiveShift } from '@/lib/cashbox-store';
+import { getActiveShift, getCashDrawerId } from '@/lib/cashbox-store';
 import { markExpensePaidFromDrawer, takeExpensePaidFromDrawer } from '@/lib/drawer-expense-marks';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -286,7 +286,7 @@ export default function Expenses() {
         : '';
       const finalNotes = formData.notes ? `${formData.notes}${noteSuffix}` : (noteSuffix.trim() || undefined);
 
-      const expenseShiftId = getActiveShift()?.id;
+      const expenseShiftId = (getCashDrawerId() ?? undefined);
       const created = await addExpenseCloud({
         shiftId: expenseShiftId,
         paidFrom: expenseShiftId ? 'drawer' : undefined,
@@ -365,7 +365,7 @@ export default function Expenses() {
 
       if (recurringForm.payImmediately) {
         const todayStr = toLocalDateString(new Date());
-        const expenseShiftId = getActiveShift()?.id;
+        const expenseShiftId = (getCashDrawerId() ?? undefined);
         const createdRecurringPayment = await addExpenseCloud({
           shiftId: expenseShiftId,
           paidFrom: expenseShiftId ? 'drawer' : undefined,
@@ -490,13 +490,13 @@ export default function Expenses() {
     const reversedId = expense.id;
 
     try {
-      const originalShiftId = getActiveShift()?.id ?? null;
+      const originalShiftId = getCashDrawerId();
       const result = await reverseExpenseWithResultCloud(reversedId, 'تراجع بواسطة المستخدم', originalShiftId);
       if (result.cashRefunded && result.shiftId && getActiveShift()?.id === result.shiftId
           && result.cashAmount !== undefined && result.cashCurrency) {
         takeExpensePaidFromDrawer(result.shiftId, reversedId);
         restoreExpenseCash(result.cashAmount, reversedType, reversedId, result.cashCurrency, result.cashCurrencyAmount);
-      } else if (result.queued && takeExpensePaidFromDrawer(getActiveShift()?.id, reversedId)) {
+      } else if (result.queued && takeExpensePaidFromDrawer((getCashDrawerId() ?? undefined), reversedId)) {
         // Offline: the server refunds the drawer when the queued reversal syncs; mirror it locally now, once.
         restoreExpenseCash(reversedAmount, reversedType, reversedId, expense.originalCurrency || 'USD', expense.originalAmount ?? reversedAmount);
       }

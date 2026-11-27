@@ -34,6 +34,7 @@ const REGISTERED = [
   { file: 'currency-guard.test.ts', kind: 'production', covers: 'money-engine: a new operation in a currency that is not set up is refused, never converted at rate 1 (F-05)' },
   { file: 'drawer-expense-marks.test.ts', kind: 'production', covers: 'drawer-expense-marks: an expense reversed offline gives its cash back to the local drawer exactly once (local = cloud)' },
   { file: 'store-credit-op.test.ts', kind: 'production', covers: 'store-credit-op: one operation id per action across retries and the offline queue; refusals are not queued (invariants 3-4)' },
+  { file: 'general-drawer.test.ts', kind: 'production', covers: 'D-35: a cash operation without a shift goes to the general drawer unless the owner requires a shift (cashiers by default)' },
   { file: 'cashbox-shift-adopt.test.ts', kind: 'production', covers: 'shift-adopt: a shift open in the cloud is adopted on another device; expected cash follows the server (F-18)' },
   { file: 'comprehensive-accounting-audit.test.ts', kind: 'model', covers: 'accounting spec model (self-contained; see KD-02)' },
 ];

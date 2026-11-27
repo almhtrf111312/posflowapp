@@ -177,7 +177,8 @@ export function CloudSyncProvider({ children }: CloudSyncProviderProps) {
   useEffect(() => {
     if (!isReady || !userId || isGuestDemoMode() || isAppOffline()) return;
     import('@/lib/cloud/cashbox-cloud')
-      .then(({ reconcileDrawerWithCloud }) => reconcileDrawerWithCloud(userId))
+      // D-35: the general store drawer id is fetched (created on first use) and cached for cash operations without a shift.
+      .then(async ({ reconcileDrawerWithCloud, ensureGeneralDrawerCloud }) => { await ensureGeneralDrawerCloud(); return reconcileDrawerWithCloud(userId); })
       .catch((e) => console.warn('[CloudSync] Drawer reconciliation skipped:', e));
   }, [isReady, userId]);
 

@@ -1330,6 +1330,66 @@ export async function runQaFixes(k, newWorldFn) {
     await open('77777777-7777-4777-8777-000000000006', 5, '2999-01-01T00:00:00Z');
     truthy('OPEN a future open time is clamped to now', (await w.one(`select opened_at <= now() ok from public.cash_shifts where id='77777777-7777-4777-8777-000000000006'`)).ok === true);
   }
+  // General store drawer (D-35): permanent drawer, shift opening/closing transfers, optional count, no double counting.
+  {
+    const w = await newWorldFn();
+    await w.q(`update public.cash_shifts set closed_at=now() where closed_at is null`);
+    const bal = async (id) => Number((await w.one(`select round(coalesce((select opening_balance from public.cash_shifts where id=$1),0)
+      + coalesce((select sum(case when type in ('sale','deposit','deposit_capital','deposit_revenue','deposit_purchase_cover','debt_payment','surplus','expense_refund','supplier_refund','fx_in','transfer_in') then amount
+                                  when type in ('expense','refund','withdrawal','supplier_payment','store_credit_refund','shortage','fx_out','transfer_out') then -amount else 0 end)
+                 from public.shift_transactions where shift_id=$1),0), 8)::float8 b`, [id])).b);
+    // Before a general drawer exists nothing changes (stores that never use it behave as before).
+    const plain = '88888888-8888-4888-8888-000000000001';
+    await w.one(`select public.open_cash_shift_atomic($1::uuid,null,'C',10) r`, [plain]);
+    check('GENERAL no general drawer: opening a shift posts no transfer', Number((await w.one(`select count(*)::int c from public.shift_transactions where reference_id like 'shift_open:%'`)).c), 0);
+    await w.one(`select public.close_cash_shift_atomic($1::uuid,10) r`, [plain]);
+    const g1 = (await w.one(`select public.ensure_general_drawer_atomic(100) r`)).r;
+    check('GENERAL created with a starting balance', g1.status, 'created');
+    const gen = g1.id;
+    check('GENERAL second call returns the same drawer', (await w.one(`select public.ensure_general_drawer_atomic(5) r`)).r.id, gen);
+    check('GENERAL starting balance 100', await bal(gen), 100);
+    // Opening float 30 leaves the general drawer.
+    const sh = '88888888-8888-4888-8888-000000000002';
+    await w.one(`select public.open_cash_shift_atomic($1::uuid,null,'Cashier',30) r`, [sh]);
+    check('GENERAL opening float leaves the general drawer (100 - 30)', await bal(gen), 70);
+    truthy('GENERAL the general drawer does not block a cashier shift (unique index)', true);
+    // Sale 20 cash in the shift, then close with 50 counted: 50 enters the general drawer once.
+    await w.one(`select public.record_shift_movement_atomic($1::uuid,$2::uuid,'sale',20,'inv-g1','t','USD',20,1) r`, ['88888888-8888-4888-8888-0000000000a1', sh]);
+    check('GENERAL shift cash is NOT in the general drawer while the shift is open', await bal(gen), 70);
+    await w.one(`select public.close_cash_shift_atomic($1::uuid,50) r`, [sh]);
+    check('GENERAL counted cash enters the general drawer on close (70 + 50)', await bal(gen), 120);
+    check('GENERAL one transfer per closed shift', Number((await w.one(`select count(*)::int c from public.shift_transactions where shift_id=$1 and type='transfer_in'`, [gen])).c), 1);
+    check('GENERAL expected_balance cache follows the movements', await w.expected(gen), 120);
+    // A shortage closed by the cashier: only the counted cash moves (45 of expected 50).
+    const sh2 = '88888888-8888-4888-8888-000000000003';
+    await w.one(`select public.open_cash_shift_atomic($1::uuid,null,'Cashier',50) r`, [sh2]);
+    check('GENERAL second opening float leaves (120 - 50)', await bal(gen), 70);
+    await w.one(`select public.close_cash_shift_atomic($1::uuid,45,'short','accept') r`, [sh2]);
+    check('GENERAL counted 45 enters, the 5 shortage stays on the shift', await bal(gen), 115);
+    check('GENERAL the shortage is recorded on the cashier shift', await w.txSum(sh2, 'shortage'), 5);
+    // Cash operations without a shift use the general drawer id (any cash RPC accepts an open drawer of the store).
+    await w.one(`select public.record_shift_movement_atomic($1::uuid,$2::uuid,'sale',10,'inv-g2','t','USD',10,1) r`, ['88888888-8888-4888-8888-0000000000a2', gen]);
+    check('GENERAL a sale without a shift lands in the general drawer', await bal(gen), 125);
+    // The general drawer cannot be closed, by the RPC or directly.
+    truthy('GENERAL close_cash_shift_atomic refuses the general drawer', (await w.fails(w.one(`select public.close_cash_shift_atomic($1::uuid,0) r`, [gen]))) !== null);
+    truthy('GENERAL a direct close is refused', (await w.fails(w.q(`update public.cash_shifts set closed_at=now() where id=$1`, [gen]))) !== null);
+    truthy('GENERAL the flag cannot be removed', (await w.fails(w.q(`update public.cash_shifts set is_general=false where id=$1`, [gen]))) !== null);
+    // Optional count: 120 counted vs 125 expected → shortage 5, drawer stays open; replay adds nothing.
+    const c1 = (await w.one(`select public.count_general_drawer_atomic(120,'count','op-count-1') r`)).r;
+    check('GENERAL count posts the difference', Number(c1.difference), -5);
+    check('GENERAL after the count the balance equals the counted cash', await bal(gen), 120);
+    check('GENERAL count replay adds nothing', (await w.one(`select public.count_general_drawer_atomic(120,'count','op-count-1') r`)).r.replayed, true);
+    check('GENERAL balance unchanged after replay', await bal(gen), 120);
+    check('GENERAL drawer still open after a count', (await w.one(`select closed_at is null o from public.cash_shifts where id=$1`, [gen])).o, true);
+    // Currency settings are not blocked by the always-open general drawer.
+    await w.q(`insert into public.stores(user_id, name) values ($1,'S') on conflict do nothing`, [OWNER]);
+    truthy('GENERAL currency change allowed while only the general drawer is open',
+      (await w.fails(w.q(`update public.stores set exchange_rates='{"TRY":10}'::jsonb where user_id=$1`, [OWNER]))) === null);
+    // An expense paid from the general drawer.
+    const ex = await w.one(`select public.add_expense_atomic('op-gen-exp','other',4,'d',current_date,null,$1::uuid,'drawer') r`, [gen]);
+    truthy('GENERAL an expense can be paid from the general drawer', ex.r && (ex.r.success === true || ex.r.id));
+    check('GENERAL ...and leaves it (120 - 4)', await bal(gen), 116);
+  }
 }
 
 

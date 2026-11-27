@@ -1,7 +1,7 @@
 import { emitEvent, EVENTS } from './events';
 import { addExpenseCloud, ExpenseType } from './cloud/expenses-cloud';
 import { processExpense } from './unified-transactions';
-import { getActiveShift } from './cashbox-store';
+import { getActiveShift, getCashDrawerId } from './cashbox-store';
 import { toLocalDateString } from './date-utils';
 import { getCurrencyDef, toUsd, round8 } from './money-engine';
 import {
@@ -186,7 +186,7 @@ export async function payRecurringExpense(id: string): Promise<boolean> {
 
     // 2. Add as regular cloud expense with currency breakdown
     // الصندوق: الخادم يسجل حركة المصروف ويحدّث الرصيد المتوقع ذرياً داخل add_expense_atomic عند تمرير الوردية
-    const expenseShiftId = getActiveShift()?.id;
+    const expenseShiftId = (getCashDrawerId() ?? undefined);
     const createdExpense = await addExpenseCloud({
       shiftId: expenseShiftId,
       paidFrom: expenseShiftId ? 'drawer' : undefined,

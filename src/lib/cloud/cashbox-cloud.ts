@@ -251,7 +251,8 @@ export const loadCloudShifts = async (limit = 50): Promise<CloudShift[]> => {
       .order('opened_at', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    return (data || []) as CloudShift[];
+    // Shift lists never include the permanent general drawer (D-35); it has its own card.
+    return ((data || []) as CloudShift[]).filter(s => !isGeneralDrawerRow(s));
   } catch {
     return [];
   }
@@ -323,12 +324,45 @@ export const saveShiftVarianceTolerance = async (valueUsd: number): Promise<bool
   return !error;
 };
 
+/** True for the store's permanent general drawer (cash_shifts.is_general, D-35). */
+export const isGeneralDrawerRow = (row: unknown): boolean => Boolean((row as { is_general?: boolean } | null)?.is_general);
+
+/**
+ * Returns the id of the store's general drawer, creating it on first use (D-35), and caches it for offline use.
+ * The starting balance applies only when it is created (owner only). Null when offline or on error.
+ */
+export const ensureGeneralDrawerCloud = async (openingBalance = 0): Promise<string | null> => {
+  try {
+    const { data, error } = await sb.rpc('ensure_general_drawer_atomic' as never, { _opening_balance: round8(openingBalance) } as never);
+    if (error) throw error;
+    const id = (data as { id?: string } | null)?.id;
+    if (!id) return null;
+    const { setCachedGeneralDrawerId } = await import('../cashbox-store');
+    setCachedGeneralDrawerId((await getOwnerIdForInsert()) || null, id);
+    return id;
+  } catch (e) {
+    console.warn('[cashbox-cloud] general drawer unavailable:', e);
+    return null;
+  }
+};
+
+/** Owner-only count of the general drawer; the difference is posted as surplus/shortage and the drawer stays open. */
+export const countGeneralDrawerCloud = async (countedUsd: number, note: string | null, operationId: string): Promise<{ difference: number; expected: number }> => {
+  const { data, error } = await sb.rpc('count_general_drawer_atomic' as never, {
+    _counted_usd: round8(countedUsd), _note: note, _operation_id: operationId,
+  } as never);
+  if (error) throw error;
+  const r = (data || {}) as { difference?: number | string; expected?: number | string };
+  return { difference: Number(r.difference) || 0, expected: Number(r.expected) || 0 };
+};
+
 /** Every open shift of the store (owner view: manage cashiers' drawers remotely). */
 export const loadStoreOpenShifts = async (): Promise<CloudShift[]> => {
   try {
     const { data, error } = await sb.from('cash_shifts').select('*').is('closed_at', null).order('opened_at', { ascending: false }).limit(50);
     if (error) throw error;
-    return (data || []) as CloudShift[];
+    // The general store drawer (D-35) is always open and is not a cashier's shift.
+    return ((data || []) as CloudShift[]).filter(s => !isGeneralDrawerRow(s));
   } catch {
     return [];
   }
@@ -410,8 +444,9 @@ export const reconcileDrawerWithCloud = async (userId: string | null | undefined
   // Query open shifts directly instead of filtering the last 20 shifts.
   // The cashier filter runs in the query, so other cashiers' open shifts can never push this one out of the result.
   const { data: openRows } = await sb.from('cash_shifts').select('*').is('closed_at', null)
-    .or(`cashier_id.is.null,cashier_id.eq.${userId}`).order('opened_at', { ascending: false }).limit(1);
-  const open = ((openRows || []) as CloudShift[])[0];
+    .or(`cashier_id.is.null,cashier_id.eq.${userId}`).order('opened_at', { ascending: false }).limit(5);
+  // Never adopt the general store drawer (D-35) as this device's shift.
+  const open = ((openRows || []) as CloudShift[]).filter(s => !isGeneralDrawerRow(s))[0];
   if (!open) return 'none';
   const fromMovements = await loadShiftExpectedFromMovements(open.id, open.opening_balance);
   const adopted = adoptCloudOpenShift(fromMovements === null ? open : { ...open, expected_balance: fromMovements }, userId);

@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, ArrowLeft, Truck, Plus } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
-import { getActiveShift, addWithdrawalFromShift, addDepositToShift } from '@/lib/cashbox-store';
+import { getActiveShift, addWithdrawalFromShift, addDepositToShift, getCashDrawerId } from '@/lib/cashbox-store';
 import { extractErrorMessage } from '@/lib/sync-queue';
 import { formatMoney } from '@/lib/utils';
 import { getEnabledCurrencies, toUsd, round8 } from '@/lib/money-engine';
@@ -84,19 +84,19 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
   const startMode = (m: 'pay' | 'refund') => {
     opIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
     setMode(m); setAmount(''); setNote('');
-    setSource(getActiveShift() ? 'drawer' : 'external');
+    setSource(getCashDrawerId() ? 'drawer' : 'external');
   };
 
   const submit = async () => {
     if (!selected || !mode) return;
     const val = Number(amount);
     if (!(val > 0)) { toast.error('أدخل مبلغاً صحيحاً'); return; }
-    const shift = getActiveShift();
-    if (source === 'drawer' && !shift) { toast.error('لا توجد وردية مفتوحة'); return; }
+    const drawerId = getCashDrawerId();
+    if (source === 'drawer' && !drawerId) { toast.error('لا توجد وردية مفتوحة'); return; }
     setBusy(true);
     try {
       const usd = ccy === 'USD' ? val : round8(toUsd(val, ccy));
-      const args = { supplierId: selected.id, amount: usd, note, source, shiftId: shift?.id, currency: ccy, currencyAmount: val, rate: usd > 0 ? round8(val / usd) : undefined, operationId: opIdRef.current };
+      const args = { supplierId: selected.id, amount: usd, note, source, shiftId: drawerId ?? undefined, currency: ccy, currencyAmount: val, rate: usd > 0 ? round8(val / usd) : undefined, operationId: opIdRef.current };
       if (mode === 'pay') await paySupplierCloud(args); else await refundFromSupplierCloud(args);
       if (source === 'drawer') { if (mode === 'pay') addWithdrawalFromShift(usd, ccy, val); else addDepositToShift(usd, ccy, val); }
       opIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -109,7 +109,7 @@ export function SuppliersDialog({ open, onOpenChange }: { open: boolean; onOpenC
   };
 
   const due = selected?.balance_due ?? 0;
-  const shift = getActiveShift();
+  const shift = getCashDrawerId();
 
   const isDirty = busy || (mode !== null && Boolean(amount.trim() || note.trim()));
   return (

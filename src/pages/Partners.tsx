@@ -1,7 +1,7 @@
 import { round8 } from '@/lib/utils';
 import { useState, useEffect, useRef } from 'react';
 import { capitalMaxInForeign, capitalOriginalRate, capitalUsdFromForeign, type CapitalHistoryLike } from '@/lib/partner-fx';
-import { getActiveShift } from '@/lib/cashbox-store';
+import { getActiveShift, getCashDrawerId } from '@/lib/cashbox-store';
 import {
   Search,
   Plus,
@@ -425,7 +425,7 @@ export default function Partners() {
       }
       request = {
         operationId: crypto.randomUUID(),
-        shiftId: getActiveShift()?.id ?? null,
+        shiftId: getCashDrawerId(),
         rate,
         amount,
         originalAmount: Math.round(withdrawAmount * 100) / 100,

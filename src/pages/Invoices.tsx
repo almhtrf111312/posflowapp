@@ -135,7 +135,7 @@ import { useActionGuard } from '@/hooks/use-action-guard';
 import { addToQueueIfNotExists } from '@/lib/sync-queue';
 import { useCloudSyncContext } from '@/providers/CloudSyncProvider';
 import { getCurrentUserRole } from '@/lib/supabase-store';
-import { getActiveShift } from '@/lib/cashbox-store';
+import { getActiveShift, getCashDrawerId } from '@/lib/cashbox-store';
 import { PurchaseInvoicesListTab } from '@/components/purchases/PurchaseInvoicesListTab';
 import { InvoiceProfitDialog } from '@/components/invoices/InvoiceProfitDialog';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -928,7 +928,7 @@ export default function Invoices() {
     saveRefundMeta(invoice.id, 'full');
     // Snapshot invoice-specific data BEFORE running so notifications reflect this exact invoice
     const invoiceLabel = invoice.id;
-    const refundShiftId = getActiveShift()?.id ?? null;
+    const refundShiftId = getCashDrawerId();
     const refundFin = getInvoiceFinancials(invoice, true);
     const invoiceTotal = refundFin.displayTotal;
     const invoiceCurrencySymbol = refundFin.symbol;
@@ -1092,7 +1092,7 @@ export default function Invoices() {
     const invoice = invoiceToRefund;
     saveRefundMeta(invoice.id, 'partial');
     const invoiceLabel = invoice.id;
-    const refundShiftId = getActiveShift()?.id ?? null;
+    const refundShiftId = getCashDrawerId();
     const toastId = `refund-${invoiceLabel}`;
 
     const itemsToRefund: PartialRefundItem[] = [];
@@ -1376,7 +1376,7 @@ export default function Invoices() {
 
       // الوردية المفتوحة + العملة الأصلية وسعر الصرف: الدالة الذرية تسجل حركة الصندوق وتفصل فرق التقريب
       const { getActiveShift } = await import('@/lib/cashbox-store');
-      const currentShiftId = getActiveShift()?.id || undefined;
+      const currentShiftId = (getCashDrawerId() ?? undefined);
       const updatedDebt = await recordPaymentWithInvoiceSyncCloud(
         selectedDebtForPayment.id,
         finalPaymentUSD,

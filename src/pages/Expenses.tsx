@@ -337,6 +337,7 @@ export default function Expenses() {
       return;
     }
 
+    if (!(recurringForm.intervalDays >= 1)) { toast.error(isRTL ? 'أدخل عدد أيام التكرار (1 أو أكثر)' : 'Enter the repeat interval in days (1 or more)'); return; }
     const curr = recurringForm.currency || m.activeCode;
     const currDef = m.enabledCurrencies.find(c => c.code === curr) || m.getCurrencyDef(curr);
     const amountUSD = m.toUsd(recurringForm.amount, curr, currDef.rate);
@@ -441,6 +442,7 @@ export default function Expenses() {
       return;
     }
 
+    if (!(editRecurringForm.intervalDays >= 1)) { toast.error(isRTL ? 'أدخل عدد أيام التكرار (1 أو أكثر)' : 'Enter the repeat interval in days (1 or more)'); return; }
     const intervalInfo = recurringIntervals.find(i => i.value === editRecurringForm.intervalDays) || recurringIntervals[1];
     const curr = editRecurringForm.currency || m.activeCode;
     const currDef = m.enabledCurrencies.find(c => c.code === curr) || m.getCurrencyDef(curr);
@@ -1109,6 +1111,13 @@ export default function Expenses() {
                   ))}
                 </SelectContent>
               </Select>
+              <Input
+                type="number" inputMode="numeric" min="1" max="3650"
+                className="min-h-11 sm:min-h-10 rounded-[14px]"
+                placeholder={isRTL ? 'أو اكتب عدد الأيام' : 'Or type the number of days'}
+                value={recurringForm.intervalDays || ''}
+                onChange={(e) => { const n = Math.floor(Number(e.target.value)); setRecurringForm({ ...recurringForm, intervalDays: n >= 1 && n <= 3650 ? n : 0 }); }}
+              />
             </div>
 
             <div>
@@ -1402,6 +1411,13 @@ export default function Expenses() {
                   ))}
                 </SelectContent>
               </Select>
+              <Input
+                type="number" inputMode="numeric" min="1" max="3650"
+                className="min-h-11 sm:min-h-10 rounded-[14px]"
+                placeholder={isRTL ? 'أو اكتب عدد الأيام' : 'Or type the number of days'}
+                value={editRecurringForm.intervalDays || ''}
+                onChange={(e) => { const n = Math.floor(Number(e.target.value)); setEditRecurringForm({ ...editRecurringForm, intervalDays: n >= 1 && n <= 3650 ? n : 0 }); }}
+              />
             </div>
 
             <div>

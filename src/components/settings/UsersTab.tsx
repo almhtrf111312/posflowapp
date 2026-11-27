@@ -43,6 +43,22 @@ export function UsersTab() {
   const licenseState = (license as typeof license & { licenseState?: typeof license })?.licenseState || license;
   const { users, isLoading: usersLoading, addUser, updateUserProfile, deleteUser, setUserRefundPermission } = useUsersManagement();
 
+  // The license copy on this device can be older than a plan change made in Boss: when it says "limit reached",
+  // the server (can_add_cashier) decides, and the saved license is refreshed.
+  const cashierLimitReachedOnServer = async (): Promise<boolean> => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.rpc('can_add_cashier', { _owner_id: currentUser?.id ?? '' });
+      if (!error && data === true) {
+        void license.checkLicense?.();
+        return false;
+      }
+    } catch (err) {
+      console.warn('[UsersTab] can_add_cashier check failed:', err);
+    }
+    return true;
+  };
+
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
@@ -67,7 +83,7 @@ export function UsersTab() {
   const userEmailInputRef = useRef<HTMLInputElement>(null);
   const userPasswordInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (isGuestDemoMode()) {
       toast({
         title: isRTL ? 'تنبيه' : 'Notice',
@@ -81,7 +97,7 @@ export function UsersTab() {
       const maxAllowedCashiers = Number(licenseState?.maxCashiers) || 1;
       const currentCashiersCount = users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length;
 
-      if (currentCashiersCount >= maxAllowedCashiers) {
+      if (currentCashiersCount >= maxAllowedCashiers && await cashierLimitReachedOnServer()) {
         toast({
           title: isRTL ? 'تنبيه الباقة والترخيص' : 'Plan Limit Reached',
           description: isRTL 
@@ -249,7 +265,7 @@ export function UsersTab() {
         const maxAllowedCashiers = Number(licenseState?.maxCashiers) || 1;
         const currentCashiersCount = users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length;
 
-        if (currentCashiersCount >= maxAllowedCashiers) {
+        if (currentCashiersCount >= maxAllowedCashiers && await cashierLimitReachedOnServer()) {
           toast({
             title: isRTL ? 'تنبيه الباقة والترخيص' : 'Plan Limit Reached',
             description: isRTL 

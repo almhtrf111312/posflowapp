@@ -18,6 +18,7 @@ import { EVENTS } from '@/lib/events';
 import { loadQueue } from '@/lib/sync-queue';
 import { decideLocalShiftSync, expectedCashOfShift } from '@/lib/shift-adopt';
 import { ShiftFxDialog } from '@/components/cashbox/ShiftFxDialog';
+import { CashierShiftsManager } from '@/components/cashbox/CashierShiftsManager';
 import { loadShiftSupplierMoney, ShiftSupplierMoney } from '@/lib/cloud/suppliers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
 import { cn, formatCurrency, formatMoney, formatDateTime, formatNumber } from '@/lib/utils';
@@ -387,9 +388,10 @@ export default function CashShifts() {
       }
     }
 
-    const adjustmentNote = beyondTolerance && varianceDecision === 'accept' ? t('cashShifts.createAdjustment') : undefined;
+    const adjustmentNote = beyondTolerance && varianceDecision === 'accept' && isOwner ? t('cashShifts.createAdjustment') : undefined;
     const closeCounts = closingRows.map(r => ({ code: r.code, counted: r.counted, rate: r.rate }));
-    const closeDecision = varianceDecision;
+    // Beyond tolerance, only the owner decides: a cashier's close is deferred to the owner (Pending Variances).
+    const closeDecision = beyondTolerance && !isOwner ? 'defer' : varianceDecision;
 
     // Close dialog immediately for responsive UX
     setShowCloseDialog(false);
@@ -584,6 +586,10 @@ export default function CashShifts() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {isOwner && user?.id && (
+        <CashierShiftsManager ownerId={user.id} ownerName={userName} isEn={isEn} onChanged={() => { loadData(); loadDeferred(); }} />
       )}
 
       {isOwner && deferred.length > 0 && (
@@ -1024,7 +1030,10 @@ export default function CashShifts() {
                 <div className="text-xs font-semibold text-destructive">
                   {isEn ? `Variance exceeds tolerance (${formatUsd(toleranceUsd)}). Net diff:` : `الفرق أكبر من حد السماح (${formatUsd(toleranceUsd)}). صافي الفرق:`} <span dir="ltr" className="inline-block tabular-nums">{netVarianceUsd > 0 ? '+' : ''}{formatUsd(netVarianceUsd)}</span>
                 </div>
-                <RadioGroup value={varianceDecision} onValueChange={(v) => setVarianceDecision(v as 'accept' | 'defer')} className="space-y-2">
+                {!isOwner && (
+                  <div className="text-xs text-muted-foreground">{isEn ? 'The difference will be sent to the owner to decide.' : 'سيُرسل الفرق إلى المالك ليقرّر فيه.'}</div>
+                )}
+                {isOwner && <RadioGroup value={varianceDecision} onValueChange={(v) => setVarianceDecision(v as 'accept' | 'defer')} className="space-y-2">
                   <div className="flex items-start gap-2 text-sm">
                     <RadioGroupItem value="accept" id="var-dec-accept" className="mt-0.5" />
                     <Label htmlFor="var-dec-accept" className="cursor-pointer font-normal leading-snug">
@@ -1037,7 +1046,7 @@ export default function CashShifts() {
                       {isEn ? "Defer decision to owner (not recorded now; appears under Pending Variances)" : "تأجيل القرار للمالك (لا يُسجَّل شيء الآن ويظهر في «فروقات بانتظار القرار»)"}
                     </Label>
                   </div>
-                </RadioGroup>
+                </RadioGroup>}
               </div>
             )}
           </DialogBody>

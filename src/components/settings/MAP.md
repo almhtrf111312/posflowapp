@@ -33,5 +33,5 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `ThemeLivePreview.tsx` | Theme live preview. | ThemeLivePreview | hooks/language-context, hooks/theme-context | — |
 | `ThemeSection.tsx` | Theme settings section. | ThemeSection · 1 types | ThemeLivePreview, hooks/language-context, hooks/theme-context, lib/performance-mode, ui/* | — |
 | `UIScaleSelector.tsx` | UI scale selector. | UIScaleSelector, default | hooks/language-context, lib/events, lib/sonner-bridge, lib/store-settings-sync, lib/ui-scale-config, ui/* | — |
-| `UsersTab.tsx` | Store users management tab. | UsersTab, default | PasswordChangeDialog, hooks/auth-context, hooks/language-context, hooks/license-context, hooks/use-users-management, hooks/user-role-context, lib/demo-data, lib/sonner-bridge (+1) | — |
+| `UsersTab.tsx` | Store users management tab. | UsersTab, default | PasswordChangeDialog, hooks/auth-context, hooks/language-context, hooks/license-context, hooks/use-users-management, hooks/user-role-context, lib/demo-data, lib/sonner-bridge (+1) | rpc: can_add_cashier |
 | `surplus-profit-sync.ts` | Surplus-profit setting sync from store settings, with local cache. | SURPLUS_PROFIT_KEY, syncSurplusSetting | lib/supabase-store | tbl: store_settings |

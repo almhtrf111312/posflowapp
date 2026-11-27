@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Key, Clock } from 'lucide-react';
 import { useLanguage } from '@/hooks/language-context';
+import { useUserRole } from '@/hooks/user-role-context';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/sonner-bridge';
 import { isGuestDemoMode } from '@/lib/demo-data';
@@ -135,6 +136,15 @@ function LicenseGuardInner({ children }: LicenseGuardProps) {
   const [showTrialNotice, setShowTrialNotice] = useState(false);
 
   const [hasTimedOut, setHasTimedOut] = useState(false);
+  // A cashier works under the store owner's license: never the activation/trial choice for a cashier.
+  const { isCashier: isCashierByRole } = useUserRole();
+  const isCashierAccount = role === 'cashier' || isCashierByRole;
+  const cashierWaitingForLicense = isCashierAccount && !hasLicense && !ownerNeedsActivation;
+  useEffect(() => {
+    if (!cashierWaitingForLicense) return;
+    const timer = setInterval(() => { void checkLicense(); }, 5000); // the owner's license check failed (weak network): retry
+    return () => clearInterval(timer);
+  }, [cashierWaitingForLicense, checkLicense]);
 
   // Fast-path: valid cached license (not expired, not revoked, belongs to this user)
   const hasCachedLicense = typeof window !== 'undefined' && cachedLicenseGrantsAccess(readLicenseCacheRaw(), user?.id);
@@ -240,6 +250,19 @@ function LicenseGuardInner({ children }: LicenseGuardProps) {
             <Button variant="ghost" className="w-full text-muted-foreground" onClick={async () => { await supabase.auth.signOut(); }}>{t('license.signOut')}</Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (cashierWaitingForLicense) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-4" dir={direction}>
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">جاري التحقق من ترخيص المتجر… تأكد من الاتصال بالإنترنت.</p>
+          <Button variant="outline" onClick={() => checkLicense()}>{t('license.recheck')}</Button>
+          <Button variant="ghost" className="text-muted-foreground" onClick={async () => { await supabase.auth.signOut(); }}>{t('license.signOut')}</Button>
+        </div>
       </div>
     );
   }

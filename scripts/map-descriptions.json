@@ -412,5 +412,6 @@
   "src/hooks/notifications-context.ts": "Notifications context, useNotifications hook, storage helpers and types.",
   "src/hooks/theme-context.ts": "Theme context, useTheme hook, palettes and DOM apply helpers.",
   "src/hooks/user-role-context.ts": "User role context, useUserRole hook, role cache and types.",
-  "src/hooks/warehouse-context.ts": "Warehouse context and useWarehouse hook."
+  "src/hooks/warehouse-context.ts": "Warehouse context and useWarehouse hook.",
+  "src/components/cashbox/CashierShiftsManager.tsx": "Owner card: cashiers' open shifts, close one remotely (count + accept/defer) or open one for a cashier"
 }

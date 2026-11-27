@@ -10,7 +10,7 @@ Read the MAP.md of the directory you need; do not open source files blindly. 18 
 | `components/auth/` | 11 | login / signup / lock UI | [MAP.md](components/auth/MAP.md) |
 | `components/barcode/` | 3 | Barcode scanning UI helpers. | [MAP.md](components/barcode/MAP.md) |
 | `components/camera/` | 1 | Camera capture UI. | — |
-| `components/cashbox/` | 1 | Cashbox UI pieces. | — |
+| `components/cashbox/` | 2 | Cashbox UI pieces. | — |
 | `components/customers/` | 1 | Customer credit UI. | — |
 | `components/dashboard/` | 8 | dashboard widgets | [MAP.md](components/dashboard/MAP.md) |
 | `components/debug/` | 3 | Debug probes, per-feature error boundary, safe-mode screen. | [MAP.md](components/debug/MAP.md) |

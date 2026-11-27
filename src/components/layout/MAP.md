@@ -7,7 +7,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps | rpc · tables |
 |---|---|---|---|---|
-| `MainLayout.tsx` | Main app layout. | MainLayout | Sidebar, hooks/language-context, hooks/use-app-lifecycle, hooks/use-mobile, providers/CloudSyncProvider | — |
+| `MainLayout.tsx` | Main app layout. | MainLayout | Sidebar, hooks/language-context, hooks/use-app-lifecycle, hooks/use-mobile, hooks/user-role-context, providers/CloudSyncProvider, hooks/use-smart-toast*, lib/cloud/cashbox-cloud* | — |
 | `NativeTabKeepAlive.tsx` | Keep-alive tab host that keeps pages mounted for instant navigation. | KeepAliveTab, NativeTabHost · 1 types | components/auth/RoleGuard, components/debug/FeatureErrorBoundary, tab-paths, contexts/PageActivityContext, hooks/auth-context, lib/performance-metrics, pages/Appearance*, pages/Customers* (+7) | — |
 | `NetworkStatusIndicator.tsx` | Offline/online status indicator. | NetworkStatusIndicator | hooks/language-context, providers/CloudSyncProvider | — |
 | `PageHeader.tsx` | Page header. | PageHeader | — | — |

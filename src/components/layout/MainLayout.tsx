@@ -7,6 +7,7 @@ import { useOrientationChange } from '@/hooks/use-app-lifecycle';
 import { useLanguage } from '@/hooks/language-context';
 import { useCloudSyncContext } from '@/providers/CloudSyncProvider';
 import { cn } from '@/lib/utils';
+import { useUserRole } from '@/hooks/user-role-context';
 
 interface MainLayoutProps {
   children?: ReactNode;
@@ -15,6 +16,26 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+  const { isOwner } = useUserRole();
+
+  // Owner alert (once per app session): shifts closed with a difference that waits for the owner's decision.
+  useEffect(() => {
+    if (!isOwner) return;
+    const KEY = 'posflow_deferred_variance_alerted';
+    try { if (sessionStorage.getItem(KEY)) return; } catch { /* storage may be unavailable */ }
+    const timer = setTimeout(() => {
+      void import('@/lib/cloud/cashbox-cloud').then(({ loadDeferredShiftVariances }) => loadDeferredShiftVariances()).then(list => {
+        if (!list.length) return;
+        try { sessionStorage.setItem(KEY, '1'); } catch { /* ignore */ }
+        void import('@/hooks/use-smart-toast').then(({ showSmartToast }) => showSmartToast({
+          type: 'warning',
+          title: `لديك ${list.length} فرق ورديات بانتظار قرارك`,
+          description: 'من الصندوق والورديات ← «فروقات بانتظار القرار».',
+        } as never));
+      }).catch(() => {});
+    }, 3000); // after the first screen is shown: never delays opening
+    return () => clearTimeout(timer);
+  }, [isOwner]);
   const isTablet = useIsTablet();
   const { isRTL, t } = useLanguage();
   const { syncNow: triggerPullToRefreshSync } = useCloudSyncContext();

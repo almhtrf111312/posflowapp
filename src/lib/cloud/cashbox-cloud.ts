@@ -296,6 +296,32 @@ export const saveShiftVarianceTolerance = async (valueUsd: number): Promise<bool
   return !error;
 };
 
+/** Every open shift of the store (owner view: manage cashiers' drawers remotely). */
+export const loadStoreOpenShifts = async (): Promise<CloudShift[]> => {
+  try {
+    const { data, error } = await sb.from('cash_shifts').select('*').is('closed_at', null).order('opened_at', { ascending: false }).limit(50);
+    if (error) throw error;
+    return (data || []) as CloudShift[];
+  } catch {
+    return [];
+  }
+};
+
+/** The store's cashiers (owner view), with their display names. */
+export const loadStoreCashiers = async (ownerId: string): Promise<Array<{ id: string; name: string }>> => {
+  try {
+    const { data: roles, error } = await sb.from('user_roles').select('user_id, is_active').eq('owner_id', ownerId).eq('role', 'cashier');
+    if (error) throw error;
+    const ids = (roles || []).filter(r => r.is_active !== false).map(r => r.user_id as string);
+    if (!ids.length) return [];
+    const { data: profiles } = await sb.from('profiles').select('user_id, full_name').in('user_id', ids);
+    const names = new Map((profiles || []).map(p => [p.user_id as string, (p.full_name as string | null) || '']));
+    return ids.map(id => ({ id, name: names.get(id) || id.slice(0, 8) }));
+  } catch {
+    return [];
+  }
+};
+
 export interface DeferredShiftVariance {
   id: string;
   closed_at: string | null;

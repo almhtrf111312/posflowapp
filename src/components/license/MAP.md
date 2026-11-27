@@ -9,7 +9,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 |---|---|---|---|---|
 | `ActivationScreen.tsx` | License activation screen. | ActivationScreen | components/settings/ContactLinksSection, hooks/auth-context, hooks/language-context, hooks/license-context, ui/* | tbl: app_settings |
 | `DataEncryptedScreen.tsx` | Screen shown when local data is encrypted after offline lockout. | DataEncryptedScreen | hooks/language-context, hooks/license-context, ui/* | — |
-| `LicenseGuard.tsx` | License guard wrapper. | LicenseGuard | components/auth/DeviceBlockedScreen, ActivationScreen, DataEncryptedScreen, TrialNoticeDialog, components/settings/ContactLinksSection, hooks/auth-context, hooks/language-context, hooks/license-context (+6) | tbl: app_settings |
+| `LicenseGuard.tsx` | License guard wrapper. | LicenseGuard | components/auth/DeviceBlockedScreen, ActivationScreen, DataEncryptedScreen, TrialNoticeDialog, components/settings/ContactLinksSection, hooks/auth-context, hooks/language-context, hooks/license-context (+7) | tbl: app_settings |
 | `LicenseWarningBadge.tsx` | License warning badge. | LicenseWarningBadge | hooks/auth-context, hooks/language-context, hooks/license-context | — |
 | `OfflineProtectionBanner.tsx` | Offline protection warning banner. | OfflineProtectionBanner | hooks/language-context, hooks/license-context | — |
 | `SubscriptionLockNotice.tsx` | Notice replacing sections that require an active subscription. | SubscriptionLockNotice, default | hooks/language-context, ui/* | — |

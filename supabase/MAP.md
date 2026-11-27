@@ -24,7 +24,7 @@ Shows only the signature(s) defined by the NEWEST migration (by real applied ord
 | `close_cash_shift_atomic` | _shift_id, _actual_balance, _variance_reason?, _decision?, _counts? | 20261123030000_pkg3_debts_expenses_and_fx_lock | 1 |
 | `complete_phone_transfer` | _request_id, _entered_code | 20261122160000_posflow_accounting_core_fixes_part1 | — |
 | `confirm_partner_debt_profit_atomic` | _invoice_id, _payment_ratio | 20261125090000_money_precision_8dp | — |
-| `count_general_drawer_atomic` | _counted_usd, _note?, _operation_id? | 20261127100000_general_drawer | — |
+| `count_general_drawer_atomic` | _counts, _note?, _operation_id? | 20261127100000_general_drawer | — |
 | `create_manual_debt_atomic` | _id, _invoice_id, _customer_name, _customer_phone, _total_debt, _due_date?, _notes?, _is_cash_debt? | 20261126070000_fx_rounding_split_snapshot_trigger_manual_debt | — |
 | `create_supplier_atomic` | _name, _company?, _phone?, _notes? | 20261120060000_posflow_phase6_suppliers_returns | — |
 | `deduct_product_quantity` | _product_id, _amount | 20260801002923_8a349dc7-b820-40fe-b2fa-e99f4c28e583 | — |

@@ -256,7 +256,20 @@ export function toggleRecurringExpense(id: string, isActive: boolean): boolean {
   return updateRecurringExpense(id, { isActive });
 }
 
+let autoPayRunning = false;
+
 export async function executeAutoPayRecurringExpenses(): Promise<number> {
+  // One run at a time (the checker runs on a timer).
+  if (autoPayRunning) return 0;
+  autoPayRunning = true;
+  try {
+    return await executeAutoPayOnce();
+  } finally {
+    autoPayRunning = false;
+  }
+}
+
+async function executeAutoPayOnce(): Promise<number> {
   const expenses = loadRecurringExpenses();
   const todayStr = toLocalDateString(new Date());
   const today = new Date();

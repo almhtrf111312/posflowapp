@@ -7,7 +7,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 
 | file | role | exports | local deps |
 |---|---|---|---|
-| `CashierShiftsManager.tsx` | Owner card: cashiers' open shifts, close one remotely (count + accept/defer) or open one for a cashier | CashierShiftsManager | lib/activity-log, lib/cloud/cashbox-cloud, lib/money-engine, lib/sonner-bridge, ui/* |
-| `GeneralDrawerCard.tsx` | General store drawer card (D-35): balance, details, owner deposit and optional count, and the require-shift settings | GeneralDrawerCard | ShiftDetailsDialog, lib/activity-log, lib/cloud/cashbox-cloud, lib/money-engine, lib/sonner-bridge, lib/store-settings-sync*, ui/* |
+| `CashierShiftsManager.tsx` | Owner card: cashiers' open shifts, close one remotely (count + accept/defer) or open one for a cashier | CashierShiftsManager | ShiftDetailsDialog, lib/activity-log, lib/cloud/cashbox-cloud, lib/money-engine, lib/sonner-bridge, ui/* |
+| `GeneralDrawerCard.tsx` | General store drawer card (D-35): balance, details, owner deposit and optional count, and the require-shift settings | GeneralDrawerCard | ShiftDetailsDialog, lib/activity-log, lib/cloud/cashbox-cloud, lib/money-engine, lib/shift-adopt, lib/sonner-bridge, lib/store-settings-sync*, ui/* |
 | `ShiftDetailsDialog.tsx` | Shift details: totals per movement kind and the full drawer movement list of one shift (read-only, from cloud movements) | ShiftDetailsDialog · 1 types | lib/cloud/cashbox-cloud, lib/money-engine, lib/shift-adopt, ui/* |
 | `ShiftFxDialog.tsx` | In-shift currency exchange dialog (cash out in one currency, in another) | ShiftFxDialog | lib/cashbox-store, lib/cloud/cashbox-cloud, lib/money-engine, lib/sonner-bridge, lib/sync-queue, ui/* |

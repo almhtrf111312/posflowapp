@@ -1,4 +1,4 @@
-import { getActiveShift, getCashDrawerId } from '@/lib/cashbox-store';
+import { getActiveShift, getCashDrawerId, getCachedGeneralDrawerId } from '@/lib/cashbox-store';
 import { markExpensePaidFromDrawer, takeExpensePaidFromDrawer } from '@/lib/drawer-expense-marks';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -144,6 +144,10 @@ export default function Expenses() {
   const [stats, setStats] = useState({ totalExpenses: 0, totalThisMonth: 0, expenseCount: 0, monthlyCount: 0, byType: {} as Record<string, number> });
 
   // Form state
+  // D-35: with an open shift AND a general drawer, the user chooses where the cash comes from
+  // (e.g. the owner taking money home = a normal expense from the general drawer).
+  const [expenseSource, setExpenseSource] = useState<'shift' | 'general'>('shift');
+  const canChooseExpenseSource = Boolean(getActiveShift() && getCachedGeneralDrawerId());
   const [formData, setFormData] = useState({
     type: 'rent' as ExpenseType,
     customType: '',
@@ -286,7 +290,8 @@ export default function Expenses() {
         : '';
       const finalNotes = formData.notes ? `${formData.notes}${noteSuffix}` : (noteSuffix.trim() || undefined);
 
-      const expenseShiftId = (getCashDrawerId() ?? undefined);
+      const expenseShiftId = (canChooseExpenseSource && expenseSource === 'general'
+        ? getCachedGeneralDrawerId() : getCashDrawerId()) ?? undefined;
       const created = await addExpenseCloud({
         shiftId: expenseShiftId,
         paidFrom: expenseShiftId ? 'drawer' : undefined,
@@ -975,6 +980,19 @@ export default function Expenses() {
                 placeholder={t('common.selectDate')}
               />
             </div>
+
+            {canChooseExpenseSource && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold block text-muted-foreground">{isRTL ? 'يُدفع من' : 'Paid from'}</label>
+                <Select value={expenseSource} onValueChange={(v) => setExpenseSource(v as 'shift' | 'general')}>
+                  <SelectTrigger className="min-h-11 sm:min-h-10 rounded-[14px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="shift">{isRTL ? 'الوردية المفتوحة' : 'The open shift'}</SelectItem>
+                    <SelectItem value="general">{isRTL ? 'الصندوق العام' : 'The general drawer'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold block text-muted-foreground">{t('expenses.notes')}</label>

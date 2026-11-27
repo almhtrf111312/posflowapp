@@ -5,6 +5,7 @@ import { formatNumber, formatMoney } from '@/lib/utils';
 
 export function useDueExpensesChecker() {
   useEffect(() => {
+    let manualAlertShown = false; // the manual-due reminder is shown once per session, not on every re-check
     const checkAndAutoPay = async () => {
       try {
         // 1. تنفيذ الدفع التلقائي للمصاريف المجدولة مع ضمان عدم التكرار (Idempotency)
@@ -19,7 +20,8 @@ export function useDueExpensesChecker() {
 
         // 2. التنبيه بالمصاريف المستحقة التي تتطلب مراجعة وسداد يدوي
         const manualDue = getDueExpenses().filter(e => !e.autoPay);
-        if (manualDue.length > 0) {
+        if (manualDue.length > 0 && !manualAlertShown) {
+          manualAlertShown = true;
           const totalAmount = manualDue.reduce((sum, e) => sum + e.amount, 0);
           toast.warning(`تنبيه: يوجد ${manualDue.length} مصروف مستحق السداد اليوم`, {
             id: 'manual-due-expenses-alert',
@@ -38,7 +40,10 @@ export function useDueExpensesChecker() {
       }
     };
 
-    const timer = setTimeout(checkAndAutoPay, 2000);
-    return () => clearTimeout(timer);
+    // The first run happens before login / before the recurring list is loaded from the cloud, so it can find nothing.
+    // Re-check after the session is ready and then every 5 minutes (payment stays idempotent: lastPaidDate + lock).
+    const timers = [setTimeout(checkAndAutoPay, 2000), setTimeout(checkAndAutoPay, 20000)];
+    const interval = setInterval(checkAndAutoPay, 5 * 60 * 1000);
+    return () => { timers.forEach(clearTimeout); clearInterval(interval); };
   }, []);
 }

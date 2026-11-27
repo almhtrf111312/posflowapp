@@ -898,7 +898,8 @@ export default function Products() {
     return products.filter(product => {
       if (product.archived) return false;
 
-      // المنتجات المنتهية تبقى ظاهرة في قسم النشطة (بكمية حمراء) حتى لا تبدو محذوفة؛ وتظهر أيضاً في الأرشيف لإعادة التزويد.
+      // قرار المالك (2026-11-27، Q-1): المنتج الذي نفد (كمية ≤ 0) ينتقل إلى «الأرشيف» ولا يبقى في «النشطة»؛ يعود تلقائياً عند إعادة التزويد.
+      if (!noInventory && product.quantity <= 0) return false;
 
       // تصفية حسب حالة التوفر المتبقية (متوفر / منخفض)
       if (!noInventory) {

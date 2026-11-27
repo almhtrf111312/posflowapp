@@ -34,9 +34,30 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
   const [showDetails, setShowDetails] = useState(false);
   const opRef = useRef(newOpId());
   // Stable object: the details dialog reloads when its shift prop changes.
+  // «فترة جديدة»: the balance is real cash and never reset; only the details list starts again from this moment.
+  // Stored in the store sync settings so every device of the store shows the same period.
+  const readPeriodStart = (): string | null => {
+    try {
+      const v = (JSON.parse(localStorage.getItem('posflow_settings_v1') || '{}')?.syncSettings || {}).generalDrawerPeriodStart;
+      return typeof v === 'string' && v ? v : null;
+    } catch { return null; }
+  };
+  const [periodStart, setPeriodStart] = useState<string | null>(readPeriodStart);
+  const [confirmPeriod, setConfirmPeriod] = useState(false);
+  const startNewPeriod = async () => {
+    const now = new Date().toISOString();
+    const { saveUnifiedStoreSettings, loadUnifiedStoreSettings } = await import('@/lib/store-settings-sync');
+    const current = loadUnifiedStoreSettings().syncSettings || {};
+    const res = await saveUnifiedStoreSettings({ syncSettings: { ...current, generalDrawerPeriodStart: now } });
+    if (res && res.success === false) { toast.error(res.message || (isEn ? 'Not saved' : 'لم يُحفظ')); return; }
+    setPeriodStart(now);
+    setConfirmPeriod(false);
+    addActivityLog('shift_opened', userId, userName, isEn ? 'General drawer: new period started' : 'الصندوق العام: بدء فترة جديدة');
+    toast.success(isEn ? 'New period started' : 'بدأت فترة جديدة', { description: isEn ? 'The balance is unchanged' : 'الرصيد لم يتغيّر' });
+  };
   const detailsShift = useMemo(() => (showDetails && id
-    ? { id, userName: isEn ? 'General drawer' : 'الصندوق العام', openedAt: new Date().toISOString(), openingCash: 0, status: 'open' as const }
-    : null), [showDetails, id, isEn]);
+    ? { id, userName: isEn ? 'General drawer' : 'الصندوق العام', openedAt: periodStart || new Date().toISOString(), openingCash: 0, status: 'open' as const, since: periodStart }
+    : null), [showDetails, id, isEn, periodStart]);
 
   const reload = useCallback(async () => {
     const gid = await ensureGeneralDrawerCloud();
@@ -150,6 +171,7 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
         <Button size="sm" variant="outline" onClick={() => setShowDetails(true)}>{isEn ? 'Details' : 'التفاصيل'}</Button>
         {isOwner && <Button size="sm" variant="outline" onClick={() => { setMode('deposit'); setAmount(''); }}>{isEn ? 'Add cash' : 'إيداع'}</Button>}
         {isOwner && <Button size="sm" onClick={() => { setMode('count'); setCounts({}); opRef.current = newOpId(); }}>{isEn ? 'Count the drawer' : 'عدّ الصندوق'}</Button>}
+        {isOwner && <Button size="sm" variant="outline" onClick={() => setConfirmPeriod(true)}>{isEn ? 'New period' : 'فترة جديدة'}</Button>}
       </CardContent>
 
       <Dialog open={mode !== null} onOpenChange={(o) => { if (!o) setMode(null); }}>
@@ -203,6 +225,27 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               {isEn ? 'Save' : 'حفظ'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmPeriod} onOpenChange={setConfirmPeriod}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEn ? 'Start a new period?' : 'بدء فترة جديدة؟'}</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-2 text-sm">
+            <p>{isEn
+              ? 'The details list will start empty from now. Older movements stay saved («Show all movements» and reports).'
+              : 'قائمة التفاصيل تبدأ فارغة من الآن. الحركات القديمة تبقى محفوظة («عرض كل الحركات» والتقارير).'}</p>
+            <p className="font-bold">{isEn
+              ? 'The balance does NOT change: it is the real cash in the drawer.'
+              : 'الرصيد لا يتغيّر: هو النقد الموجود فعلاً في الصندوق.'}</p>
+            <p className="text-muted-foreground">{isEn ? 'Tip: count the drawer first so the new period starts matched.' : 'نصيحة: اعمل «عدّ الصندوق» قبلها حتى تبدأ الفترة مطابقة.'}</p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmPeriod(false)}>{isEn ? 'Cancel' : 'إلغاء'}</Button>
+            <Button onClick={() => void startNewPeriod()}>{isEn ? 'Start new period' : 'بدء فترة جديدة'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

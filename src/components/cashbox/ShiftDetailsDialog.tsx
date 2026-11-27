@@ -20,6 +20,8 @@ export interface ShiftSummaryInput {
   status: 'open' | 'closed';
   /** When set, the invoices this cashier issued during the shift are summarised (cash / credit / digital). */
   cashierId?: string;
+  /** General drawer: list movements from this moment (start of the current period); older ones behind «عرض كل الحركات». */
+  since?: string | null;
 }
 
 const LABELS: Record<string, [string, string]> = {
@@ -55,6 +57,7 @@ const PAY_LABELS: Record<string, [string, string]> = {
 export function ShiftDetailsDialog({ shift, isEn, onClose }: { shift: ShiftSummaryInput | null; isEn: boolean; onClose: () => void }) {
   const [rows, setRows] = useState<ShiftMovementRow[] | null>(null);
   const [sales, setSales] = useState<Array<{ paymentType: string; count: number; total: number }>>([]);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (!shift) return;
@@ -66,15 +69,19 @@ export function ShiftDetailsDialog({ shift, isEn, onClose }: { shift: ShiftSumma
     return () => { alive = false; };
   }, [shift]);
 
+  const since = shift?.since && !showAll ? new Date(shift.since).getTime() : null;
+  const visible = useMemo(() => (rows || []).filter(r => since === null || new Date(r.created_at).getTime() >= since), [rows, since]);
+  const hiddenCount = (rows?.length || 0) - visible.length;
+
   const groups = useMemo(() => {
     const m = new Map<string, { total: number; count: number }>();
-    (rows || []).forEach(r => {
+    visible.forEach(r => {
       const g = m.get(r.type) || { total: 0, count: 0 };
       g.total = round8(g.total + r.amount); g.count += 1;
       m.set(r.type, g);
     });
     return Array.from(m.entries()).sort((a, b) => b[1].total - a[1].total);
-  }, [rows]);
+  }, [visible]);
 
   const label = (type: string) => (LABELS[type] ? LABELS[type][isEn ? 1 : 0] : type);
 
@@ -105,10 +112,22 @@ export function ShiftDetailsDialog({ shift, isEn, onClose }: { shift: ShiftSumma
           )}
           {rows === null ? (
             <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-          ) : rows.length === 0 ? (
+          ) : (rows.length === 0 || (visible.length === 0 && hiddenCount === 0)) ? (
             <p className="text-sm text-muted-foreground">{isEn ? 'No drawer movements (or no connection).' : 'لا توجد حركات صندوق (أو لا يوجد اتصال).'}</p>
           ) : (
             <>
+              {shift?.since && (
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-xs">
+                  <span>{showAll
+                    ? (isEn ? 'All movements' : 'كل الحركات')
+                    : `${isEn ? 'Current period since' : 'الفترة الحالية منذ'} ${formatDateTime(shift.since)}`}</span>
+                  {(hiddenCount > 0 || showAll) && (
+                    <button type="button" className="text-primary font-bold" onClick={() => setShowAll(v => !v)}>
+                      {showAll ? (isEn ? 'Current period' : 'الفترة الحالية') : `${isEn ? 'Show all movements' : 'عرض كل الحركات'} (${hiddenCount})`}
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="space-y-1.5">
                 {groups.map(([type, g]) => (
                   <div key={type} className="flex items-center justify-between gap-2 rounded-xl border border-border px-3 py-2 text-sm">
@@ -121,7 +140,7 @@ export function ShiftDetailsDialog({ shift, isEn, onClose }: { shift: ShiftSumma
               </div>
               <div className="space-y-1">
                 <p className="text-xs font-semibold text-muted-foreground">{isEn ? 'All movements' : 'كل الحركات'}</p>
-                {rows.map(r => (
+                {visible.map(r => (
                   <div key={r.id} className="flex items-start justify-between gap-2 border-b border-border/50 py-1.5 text-xs">
                     <div className="min-w-0">
                       <div className="font-medium">{label(r.type)}{r.reference_id ? <span className="text-muted-foreground"> · {isEn ? 'Invoice' : 'فاتورة'} <span dir="ltr">{r.reference_id}</span></span> : null}</div>

@@ -1915,95 +1915,13 @@ export default function Invoices() {
       <Tabs value={activeMainTab} onValueChange={(val) => setActiveMainTab(val as typeof activeMainTab)} className="w-full space-y-4">
         <TabsContent value="sales" className="space-y-4 m-0">
 
-          {/* 1. Sleek Sales Snapshot Card (بطاقة مبيعات موحدة + خيار المزيد) */}
-          <div className="bg-gradient-to-r from-card via-card to-primary/5 p-3 sm:p-4 rounded-2xl border border-border shadow-md">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-success/15 border border-success/30 flex items-center justify-center text-success shrink-0 font-bold text-sm">
-                  {statCurrencySymbol || '$'}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs font-bold text-foreground">
-                      {tx('invoices.salesPeriodTitle', `مبيعات ${currentPeriodTitle}:`)}
-                    </span>
-                    <span dir="ltr" className="inline-block tabular-nums text-xs sm:text-sm font-bold text-success font-mono whitespace-nowrap">
-                      {formatCurrency(currentPeriodSales.total, statCurrencySymbol, statDecimals)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground font-medium truncate mt-0.5">
-                    <span dir="ltr" className="inline-block tabular-nums">{currentPeriodSales.count}</span> {tx('invoices.displayedInvoices', 'فاتورة')} • <span dir="ltr" className="inline-block tabular-nums">{stats.pendingDebts}</span> {tx('invoices.pendingDeferred', 'مؤجلة')}
-                  </div>
-                </div>
-              </div>
-
-              {/* المزيد / التفاصيل Dropdown & Toggle */}
-              <div className="flex items-center gap-1 shrink-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl gap-1"
-                    >
-                      <span>{tx('common.more', 'المزيد')}</span>
-                      <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-2xl p-1.5 text-xs font-bold w-48 shadow-xl">
-                    <div className="px-2 py-1 text-xs text-muted-foreground font-bold border-b border-border/50 mb-1">
-                      {tx('invoices.selectPeriod', 'فترة العرض:')}
-                    </div>
-                    <DropdownMenuItem onClick={() => handleSetPeriod('today')} className="rounded-xl flex items-center justify-between cursor-pointer">
-                      <span>{tx('reports.today', 'اليوم')}</span>
-                      {dateQuickFilter === 'today' && <Check className="w-3.5 h-3.5 text-primary" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSetPeriod('week')} className="rounded-xl flex items-center justify-between cursor-pointer">
-                      <span>{tx('reports.thisWeek', 'هذا الأسبوع')}</span>
-                      {dateQuickFilter === 'week' && <Check className="w-3.5 h-3.5 text-primary" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSetPeriod('month')} className="rounded-xl flex items-center justify-between cursor-pointer">
-                      <span>{tx('reports.thisMonth', 'هذا الشهر')}</span>
-                      {dateQuickFilter === 'month' && <Check className="w-3.5 h-3.5 text-primary" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSetPeriod('year')} className="rounded-xl flex items-center justify-between cursor-pointer">
-                      <span>{tx('reports.thisYear', 'هذا العام')}</span>
-                      {dateQuickFilter === 'year' && <Check className="w-3.5 h-3.5 text-primary" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSetPeriod('all')} className="rounded-xl flex items-center justify-between cursor-pointer">
-                      <span>{tx('invoices.allInvoices', 'كل الفواتير')}</span>
-                      {dateQuickFilter === 'all' && <Check className="w-3.5 h-3.5 text-primary" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="my-1" />
-                    <DropdownMenuItem onClick={() => setShowDetailedStats(prev => !prev)} className="rounded-xl text-primary font-bold cursor-pointer">
-                      <Layers className="w-3.5 h-3.5 me-1.5" />
-                      <span>{showDetailedStats ? tx('invoices.hideStats', 'إخفاء الإحصائيات') : tx('invoices.showStats', 'عرض تفاصيل الإحصائيات')}</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowDetailedStats(prev => !prev)}
-                  aria-label={showDetailedStats ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
-                  title={showDetailedStats ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
-                >
-                  {showDetailedStats ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
-
-            {/* Collapsible Detailed Stats (تظهر عند النقر على خيار التفاصيل من زر المزيد) */}
-            {showDetailedStats && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center select-none pt-3 mt-3 border-t border-dashed border-border/80">
+          {/* 1. Compact stats row: totals of the selected period (default this week; the period is chosen in «التصفية») */}
+              <div className={cn("grid gap-2 text-center select-none", canViewInvoiceProfit ? "grid-cols-4" : "grid-cols-3")}>
                 <button
                   type="button"
                   onClick={handleKpiTotal}
                   className={cn(
-                    "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "py-1.5 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     activeKpi === 'total'
                       ? "bg-primary/10 border-primary ring-2 ring-primary/40 shadow-xs"
                       : "bg-background/80 border-border hover:border-primary/40 shadow-xs"
@@ -2016,7 +1934,7 @@ export default function Invoices() {
                   type="button"
                   onClick={handleKpiDebt}
                   className={cn(
-                    "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "py-1.5 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     activeKpi === 'debt'
                       ? "bg-warning/15 border-warning ring-2 ring-warning/40 shadow-xs"
                       : "bg-background/80 border-border hover:border-warning/40 shadow-xs"
@@ -2029,7 +1947,7 @@ export default function Invoices() {
                   type="button"
                   onClick={handleKpiToday}
                   className={cn(
-                    "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "py-1.5 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     activeKpi === 'today'
                       ? "bg-success/15 border-success ring-2 ring-success/40 shadow-xs"
                       : "bg-background/80 border-border hover:border-success/40 shadow-xs"
@@ -2045,7 +1963,7 @@ export default function Invoices() {
                     type="button"
                     onClick={handleKpiProfit}
                     className={cn(
-                      "py-2.5 px-2 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "py-1.5 px-1 rounded-xl border text-center transition-colors select-none hover:shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       activeKpi === 'profit'
                         ? "bg-primary/10 border-primary ring-2 ring-primary/40 shadow-xs"
                         : "bg-background/80 border-border hover:border-primary/40 shadow-xs"
@@ -2058,8 +1976,6 @@ export default function Invoices() {
                   </button>
                 )}
               </div>
-            )}
-          </div>
 
           {/* 2. Unified Search + «التصفية» Button Bar */}
           <div className="flex items-center gap-2">

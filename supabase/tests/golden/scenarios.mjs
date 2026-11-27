@@ -1434,6 +1434,11 @@ export async function runQaFixes(k, newWorldFn) {
     const fin = await asUser(CASH, `select public.finalize_purchase_invoice_atomic('00000000-0000-4000-8000-0000000000aa'::uuid)`);
     truthy('PERM cashier with purchases passes the owner check (fails only on the missing invoice)', fin !== null && !fin.includes('مخصص لمالك المتجر'));
     check('PERM owner keeps full access', await asUser(OWNER, `update public.products set name='Owner edit' where id=$1`, [prod.id]), null);
+    // user_roles UPDATE policy must not recurse (live error 2026-11-27: infinite recursion), the owner grants refund.
+    check('PERM owner can grant refund to its cashier (no policy recursion)', await asUser(OWNER, `update public.user_roles set can_refund=true where user_id=$1`, [CASH]), null);
+    check('PERM ...the test transaction is rolled back (nothing kept)', (await w.one(`select can_refund from public.user_roles where user_id=$1`, [CASH])).can_refund, false);
+    truthy('PERM a cashier cannot grant itself refund', (await asUser(CASH, `update public.user_roles set can_refund=true where user_id=$1 returning 1`, [CASH])) === null
+      ? (await w.one(`select can_refund from public.user_roles where user_id=$1`, [CASH])).can_refund === false : true);
   }
 }
 

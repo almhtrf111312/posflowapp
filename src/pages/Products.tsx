@@ -31,6 +31,7 @@ import {
   RotateCcw,
   RefreshCw,
   ChevronDown,
+  Check,
   ChevronUp
 } from 'lucide-react';
 import { cn, toWesternNumerals, formatNumber, formatMoney } from '@/lib/utils';
@@ -39,6 +40,7 @@ import { useMoney } from '@/hooks/use-money';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
   Dialog,
@@ -837,7 +839,10 @@ export default function Products() {
   // Get categories used by products (cannot be deleted)
   const usedCategories = [...new Set(products.map(p => p.category))];
 
-  const categories = [t('products.all'), ...categoryOptions];
+  // Most-used categories first, so the single visible row shows the ones with the most products.
+  const categoryUse = new Map<string, number>();
+  products.forEach(p => { if (!p.archived && p.category) categoryUse.set(p.category, (categoryUse.get(p.category) || 0) + 1); });
+  const categories = [t('products.all'), ...[...categoryOptions].sort((a, b) => (categoryUse.get(b) || 0) - (categoryUse.get(a) || 0))];
   // Show only the first few category chips (plus the selected one) instead of a sideways-scrolling row; "More" reveals the rest
   const CATEGORY_CHIPS_LIMIT = 4;
   const [showAllCategories, setShowAllCategories] = useState(false);
@@ -2281,6 +2286,8 @@ export default function Products() {
       <div className="flex-shrink-0 px-3 md:px-6 pb-1.5 md:pb-2 max-w-full relative z-10">
         <div className="bg-muted/60 p-1 rounded-2xl grid grid-cols-3 gap-1 w-full sm:w-fit sm:min-w-[24rem] border border-border/40 shadow-xs select-none">
           {/* 1. النشطة (يمين في RTL) */}
+          <DropdownMenu open={mainTab === 'products' && !noInventory ? undefined : false}>
+          <DropdownMenuTrigger asChild>
           <button
             type="button"
             onClick={() => setMainTab('products')}
@@ -2292,8 +2299,27 @@ export default function Products() {
             )}
           >
             <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span>{t('products.active') || 'النشطة'}</span>
+            <span className="flex items-center gap-0.5">
+              {statusFilter === 'in_stock' ? (t('products.available') || 'متوفر')
+                : statusFilter === 'low_stock' ? (t('products.lowStock') || 'منخفض')
+                : (t('products.active') || 'النشطة')}
+              {mainTab === 'products' && !noInventory && <ChevronDown className="w-3 h-3 opacity-80" />}
+            </span>
           </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="rounded-2xl p-1 w-44">
+            {([
+              ['all', t('products.active') || 'النشطة', stats.total],
+              ['in_stock', t('products.available') || 'متوفر', stats.inStock],
+              ['low_stock', t('products.lowStock') || 'منخفض', stats.lowStock],
+            ] as const).map(([key, label, count]) => (
+              <DropdownMenuItem key={key} onClick={() => setStatusFilter(key)} className="rounded-xl flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5">{statusFilter === key && <Check className="w-3.5 h-3.5 text-primary" />}{label}</span>
+                <span dir="ltr" className="tabular-nums text-xs text-muted-foreground">{count}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* 2. التصنيفات (في المنتصف) */}
           <button
@@ -2338,66 +2364,6 @@ export default function Products() {
           </button>
         </div>
       </div>
-
-      {/* Stats - كبسولات إحصائيات مصغرة بنسبة 50% مع تقليل الارتفاع */}
-      {!noInventory && mainTab === 'products' && (
-        <div className="flex-shrink-0 px-3 md:px-6 pb-2 md:pb-2.5">
-          <div className="bg-muted/60 p-1 rounded-2xl border border-border/40 shadow-xs sm:w-fit sm:min-w-[24rem]">
-          {mainTab === 'products' ? (
-            <div className="grid grid-cols-3 gap-1">
-              <button
-                type="button"
-                onClick={() => setStatusFilter('all')}
-                className={cn(
-                  "flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-primary/40",
-                  statusFilter === 'all' ? "border-primary bg-primary/10 ring-1 ring-primary/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
-                )}
-              >
-                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Package className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span dir="ltr" className="inline-block text-xs sm:text-base font-bold text-foreground leading-none tabular-nums">{stats.total}</span>
-                  <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.total')}</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('in_stock')}
-                className={cn(
-                  "flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-success/40",
-                  statusFilter === 'in_stock' ? "border-success bg-success/10 ring-1 ring-success/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
-                )}
-              >
-                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                  <CheckCircle className="w-3.5 h-3.5 text-success" />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span dir="ltr" className="inline-block text-xs sm:text-base font-bold text-foreground leading-none tabular-nums">{stats.inStock}</span>
-                  <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.available')}</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('low_stock')}
-                className={cn(
-                  "flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl border bg-card/90 transition-colors select-none text-start cursor-pointer hover:border-warning/40",
-                  statusFilter === 'low_stock' ? "border-warning bg-warning/10 ring-1 ring-warning/30 shadow-2xs" : "border-border/60 hover:bg-muted/40"
-                )}
-              >
-                <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="w-3.5 h-3.5 text-warning" />
-                </div>
-                <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-baseline sm:gap-1.5">
-                  <span dir="ltr" className="inline-block text-xs sm:text-base font-bold text-foreground leading-none tabular-nums">{stats.lowStock}</span>
-                  <span className="text-[11px] sm:text-xs text-muted-foreground truncate leading-none mt-0.5 sm:mt-0">{t('products.low')}</span>
-                </div>
-              </button>
-            </div>
-          ) : null}
-          </div>
-        </div>
-      )}
 
       {/* Filters & Search - Fixed Geometry for Both Modes */}
       {mainTab !== 'categories' && (
@@ -2472,7 +2438,7 @@ export default function Products() {
           </div>
 
           {mainTab === 'archive' ? null : (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={cn("flex items-center gap-2", showAllCategories ? "flex-wrap" : "flex-nowrap overflow-x-auto no-scrollbar")}>
               {visibleCategories.map((category) => (
                 <Button
                   key={category}
@@ -2892,7 +2858,7 @@ export default function Products() {
                       </div>
 
                       {/* Middle: Full Name + Status + Stock + Buy/Sell Prices (Height-matched with Image) */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-between h-[5.14rem] py-0.5">
+                      <div className="flex-1 min-w-0 flex flex-col justify-between gap-1 min-h-[5.14rem] py-0.5">
                         <div className="flex items-start gap-1.5 min-w-0">
                           <h3
                             className="font-semibold text-foreground text-sm sm:text-base leading-tight truncate flex-1 min-w-0 cursor-pointer hover:text-primary transition-colors"
@@ -2970,16 +2936,16 @@ export default function Products() {
                         )}
 
                         {/* Buy & Sell Pricing (Aligned directly with bottom of image) */}
-                        <div className="flex items-center gap-1.5 font-mono text-[11px] shrink-0">
+                        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] shrink-0">
                           {!noInventory && (
                             <div className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-md border border-border/70 shadow-2xs">
                               <span className="text-[11px] font-sans text-muted-foreground font-medium">{t('products.buy') || 'شراء'}:</span>
-                              <span className="text-foreground font-bold tabular-nums">{formatPrice(product.costPrice)}</span>
+                              <span dir="ltr" className="text-foreground font-bold tabular-nums whitespace-nowrap">{formatPrice(product.costPrice)}</span>
                             </div>
                           )}
                           <div className="flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20 shadow-2xs text-primary">
                             <span className="text-[11px] font-sans text-primary/80 font-medium">{t('products.sell') || 'بيع'}:</span>
-                            <span className="text-foreground font-black tabular-nums">{formatPrice(product.salePrice)}</span>
+                            <span dir="ltr" className="text-foreground font-black tabular-nums whitespace-nowrap">{formatPrice(product.salePrice)}</span>
                           </div>
                         </div>
                       </div>
@@ -3020,7 +2986,7 @@ export default function Products() {
               return (
                 <div
                   key={product.id}
-                  className="bg-card rounded-2xl p-2.5 border border-border shadow-2xs relative hover:border-border/80 transition-colors fade-in"
+                  className="bg-card rounded-2xl p-2 border border-border shadow-2xs relative hover:border-border/80 transition-colors fade-in"
                 >
                   {/* Main Body: Right Info, Center Square Image, Left Stacked Actions */}
                   <div className="flex items-center justify-between gap-2.5">
@@ -3036,7 +3002,7 @@ export default function Products() {
                       </h3>
 
                       {/* Barcode + Status (Spaced out with ample room) */}
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="hidden md:flex items-center gap-2 flex-wrap">
                         {/* Barcode Box */}
                         {product.barcode && (
                           <div
@@ -3054,7 +3020,7 @@ export default function Products() {
                                 toast.success(`تم نسخ الباركود: ${product.barcode}`);
                               }
                             }}
-                            className="inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 px-2 py-1 rounded-lg cursor-pointer transition-colors text-muted-foreground shadow-2xs"
+                            className="hidden md:inline-flex items-center gap-1.5 bg-muted hover:bg-muted/80 px-2 py-1 rounded-lg cursor-pointer transition-colors text-muted-foreground shadow-2xs"
                             title={t('products.clickToCopyBarcode') || 'انقر لنسخ الباركود'}
                           >
                             <Copy className="w-3 h-3 text-muted-foreground/70 flex-shrink-0" />
@@ -3062,12 +3028,12 @@ export default function Products() {
                           </div>
                         )}
 
-                        {/* Status Badge next to Barcode */}
+                        {/* Status badge: on the image on phones (saves a line), next to the barcode on larger screens */}
                         {!noInventory && (
                           <Badge
                             variant="outline"
                             className={cn(
-                              "whitespace-nowrap",
+                              "whitespace-nowrap hidden md:inline-flex",
                               product.status === 'out_of_stock'
                                 ? "bg-destructive/15 text-destructive border-destructive/30"
                                 : product.status === 'low_stock'
@@ -3205,14 +3171,24 @@ export default function Products() {
                   )}
                     </div>
 
-                    {/* Center: Enlarged Square Image */}
-                    <div className="w-24 h-24 rounded-2xl bg-muted/40 overflow-hidden border border-border shrink-0 aspect-square shadow-2xs flex items-center justify-center">
+                    {/* Center: Enlarged Square Image (+ stock badge on phones) */}
+                    <div className="relative w-24 h-24 rounded-2xl bg-muted/40 overflow-hidden border border-border shrink-0 aspect-square shadow-2xs flex items-center justify-center">
                       <ProductImage
                         imageUrl={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover"
                         iconClassName="w-10 h-10 text-muted-foreground/40"
                       />
+                      {!noInventory && (
+                        <span className={cn(
+                          "md:hidden absolute bottom-0 inset-x-0 text-center text-[10px] font-bold py-0.5",
+                          product.status === 'out_of_stock' ? "bg-destructive/85 text-destructive-foreground"
+                            : product.status === 'low_stock' ? "bg-warning/85 text-warning-foreground"
+                            : "bg-success/85 text-success-foreground"
+                        )}>
+                          {status.label}
+                        </span>
+                      )}
                     </div>
 
                     {/* Left Column: Vertically Stacked Actions (Delete directly below Edit) */}

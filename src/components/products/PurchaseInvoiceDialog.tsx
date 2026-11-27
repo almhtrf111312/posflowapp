@@ -586,7 +586,7 @@ export function PurchaseInvoiceDialog({ open, onOpenChange, onSuccess }: Purchas
     <>
       <div
         className={cn(
-          "fixed inset-0 z-50 h-[100dvh] w-full bg-background flex flex-col overflow-hidden animate-in fade-in-50 duration-150",
+          "fixed inset-0 z-50 h-[100dvh] w-full bg-background flex flex-col overflow-hidden animate-in fade-in-50 duration-150 pt-[var(--app-safe-top,0px)]",
           showCameraPreview && "hidden"
         )}
         dir={isRTL ? 'rtl' : 'ltr'}

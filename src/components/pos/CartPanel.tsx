@@ -683,19 +683,20 @@ export function CartPanel({
 
     // 🧾 بيع نقدي بلا وردية محلية بينما قد تكون هناك وردية مفتوحة سحابياً (جهاز جديد): نعتمدها أولاً حتى يدخل المبلغ
     // الدرج الصحيح (تدقيق 2026-11-26). المهلة قصيرة (2.5 ث) فلا يتعطل البيع عند بطء الشبكة.
-    if (payMethod !== 'digital' && !getActiveShift() && !isAppOffline() && user?.id) {
+    if (!getActiveShift() && !isAppOffline() && user?.id) {
       try {
         const { reconcileDrawerWithCloud } = await import('@/lib/cloud/cashbox-cloud');
         await Promise.race([reconcileDrawerWithCloud(user.id), new Promise(resolve => setTimeout(resolve, 2500))]);
       } catch { /* the sale continues without a drawer, as before */ }
     }
 
-    // D-35: when the owner requires a shift for this user, a cash sale needs an open shift (otherwise it goes to the general drawer).
-    if (payMethod !== 'digital' && !getCashDrawerId() && isShiftRequiredForCurrentUser()) {
+    // D-35: when the owner requires a shift for this user, EVERY sale (cash, digital, credit) needs an open shift.
+    // Without the requirement, cash goes to the general drawer.
+    if (!getActiveShift() && isShiftRequiredForCurrentUser()) {
       if (globalLock.lockId) releaseLock(globalLock.lockId);
       savingRef.current = false;
       setIsSaving(false);
-      showToast.error(isEn ? 'Open a shift before a cash sale' : 'يجب فتح وردية قبل البيع النقدي', { persistent: false });
+      showToast.error(isEn ? 'Open a shift before selling' : 'يجب فتح وردية قبل البيع', { persistent: false });
       return;
     }
 

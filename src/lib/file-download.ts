@@ -96,6 +96,7 @@ const saveFileNative = async (
       if (!st || !(Number(st.size) > 0)) throw new Error('Backup file missing after write');
 
       console.log('[FileDownload] Saved to Documents/' + NATIVE_BACKUP_DIR + ':', result.uri);
+      void indexDocumentsFiles([`${NATIVE_BACKUP_DIR}/${filename}`]);
       return { success: true, path: `Documents/${NATIVE_BACKUP_DIR}`, filename };
     } catch (documentsError) {
       console.warn('[FileDownload] Documents save failed, trying Downloads:', documentsError);
@@ -245,6 +246,7 @@ export const listNativeBackups = async (): Promise<NativeBackupFile[]> => {
       console.log('[FileDownload] Cannot read Documents/' + dir + ':', error);
     }
   }
+  void indexDocumentsFiles(all.map(b => b.uri));
   return all.sort((a, b) => b.ctime - a.ctime);
 };
 
@@ -268,5 +270,26 @@ export const shareNativeBackup = async (backup: NativeBackupFile): Promise<boole
   } catch (error) {
     console.error('[FileDownload] share backup failed:', error);
     return false;
+  }
+};
+
+/**
+ * Asks Android to index files written under Documents (MediaStore), so file managers that only show indexed files
+ * (e.g. Xiaomi's) display the backups. `relPaths` are relative to Documents. Never throws; no-op on web.
+ */
+export const indexDocumentsFiles = async (relPaths: string[]): Promise<void> => {
+  if (!isNativePlatform() || relPaths.length === 0) return;
+  try {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem');
+    const { registerPlugin } = await import('@capacitor/core');
+    const MediaScan = registerPlugin<{ scan(o: { paths: string[] }): Promise<{ scanned: number }> }>('PosFlowMediaScan');
+    const abs: string[] = [];
+    for (const rel of relPaths) {
+      const { uri } = await Filesystem.getUri({ path: rel, directory: Directory.Documents });
+      abs.push(decodeURIComponent(uri.replace(/^file:\/\//, '')));
+    }
+    await MediaScan.scan({ paths: abs });
+  } catch (error) {
+    console.warn('[FileDownload] media index skipped:', error);
   }
 };

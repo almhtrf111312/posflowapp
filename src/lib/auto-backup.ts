@@ -128,6 +128,7 @@ export const saveBackupLocally = async (): Promise<boolean> => {
         encoding: (await import('@capacitor/filesystem')).Encoding.UTF8,
         recursive: true,
       });
+      void import('./file-download').then(m => m.indexDocumentsFiles([`PosFlow App/${fileName}`]));
     } else {
       // على الويب لا نخزن نسخة كاملة (بالصور) في localStorage؛ النسخة السحابية والتنزيل اليدوي كافيان
     }

@@ -7,6 +7,7 @@ Custom native Android code (Capacitor plugins). Default example tests omitted.
 |---|---|
 | `main/java/com/posflow/app/MainActivity.java` | Capacitor main activity; registers the native PosFlow plugins. |
 | `main/java/com/posflow/app/auth/PosFlowGoogleAuthPlugin.java` | Native Google sign-in plugin. |
+| `main/java/com/posflow/app/files/PosFlowMediaScanPlugin.java` | Media scan plugin: indexes saved backups in Documents/PosFlow App so file managers show them. |
 | `main/java/com/posflow/app/printer/PosFlowPrinterPlugin.java` | Native thermal/Bluetooth printer plugin. |
 | `main/java/com/posflow/app/push/PosFlowFirebaseService.java` | Firebase Cloud Messaging service (incoming push). |
 | `main/java/com/posflow/app/push/PosFlowPushPlugin.java` | Native push token plugin. |

@@ -96,7 +96,7 @@ export function BackupSettingsSection({
             {/* Backups saved on this device: restore directly, no file picker */}
             {onRestoreDeviceBackup && deviceBackups.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-muted-foreground">النسخ المحفوظة على الجهاز (Documents/PosFlow App)</p>
+                <p className="text-xs font-semibold text-muted-foreground">النسخ المحفوظة على الجهاز</p>
                 {deviceBackups.slice(0, 10).map(b => (
                   <div key={b.uri} className="flex items-center justify-between gap-2 rounded-lg border border-border p-2">
                     <div className="min-w-0">

@@ -25,7 +25,7 @@ import { useLanguage } from '@/hooks/language-context';
 // KD-08: the owner waits this long after entering the password before the final button is enabled
 const RESET_COUNTDOWN_SECONDS = 10;
 
-export default function DataResetSection() {
+export default function DataResetSection({ askFolderAccess }: { askFolderAccess: () => Promise<boolean> }) {
   const { language } = useLanguage();
   const { user } = useAuth();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -104,7 +104,7 @@ export default function DataResetSection() {
       // 1. Save a backup on this device right before the wipe. If it cannot be saved, nothing is deleted.
       const { buildFullBackup, backupFileName } = await import('@/lib/full-backup');
       const { downloadFile, prepareBackupFolder, usesAndroidBackupFolder, saveAndroidBackup } = await import('@/lib/file-download');
-      if (!(await prepareBackupFolder(t('settings.backupFolderAccess', language)))) {
+      if (!(await prepareBackupFolder(askFolderAccess))) {
         setError(t('settings.resetBackupFailed', language));
         return;
       }

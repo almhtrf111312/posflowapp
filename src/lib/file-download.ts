@@ -9,7 +9,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 const backupFolder = registerPlugin<{
   status(): Promise<{ granted: boolean }>;
   choose(): Promise<{ granted: boolean }>;
-  save(o: { filename: string; content: string }): Promise<{ filename: string }>;
+  save(o: { filename: string; content: string }): Promise<{ filename: string; path: string }>;
   list(): Promise<{ files: NativeBackupFile[] }>;
 }>('BackupFolder');
 
@@ -17,15 +17,15 @@ export const usesAndroidBackupFolder = () => Capacitor.isNativePlatform() && Cap
 
 export const hasBackupFolderAccess = async () => (await backupFolder.status()).granted;
 
-export async function prepareBackupFolder(explanation: string): Promise<boolean> {
+export async function prepareBackupFolder(confirmAccess: () => Promise<boolean>): Promise<boolean> {
   if (!usesAndroidBackupFolder() || (await backupFolder.status()).granted) return true;
-  if (!window.confirm(explanation)) return false;
+  if (!(await confirmAccess())) return false;
   return (await backupFolder.choose()).granted;
 }
 
 export async function saveAndroidBackup(filename: string, content: string): Promise<DownloadResult> {
   const saved = await backupFolder.save({ filename, content });
-  return { success: true, path: 'Documents/PosFlow App', filename: saved.filename };
+  return { success: true, path: saved.path, filename: saved.filename };
 }
 
 interface DownloadOptions {

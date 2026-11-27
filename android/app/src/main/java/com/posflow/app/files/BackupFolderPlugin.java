@@ -28,17 +28,18 @@ public class BackupFolderPlugin extends Plugin {
     private static final String AUTHORITY = "com.android.externalstorage.documents";
     private static final int ACCESS = Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION;
 
-    private boolean supported(Uri uri) {
+    private boolean legacyFolder(Uri uri) {
         if (!AUTHORITY.equals(uri.getAuthority())) return false;
         String id = DocumentsContract.getTreeDocumentId(uri);
         return id.equals("primary:Documents") || id.equals("primary:Documents/" + FOLDER);
     }
 
     private DocumentFile grantedRoot() {
+        String selected = getContext().getSharedPreferences("backup_folder", 0).getString("tree", null);
         for (UriPermission permission : getContext().getContentResolver().getPersistedUriPermissions()) {
             Uri uri = permission.getUri();
             if (permission.isReadPermission() && permission.isWritePermission()
-                    && DocumentsContract.isTreeUri(uri) && supported(uri)) {
+                    && DocumentsContract.isTreeUri(uri) && (selected == null ? legacyFolder(uri) : selected.equals(uri.toString()))) {
                 DocumentFile root = DocumentFile.fromTreeUri(getContext(), uri);
                 if (root != null && root.isDirectory() && root.canWrite()) return root;
             }
@@ -72,11 +73,10 @@ public class BackupFolderPlugin extends Plugin {
         }
         try {
             Uri uri = data.getData();
-            if (!supported(uri)) {
-                call.reject("اختر المستندات (Documents) في التخزين الداخلي أو مجلد PosFlow App داخله.");
-                return;
-            }
-            getContext().getContentResolver().takePersistableUriPermission(uri, ACCESS);
+            int flags = data.getFlags() & ACCESS;
+            if (!DocumentsContract.isTreeUri(uri) || flags != ACCESS) throw new IOException("Read/write access required");
+            getContext().getContentResolver().takePersistableUriPermission(uri, flags);
+            getContext().getSharedPreferences("backup_folder", 0).edit().putString("tree", uri.toString()).apply();
             status(call);
         } catch (Exception e) {
             call.reject("تعذّر الحصول على إذن المجلد.", e);
@@ -86,7 +86,7 @@ public class BackupFolderPlugin extends Plugin {
     private DocumentFile backupDir(boolean create) throws IOException {
         DocumentFile root = grantedRoot();
         if (root == null) throw new IOException("Backup folder access required");
-        if (DocumentsContract.getTreeDocumentId(root.getUri()).endsWith("/" + FOLDER)) return root;
+        if (FOLDER.equals(root.getName())) return root;
         DocumentFile child = root.findFile(FOLDER);
         if (child == null && create) child = root.createDirectory(FOLDER);
         return child;
@@ -130,7 +130,13 @@ public class BackupFolderPlugin extends Plugin {
                 stream.write(bytes);
             }
             if (file.length() != bytes.length) throw new IOException("Incomplete backup");
-            call.resolve(new JSObject().put("filename", file.getName()));
+            DocumentFile parent = dir.getParentFile();
+            String path = parent == null ? dir.getName() : parent.getName() + "/" + dir.getName();
+            if (AUTHORITY.equals(dir.getUri().getAuthority())) {
+                String id = DocumentsContract.getDocumentId(dir.getUri());
+                if (id.startsWith("primary:")) path = id.substring("primary:".length());
+            }
+            call.resolve(new JSObject().put("filename", file.getName()).put("path", path));
         } catch (Exception e) {
             if (file != null) file.delete();
             call.reject("Cannot save backup", e);

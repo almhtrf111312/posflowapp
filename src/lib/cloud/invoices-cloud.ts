@@ -1107,8 +1107,10 @@ const refundInvoiceCloudImpl = async (
   });
   if (error) {
     console.error('[refundInvoiceCloud] Atomic refund failed:', error);
+    void import('../sync-history').then(m => m.logDirectSync(`direct-refund-${id}`, 'invoice_refund', `استرداد فاتورة ${id}`, false, error.message, undefined, 'sale'));
     return failedRefund(error.message || 'فشل تنفيذ الاسترداد على الخادم');
   }
+  void import('../sync-history').then(m => m.logDirectSync(`direct-refund-${id}`, 'invoice_refund', `استرداد فاتورة ${id}`, true, undefined, undefined, 'sale'));
 
   const atomic = data?.[0] as (NonNullable<typeof data>[number] & {
     refunded_profit?: number; profit_reduced?: number; refunded_cogs?: number; cogs_reduced?: number;
@@ -1239,7 +1241,11 @@ export const refundInvoicePartialCloud = async (
     _operation_id: opId,
     _shift_id: activeShiftId,
   });
-  if (error) return fail(error.message || 'فشل الاسترداد الجزئي');
+  if (error) {
+    void import('../sync-history').then(m => m.logDirectSync(`direct-prefund-${opId}`, 'invoice_refund_partial', `استرداد جزئي ${invoiceNumber}`, false, error.message, undefined, 'sale'));
+    return fail(error.message || 'فشل الاسترداد الجزئي');
+  }
+  void import('../sync-history').then(m => m.logDirectSync(`direct-prefund-${opId}`, 'invoice_refund_partial', `استرداد جزئي ${invoiceNumber}`, true, undefined, undefined, 'sale'));
 
   const r = (data || {}) as Record<string, unknown>;
   if (r.success !== true) return fail(r.already_refunded ? 'الفاتورة مستردة سابقاً' : 'تعذّر إتمام الاسترداد الجزئي');

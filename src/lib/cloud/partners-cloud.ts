@@ -453,7 +453,11 @@ export const addCapitalWithCashboxCloud = async (
     _original_amount: origAmt,
     _exchange_rate: rate,
   });
-  if (error) throw new Error(error.message || 'فشل إيداع مبلغ الشريك');
+  if (error) {
+    void import('../sync-history').then(m => m.logDirectSync(`direct-pdep-${partnerId}-${Date.now()}`, 'partner_deposit', 'إيداع شريك', false, error.message, undefined, 'system'));
+    throw new Error(error.message || 'فشل إيداع مبلغ الشريك');
+  }
+  void import('../sync-history').then(m => m.logDirectSync(`direct-pdep-${partnerId}-${Date.now()}`, 'partner_deposit', `إيداع شريك ${origAmt} ${currency}`, true, undefined, undefined, 'system'));
   const result = (data || {}) as { success?: boolean; error?: string; message?: string };
   if (!result.success) throw new Error(result.error || result.message || 'رفض الخادم عملية الإيداع');
 
@@ -763,7 +767,11 @@ const executePartnerWithdrawal = async (
     _exchange_rate: rate,
     _operation_id: resolvedOpId,
   });
-  if (error) throw new Error(error.message || 'فشل السحب من رصيد الشريك');
+  if (error) {
+    void import('../sync-history').then(m => m.logDirectSync(`direct-pwd-${resolvedOpId || Date.now()}`, 'partner_withdrawal', 'سحب شريك', false, error.message, undefined, 'system'));
+    throw new Error(error.message || 'فشل السحب من رصيد الشريك');
+  }
+  void import('../sync-history').then(m => m.logDirectSync(`direct-pwd-${resolvedOpId || Date.now()}`, 'partner_withdrawal', `سحب شريك ${origAmt} ${currency}`, true, undefined, undefined, 'system'));
   const result = (data || {}) as {
     success?: boolean;
     already_processed?: boolean;

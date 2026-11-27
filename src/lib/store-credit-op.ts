@@ -78,8 +78,15 @@ export async function submitCreditOperation(d: CreditOpData, deps: CreditOpDeps)
     let error: unknown = null;
     try { ({ error } = await deps.rpc(call.fn, call.args)); } catch (e) { error = e; }
     if (error && isNetworkFailure(error)) { deps.enqueue(d); result = 'queued'; }
-    else if (error) throw error;
-    else result = 'done';
+    else {
+      // Direct (online) operation: listed in the sync log as synced or failed. Never affects the result.
+      const label = d.kind === 'payout' ? 'صرف رصيد متجر نقداً' : d.kind === 'apply' ? 'سداد دين من رصيد المتجر' : 'إصدار رصيد متجر';
+      void import('./sync-history')
+        .then(m => m.logDirectSync(`direct-credit-${d.operationId}`, 'store_credit_op', label, !error, error ? String((error as { message?: unknown }).message ?? error) : undefined, undefined, 'debt'))
+        .catch(() => {});
+      if (error) throw error;
+      result = 'done';
+    }
   }
   if (d.kind === 'payout') deps.onLocalPayout?.(d);
   return result;

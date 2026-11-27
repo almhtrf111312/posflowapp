@@ -381,6 +381,7 @@ export async function finalizePurchaseInvoiceCloud(invoiceId: string): Promise<b
   const { data: rpcData, error: rpcError } = await supabase.rpc('finalize_purchase_invoice_atomic', {
     _invoice_id: invoiceId,
   });
+  void import('../sync-history').then(m => m.logDirectSync(`direct-pinv-${invoiceId}`, 'purchase_invoice', 'فاتورة شراء', !rpcError, rpcError?.message, undefined, 'purchase'));
   if (rpcError) throw rpcError;
 
   const result = (rpcData || {}) as { success?: boolean; already_finalized?: boolean };

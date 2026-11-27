@@ -91,6 +91,7 @@ const moneyParams = (a: MoneyArgs) => (assertCurrencyUsable(a.currency), { // F-
 
 export async function paySupplierCloud(a: MoneyArgs): Promise<string> {
   const { data, error } = await supabase.rpc('pay_supplier_atomic', moneyParams(a));
+  void import('../sync-history').then(m => m.logDirectSync(`direct-spay-${a.operationId || Date.now()}`, 'supplier_payment', `دفعة لمورد ${a.currencyAmount ?? a.amount} ${a.currency || 'USD'}`, !error, error?.message, undefined, 'purchase'));
   if (error) throw error;
   emitEvent(EVENTS.PURCHASES_UPDATED);
   return data as string;
@@ -98,6 +99,7 @@ export async function paySupplierCloud(a: MoneyArgs): Promise<string> {
 
 export async function refundFromSupplierCloud(a: MoneyArgs): Promise<string> {
   const { data, error } = await supabase.rpc('supplier_refund_atomic', moneyParams(a));
+  void import('../sync-history').then(m => m.logDirectSync(`direct-sref-${a.operationId || Date.now()}`, 'supplier_refund', `استرداد من مورد ${a.currencyAmount ?? a.amount} ${a.currency || 'USD'}`, !error, error?.message, undefined, 'purchase'));
   if (error) throw error;
   emitEvent(EVENTS.PURCHASES_UPDATED);
   return data as string;
@@ -110,6 +112,7 @@ export async function purchaseReturnCloud(invoiceId: string, lines: Array<{ item
     _reason: reason,
     _operation_id: operationId || crypto.randomUUID(),
   });
+  void import('../sync-history').then(m => m.logDirectSync(`direct-pret-${operationId || invoiceId}`, 'purchase_return', 'مرتجع مشتريات', !error, error?.message, undefined, 'purchase'));
   if (error) throw error;
   emitEvent(EVENTS.PURCHASES_UPDATED);
   emitEvent(EVENTS.PRODUCTS_UPDATED);

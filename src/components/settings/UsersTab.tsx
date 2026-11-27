@@ -95,6 +95,8 @@ export function UsersTab() {
   // Edit dialog: refund + must-open-shift are saved together with «حفظ» (null = unchanged / not applicable).
   const [editRefund, setEditRefund] = useState<boolean | null>(null);
   const [editRequireShift, setEditRequireShift] = useState<boolean | null>(null);
+  // Old options that never worked (dashboard redirects to reports; partners data is owner-only): dropped on save.
+  const cleanPages = (pages: string[]) => pages.filter(p => p !== 'dashboard' && p !== 'partners');
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
@@ -123,7 +125,7 @@ export function UsersTab() {
     // قفل عدد الكاشيرات المسموح به في الباقة
     if (!isBoss) {
       const maxAllowedCashiers = Number(licenseState?.maxCashiers) || 1;
-      const currentCashiersCount = users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length;
+      const currentCashiersCount = users.filter(u => u.role === 'cashier' && !u.isOwner).length;
 
       if (currentCashiersCount >= maxAllowedCashiers && await cashierLimitReachedOnServer()) {
         toast({
@@ -221,7 +223,7 @@ export function UsersTab() {
       const nameChanged = trimmedName !== selectedUser.name;
       const userTypeChanged = userForm.userType !== selectedUser.userType;
       const phoneChanged = userForm.phone !== (selectedUser.phone || '');
-      const pagesChanged = JSON.stringify(userForm.allowedPages) !== JSON.stringify(selectedUser.allowedPages || []);
+      const pagesChanged = JSON.stringify(cleanPages(userForm.allowedPages)) !== JSON.stringify(selectedUser.allowedPages || []);
 
       let success = true;
 
@@ -231,7 +233,7 @@ export function UsersTab() {
           trimmedName,
           userForm.userType,
           userForm.phone,
-          userForm.allowedPages.length > 0 ? userForm.allowedPages : null
+          cleanPages(userForm.allowedPages).length > 0 ? cleanPages(userForm.allowedPages) : null
         );
       }
 
@@ -302,7 +304,7 @@ export function UsersTab() {
       // قفل إضافي قبل الحفظ لمنع تجاوز حد الكاشيرات
       if (!isBoss) {
         const maxAllowedCashiers = Number(licenseState?.maxCashiers) || 1;
-        const currentCashiersCount = users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length;
+        const currentCashiersCount = users.filter(u => u.role === 'cashier' && !u.isOwner).length;
 
         if (currentCashiersCount >= maxAllowedCashiers && await cashierLimitReachedOnServer()) {
           toast({
@@ -325,7 +327,7 @@ export function UsersTab() {
         userForm.role,
         userForm.userType,
         userForm.phone?.trim() || undefined,
-        userForm.allowedPages.length > 0 ? userForm.allowedPages : undefined
+        cleanPages(userForm.allowedPages).length > 0 ? cleanPages(userForm.allowedPages) : undefined
       );
 
       if (success) {
@@ -350,7 +352,7 @@ export function UsersTab() {
           <h2 className="text-base sm:text-lg font-bold text-foreground">{t('settings.userManagement')}</h2>
           {!isBoss && (
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-              {users.filter(u => u.role === 'cashier' || u.userType === 'cashier').length} / {Number(licenseState?.maxCashiers) || 1} {isRTL ? 'كاشير متاح' : 'cashiers'}
+              {users.filter(u => u.role === 'cashier' && !u.isOwner).length} / {Number(licenseState?.maxCashiers) || 1} {isRTL ? 'كاشير متاح' : 'cashiers'}
             </span>
           )}
         </div>
@@ -576,6 +578,7 @@ export function UsersTab() {
               <div className="space-y-1.5 pt-1">
                 {[
                   { key: 'products', label: isRTL ? 'المنتجات (عرض فقط)' : 'Products (view only)' },
+                  { key: 'purchases', label: isRTL ? 'إضافة فواتير الموردين (المشتريات)' : 'Supplier invoices (purchases)' },
                   { key: 'reports', label: t('nav.reports') },
                   { key: 'settings', label: t('nav.settings') },
                 ].map(page => (

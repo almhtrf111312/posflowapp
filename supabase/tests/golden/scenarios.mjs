@@ -1400,6 +1400,41 @@ export async function runQaFixes(k, newWorldFn) {
     truthy('GENERAL an expense can be paid from the general drawer', ex.r && (ex.r.success === true || ex.r.id));
     check('GENERAL ...and leaves it (215 - 4)', await bal(gen), 211);
   }
+  // Cashier permissions on the server (D-36): products:add and purchases.
+  {
+    const w = await newWorldFn();
+    const CASH = 'dddddddd-0000-4000-8000-000000000036';
+    await w.q(`insert into auth.users(id,email) values ($1,'perm@test.local') on conflict do nothing`, [CASH]);
+    await w.q(`delete from public.user_roles where user_id=$1`, [CASH]);
+    await w.q(`insert into public.user_roles(user_id, role, owner_id) values ($1,'cashier',$2)`, [CASH, OWNER]);
+    await w.q(`insert into public.profiles(user_id, full_name) values ($1,'Perm') on conflict (user_id) do nothing`, [CASH]);
+    const prod = await w.one(`insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'PermItem',10,6,20) returning id`, [OWNER]);
+    const asUser = async (uid, sql, params = []) => {
+      await w.db.exec('begin');
+      try {
+        await w.q(`select set_config('request.jwt.claim.sub', $1, true)`, [uid]);
+        // Supabase grants these to authenticated by default; the harness does not (rolled back with the test).
+        await w.db.exec('grant usage on schema auth to authenticated; grant execute on all functions in schema auth to authenticated; grant select, insert, update, delete on all tables in schema public to authenticated');
+        await w.db.exec('set local role authenticated');
+        return await w.fails(w.q(sql, params));
+      } finally { await w.db.exec('rollback'); }
+    };
+    const setPages = (pages) => w.q(`update public.profiles set allowed_pages=$2::jsonb where user_id=$1`, [CASH, JSON.stringify(pages)]);
+    await setPages([]);
+    check('PERM cashier without products:add can still change stock (sales)', await asUser(CASH, `update public.products set quantity=19 where id=$1`, [prod.id]), null);
+    truthy('PERM cashier without products:add cannot change the price', (await asUser(CASH, `update public.products set sale_price=1 where id=$1`, [prod.id])) !== null);
+    truthy('PERM cashier without products:add cannot rename', (await asUser(CASH, `update public.products set name='x' where id=$1`, [prod.id])) !== null);
+    truthy('PERM cashier without products:add cannot insert', (await asUser(CASH, `insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'New',1,1,1)`, [OWNER])) !== null);
+    truthy('PERM cashier without products:add cannot delete directly', (await asUser(CASH, `delete from public.products where id=$1`, [prod.id])) !== null);
+    truthy('PERM cashier without products:add cannot delete via RPC', (await asUser(CASH, `select public.hard_delete_product_atomic($1::uuid)`, [prod.id])) !== null);
+    truthy('PERM cashier without purchases cannot finalize a purchase invoice', (await asUser(CASH, `select public.finalize_purchase_invoice_atomic('00000000-0000-4000-8000-0000000000aa'::uuid)`))?.includes('مخصص لمالك المتجر'));
+    await setPages(['products', 'products:add', 'purchases']);
+    check('PERM cashier with products:add can change the price', await asUser(CASH, `update public.products set sale_price=11 where id=$1`, [prod.id]), null);
+    check('PERM cashier with products:add can insert', await asUser(CASH, `insert into public.products(user_id,name,sale_price,cost_price,quantity) values ($1,'New',1,1,1)`, [OWNER]), null);
+    const fin = await asUser(CASH, `select public.finalize_purchase_invoice_atomic('00000000-0000-4000-8000-0000000000aa'::uuid)`);
+    truthy('PERM cashier with purchases passes the owner check (fails only on the missing invoice)', fin !== null && !fin.includes('مخصص لمالك المتجر'));
+    check('PERM owner keeps full access', await asUser(OWNER, `update public.products set name='Owner edit' where id=$1`, [prod.id]), null);
+  }
 }
 
 

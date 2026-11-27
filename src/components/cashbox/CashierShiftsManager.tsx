@@ -13,10 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, PlayCircle, StopCircle, Users } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
 import { round8, getEnabledCurrencies } from '@/lib/money-engine';
+import { INFLOW_TYPES, OUTFLOW_TYPES } from '@/lib/shift-adopt';
 import { formatMoney, formatDateTime } from '@/lib/utils';
 import { addActivityLog } from '@/lib/activity-log';
 import {
-  closeShiftCloud, openShiftCloud, loadStoreOpenShifts, loadStoreCashiers, loadShiftExpectedFromMovements, CloudShift,
+  closeShiftCloud, openShiftCloud, loadStoreOpenShifts, loadStoreCashiers, loadShiftExpectedFromMovements, loadShiftMovements, CloudShift,
 } from '@/lib/cloud/cashbox-cloud';
 
 interface Props {
@@ -34,6 +35,10 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
   const [cashiers, setCashiers] = useState<Array<{ id: string; name: string }>>([]);
   const [closing, setClosing] = useState<OpenRow | null>(null);
   const [counted, setCounted] = useState('');
+  // Per-currency close (agent test W5): expected units per currency from the shift's opening + movements; counted per currency.
+  const [ccyExpected, setCcyExpected] = useState<Record<string, number>>({});
+  const [ccyCounted, setCcyCounted] = useState<Record<string, string>>({});
+  const rateOf = (code: string) => (code === 'USD' ? 1 : (getEnabledCurrencies().find(c => c.code.toUpperCase() === code)?.rate || 0));
   const [decision, setDecision] = useState<'accept' | 'defer'>('accept');
   const [opening, setOpening] = useState(false);
   const [openFor, setOpenFor] = useState('');
@@ -62,9 +67,43 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
 
   useEffect(() => { void reload(); }, [reload]);
 
+  useEffect(() => {
+    if (!closing) { setCcyExpected({}); setCcyCounted({}); return; }
+    let alive = true;
+    const opening = (closing as unknown as { opening_by_currency?: Record<string, number | string> | null }).opening_by_currency;
+    const map: Record<string, number> = {};
+    if (opening && typeof opening === 'object' && Object.keys(opening).length > 0) {
+      Object.entries(opening).forEach(([k, v]) => { map[k.toUpperCase()] = round8(Number(v) || 0); });
+    } else {
+      map.USD = round8(Number(closing.opening_balance) || 0);
+    }
+    void loadShiftMovements(closing.id).then(rows => {
+      if (!alive) return;
+      rows.forEach(r => {
+        const code = (r.currency || 'USD').toUpperCase();
+        const units = r.currency_amount ?? r.amount;
+        const sign = INFLOW_TYPES.includes(r.type) ? 1 : OUTFLOW_TYPES.includes(r.type) ? -1 : 0;
+        map[code] = round8((map[code] || 0) + sign * units);
+      });
+      setCcyExpected({ ...map });
+    });
+    return () => { alive = false; };
+  }, [closing]);
+  const isMultiCurrency = Object.keys(ccyExpected).some(k => k !== 'USD' && ccyExpected[k] !== 0);
+
   const submitClose = async () => {
     if (!closing) return;
-    const value = parseFloat(counted);
+    let counts: Array<{ code: string; counted: number; rate: number }> | undefined;
+    let value = parseFloat(counted);
+    if (isMultiCurrency) {
+      const codes = Object.keys(ccyExpected);
+      if (codes.some(c => (ccyCounted[c] ?? '').trim() === '' || !(rateOf(c) > 0))) {
+        toast.error(isEn ? 'Enter the counted amount for every currency' : 'أدخل المعدود لكل عملة');
+        return;
+      }
+      counts = codes.map(c => ({ code: c, counted: round8(parseFloat(ccyCounted[c]) || 0), rate: rateOf(c) }));
+      value = round8(counts.reduce((sum, c) => sum + c.counted / c.rate, 0));
+    }
     if (!Number.isFinite(value) || value < 0) {
       toast.error(isEn ? 'Enter the counted amount' : 'أدخل المبلغ المعدود');
       return;
@@ -78,6 +117,7 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
         actualBalance: round8(value),
         varianceReason: isEn ? `Closed by the owner (${ownerName})` : `أُغلقت من حساب المالك (${ownerName})`,
         decision,
+        counts,
       });
       const diff = round8(value - expected);
       addActivityLog('shift_closed', ownerId, ownerName,
@@ -193,10 +233,27 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
               <span>{isEn ? 'Expected in the drawer' : 'المتوقع في الدرج'}: <b>{formatMoney(closingExpected, 'USD')}</b></span>
               <Button size="sm" variant="ghost" onClick={() => closing && setDetailsRow(closing)}>{isEn ? 'Details' : 'التفاصيل'}</Button>
             </div>
-            <div className="space-y-1">
-              <Label>{isEn ? 'Counted cash (USD)' : 'النقد المعدود (دولار)'}</Label>
-              <Input type="number" inputMode="decimal" min="0" value={counted} onChange={e => setCounted(e.target.value)} />
-            </div>
+            {isMultiCurrency ? Object.keys(ccyExpected).map(code => (
+              <div key={code} className="space-y-1">
+                <Label className="flex justify-between gap-2">
+                  <span>{isEn ? 'Counted' : 'المعدود'} {code}</span>
+                  <span dir="ltr" className="text-xs text-muted-foreground tabular-nums">{isEn ? 'expected' : 'المتوقع'} {ccyExpected[code]} {code}</span>
+                </Label>
+                <Input type="number" inputMode="decimal" min="0" value={ccyCounted[code] ?? ''}
+                  onChange={e => {
+                    const next = { ...ccyCounted, [code]: e.target.value };
+                    setCcyCounted(next);
+                    // keep the USD total used for the difference preview
+                    const total = Object.keys(ccyExpected).reduce((sum, c) => sum + (parseFloat(next[c] ?? '') || 0) / (rateOf(c) || 1), 0);
+                    setCounted(String(round8(total)));
+                  }} />
+              </div>
+            )) : (
+              <div className="space-y-1">
+                <Label>{isEn ? 'Counted cash (USD)' : 'النقد المعدود (دولار)'}</Label>
+                <Input type="number" inputMode="decimal" min="0" value={counted} onChange={e => setCounted(e.target.value)} />
+              </div>
+            )}
             {closingDiff !== null && closingDiff !== 0 && (
               <>
                 <div className={closingDiff < 0 ? 'text-destructive text-sm font-bold' : 'text-info text-sm font-bold'}>

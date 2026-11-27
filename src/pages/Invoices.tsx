@@ -1894,6 +1894,10 @@ export default function Invoices() {
         exchangeRate: rate,
         totalUSD: invoice.total,
         paymentType: invoice.paymentType,
+        // Same paid/remaining lines as «مشاركة نص الفاتورة» (agent test I3).
+        downPayment: invoice.debtPaid ? invoice.debtPaid * rate : undefined,
+        paidInCurrencies: invoice.debtPaid ? await import('@/lib/cloud/debts-cloud').then(m => m.loadInvoicePaymentCurrencies(invoice.id)).catch(() => []) : undefined,
+        debtRemaining: ((invoice.debtRemaining !== undefined && invoice.debtRemaining !== null) ? invoice.debtRemaining : (invoice.paymentType === 'debt' ? invoice.total : 0)) * rate,
       };
       const text = generateInvoiceShareText(shareData);
       await navigator.clipboard.writeText(text);

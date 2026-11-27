@@ -314,9 +314,12 @@ export const loadShiftMovements = async (shiftId: string): Promise<ShiftMovement
       .map(r => String(r.reference_id).split('#')[0]);
     if (saleRefs.length > 0) {
       try {
+        const uuidRefs = saleRefs.filter(x => /^[0-9a-f-]{36}$/i.test(x));
         const [{ data: byOp }, { data: byId }] = await Promise.all([
           sb.from('invoices').select('operation_id, invoice_number').in('operation_id', saleRefs),
-          sb.from('invoices').select('id, invoice_number').in('id', saleRefs.filter(x => /^[0-9a-f-]{36}$/i.test(x))),
+          uuidRefs.length > 0
+            ? sb.from('invoices').select('id, invoice_number').in('id', uuidRefs)
+            : Promise.resolve({ data: [] as Array<{ id: string; invoice_number: string }> }),
         ]);
         ((byOp || []) as Array<{ operation_id: string; invoice_number: string }>).forEach(i => invoiceByRef.set(i.operation_id, i.invoice_number));
         ((byId || []) as Array<{ id: string; invoice_number: string }>).forEach(i => invoiceByRef.set(i.id, i.invoice_number));

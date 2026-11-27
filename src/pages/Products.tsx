@@ -906,7 +906,8 @@ export default function Products() {
           if (product.quantity <= (product.minStockLevel || 5)) return false;
         } else if (statusFilter === 'low_stock') {
           const minStock = product.minStockLevel || 5;
-          if (product.quantity > minStock) return false;
+          // Same rule as the «مخزون منخفض» counter: low = in stock but at/below the minimum (out-of-stock is not «low»).
+          if (product.quantity <= 0 || product.quantity > minStock) return false;
         }
       } else {
         if (statusFilter !== 'all' && product.status !== statusFilter) return false;

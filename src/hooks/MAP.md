@@ -46,7 +46,7 @@ Omitted as noise: `integrations/supabase/client`, `lib/utils`.
 | `use-toast.ts` | Toast hook (shadcn). | toast, useToast · 1 types | use-smart-toast, lib/toast-config | — |
 | `use-ui-scale.tsx` | UI scale hook. | useUIScale | lib/events, lib/ui-scale-config | — |
 | `use-user-role.tsx` | User role provider (hook, role types and cache in user-role-context). | UserRoleProvider | auth-context, user-role-context, lib/demo-data, lib/secure-storage | tbl: user_roles |
-| `use-users-management.tsx` | Store users management (list/create/update). | useUsersManagement · 2 types | auth-context, use-toast, lib/activity-log, lib/demo-data, lib/phone-utils | rpc: can_add_cashier, check_phone_email_availability · tbl: profiles, user_roles |
+| `use-users-management.tsx` | Store users management (list/create/update). | useUsersManagement · 2 types | auth-context, use-toast, lib/activity-log, lib/demo-data, lib/phone-utils, lib/sonner-bridge* | rpc: can_add_cashier, check_phone_email_availability · tbl: profiles, user_roles |
 | `use-warehouse.tsx` | Default-warehouse provider and hook (active; POS depends on it). | WarehouseProvider | auth-context, user-role-context, warehouse-context, lib/cloud/warehouses-cloud, lib/events | — |
 | `user-role-context.ts` | User role context, useUserRole hook, role cache and types. | UserRoleContext, ROLE_CACHE_KEY, ROLE_NS, ROLE_QUERY_TIMEOUT_MS, RETRY_DELAYS_MS, EMPTY_ROLE_STATE, buildStateFromRole, getCachedRole, setCachedRole, useUserRole · 3 types | lib/demo-data, lib/secure-storage | — |
 | `warehouse-context.ts` | Warehouse context and useWarehouse hook. | WarehouseContext, useWarehouse · 1 types | lib/cloud/warehouses-cloud | — |

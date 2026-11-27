@@ -1434,6 +1434,14 @@ export async function runQaFixes(k, newWorldFn) {
     const fin = await asUser(CASH, `select public.finalize_purchase_invoice_atomic('00000000-0000-4000-8000-0000000000aa'::uuid)`);
     truthy('PERM cashier with purchases passes the owner check (fails only on the missing invoice)', fin !== null && !fin.includes('مخصص لمالك المتجر'));
     check('PERM owner keeps full access', await asUser(OWNER, `update public.products set name='Owner edit' where id=$1`, [prod.id]), null);
+    // P3 (agent test): purchases permission may create a supplier; supplier payments stay owner-only.
+    const supNew = await asUser(CASH, `select public.create_supplier_atomic('P3 supplier', null, null, null)`);
+    check('PERM cashier with purchases can create a supplier', supNew, null);
+    await setPages(['products']);
+    truthy('PERM cashier without purchases cannot create a supplier', (await asUser(CASH, `select public.create_supplier_atomic('P3b', null, null, null)`))?.includes('إدارة الموردين'));
+    await setPages(['products', 'products:add', 'purchases']);
+    const sup = await w.one(`select public.create_supplier_atomic('Owner supplier', null, null, null) id`);
+    truthy('PERM cashier with purchases still cannot pay a supplier (owner-only)', (await asUser(CASH, `select public.pay_supplier_atomic($1::uuid, 1, 'cash', null, 'op-p3-pay', 'external', null, 'USD', 1, 1)`, [sup.id]))?.includes('إدارة الموردين'));
     // user_roles UPDATE policy must not recurse (live error 2026-11-27: infinite recursion), the owner grants refund.
     check('PERM owner can grant refund to its cashier (no policy recursion)', await asUser(OWNER, `update public.user_roles set can_refund=true where user_id=$1`, [CASH]), null);
     check('PERM ...the test transaction is rolled back (nothing kept)', (await w.one(`select can_refund from public.user_roles where user_id=$1`, [CASH])).can_refund, false);

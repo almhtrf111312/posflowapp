@@ -100,6 +100,7 @@ export const openShiftCloud = async (params: {
 
   try {
     await openShiftFromPayload(payload);
+    void import('../sync-history').then(m => m.logDirectSync(`direct-open-${payload.id}`, 'shift_open', `فتح وردية ${params.cashierName || ''}`.trim(), true, undefined, undefined, 'system'));
     return payload.id as string;
   } catch (e) {
     // الخادم يسمح بوردية مفتوحة واحدة لكل كاشير: وردية أخرى مفتوحة مسبقاً (من جهاز آخر) ← لا نُدرجها في الطابور
@@ -140,7 +141,10 @@ export const closeShiftCloud = async (params: {
       _counts: params.counts && params.counts.length > 0 ? params.counts : null,
     });
     if (error) throw error;
-    if ((data as { success?: boolean } | null)?.success) return true;
+    if ((data as { success?: boolean } | null)?.success) {
+      void import('../sync-history').then(m => m.logDirectSync(`direct-close-${params.shiftId}`, 'shift_close', 'إغلاق وردية', true, undefined, undefined, 'system'));
+      return true;
+    }
     throw new Error('close_cash_shift_atomic returned no success flag');
   } catch (e) {
     console.warn('[cashbox-cloud] atomic shift close failed, queued for retry:', e);
@@ -289,9 +293,31 @@ export const loadShiftMovements = async (shiftId: string): Promise<ShiftMovement
       .order('created_at', { ascending: false })
       .limit(500);
     if (error) throw error;
+    // Show the invoice number, not internal ids: a debt payment's reference is its operation id → debt → invoice number.
+    const invoiceByRef = new Map<string, string>();
+    const payRefs = ((data || []) as Array<Record<string, unknown>>).filter(r => r.type === 'debt_payment' && r.reference_id).map(r => String(r.reference_id));
+    if (payRefs.length > 0) {
+      try {
+        const { data: pays } = await sb.from('debt_payments').select('operation_id, debt_id').in('operation_id', payRefs);
+        const debtIds = Array.from(new Set(((pays || []) as Array<{ debt_id: string }>).map(p => p.debt_id)));
+        const { data: debts } = debtIds.length ? await sb.from('debts').select('id, invoice_id').in('id', debtIds) : { data: [] };
+        const invByDebt = new Map(((debts || []) as Array<{ id: string; invoice_id: string | null }>).map(d => [d.id, d.invoice_id || '']));
+        ((pays || []) as Array<{ operation_id: string; debt_id: string }>).forEach(p => {
+          const inv = invByDebt.get(p.debt_id);
+          if (inv) invoiceByRef.set(p.operation_id, inv);
+        });
+      } catch { /* the movement list still shows without the invoice number */ }
+    }
+    const displayRef = (type: string, ref: unknown): string | null => {
+      if (!ref) return null;
+      const r = String(ref);
+      if (invoiceByRef.has(r)) return invoiceByRef.get(r) || null;
+      const m = r.match(/\d{8}-\d{3,}/); // invoice numbers look like 20261127-00032
+      return m ? m[0] : null;
+    };
     return ((data || []) as Array<Record<string, unknown>>).map(r => ({
       id: String(r.id), type: String(r.type), amount: Number(r.amount) || 0,
-      notes: (r.notes as string | null) ?? null, reference_id: (r.reference_id as string | null) ?? null,
+      notes: (r.notes as string | null) ?? null, reference_id: displayRef(String(r.type), r.reference_id),
       currency: (r.currency as string | null) ?? null,
       currency_amount: r.currency_amount == null ? null : Number(r.currency_amount),
       created_at: String(r.created_at),

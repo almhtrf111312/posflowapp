@@ -42,6 +42,31 @@ export function UsersTab() {
   const license = useLicense();
   const licenseState = (license as typeof license & { licenseState?: typeof license })?.licenseState || license;
   const { users, isLoading: usersLoading, addUser, updateUserProfile, deleteUser, setUserRefundPermission } = useUsersManagement();
+  // D-35: per-user "must open a shift" (store sync settings requireShiftByUser), default on for cashiers, off for others.
+  const readRequireMap = (): Record<string, boolean> => {
+    try {
+      const sync = (JSON.parse(localStorage.getItem('posflow_settings_v1') || '{}')?.syncSettings || {}) as Record<string, unknown>;
+      return (sync.requireShiftByUser && typeof sync.requireShiftByUser === 'object') ? sync.requireShiftByUser as Record<string, boolean> : {};
+    } catch { return {}; }
+  };
+  const [requireMap, setRequireMap] = useState<Record<string, boolean>>(readRequireMap);
+  const requireShiftFor = (uid: string, isCashierRole: boolean) =>
+    typeof requireMap[uid] === 'boolean' ? requireMap[uid] : isCashierRole;
+  const saveRequireShift = async (uid: string, value: boolean) => {
+    const next = { ...requireMap, [uid]: value };
+    setRequireMap(next);
+    try {
+      const { saveUnifiedStoreSettings, loadUnifiedStoreSettings } = await import('@/lib/store-settings-sync');
+      const current = loadUnifiedStoreSettings().syncSettings || {};
+      const res = await saveUnifiedStoreSettings({ syncSettings: { ...current, requireShiftByUser: next } });
+      if (res && res.success === false) throw new Error(res.message);
+      sonnerToast.success(isRTL ? 'تم الحفظ' : 'Saved');
+    } catch (err) {
+      console.error('[UsersTab] require-shift save failed:', err);
+      setRequireMap(requireMap);
+      sonnerToast.error(isRTL ? 'لم يُحفظ الإعداد' : 'Not saved');
+    }
+  };
 
   // The license copy on this device can be older than a plan change made in Boss: when it says "limit reached",
   // the server (can_add_cashier) decides, and the saved license is refreshed.
@@ -403,6 +428,21 @@ export function UsersTab() {
                       checked={user.canRefund === true}
                       disabled={user.canRefund === undefined || isGuestDemoMode()}
                       onCheckedChange={(allowed) => { void setUserRefundPermission(user.user_id, allowed); }}
+                    />
+                  </div>
+                )}
+                {!user.isOwner && (
+                  <div className="flex items-center justify-between gap-3 pt-2 mt-2 border-t border-border/60">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium">{isRTL ? 'إلزام فتح وردية' : 'Must open a shift'}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {isRTL ? 'بدون وردية لا يبيع نقداً؛ عند الإيقاف تذهب عملياته النقدية إلى الصندوق العام' : 'Without a shift no cash sales; when off, cash goes to the general drawer'}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={requireShiftFor(user.user_id, user.role === 'cashier')}
+                      disabled={isGuestDemoMode()}
+                      onCheckedChange={(v) => { void saveRequireShift(user.user_id, v); }}
                     />
                   </div>
                 )}

@@ -10,6 +10,8 @@ export interface CloudShiftLike {
   expected_balance: number | string | null;
   cashier_id?: string | null;
   cashier_name?: string | null;
+  /** Opening float per currency (units of each currency), when the shift was opened with more than one currency. */
+  opening_by_currency?: Record<string, number | string> | null;
 }
 
 import { round8 } from './utils';
@@ -35,6 +37,18 @@ export function buildAdoptedShift(
   const currencies: ShiftCurrenciesMap = { ...baseCurrencies };
   const usd = { ...(currencies['USD'] || { opening, sales: 0, expenses: 0, deposits: 0, withdrawals: 0 }) };
   usd.opening = opening;
+  // Multi-currency float: each currency keeps its own opening units; USD keeps only its own units (not the total value).
+  const byCcy = cloud.opening_by_currency && typeof cloud.opening_by_currency === 'object' ? cloud.opening_by_currency : null;
+  if (byCcy && Object.keys(byCcy).some(k => k.toUpperCase() !== 'USD' && Number(byCcy[k]) > 0)) {
+    Object.entries(byCcy).forEach(([k, v]) => {
+      const code = k.toUpperCase();
+      const units = round8(Number(v) || 0);
+      if (code === 'USD') { usd.opening = units; return; }
+      const cur = { ...(currencies[code] || { opening: 0, sales: 0, expenses: 0, deposits: 0, withdrawals: 0 }) };
+      cur.opening = units;
+      currencies[code] = cur;
+    });
+  }
   if (net > 0) usd.sales = net;
   if (net < 0) usd.expenses = -net;
   currencies['USD'] = usd;
@@ -128,11 +142,17 @@ export function decideCashDrawer(input: {
   activeShiftId: string | null | undefined;
   generalDrawerId: string | null | undefined;
   role: 'boss' | 'admin' | 'cashier' | null | undefined;
-  sync: { requireShiftCashier?: unknown; requireShiftOwner?: unknown } | null | undefined;
+  sync: { requireShiftCashier?: unknown; requireShiftOwner?: unknown; requireShiftByUser?: unknown } | null | undefined;
+  /** The signed-in user: a per-user setting (Settings → Users) overrides the role default. */
+  userId?: string | null;
 }): { drawerId: string | null; shiftRequired: boolean } {
   const sync = input.sync || {};
   const isCashier = input.role === 'cashier' || !input.role;
-  const shiftRequired = isCashier ? sync.requireShiftCashier !== false : sync.requireShiftOwner === true;
+  const perUser = (sync.requireShiftByUser && typeof sync.requireShiftByUser === 'object' && input.userId)
+    ? (sync.requireShiftByUser as Record<string, unknown>)[input.userId] : undefined;
+  const shiftRequired = typeof perUser === 'boolean'
+    ? perUser
+    : (isCashier ? sync.requireShiftCashier !== false : sync.requireShiftOwner === true);
   if (input.activeShiftId) return { drawerId: input.activeShiftId, shiftRequired };
   return { drawerId: shiftRequired ? null : (input.generalDrawerId || null), shiftRequired };
 }

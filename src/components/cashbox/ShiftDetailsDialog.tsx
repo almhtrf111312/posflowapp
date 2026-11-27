@@ -124,7 +124,7 @@ export function ShiftDetailsDialog({ shift, isEn, onClose }: { shift: ShiftSumma
                 {rows.map(r => (
                   <div key={r.id} className="flex items-start justify-between gap-2 border-b border-border/50 py-1.5 text-xs">
                     <div className="min-w-0">
-                      <div className="font-medium">{label(r.type)}{r.reference_id ? <span className="text-muted-foreground" dir="ltr"> · {r.reference_id}</span> : null}</div>
+                      <div className="font-medium">{label(r.type)}{r.reference_id ? <span className="text-muted-foreground"> · {isEn ? 'Invoice' : 'فاتورة'} <span dir="ltr">{r.reference_id}</span></span> : null}</div>
                       {r.notes && <div className="text-muted-foreground truncate">{r.notes}</div>}
                       <div className="text-muted-foreground" dir="ltr">{formatDateTime(r.created_at)}</div>
                     </div>

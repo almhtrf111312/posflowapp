@@ -64,5 +64,11 @@ eq('LOCAL=CLOUD same balance: nothing to do', decideLocalShiftSync(526, { closed
 eq('LOCAL=CLOUD no cloud copy yet (opened offline): kept', decideLocalShiftSync(526, null, null, false), 'keep');
 eq('LOCAL=CLOUD cloud balance unknown: kept', decideLocalShiftSync(526, { closed_at: null }, null, false), 'keep');
 
+// Multi-currency opening float (owner opens a cashier shift with 20 USD + 300 TRY): each currency keeps its own units.
+const mc = buildAdoptedShift({ ...cloud, id: 's-mc', opening_balance: 50, expected_balance: 50, opening_by_currency: { USD: 20, TRY: 300 } }, USER, false, base);
+eq('SYNC multi-currency: USD opening is its own units (20)', mc?.currencies?.USD.opening, 20);
+eq('SYNC multi-currency: TRY opening is 300 lira', mc?.currencies?.TRY?.opening, 300);
+eq('SYNC multi-currency: total opening value stays 50 USD', mc?.openingCash, 50);
+
 console.log(`${failed ? 'FAIL' : 'PASS'} cashbox-shift-adopt: ${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

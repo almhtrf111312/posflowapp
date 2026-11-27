@@ -381,6 +381,7 @@ export const addExpenseCloud = async (expenseData: {
     // رفض صريح من قاعدة البيانات (فترة مغلقة، وردية، صلاحية...) ⇒ نعرض الخطأ الحقيقي ولا نخفيه في الطابور
     if (rpcError.code) {
       console.warn('[addExpenseCloud] Database rejected expense:', rpcError);
+      void import('../sync-history').then(m => m.logDirectSync(`direct-exp-${localExpense.id}`, 'expense_create', `مصروف: ${expenseData.type}`, false, rpcError?.message, undefined, 'expense'));
       throw new Error(rpcError.message || 'رفض الخادم حفظ المصروف');
     }
     // فشل في النقل فقط: طابور المزامنة الذري يعيد المحاولة لاحقاً
@@ -388,6 +389,7 @@ export const addExpenseCloud = async (expenseData: {
     return saveToLocalAndQueue();
   }
 
+  void import('../sync-history').then(m => m.logDirectSync(`direct-exp-${localExpense.id}`, 'expense_create', `مصروف: ${expenseData.type}`, true, undefined, undefined, 'expense'));
   invalidateExpensesCache();
   invalidatePartnersCache(); // ⬅️ تفريغ كاش الشركاء حتى يظهر الاستقطاع فورياً
   const existing = expensesCache || loadExpensesLocally() || [];

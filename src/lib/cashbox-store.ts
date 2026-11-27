@@ -206,6 +206,7 @@ const decideForCurrentUser = () => {
     generalDrawerId: getCachedGeneralDrawerId(),
     role: uid ? getCachedRole(uid)?.role : undefined,
     sync,
+    userId: uid,
   });
 };
 

@@ -23,6 +23,11 @@ eq('GD unknown role is treated as a cashier', decideCashDrawer({ activeShiftId: 
 eq('GD no cached general drawer (never online) gives no drawer, as before', decideCashDrawer({ activeShiftId: null, generalDrawerId: null, role: 'admin', sync: {} }).drawerId, null);
 eq('GD a non-boolean setting does not turn the cashier requirement off', decideCashDrawer({ activeShiftId: null, generalDrawerId: G, role: 'cashier', sync: { requireShiftCashier: 'false' } }).drawerId, null);
 
+// Per-user setting (Settings → Users) overrides the role default.
+eq('GD per-user: a cashier allowed without a shift uses the general drawer', decideCashDrawer({ activeShiftId: null, generalDrawerId: G, role: 'cashier', sync: { requireShiftByUser: { c1: false } }, userId: 'c1' }).drawerId, G);
+eq('GD per-user: another cashier keeps the default (required)', decideCashDrawer({ activeShiftId: null, generalDrawerId: G, role: 'cashier', sync: { requireShiftByUser: { c1: false } }, userId: 'c2' }).drawerId, null);
+eq('GD per-user: an owner can be required', decideCashDrawer({ activeShiftId: null, generalDrawerId: G, role: 'admin', sync: { requireShiftByUser: { o1: true } }, userId: 'o1' }).drawerId, null);
+
 console.log(`Passed Cases: ${passed}`);
 console.log(`Failed Cases: ${failed}`);
 console.log(`${failed ? 'FAIL' : 'PASS'} general-drawer: ${passed} passed, ${failed} failed`);

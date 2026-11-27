@@ -488,9 +488,13 @@ export const recordPaymentCloud = async (
     _exchange_rate: exchangeRate ?? null,
     _payment_method: method,
   });
+  const { logDirectSync } = await import('../sync-history');
+  const payLabel = `سداد دين ${currency !== 'USD' && currencyAmount ? `${currencyAmount} ${currency}` : `${amt} USD`}`;
   if (error) {
+    logDirectSync(`direct-${opId}`, 'debt_payment', payLabel, false, error.message, undefined, 'debt');
     throw new Error(error.message || 'فشل تسجيل الدفعة');
   }
+  logDirectSync(`direct-${opId}`, 'debt_payment', payLabel, true, undefined, undefined, 'debt');
   const res = (data || {}) as Record<string, unknown>;
   invalidateDebtsCache();
   import('./partners-cloud').then(({ invalidatePartnersCache }) => {

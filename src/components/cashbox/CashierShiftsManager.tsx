@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, PlayCircle, StopCircle, Users } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
-import { round8 } from '@/lib/money-engine';
+import { round8, getEnabledCurrencies } from '@/lib/money-engine';
 import { formatMoney, formatDateTime } from '@/lib/utils';
 import { addActivityLog } from '@/lib/activity-log';
 import {
@@ -37,7 +37,10 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
   const [decision, setDecision] = useState<'accept' | 'defer'>('accept');
   const [opening, setOpening] = useState(false);
   const [openFor, setOpenFor] = useState('');
-  const [openAmount, setOpenAmount] = useState('');
+  // Opening float per currency (units of each currency); USD value = Σ units / rate.
+  const [openAmounts, setOpenAmounts] = useState<Record<string, string>>({});
+  const openCurrencies = [{ code: 'USD', rate: 1 }, ...getEnabledCurrencies()
+    .filter(c => c.code.toUpperCase() !== 'USD' && c.rate > 0).map(c => ({ code: c.code.toUpperCase(), rate: c.rate }))];
   const [busy, setBusy] = useState(false);
   const [detailsRow, setDetailsRow] = useState<OpenRow | null>(null);
   const detailsInput = useMemo(() => (detailsRow ? {
@@ -96,8 +99,17 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
 
   const submitOpen = async () => {
     const cashier = cashiers.find(c => c.id === openFor);
-    const value = parseFloat(openAmount || '0');
-    if (!cashier || !Number.isFinite(value) || value < 0) {
+    const byCcy: Record<string, number> = {};
+    let value = 0;
+    let bad = false;
+    openCurrencies.forEach(c => {
+      const raw = (openAmounts[c.code] || '').trim();
+      if (!raw) return;
+      const units = parseFloat(raw);
+      if (!Number.isFinite(units) || units < 0) { bad = true; return; }
+      if (units > 0) { byCcy[c.code] = round8(units); value = round8(value + units / c.rate); }
+    });
+    if (!cashier || bad) {
       toast.error(isEn ? 'Choose a cashier and an opening amount' : 'اختر الكاشير وأدخل رصيد الافتتاح');
       return;
     }
@@ -108,15 +120,16 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
         cashierId: cashier.id,
         cashierName: cashier.name,
         openingBalance: round8(value),
+        openingByCurrency: Object.keys(byCcy).length > 0 ? byCcy : undefined,
       });
       if (res === 'conflict') {
         toast.error(isEn ? 'This cashier already has an open shift' : 'لهذا الكاشير وردية مفتوحة بالفعل');
       } else {
-        addActivityLog('shift_opened', ownerId, ownerName, `${isEn ? 'Opened a shift for' : 'فتح وردية للكاشير'} ${cashier.name} - ${formatMoney(value, 'USD')}`);
+        addActivityLog('shift_opened', ownerId, ownerName, `${isEn ? 'Opened a shift for' : 'فتح وردية للكاشير'} ${cashier.name} - ${Object.entries(byCcy).map(([k, v]) => `${v} ${k}`).join('، ') || formatMoney(0, 'USD')}`);
         toast.success(isEn ? 'Shift opened for the cashier' : 'تم فتح وردية للكاشير');
         setOpening(false);
         setOpenFor('');
-        setOpenAmount('');
+        setOpenAmounts({});
       }
       await reload();
       onChanged?.();
@@ -227,10 +240,14 @@ export function CashierShiftsManager({ ownerId, ownerName, isEn, onChanged }: Pr
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
-              <Label>{isEn ? 'Opening cash (USD)' : 'رصيد الافتتاح (دولار)'}</Label>
-              <Input type="number" inputMode="decimal" min="0" value={openAmount} onChange={e => setOpenAmount(e.target.value)} />
-            </div>
+            {openCurrencies.map(c => (
+              <div key={c.code} className="space-y-1">
+                <Label>{isEn ? 'Opening cash' : 'رصيد الافتتاح'} ({c.code})</Label>
+                <Input type="number" inputMode="decimal" min="0" value={openAmounts[c.code] ?? ''}
+                  onChange={e => setOpenAmounts(prev => ({ ...prev, [c.code]: e.target.value }))} />
+              </div>
+            ))}
+            <p className="text-xs text-muted-foreground">{isEn ? 'The opening cash is taken from the general drawer.' : 'رصيد الافتتاح يُسحب من الصندوق العام.'}</p>
           </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpening(false)}>{isEn ? 'Cancel' : 'إلغاء'}</Button>

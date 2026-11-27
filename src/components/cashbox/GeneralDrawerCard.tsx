@@ -8,7 +8,6 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Loader2, Landmark } from 'lucide-react';
 import { toast } from '@/lib/sonner-bridge';
 import { formatMoney } from '@/lib/utils';
@@ -28,28 +27,12 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
   // Balance per currency (units of each currency), from the drawer's movements; USD includes the starting balance.
   const [byCurrency, setByCurrency] = useState<Record<string, number>>({});
   const [counts, setCounts] = useState<Record<string, string>>({});
+  const [depositCcy, setDepositCcy] = useState('USD');
   const [mode, setMode] = useState<'count' | 'deposit' | null>(null);
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const opRef = useRef(newOpId());
-  // Owner settings (store sync settings): who must open a shift before cash operations.
-  const readRequire = () => {
-    try {
-      const sync = (JSON.parse(localStorage.getItem('posflow_settings_v1') || '{}')?.syncSettings || {}) as Record<string, unknown>;
-      return { cashier: sync.requireShiftCashier !== false, owner: sync.requireShiftOwner === true };
-    } catch { return { cashier: true, owner: false }; }
-  };
-  const [requireShift, setRequireShift] = useState(readRequire);
-  const saveRequire = async (key: 'cashier' | 'owner', value: boolean) => {
-    const next = { ...requireShift, [key]: value };
-    setRequireShift(next);
-    const { saveUnifiedStoreSettings, loadUnifiedStoreSettings } = await import('@/lib/store-settings-sync');
-    const current = loadUnifiedStoreSettings().syncSettings || {};
-    const res = await saveUnifiedStoreSettings({ syncSettings: { ...current, requireShiftCashier: next.cashier, requireShiftOwner: next.owner } });
-    if (res && res.success === false) toast.error(res.message || (isEn ? 'Not saved' : 'لم يُحفظ'));
-    else toast.success(isEn ? 'Saved' : 'تم الحفظ');
-  };
   // Stable object: the details dialog reloads when its shift prop changes.
   const detailsShift = useMemo(() => (showDetails && id
     ? { id, userName: isEn ? 'General drawer' : 'الصندوق العام', openedAt: new Date().toISOString(), openingCash: 0, status: 'open' as const }
@@ -85,6 +68,7 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
       setBusy(true);
       try {
         const res = await countGeneralDrawerCloud(list, isEn ? `Counted by ${userName}` : `عدّه ${userName}`, opRef.current);
+        void import('@/lib/sync-history').then(m => m.logDirectSync(`direct-count-${opRef.current}`, 'general_count', 'عدّ الصندوق العام', true, undefined, undefined, 'system'));
         const diffs = res.filter(r => r.difference !== 0);
         addActivityLog('shift_closed', userId, userName, `${isEn ? 'General drawer count' : 'عدّ الصندوق العام'}: ${res.map(r => `${r.counted} ${r.code} (${r.difference >= 0 ? '+' : ''}${r.difference})`).join('، ')}`);
         toast.success(diffs.length === 0 ? (isEn ? 'Matched' : 'الصندوق مطابق')
@@ -109,9 +93,16 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
     setBusy(true);
     try {
       {
-        const ok = await addShiftTransactionCloud({ shiftId: id, type: 'deposit_capital', amount: round8(v), notes: isEn ? 'Cash added to the general drawer' : 'إيداع في الصندوق العام' });
+        // Deposit in any enabled currency: stored in USD with the original amount and its rate (F-01).
+        const rate = depositCcy === 'USD' ? 1 : (getEnabledCurrencies().find(c => c.code.toUpperCase() === depositCcy)?.rate || 0);
+        if (!(rate > 0)) throw new Error(isEn ? 'This currency has no exchange rate' : 'لا يوجد سعر صرف لهذه العملة');
+        const ok = await addShiftTransactionCloud({
+          shiftId: id, type: 'deposit_capital', amount: round8(v / rate), currency: depositCcy, currencyAmount: round8(v), exchangeRate: rate,
+          notes: isEn ? 'Cash added to the general drawer' : 'إيداع في الصندوق العام',
+        });
         if (!ok) throw new Error(isEn ? 'Could not record the deposit' : 'تعذّر تسجيل الإيداع');
-        addActivityLog('shift_opened', userId, userName, `${isEn ? 'General drawer deposit' : 'إيداع في الصندوق العام'}: ${formatMoney(v, 'USD')}`);
+        void import('@/lib/sync-history').then(m => m.logDirectSync(`direct-dep-${opRef.current}`, 'general_deposit', 'إيداع في الصندوق العام', true, undefined, undefined, 'system'));
+        addActivityLog('shift_opened', userId, userName, `${isEn ? 'General drawer deposit' : 'إيداع في الصندوق العام'}: ${v} ${depositCcy}`);
         toast.success(isEn ? 'Deposit recorded' : 'تم تسجيل الإيداع');
       }
       opRef.current = newOpId();
@@ -155,19 +146,6 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
           ))}
         </div>
       </CardHeader>
-      {isOwner && (
-        <CardContent className="space-y-2 pb-0">
-          <label className="flex items-center justify-between gap-3 text-sm">
-            <span>{isEn ? 'Cashiers must open a shift' : 'إلزام الكاشير بفتح وردية'}</span>
-            <Switch checked={requireShift.cashier} onCheckedChange={(v) => void saveRequire('cashier', v)} />
-          </label>
-          <label className="flex items-center justify-between gap-3 text-sm">
-            <span>{isEn ? 'The owner must open a shift' : 'إلزام المالك بفتح وردية'}</span>
-            <Switch checked={requireShift.owner} onCheckedChange={(v) => void saveRequire('owner', v)} />
-          </label>
-          <p className="text-xs text-muted-foreground">{isEn ? 'Without a required shift, cash operations go to the general drawer.' : 'بدون إلزام، العمليات النقدية بلا وردية تذهب إلى الصندوق العام.'}</p>
-        </CardContent>
-      )}
       <CardContent className="flex flex-wrap gap-2 pt-4">
         <Button size="sm" variant="outline" onClick={() => setShowDetails(true)}>{isEn ? 'Details' : 'التفاصيل'}</Button>
         {isOwner && <Button size="sm" variant="outline" onClick={() => { setMode('deposit'); setAmount(''); }}>{isEn ? 'Add cash' : 'إيداع'}</Button>}
@@ -180,19 +158,39 @@ export function GeneralDrawerCard({ isOwner, userId, userName, isEn }: { isOwner
             <DialogTitle>{mode === 'count' ? (isEn ? 'Count the general drawer' : 'عدّ الصندوق العام') : (isEn ? 'Add cash to the general drawer' : 'إيداع في الصندوق العام')}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-3">
+            {mode === 'count' && (
+              <div className="rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground space-y-1">
+                <p>{isEn
+                  ? 'Count what is physically in the general drawer, each currency in its own units. The app compares it with the expected amount and records any difference as surplus or shortage.'
+                  : 'عدّ ما هو موجود فعلاً في الصندوق العام، كل عملة بوحداتها هي (الليرة بالليرة والدولار بالدولار). يقارنه التطبيق بالمتوقع ويسجّل أي فرق كفائض أو عجز.'}</p>
+                <p>{isEn ? 'A negative expected amount means more went out in that currency than came in.' : 'المتوقع السالب يعني أن ما خرج بهذه العملة أكثر مما دخل بها.'}</p>
+                <Button type="button" size="sm" variant="ghost" className="h-7 px-2"
+                  onClick={() => setCounts(Object.fromEntries(countCurrencies.map(c => [c.code, String(Math.max(0, byCurrency[c.code] ?? 0))])))}>
+                  {isEn ? 'Fill with the expected amounts' : 'تعبئة بالمبالغ المتوقعة'}
+                </Button>
+              </div>
+            )}
             {mode === 'count' ? countCurrencies.map(c => (
               <div key={c.code} className="space-y-1">
                 <Label className="flex justify-between gap-2">
                   <span>{isEn ? 'Counted' : 'المعدود'} {c.code}</span>
-                  <span dir="ltr" className="text-xs text-muted-foreground tabular-nums">{isEn ? 'expected' : 'المتوقع'} {c.code === 'USD' ? (byCurrency.USD ?? 0) : (byCurrency[c.code] ?? 0)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {isEn ? 'Expected' : 'المتوقع'}:{' '}
+                    <b dir="ltr" className={(byCurrency[c.code] ?? 0) < 0 ? 'tabular-nums text-destructive' : 'tabular-nums text-foreground'}>{byCurrency[c.code] ?? 0} {c.code}</b>
+                  </span>
                 </Label>
                 <Input type="number" inputMode="decimal" min="0" value={counts[c.code] ?? ''} disabled={c.code !== 'USD' && !c.rate}
                   onChange={e => setCounts(prev => ({ ...prev, [c.code]: e.target.value }))} />
               </div>
             )) : (
               <div className="space-y-1">
-                <Label>{isEn ? 'Amount (USD)' : 'المبلغ (دولار)'}</Label>
-                <Input type="number" inputMode="decimal" min="0" value={amount} onChange={e => setAmount(e.target.value)} />
+                <Label>{isEn ? 'Amount' : 'المبلغ'}</Label>
+                <div className="flex gap-2">
+                  <Input className="flex-1" type="number" inputMode="decimal" min="0" value={amount} onChange={e => setAmount(e.target.value)} />
+                  <select className="h-10 rounded-md border border-input bg-background px-2 text-sm" value={depositCcy} onChange={e => setDepositCcy(e.target.value)}>
+                    {countCurrencies.filter(c => c.code === 'USD' || c.rate > 0).map(c => <option key={c.code} value={c.code}>{c.code}</option>)}
+                  </select>
+                </div>
               </div>
             )}
             {mode === 'count' && (

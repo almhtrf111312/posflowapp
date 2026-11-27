@@ -288,3 +288,24 @@ export const cleanupSyncedItems = (): void => {
     saveHistory(filtered);
   }
 };
+
+/**
+ * Records an operation that went to the server directly (online, not through the queue), so the sync log lists every
+ * operation: 'synced' on success, 'failed' with the server message on refusal. Never throws.
+ */
+export const logDirectSync = (
+  id: string,
+  type: string,
+  label: string,
+  ok: boolean,
+  error?: string,
+  meta?: SyncHistoryMeta,
+  category?: SyncCategory,
+): void => {
+  try {
+    addToHistory(id, type, label, meta, category);
+    updateHistoryStatus(id, ok ? 'synced' : 'failed', ok ? undefined : (error || 'رفض الخادم العملية'));
+  } catch (e) {
+    console.warn('[SyncHistory] direct log failed:', e);
+  }
+};

@@ -3,7 +3,7 @@
 Role, exports and local dependencies only — no internals. 6 files. Lists are capped; open the file for the rest.
 `dep*` = dynamic import · bare name = same directory · `ui/*` = shadcn primitives · `(+N)` = more not shown.
 Omitted as noise: `integrations/supabase/client`, `lib/utils`.
-Subfolders with their own map: auth/, barcode/, dashboard/, debug/, layout/, license/, pos/, products/, purchases/, reports/, settings/, support/
+Subfolders with their own map: auth/, barcode/, cashbox/, dashboard/, debug/, layout/, license/, pos/, products/, purchases/, reports/, settings/, support/
 
 
 | file | role | exports | local deps |

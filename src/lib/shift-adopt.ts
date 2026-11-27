@@ -59,8 +59,8 @@ export function buildAdoptedShift(
 }
 
 // Same direction table as close_cash_shift_atomic (F-18): the drawer is opening + inflows − outflows.
-const INFLOW_TYPES = ['sale', 'deposit', 'deposit_capital', 'deposit_revenue', 'deposit_purchase_cover', 'debt_payment', 'surplus', 'expense_refund', 'supplier_refund', 'fx_in', 'transfer_in'];
-const OUTFLOW_TYPES = ['expense', 'refund', 'withdrawal', 'supplier_payment', 'store_credit_refund', 'shortage', 'fx_out', 'transfer_out'];
+export const INFLOW_TYPES = ['sale', 'deposit', 'deposit_capital', 'deposit_revenue', 'deposit_purchase_cover', 'debt_payment', 'surplus', 'expense_refund', 'supplier_refund', 'fx_in', 'transfer_in'];
+export const OUTFLOW_TYPES = ['expense', 'refund', 'withdrawal', 'supplier_payment', 'store_credit_refund', 'shortage', 'fx_out', 'transfer_out'];
 
 export interface ShiftMovement { type: string; amount: number | string; }
 

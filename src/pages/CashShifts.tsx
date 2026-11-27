@@ -18,6 +18,7 @@ import { EVENTS } from '@/lib/events';
 import { loadQueue } from '@/lib/sync-queue';
 import { decideLocalShiftSync, expectedCashOfShift } from '@/lib/shift-adopt';
 import { ShiftFxDialog } from '@/components/cashbox/ShiftFxDialog';
+import { ShiftDetailsDialog } from '@/components/cashbox/ShiftDetailsDialog';
 import { CashierShiftsManager } from '@/components/cashbox/CashierShiftsManager';
 import { loadShiftSupplierMoney, ShiftSupplierMoney } from '@/lib/cloud/suppliers-cloud';
 import { useActionGuard } from '@/hooks/use-action-guard';
@@ -72,6 +73,7 @@ export default function CashShifts() {
   const isEn = language === 'en';
 
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [detailsShift, setDetailsShift] = useState<Shift | null>(null);
   const [openShift, setOpenShift] = useState<Shift | null>(null);
   const [showFx, setShowFx] = useState(false);
   const [supplierMoney, setSupplierMoney] = useState<ShiftSupplierMoney | null>(null);
@@ -641,76 +643,42 @@ export default function CashShifts() {
               <p className="text-sm sm:text-base font-semibold text-foreground">{t('cashShifts.noShifts')}</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-start">{t('cashShifts.user')}</TableHead>
-                    <TableHead className="text-start">{t('cashShifts.openTime')}</TableHead>
-                    <TableHead className="text-start">{t('cashShifts.closeTime')}</TableHead>
-                    <TableHead className="text-end">{t('cashShifts.opening')}</TableHead>
-                    <TableHead className="text-end">{t('cashShifts.sales')}</TableHead>
-                    <TableHead className="text-end">{t('cashShifts.expected')}</TableHead>
-                    <TableHead className="text-end">{t('cashShifts.actual')}</TableHead>
-                    <TableHead className="text-end">{t('cashShifts.discrepancy')}</TableHead>
-                    <TableHead className="text-start">{isEn ? "Adjustments" : "التعديلات"}</TableHead>
-                    <TableHead className="text-center">{t('common.status')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentShifts.map((shift) => (
-                    <TableRow key={shift.id}>
-                      <TableCell className="font-medium text-start">{shift.userName}</TableCell>
-                      <TableCell className="text-sm text-start"><span dir="ltr" className="inline-block tabular-nums">{formatDateTime(shift.openedAt)}</span></TableCell>
-                      <TableCell className="text-sm text-start">
-                        {shift.closedAt ? <span dir="ltr" className="inline-block tabular-nums">{formatDateTime(shift.closedAt)}</span> : '-'}
-                      </TableCell>
-                      <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.openingCash)}</span></TableCell>
-                      <TableCell className="text-end text-success">
-                        <span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.salesTotal)}</span>
-                      </TableCell>
-                      <TableCell className="text-end"><span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.expectedCash || 0)}</span></TableCell>
-                      <TableCell className="text-end">
-                        {shift.closingCash !== undefined ? <span dir="ltr" className="inline-block tabular-nums">{formatUsd(shift.closingCash)}</span> : '-'}
-                      </TableCell>
-                      <TableCell className="text-end">
-                        {shift.discrepancy !== undefined ? (
-                          <span dir="ltr" className={cn(
-                            'inline-block tabular-nums',
-                            shift.discrepancy === 0
-                              ? 'text-muted-foreground'
-                              : shift.discrepancy > 0
-                                ? 'text-success'
-                                : 'text-destructive'
-                          )}>
-                            {shift.discrepancy > 0 ? '+' : ''}{formatUsd(shift.discrepancy)}
-                          </span>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="text-start">
-                        {shift.adjustments && shift.adjustments.length > 0 ? (
-                          <div className="space-y-1">
-                            {shift.adjustments.map(adj => (
-                              <Badge key={adj.id} variant={adj.type === 'expense_added' ? 'destructive' : 'secondary'} className="text-xs">
-                                {adj.type === 'expense_added' ? (isEn ? 'Expense' : 'مصروف') : (isEn ? 'Income' : 'إيراد')} <span dir="ltr" className="inline-block tabular-nums ms-1">{formatUsd(adj.amount)}</span>
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={shift.status === 'open' ? 'default' : 'secondary'}>
-                          {shift.status === 'open' ? t('cashShifts.status.open') : t('cashShifts.status.closed')}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="space-y-2">
+              {recentShifts.map((shift) => (
+                <button
+                  key={shift.id}
+                  type="button"
+                  onClick={() => setDetailsShift(shift)}
+                  className="w-full rounded-xl border border-border p-3 text-start hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold truncate">{shift.userName}</span>
+                    <Badge variant={shift.status === 'open' ? 'default' : 'secondary'}>
+                      {shift.status === 'open' ? t('cashShifts.status.open') : t('cashShifts.status.closed')}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground" dir="ltr">
+                    {formatDateTime(shift.openedAt)}{shift.closedAt ? ` → ${formatDateTime(shift.closedAt)}` : ''}
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1 text-xs">
+                    <div>{t('cashShifts.opening')}: <span dir="ltr" className="inline-block tabular-nums font-semibold">{formatUsd(shift.openingCash)}</span></div>
+                    <div>{t('cashShifts.expected')}: <span dir="ltr" className="inline-block tabular-nums font-semibold">{formatUsd(shift.expectedCash || 0)}</span></div>
+                    <div>{t('cashShifts.actual')}: <span dir="ltr" className="inline-block tabular-nums font-semibold">{shift.closingCash !== undefined ? formatUsd(shift.closingCash) : '-'}</span></div>
+                    <div>{t('cashShifts.discrepancy')}: {shift.discrepancy !== undefined ? (
+                      <span dir="ltr" className={cn('inline-block tabular-nums font-semibold', shift.discrepancy === 0 ? 'text-muted-foreground' : shift.discrepancy > 0 ? 'text-success' : 'text-destructive')}>
+                        {shift.discrepancy > 0 ? '+' : ''}{formatUsd(shift.discrepancy)}
+                      </span>
+                    ) : '-'}</div>
+                  </div>
+                  <div className="mt-1 text-[11px] text-primary">{isEn ? 'Tap for details' : 'اضغط لعرض التفاصيل'}</div>
+                </button>
+              ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      <ShiftDetailsDialog shift={detailsShift} isEn={isEn} onClose={() => setDetailsShift(null)} />
 
       {/* Start Shift Dialog */}
       <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>

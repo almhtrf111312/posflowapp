@@ -413,5 +413,6 @@
   "src/hooks/theme-context.ts": "Theme context, useTheme hook, palettes and DOM apply helpers.",
   "src/hooks/user-role-context.ts": "User role context, useUserRole hook, role cache and types.",
   "src/hooks/warehouse-context.ts": "Warehouse context and useWarehouse hook.",
-  "src/components/cashbox/CashierShiftsManager.tsx": "Owner card: cashiers' open shifts, close one remotely (count + accept/defer) or open one for a cashier"
+  "src/components/cashbox/CashierShiftsManager.tsx": "Owner card: cashiers' open shifts, close one remotely (count + accept/defer) or open one for a cashier",
+  "src/components/cashbox/ShiftDetailsDialog.tsx": "Shift details: totals per movement kind and the full drawer movement list of one shift (read-only, from cloud movements)"
 }

@@ -273,6 +273,33 @@ export const loadShiftExpectedFromMovements = async (shiftId: string, opening: n
   }
 };
 
+export interface ShiftMovementRow {
+  id: string; type: string; amount: number; notes: string | null; reference_id: string | null;
+  currency: string | null; currency_amount: number | null; created_at: string;
+}
+
+/** Every drawer movement of one shift (newest first), for the shift details view. Empty on error/offline. */
+export const loadShiftMovements = async (shiftId: string): Promise<ShiftMovementRow[]> => {
+  try {
+    const { data, error } = await sb
+      .from('shift_transactions')
+      .select('id, type, amount, notes, reference_id, currency, currency_amount, created_at')
+      .eq('shift_id', shiftId)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    return ((data || []) as Array<Record<string, unknown>>).map(r => ({
+      id: String(r.id), type: String(r.type), amount: Number(r.amount) || 0,
+      notes: (r.notes as string | null) ?? null, reference_id: (r.reference_id as string | null) ?? null,
+      currency: (r.currency as string | null) ?? null,
+      currency_amount: r.currency_amount == null ? null : Number(r.currency_amount),
+      created_at: String(r.created_at),
+    }));
+  } catch {
+    return [];
+  }
+};
+
 /** حد سماح فروقات الصندوق بالدولار (من إعدادات المتجر) */
 export const loadShiftVarianceTolerance = async (): Promise<number> => {
   try {
